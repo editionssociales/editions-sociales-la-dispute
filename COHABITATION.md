@@ -65,7 +65,15 @@ disparaît puisque le domaine ne servira plus WordPress.
 - [x] Sites WordPress + boutique en ligne, inchangés.
 - [x] Couche data headless (REST + Store API) opérationnelle et vérifiée.
 - [x] mu-plugin déployé sur www/ et LaDispute/.
-- [ ] Phase 1 — déploiement preview Vercel *(cette itération)*.
+- [x] Phase 1 — beta déployée : https://editions-sociales-la-dispute.vercel.app
+      (team Vercel `solidz`, **provisoire** — projet transférable sans perte
+      d'historique vers un compte dédié au client dès qu'il existe). Catalogue
+      + boutique vérifiés avec données réelles ; les 3 sites WP restent à 200.
+      ⚠️ Pas encore de repo GitHub connecté (déploiement fait en direct via
+      `vercel deploy` CLI) → le workflow *push git → build → preview* décrit
+      par le client n'est pas encore branché : il manque la création du repo
+      (à faire par le client/Youri, pas unilatéralement par l'agent) puis
+      `vercel link` au repo pour activer les déploiements auto par branche.
 - [ ] Phase 2 — hostnames CMS découplés.
 - [ ] Phase 3 — redirections 301 + cutover DNS.
 - [ ] Phase 4 — retrait des front-ends WP.
