@@ -8,11 +8,11 @@ export function SiteFooter() {
       <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
           <p className="font-serif text-lg font-semibold">
-            Éditions sociales · La Dispute
+            Les Éditions sociales <span className="text-muted">x</span> La Dispute
           </p>
           <p className="mt-3 max-w-xs text-sm text-ink-soft">
-            Deux maisons d&apos;édition réunies&nbsp;: la pensée critique, les
-            sciences sociales et le mouvement ouvrier.
+            La maison de la pensée critique, des sciences sociales et du
+            mouvement ouvrier.
           </p>
         </div>
 
@@ -22,7 +22,7 @@ export function SiteFooter() {
           </p>
           <ul className="space-y-2">
             <li>
-              <Link href="/catalogue" className="text-ink-soft hover:text-es">
+              <Link href="/catalogue" className="text-ink-soft hover:text-ink">
                 Tous les livres
               </Link>
             </li>
@@ -30,12 +30,17 @@ export function SiteFooter() {
               <li key={e.slug}>
                 <Link
                   href={`/catalogue/${e.slug}`}
-                  className="text-ink-soft hover:text-es"
+                  className="text-ink-soft hover:text-ink"
                 >
                   {e.name}
                 </Link>
               </li>
             ))}
+            <li>
+              <Link href="/panier" className="text-ink-soft hover:text-ink">
+                Panier
+              </Link>
+            </li>
           </ul>
         </nav>
 
@@ -44,26 +49,23 @@ export function SiteFooter() {
             La maison
           </p>
           <ul className="space-y-2">
-            <li><Link href="/editions" className="text-ink-soft hover:text-es">Les deux maisons</Link></li>
-            <li><Link href="/rencontres" className="text-ink-soft hover:text-es">Rencontres</Link></li>
-            <li><Link href="/a-propos" className="text-ink-soft hover:text-es">À propos</Link></li>
-            <li><Link href="/souscription" className="text-ink-soft hover:text-es">Souscription</Link></li>
+            <li><Link href="/editions" className="text-ink-soft hover:text-ink">Nos collections</Link></li>
+            <li><Link href="/rencontres" className="text-ink-soft hover:text-ink">Rencontres</Link></li>
+            <li><Link href="/a-propos" className="text-ink-soft hover:text-ink">À propos</Link></li>
           </ul>
         </nav>
 
-        <nav aria-label="Boutique" className="text-sm">
+        <nav aria-label="Souscription" className="text-sm">
           <p className="mb-3 font-semibold uppercase tracking-wider text-muted">
-            Boutique
+            Souscription
           </p>
           <ul className="space-y-2">
-            <li><Link href="/boutique" className="text-ink-soft hover:text-es">La librairie</Link></li>
-            <li><Link href="/panier" className="text-ink-soft hover:text-es">Panier</Link></li>
+            <li><Link href="/souscription" className="text-ink-soft hover:text-ink">Participer</Link></li>
           </ul>
         </nav>
       </Container>
       <Container className="flex flex-col gap-2 border-t border-line py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} Les Éditions sociales — La Dispute</p>
-        <p>Site en reconstruction · squelette unifié</p>
+        <p>© {new Date().getFullYear()} Les Éditions sociales x La Dispute</p>
       </Container>
     </footer>
   );

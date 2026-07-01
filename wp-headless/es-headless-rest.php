@@ -77,6 +77,27 @@ function es_headless_terms($id, $taxonomy)
     }, $terms);
 }
 
+/**
+ * Dimensions réelles de la couverture (taille 'large', non recadrée) : le
+ * front en a besoin pour afficher chaque couverture à son ratio exact, sans
+ * recadrage.
+ */
+function es_headless_cover($cover_id)
+{
+    if (!$cover_id) {
+        return null;
+    }
+    $img = wp_get_attachment_image_src($cover_id, 'large');
+    if (!$img) {
+        return null;
+    }
+    return [
+        'url'    => $img[0],
+        'width'  => $img[1],
+        'height' => $img[2],
+    ];
+}
+
 function es_headless_book_payload($post)
 {
     $id = $post['id'];
@@ -98,6 +119,6 @@ function es_headless_book_payload($post)
         'lalibrairie'     => es_headless_get_field('lalibrairie', $id),
         'authors'         => $authors,
         'collection'      => $collections[0] ?? null,
-        'cover'           => $cover_id ? wp_get_attachment_image_url($cover_id, 'large') : null,
+        'cover'           => es_headless_cover($cover_id),
     ];
 }

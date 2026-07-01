@@ -5,9 +5,8 @@ import { EDITION_LIST } from "@/lib/editions";
 import { countBooks } from "@/lib/catalogue";
 
 export const metadata: Metadata = {
-  title: "Les deux maisons",
-  description:
-    "Les Éditions sociales et La Dispute : deux maisons d'édition réunies dans une même structure.",
+  title: "Nos collections",
+  description: "Les fonds Éditions sociales et La Dispute, au sein d'une même maison.",
 };
 
 export const dynamic = "force-dynamic";
@@ -20,11 +19,10 @@ export default async function EditionsPage() {
   return (
     <Container className="py-12">
       <header className="max-w-2xl">
-        <h1 className="font-serif text-4xl font-semibold">Une maison, deux catalogues</h1>
+        <h1 className="font-serif text-4xl font-semibold">Nos collections</h1>
         <p className="mt-3 text-ink-soft">
-          Les Éditions sociales et La Dispute réunissent leurs catalogues et leur
-          boutique dans une structure commune, tout en gardant chacune leur
-          identité éditoriale.
+          Deux fonds éditoriaux, chacun avec son identité, réunis dans le même
+          catalogue.
         </p>
       </header>
 
@@ -34,10 +32,7 @@ export default async function EditionsPage() {
             key={e.slug}
             className="flex flex-col rounded-lg border border-line bg-white/40 p-8"
           >
-            <span
-              className="text-sm font-semibold uppercase tracking-[0.18em]"
-              style={{ color: `var(--color-${e.accent})` }}
-            >
+            <span className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
               {e.name}
             </span>
             <h2 className="mt-2 font-serif text-2xl font-semibold">{e.tagline}</h2>
@@ -46,13 +41,13 @@ export default async function EditionsPage() {
             <div className="mt-5 flex gap-3">
               <Link
                 href={`/editions/${e.slug}`}
-                className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper hover:opacity-90"
               >
                 Découvrir
               </Link>
               <Link
                 href={`/catalogue/${e.slug}`}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-line hover:text-es"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-line hover:bg-paper-2"
               >
                 Le catalogue
               </Link>

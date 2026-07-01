@@ -12,8 +12,8 @@ export default function RencontresPage() {
       <header className="max-w-2xl">
         <h1 className="font-serif text-4xl font-semibold">Rencontres</h1>
         <p className="mt-3 text-ink-soft">
-          Présentations d&apos;ouvrages, débats et rencontres avec les autrices et
-          auteurs des deux maisons.
+          Présentations d&apos;ouvrages, débats et rencontres avec nos autrices
+          et auteurs.
         </p>
       </header>
 

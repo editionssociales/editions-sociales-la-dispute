@@ -11,13 +11,18 @@
   --color-muted: #8a8578;
   --color-line: #e4ded1;
 
-  /* Accents par maison d'édition */
-  --color-es: #b3131b;
-  --color-es-dark: #8f0f16;
-  --color-ld: #1f5560;
-  --color-ld-dark: #163e46;
+  /*
+   * Palette inspirée des couvertures Éditions sociales : blocs de couleur
+   * plats à poids égal (marine, bouteille, ocre, brique) — aucune couleur
+   * de marque dominante. L'action principale (boutons, liens) reste sur
+   * `ink`, ces accents ne servent qu'à distinguer collections/étiquettes.
+   */
+  --color-navy: #262a5c;
+  --color-bottle: #1f5c53;
+  --color-ocher: #c97a2b;
+  --color-brick: #a8422b;
 
-  --color-accent: #b3131b;
+  --color-accent: var(--color-navy);
 }
 
 :root {
@@ -37,8 +42,8 @@ h1, h2, h3, h4 {
 }
 
 ::selection {
-  background: var(--color-es);
-  color: #fff;
+  background: var(--color-ink);
+  color: var(--color-paper);
 }
 
 /* Rendu du HTML éditorial (présentations de livres, pages). */
@@ -47,7 +52,7 @@ h1, h2, h3, h4 {
   color: var(--color-ink-soft);
 }
 .prose-book p { margin: 0 0 1rem; }
-.prose-book a { color: var(--color-es); text-decoration: underline; text-underline-offset: 2px; }
+.prose-book a { color: var(--color-ink); text-decoration: underline; text-underline-offset: 2px; }
 .prose-book h2, .prose-book h3 { color: var(--color-ink); margin: 1.6rem 0 0.6rem; }
 .prose-book ul { list-style: disc; padding-left: 1.25rem; margin: 0 0 1rem; }
 .prose-book img { max-width: 100%; height: auto; border-radius: 0.25rem; }

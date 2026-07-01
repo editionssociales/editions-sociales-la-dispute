@@ -19,11 +19,11 @@ const spectral = Spectral({
 
 export const metadata: Metadata = {
   title: {
-    default: "Éditions sociales · La Dispute",
-    template: "%s — Éditions sociales · La Dispute",
+    default: "Les Éditions sociales x La Dispute",
+    template: "%s — Les Éditions sociales x La Dispute",
   },
   description:
-    "Le catalogue commun des Éditions sociales et de La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
+    "Les Éditions sociales x La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
 };
 
 export default function RootLayout({

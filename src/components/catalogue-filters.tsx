@@ -29,6 +29,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
       const next = new URLSearchParams(params.toString());
       if (value) next.set(key, value);
       else next.delete(key);
+      next.delete("page"); // toute modification de filtre revient à la page 1
       const qs = next.toString();
       startTransition(() => {
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -38,7 +39,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
   );
 
   const selectClass =
-    "w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink focus:border-es focus:outline-none";
+    "w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink focus:border-ink focus:outline-none";
 
   return (
     <div

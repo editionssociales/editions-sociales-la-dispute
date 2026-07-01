@@ -8,8 +8,6 @@ export interface EditionInfo {
   shortName: string;
   tagline: string;
   description: string;
-  /** Jeton d'accent CSS (`--edition-<accent>`). */
-  accent: "es" | "ld";
   legacyUrl: string;
 }
 
@@ -22,7 +20,6 @@ export const EDITIONS: Record<EditionSlug, EditionInfo> = {
     tagline: "La pensée critique et le mouvement ouvrier depuis 1927.",
     description:
       "Fondées en 1927, Les Éditions sociales publient les grands textes du marxisme, de la philosophie et des sciences sociales, ainsi que la recherche critique contemporaine.",
-    accent: "es",
     legacyUrl: "https://editionssociales.fr",
   },
   "la-dispute": {
@@ -33,7 +30,6 @@ export const EDITIONS: Record<EditionSlug, EditionInfo> = {
     tagline: "Sciences sociales, féminisme et critique.",
     description:
       "La Dispute publie des essais de sciences humaines et sociales, à la croisée de la recherche universitaire et des mouvements sociaux.",
-    accent: "ld",
     legacyUrl: "https://ladispute.fr",
   },
 };

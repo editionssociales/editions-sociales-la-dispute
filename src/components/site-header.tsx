@@ -3,9 +3,8 @@ import { Container } from "./container";
 
 const NAV = [
   { href: "/catalogue", label: "Catalogue" },
-  { href: "/editions", label: "Les maisons" },
+  { href: "/editions", label: "Nos collections" },
   { href: "/rencontres", label: "Rencontres" },
-  { href: "/boutique", label: "Boutique" },
   { href: "/a-propos", label: "À propos" },
 ];
 
@@ -13,15 +12,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
       <Container className="flex h-16 items-center justify-between gap-6">
-        <Link href="/" className="group flex flex-col leading-none">
-          <span className="font-serif text-lg font-semibold tracking-tight">
-            Éditions sociales
-            <span className="text-muted"> · </span>
-            La Dispute
-          </span>
-          <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
-            Une maison, deux catalogues
-          </span>
+        <Link href="/" className="font-serif text-lg font-semibold tracking-tight">
+          Les Éditions sociales <span className="text-muted">x</span> La Dispute
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
@@ -29,7 +21,7 @@ export function SiteHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-ink-soft transition-colors hover:text-es"
+              className="text-sm font-medium text-ink-soft transition-colors hover:text-ink"
             >
               {item.label}
             </Link>
@@ -38,7 +30,7 @@ export function SiteHeader() {
 
         <Link
           href="/souscription"
-          className="rounded-full bg-es px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-es-dark"
+          className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-opacity hover:opacity-90"
         >
           Souscrire
         </Link>

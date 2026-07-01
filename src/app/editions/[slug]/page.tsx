@@ -30,15 +30,9 @@ export default async function EditionPage({
 
   return (
     <>
-      <section
-        className="border-b border-line"
-        style={{ background: `color-mix(in srgb, var(--color-${info.accent}) 8%, var(--color-paper))` }}
-      >
+      <section className="border-b border-line bg-paper-2">
         <Container className="py-16">
-          <p
-            className="text-sm font-semibold uppercase tracking-[0.18em]"
-            style={{ color: `var(--color-${info.accent})` }}
-          >
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
             {info.name}
           </p>
           <h1 className="mt-3 max-w-3xl font-serif text-4xl font-semibold sm:text-5xl">
@@ -54,7 +48,7 @@ export default async function EditionPage({
       <Container className="py-12">
         <div className="mb-8 flex items-end justify-between">
           <h2 className="font-serif text-2xl font-semibold">Parutions récentes</h2>
-          <Link href={`/catalogue/${slug}`} className="text-sm font-semibold text-es hover:underline">
+          <Link href={`/catalogue/${slug}`} className="text-sm font-semibold text-ink hover:underline">
             Tout le catalogue →
           </Link>
         </div>

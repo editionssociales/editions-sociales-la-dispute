@@ -4,10 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBook } from "@/lib/catalogue";
 import { Container } from "@/components/container";
-import { EditionBadge } from "@/components/edition-badge";
+import { CollectionTag } from "@/components/collection-tag";
 import { BuyLinksList } from "@/components/buy-links";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
-import { excerptFromHtml, formatDateFr, formatPrice } from "@/lib/format";
+import { excerptFromHtml, formatDateFr } from "@/lib/format";
 
 export async function generateMetadata({
   params,
@@ -51,25 +51,28 @@ export default async function BookPage({
   return (
     <Container className="py-12">
       <nav className="mb-8 text-sm text-muted">
-        <Link href="/catalogue" className="hover:text-es">
+        <Link href="/catalogue" className="hover:text-ink">
           Catalogue
         </Link>{" "}
         /{" "}
-        <Link href={`/catalogue/${edition}`} className="hover:text-es">
+        <Link href={`/catalogue/${edition}`} className="hover:text-ink">
           {EDITIONS[edition].name}
         </Link>
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="relative aspect-[2/3] overflow-hidden rounded-sm bg-paper-2 ring-1 ring-line">
-            {book.coverUrl ? (
+          <div
+            className="relative w-full overflow-hidden rounded-sm bg-paper-2 ring-1 ring-line"
+            style={{ aspectRatio: book.cover ? `${book.cover.width} / ${book.cover.height}` : "2 / 3" }}
+          >
+            {book.cover ? (
               <Image
-                src={book.coverUrl}
+                src={book.cover.url}
                 alt={`Couverture de « ${book.title} »`}
                 fill
                 sizes="300px"
-                className="object-cover"
+                className="object-contain"
                 priority
               />
             ) : (
@@ -81,7 +84,7 @@ export default async function BookPage({
 
           <div className="mt-6">
             <p className="mb-2 text-sm font-semibold text-ink">Acheter</p>
-            <BuyLinksList buy={book.buy} />
+            <BuyLinksList book={book} />
           </div>
 
           <dl className="mt-6">
@@ -89,17 +92,16 @@ export default async function BookPage({
             <Info label="Parution" value={formatDateFr(book.publishedAt)} />
             <Info label="Pages" value={book.pages ? `${book.pages} p.` : null} />
             <Info label="ISBN" value={book.isbn} />
-            <Info label="Prix" value={formatPrice(book.price)} />
           </dl>
 
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
             {book.tocUrl && (
-              <a href={book.tocUrl} target="_blank" rel="noreferrer" className="text-es underline underline-offset-2">
+              <a href={book.tocUrl} target="_blank" rel="noreferrer" className="text-ink underline underline-offset-2">
                 Table des matières
               </a>
             )}
             {book.excerptUrl && (
-              <a href={book.excerptUrl} target="_blank" rel="noreferrer" className="text-es underline underline-offset-2">
+              <a href={book.excerptUrl} target="_blank" rel="noreferrer" className="text-ink underline underline-offset-2">
                 Extrait choisi
               </a>
             )}
@@ -107,7 +109,8 @@ export default async function BookPage({
         </div>
 
         <article>
-          <EditionBadge edition={edition} className="mb-3" />
+          <p className="mb-2 text-sm font-medium text-muted">{EDITIONS[edition].name}</p>
+          {book.collection && <CollectionTag collection={book.collection} className="mb-3" />}
           <h1 className="font-serif text-4xl font-semibold leading-tight">
             {book.title}
           </h1>

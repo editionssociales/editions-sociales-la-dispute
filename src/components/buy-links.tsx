@@ -1,39 +1,54 @@
-import type { BuyLinks } from "@/lib/types";
+import type { Book } from "@/lib/types";
+import { formatDateFr, formatPrice } from "@/lib/format";
 
-const OUTLETS: {
-  key: keyof BuyLinks;
-  label: string;
-  primary?: boolean;
-}[] = [
-  { key: "boutique", label: "Notre boutique", primary: true },
-  { key: "parislibrairies", label: "ParisLibrairies" },
-  { key: "lalibrairie", label: "LaLibrairie" },
-];
-
-export function BuyLinksList({ buy }: { buy: BuyLinks }) {
-  const available = OUTLETS.filter((o) => buy[o.key]);
-  if (available.length === 0) {
+export function BuyLinksList({ book }: { book: Book }) {
+  if (book.status === "upcoming") {
     return (
       <p className="text-sm text-muted">
-        Ce titre n&apos;est pas encore disponible à la vente en ligne.
+        À paraître{book.publishedAt ? ` le ${formatDateFr(book.publishedAt)}` : ""}.
       </p>
     );
   }
+  if (book.status === "unavailable") {
+    return (
+      <p className="text-sm text-muted">
+        Indisponible à la vente en ligne pour le moment.
+      </p>
+    );
+  }
+
+  const secondary = [
+    book.status !== "external" && book.buy.parislibrairies
+      ? { label: "ParisLibrairies", href: book.buy.parislibrairies }
+      : null,
+    book.status !== "external" && book.buy.lalibrairie
+      ? { label: "LaLibrairie", href: book.buy.lalibrairie }
+      : null,
+  ].filter((o): o is { label: string; href: string } => o != null);
+
   return (
     <div className="flex flex-wrap gap-2">
-      {available.map((o) => (
+      {book.permalink && (
         <a
-          key={o.key}
-          href={buy[o.key] as string}
+          href={book.permalink}
           target="_blank"
           rel="noreferrer"
-          className={
-            o.primary
-              ? "inline-flex items-center rounded-full bg-es px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-es-dark"
-              : "inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition-colors hover:border-es hover:text-es"
-          }
+          className="inline-flex items-center rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-opacity hover:opacity-90"
         >
-          {o.label}
+          {book.status === "available"
+            ? `Acheter${book.price != null ? ` · ${formatPrice(book.price)}` : ""}`
+            : "Voir en librairie"}
+        </a>
+      )}
+      {secondary.map((s) => (
+        <a
+          key={s.label}
+          href={s.href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition-colors hover:bg-paper-2"
+        >
+          {s.label}
         </a>
       ))}
     </div>

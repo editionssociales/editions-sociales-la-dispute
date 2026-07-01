@@ -1,6 +1,33 @@
 /**
  * Helpers de formatage — purs, réutilisables côté serveur comme client.
  */
+import type { PurchaseStatus } from "./types";
+
+const ACCENTS = ["navy", "bottle", "ocher", "brick"] as const;
+export type Accent = (typeof ACCENTS)[number];
+
+/**
+ * Choisit un accent parmi la palette à poids égal, de façon déterministe
+ * (même collection → même couleur), sans jamais privilégier une teinte.
+ */
+export function accentFor(key: string): Accent {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return ACCENTS[hash % ACCENTS.length];
+}
+
+export function purchaseLabel(status: PurchaseStatus): string {
+  switch (status) {
+    case "available":
+      return "En vente";
+    case "external":
+      return "Disponible en librairie";
+    case "upcoming":
+      return "À paraître";
+    case "unavailable":
+      return "Indisponible en ligne";
+  }
+}
 
 /**
  * Les auteurs sont stockés dans WordPress au format `Nom/Prénom`.

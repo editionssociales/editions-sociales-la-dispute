@@ -12,7 +12,7 @@ export function BookGrid({ books }: { books: Book[] }) {
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
       {books.map((book) => (
-        <BookCard key={`${book.edition}-${book.id}`} book={book} />
+        <BookCard key={`${book.origin}-${book.slug}`} book={book} />
       ))}
     </div>
   );
