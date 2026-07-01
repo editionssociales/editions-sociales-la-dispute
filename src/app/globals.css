@@ -1,26 +1,53 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-spectral), Georgia, "Times New Roman", serif;
+
+  --color-paper: #faf7f2;
+  --color-paper-2: #f2ece1;
+  --color-ink: #17140f;
+  --color-ink-soft: #4a463d;
+  --color-muted: #8a8578;
+  --color-line: #e4ded1;
+
+  /* Accents par maison d'édition */
+  --color-es: #b3131b;
+  --color-es-dark: #8f0f16;
+  --color-ld: #1f5560;
+  --color-ld-dark: #163e46;
+
+  --color-accent: #b3131b;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--color-es);
+  color: #fff;
+}
+
+/* Rendu du HTML éditorial (présentations de livres, pages). */
+.prose-book {
+  line-height: 1.7;
+  color: var(--color-ink-soft);
+}
+.prose-book p { margin: 0 0 1rem; }
+.prose-book a { color: var(--color-es); text-decoration: underline; text-underline-offset: 2px; }
+.prose-book h2, .prose-book h3 { color: var(--color-ink); margin: 1.6rem 0 0.6rem; }
+.prose-book ul { list-style: disc; padding-left: 1.25rem; margin: 0 0 1rem; }
+.prose-book img { max-width: 100%; height: auto; border-radius: 0.25rem; }

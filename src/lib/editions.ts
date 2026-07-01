@@ -1,0 +1,45 @@
+import type { EditionSlug, SourceKey } from "./types";
+
+export interface EditionInfo {
+  slug: EditionSlug;
+  /** Source de données (base OVH) associée. */
+  source: SourceKey;
+  name: string;
+  shortName: string;
+  tagline: string;
+  description: string;
+  /** Jeton d'accent CSS (`--edition-<accent>`). */
+  accent: "es" | "ld";
+  legacyUrl: string;
+}
+
+export const EDITIONS: Record<EditionSlug, EditionInfo> = {
+  "editions-sociales": {
+    slug: "editions-sociales",
+    source: "es",
+    name: "Les Éditions sociales",
+    shortName: "Éditions sociales",
+    tagline: "La pensée critique et le mouvement ouvrier depuis 1927.",
+    description:
+      "Fondées en 1927, Les Éditions sociales publient les grands textes du marxisme, de la philosophie et des sciences sociales, ainsi que la recherche critique contemporaine.",
+    accent: "es",
+    legacyUrl: "https://editionssociales.fr",
+  },
+  "la-dispute": {
+    slug: "la-dispute",
+    source: "ld",
+    name: "La Dispute",
+    shortName: "La Dispute",
+    tagline: "Sciences sociales, féminisme et critique.",
+    description:
+      "La Dispute publie des essais de sciences humaines et sociales, à la croisée de la recherche universitaire et des mouvements sociaux.",
+    accent: "ld",
+    legacyUrl: "https://ladispute.fr",
+  },
+};
+
+export const EDITION_LIST: EditionInfo[] = Object.values(EDITIONS);
+
+export function isEditionSlug(value: string): value is EditionSlug {
+  return value === "editions-sociales" || value === "la-dispute";
+}
