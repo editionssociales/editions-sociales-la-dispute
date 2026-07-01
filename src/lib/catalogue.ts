@@ -77,11 +77,19 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Ratio par défaut quand les dimensions réelles sont inconnues (rendu en `object-contain`, jamais recadré). */
+const DEFAULT_COVER_RATIO = { width: 2, height: 3 };
+
 function toCover(value?: WpCoverField | string | null): Cover | null {
   if (!value) return null;
-  if (typeof value === "string") return null; // ancienne forme sans dimensions
+  if (typeof value === "string") {
+    // Ancienne forme du mu-plugin (avant redéploiement) : URL brute sans dimensions.
+    const url = httpsify(value);
+    return url ? { url, ...DEFAULT_COVER_RATIO } : null;
+  }
   const url = httpsify(value.url);
-  return url ? { url, width: value.width, height: value.height } : null;
+  if (!url || !value.width || !value.height) return null;
+  return { url, width: value.width, height: value.height };
 }
 
 function baseBook(edition: EditionSlug, item: WpBook): Book {
@@ -167,7 +175,7 @@ function resolvePurchase(
 function productCover(p: WcProduct): Cover | null {
   const url = httpsify(p.images?.[0]?.src ?? null);
   // Dimensions inconnues côté Store API : ratio par défaut, rendu en `object-contain`.
-  return url ? { url, width: 2, height: 3 } : null;
+  return url ? { url, ...DEFAULT_COVER_RATIO } : null;
 }
 
 /** Transforme un produit boutique sans fiche catalogue en entrée de catalogue minimale. */

@@ -25,8 +25,8 @@ export default async function CataloguePage({
   const filters = parseBookFilters(await searchParams);
   const [allBooks, facets] = await Promise.all([getBooks(filters), getFacets(filters)]);
 
-  const page = filters.page ?? 1;
   const totalPages = Math.max(1, Math.ceil(allBooks.length / PAGE_SIZE));
+  const page = Math.min(Math.max(filters.page ?? 1, 1), totalPages);
   const books = allBooks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const hrefFor = (p: number) => {
