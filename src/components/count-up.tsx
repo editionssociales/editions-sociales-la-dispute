@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-const NUM_FR = new Intl.NumberFormat("fr-FR");
+import { useEffect, useState } from "react";
+import { formatInt } from "@/lib/format";
+import { useInView } from "@/hooks/use-in-view";
 
 /** Compteur animé : grimpe de 0 à `value` quand il devient visible. */
 export function CountUp({
@@ -16,40 +16,30 @@ export function CountUp({
   duration?: number;
   className?: string;
 }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
+  const [ref, inView] = useInView<HTMLSpanElement>({ threshold: 0.4 });
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || started.current) return;
-        started.current = true;
-        io.disconnect();
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          setDisplay(value);
-          return;
-        }
-        const t0 = performance.now();
-        const tick = (t: number) => {
-          const p = Math.min((t - t0) / duration, 1);
-          const eased = 1 - Math.pow(1 - p, 3);
-          setDisplay(Math.round(value * eased));
-          if (p < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      },
-      { threshold: 0.4 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [value, duration]);
+    if (!inView) return;
+    // Mouvement réduit : on saute à la valeur finale (première frame p=1), sans
+    // animer. `setDisplay` reste ainsi appelé dans un callback rAF, jamais
+    // synchronement dans le corps de l'effet.
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = reduce ? 1 : Math.min((t - t0) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setDisplay(Math.round(value * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, value, duration]);
 
   return (
     <span ref={ref} className={className}>
-      {NUM_FR.format(display)}
+      {formatInt(display)}
       {suffix}
     </span>
   );

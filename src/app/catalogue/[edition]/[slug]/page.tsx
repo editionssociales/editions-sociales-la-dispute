@@ -7,7 +7,8 @@ import { Container } from "@/components/container";
 import { CollectionTag } from "@/components/collection-tag";
 import { BuyLinksList } from "@/components/buy-links";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
-import { excerptFromHtml, formatDateFr } from "@/lib/format";
+import { formatDateFr } from "@/lib/format";
+import { cmsExcerpt } from "@/lib/cms-html";
 import { ACCENT_BG } from "@/lib/accents";
 
 export async function generateMetadata({
@@ -22,7 +23,7 @@ export async function generateMetadata({
   return {
     title: book.title,
     description:
-      excerptFromHtml(book.presentation, 160) ||
+      cmsExcerpt(book.presentation, 160) ||
       `${book.title} — ${EDITIONS[edition].name}`,
   };
 }

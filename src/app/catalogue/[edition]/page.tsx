@@ -6,9 +6,10 @@ import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
-import { parseBookFilters, serializeBookFilters } from "@/lib/parse-filters";
+import { parseBookFilters } from "@/lib/parse-filters";
+import { catalogueHref, paginate } from "@/lib/browse";
+import { FOCUS_RING, invertingCell } from "@/lib/ui";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
-import { PAGE_SIZE } from "@/lib/types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -65,9 +66,7 @@ function ThemeCell({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`relative flex flex-col justify-end gap-1.5 overflow-hidden px-[17px] py-[15px] transition-colors motion-reduce:transition-none focus-visible:z-[2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px] ${span} ${
-        active ? "bg-black text-white" : "bg-white text-black hover:bg-black hover:text-white"
-      }`}
+      className={`relative flex flex-col justify-end gap-1.5 overflow-hidden px-[17px] py-[15px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${FOCUS_RING} ${span} ${invertingCell(active)}`}
     >
       <span className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] ${textClass}`}>
         {label}
@@ -93,17 +92,12 @@ export default async function EditionCataloguePage({
   const filters = { ...parseBookFilters(await searchParams), edition };
   const [allBooks, facets] = await Promise.all([getBooks(filters), getFacets(filters)]);
 
-  const totalPages = Math.max(1, Math.ceil(allBooks.length / PAGE_SIZE));
-  const page = Math.min(Math.max(filters.page ?? 1, 1), totalPages);
-  const books = allBooks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { items: books, page, totalPages } = paginate(allBooks, filters.page);
   const isUpcoming = filters.upcoming === true;
   const basePath = `/catalogue/${edition}`;
 
-  const hrefFor = (p: number) => {
-    const qs = serializeBookFilters({ ...filters, edition: undefined, page: p > 1 ? p : undefined });
-    const s = qs.toString();
-    return s ? `${basePath}?${s}` : basePath;
-  };
+  const hrefFor = (p: number) =>
+    catalogueHref({ ...filters, edition: undefined, page: p }, basePath);
 
   const themeItems: { name: string; slug: string | null; count: number }[] = [
     { name: "Tous les livres", slug: null, count: facets.total },
@@ -157,17 +151,14 @@ export default async function EditionCataloguePage({
         {themeItems.map((item) => {
           const tier = themeTier(item.count);
           const active = (item.slug ?? undefined) === filters.collection;
-          const qs = serializeBookFilters({
-            ...filters,
-            edition: undefined,
-            collection: item.slug ?? undefined,
-            page: undefined,
-          });
-          const s = qs.toString();
+          const href = catalogueHref(
+            { ...filters, edition: undefined, collection: item.slug ?? undefined, page: undefined },
+            basePath,
+          );
           return (
             <ThemeCell
               key={item.slug ?? "all"}
-              href={s ? `${basePath}?${s}` : basePath}
+              href={href}
               active={active}
               span={tier.span}
               textClass={tier.text}

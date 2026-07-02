@@ -85,6 +85,13 @@ export function formatPrice(value?: number | null): string | null {
   return value == null ? null : PRICE_FR.format(value);
 }
 
+const INT_FR = new Intl.NumberFormat("fr-FR");
+
+/** Entier en notation française (séparateur de milliers) — compteurs, jauge. */
+export function formatInt(value: number): string {
+  return INT_FR.format(value);
+}
+
 /** Les médias historiques ont des URLs http ; on force https (SSL actif chez OVH). */
 export function httpsify(url?: string | null): string | null {
   if (!url) return null;
@@ -115,15 +122,4 @@ export function decodeEntities(input: string): string {
     }
     return NAMED_ENTITIES[entity] ?? match;
   });
-}
-
-/** Extrait un texte brut d'un contenu HTML (méta descriptions, aperçus). */
-export function excerptFromHtml(html: string, max = 200): string {
-  const text = html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\[[^\]]+\]/g, " ") // shortcodes WP
-    .replace(/&nbsp;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 }

@@ -1,41 +1,19 @@
 import "server-only";
 import { cache } from "react";
+import type { WcProduct } from "./catalogue-source";
 
 /**
- * Accès à la **WooCommerce Store API** (`/wp-json/wc/store/v1/…`), publique et
- * sans clé. Utilisé uniquement par `catalogue.ts` pour fusionner chaque livre
- * avec son produit boutique (prix, disponibilité, lien d'achat) — la boutique
- * n'est plus une section séparée, elle enrichit le catalogue unifié.
+ * Transport de la **WooCommerce Store API** (`/wp-json/wc/store/v1/…`), publique
+ * et sans clé. Adaptateur bas niveau utilisé par `catalogue-http.ts` pour
+ * fusionner chaque livre avec son produit boutique (prix, disponibilité, lien
+ * d'achat) — la boutique n'est plus une section séparée, elle enrichit le
+ * catalogue unifié. Les shapes + helpers purs vivent dans `catalogue-source.ts`.
  */
 
 const WC = process.env.WC_STORE_URL || "https://boutique.editionssociales.fr";
 const REVALIDATE = Number(process.env.WP_REVALIDATE ?? "3600");
 
-export interface WcProduct {
-  id: number;
-  name: string;
-  slug: string;
-  permalink: string;
-  is_purchasable: boolean;
-  is_in_stock: boolean;
-  prices?: { price: string; currency_minor_unit: number };
-  images?: { src: string }[];
-}
-
-export function priceOf(p: WcProduct): number | null {
-  const minor = p.prices?.currency_minor_unit ?? 2;
-  const raw = p.prices?.price != null ? Number(p.prices.price) : NaN;
-  return Number.isFinite(raw) ? raw / 10 ** minor : null;
-}
-
-/** Extrait le slug produit d'un lien boutique ACF (`…/produit/<slug>/`). */
-export function slugFromBoutiqueLink(link: string | null): string | null {
-  if (!link) return null;
-  const m = /\/produit\/([^/]+)\/?/.exec(link);
-  return m?.[1] ?? null;
-}
-
-/** Récupère l'intégralité des produits de la boutique (pagination interne). */
+/** Récupère l'intégralité des produits de la boutique (pagination interne, résilient). */
 export const getAllStoreProducts = cache(async (): Promise<WcProduct[]> => {
   const perPage = 100;
   const out: WcProduct[] = [];
@@ -48,6 +26,9 @@ export const getAllStoreProducts = cache(async (): Promise<WcProduct[]> => {
       );
       if (!res.ok) break;
       items = (await res.json()) as WcProduct[];
+      // Réponse 200 mais corps non-liste (erreur WP sérialisée, cache/proxy) :
+      // on dégrade en catalogue sans produits plutôt que de planter la page.
+      if (!Array.isArray(items)) break;
     } catch (err) {
       if (page === 1) console.error("[boutique] Store API indisponible:", err);
       break;

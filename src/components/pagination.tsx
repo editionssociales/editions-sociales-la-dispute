@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FOCUS_RING, invertingCell } from "@/lib/ui";
 
 interface Props {
   page: number;
@@ -7,13 +8,9 @@ interface Props {
   hrefFor: (page: number) => string;
 }
 
-/** Focus visible partagé : anneau jaune pop, lisible sur fond blanc comme noir. */
-const FOCUS_CLASS =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
-
 /** Flèches Précédent/Suivant — cellules carrées 40px de haut, grille encadrée. */
 function arrowClass(disabled: boolean): string {
-  return `flex h-10 items-center gap-1.5 bg-white px-4 text-sm font-bold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
+  return `flex h-10 items-center gap-1.5 bg-white px-4 text-sm font-bold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none ${FOCUS_RING} ${
     disabled ? "pointer-events-none text-black/30" : "hover:bg-black hover:text-white"
   }`;
 }
@@ -51,11 +48,7 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
             <Link
               href={hrefFor(p)}
               aria-current={p === page ? "page" : undefined}
-              className={`flex h-10 w-10 items-center justify-center text-sm font-bold transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
-                p === page
-                  ? "bg-black text-white"
-                  : "bg-white text-black hover:bg-black hover:text-white"
-              }`}
+              className={`flex h-10 w-10 items-center justify-center text-sm font-bold transition-colors motion-reduce:transition-none ${FOCUS_RING} ${invertingCell(p === page)}`}
             >
               {p}
             </Link>

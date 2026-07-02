@@ -5,8 +5,8 @@ import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
-import { parseBookFilters, serializeBookFilters } from "@/lib/parse-filters";
-import { PAGE_SIZE } from "@/lib/types";
+import { parseBookFilters } from "@/lib/parse-filters";
+import { catalogueHref, paginate } from "@/lib/browse";
 
 export const metadata: Metadata = {
   title: "Catalogue",
@@ -26,16 +26,10 @@ export default async function CataloguePage({
   const filters = parseBookFilters(await searchParams);
   const [allBooks, facets] = await Promise.all([getBooks(filters), getFacets(filters)]);
 
-  const totalPages = Math.max(1, Math.ceil(allBooks.length / PAGE_SIZE));
-  const page = Math.min(Math.max(filters.page ?? 1, 1), totalPages);
-  const books = allBooks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { items: books, page, totalPages } = paginate(allBooks, filters.page);
   const isUpcoming = filters.upcoming === true;
 
-  const hrefFor = (p: number) => {
-    const qs = serializeBookFilters({ ...filters, page: p > 1 ? p : undefined });
-    const s = qs.toString();
-    return s ? `/catalogue?${s}` : "/catalogue";
-  };
+  const hrefFor = (p: number) => catalogueHref({ ...filters, page: p });
 
   return (
     <Container className="bg-white py-12">

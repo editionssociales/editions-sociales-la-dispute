@@ -3,9 +3,19 @@
 import type { ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import type { Facet } from "@/lib/types";
+import type { BookFilters, Facet } from "@/lib/types";
 import { EDITION_LIST } from "@/lib/editions";
-import { FilterChips, type FilterChip } from "@/components/filter-chips";
+import { serializeBookFilters } from "@/lib/parse-filters";
+import {
+  activeChips,
+  clearFilters,
+  readFilters,
+  withFilter,
+  withoutFilter,
+  type FilterField,
+} from "@/lib/browse";
+import { FOCUS_RING, invertingCell } from "@/lib/ui";
+import { FilterChips } from "@/components/filter-chips";
 
 interface Props {
   collections: Facet[];
@@ -27,13 +37,11 @@ const SORTS = [
  * qui transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
  * par-dessus (recette « grille encadrée », voir AGENTS.md).
  */
-const FOCUS_CLASS =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
 const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-black";
-const FIELD_CLASS = `bg-white px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_CLASS}`;
+const FIELD_CLASS = `bg-white px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_RING}`;
 const SELECT_CLASS = `${FIELD_CLASS} cursor-pointer`;
 
-/** Étiquette cliquable (thème, maison) — inversion noir/blanc à l'état actif. */
+/** Étiquette cliquable (thème, maison) — cellule inversante à l'état actif. */
 function Tag({
   active,
   onClick,
@@ -48,9 +56,7 @@ function Tag({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${FOCUS_CLASS} ${
-        active ? "bg-black text-white" : "bg-white text-black hover:bg-black hover:text-white"
-      }`}
+      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${FOCUS_RING} ${invertingCell(active)}`}
     >
       {children}
     </button>
@@ -62,6 +68,8 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
   const pathname = usePathname();
   const params = useSearchParams();
   const [isPending, startTransition] = useTransition();
+
+  const filters = readFilters(params);
 
   // Valeur locale du champ de recherche, pour pouvoir le vider depuis les
   // chips. Si l'URL change sans passer par le champ (chips, navigation,
@@ -77,10 +85,11 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
     setQuery(urlQuery);
   }, [urlQuery, isPending]);
 
-  const navigate = useCallback(
-    (next: URLSearchParams) => {
-      next.delete("page"); // toute modification de filtre revient à la page 1
-      const qs = next.toString();
+  // Un seul encodeur, dans les deux sens : on lit l'URL en `BookFilters`
+  // (`readFilters`), on applique l'algèbre, on ré-encode via `serializeBookFilters`.
+  const pushFilters = useCallback(
+    (next: BookFilters) => {
+      const qs = serializeBookFilters(next).toString();
       startTransition(() => {
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
       });
@@ -88,58 +97,21 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
     [pathname, router],
   );
 
-  const setParam = useCallback(
-    (key: string, value: string) => {
-      const next = new URLSearchParams(params.toString());
-      if (value) next.set(key, value);
-      else next.delete(key);
-      navigate(next);
-    },
-    [params, navigate],
-  );
+  const setFilter = (field: FilterField, value: string) => pushFilters(withFilter(filters, field, value));
 
-  const removeFilter = useCallback(
-    (key: string) => {
-      if (key === "q") setQuery("");
-      setParam(key, "");
-    },
-    [setParam],
-  );
+  const removeFilter = (param: string) => {
+    if (param === "q") setQuery("");
+    pushFilters(withoutFilter(filters, param));
+  };
 
-  const clearAll = useCallback(() => {
+  const clearAll = () => {
     setQuery("");
-    const next = new URLSearchParams(params.toString());
-    for (const key of ["q", "edition", "collection", "author", "upcoming"]) next.delete(key);
-    navigate(next);
-  }, [params, navigate]);
+    pushFilters(clearFilters(filters));
+  };
 
-  const activeCollection = params.get("collection") ?? "";
-  const activeEdition = params.get("edition") ?? "";
-
-  // Chips des filtres actifs — libellés repris des facettes et des maisons.
-  const chips: FilterChip[] = [];
-  const q = params.get("q");
-  if (q) {
-    chips.push({ param: "q", type: "recherche", label: `« ${q} »` });
-  }
-  const edition = params.get("edition");
-  if (edition && !lockedEdition) {
-    const e = EDITION_LIST.find((x) => x.slug === edition);
-    chips.push({ param: "edition", type: "maison", label: e?.name ?? edition });
-  }
-  const collection = params.get("collection");
-  if (collection) {
-    const c = collections.find((x) => x.slug === collection);
-    chips.push({ param: "collection", type: "thème", label: c?.name ?? collection });
-  }
-  const author = params.get("author");
-  if (author) {
-    const a = authors.find((x) => x.slug === author);
-    chips.push({ param: "author", type: "auteur", label: a?.name ?? author });
-  }
-  if (params.get("upcoming") === "1") {
-    chips.push({ param: "upcoming", type: "statut", label: "À paraître" });
-  }
+  const activeCollection = filters.collection ?? "";
+  const activeEdition = filters.edition ?? "";
+  const chips = activeChips(filters, { collections, authors, lockedEdition });
 
   return (
     <div
@@ -152,14 +124,14 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
         aria-label="Thèmes et filtres du catalogue"
         className="flex flex-wrap items-stretch gap-[2px] bg-black p-[2px]"
       >
-        <Tag active={activeCollection === ""} onClick={() => setParam("collection", "")}>
+        <Tag active={activeCollection === ""} onClick={() => setFilter("collection", "")}>
           Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
         </Tag>
         {collections.map((c) => (
           <Tag
             key={c.slug}
             active={activeCollection === c.slug}
-            onClick={() => setParam("collection", c.slug)}
+            onClick={() => setFilter("collection", c.slug)}
           >
             {c.name} ({c.count})
           </Tag>
@@ -170,7 +142,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
             <Tag
               key={e.slug}
               active={activeEdition === e.slug}
-              onClick={() => setParam("edition", activeEdition === e.slug ? "" : e.slug)}
+              onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
             >
               {e.shortName}
             </Tag>
@@ -185,16 +157,16 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
             onChange={(e) => {
               lastPushed.current = e.target.value;
               setQuery(e.target.value);
-              setParam("q", e.target.value);
+              setFilter("q", e.target.value);
             }}
-            className={`w-full min-w-[190px] bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-black/40 ${CELL_TEXT} ${FOCUS_CLASS}`}
+            className={`w-full min-w-[190px] bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-black/40 ${CELL_TEXT} ${FOCUS_RING}`}
           />
         </label>
 
         <select
           aria-label="Auteur"
-          value={params.get("author") ?? ""}
-          onChange={(e) => setParam("author", e.target.value)}
+          value={filters.author ?? ""}
+          onChange={(e) => setFilter("author", e.target.value)}
           className={SELECT_CLASS}
         >
           <option value="">Tous les auteurs</option>
@@ -207,8 +179,8 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
 
         <select
           aria-label="Trier"
-          value={params.get("sort") ?? "recent"}
-          onChange={(e) => setParam("sort", e.target.value)}
+          value={filters.sort ?? "recent"}
+          onChange={(e) => setFilter("sort", e.target.value)}
           className={SELECT_CLASS}
         >
           {SORTS.map((s) => (

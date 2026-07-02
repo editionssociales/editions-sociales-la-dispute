@@ -6,6 +6,7 @@
  * ailleurs (liens vers d'autres librairies), à paraître, ou indisponible en
  * ligne — mais il reste toujours visible dans le même catalogue.
  */
+import type { SafeHtml } from "./cms-html";
 
 /** Clé technique d'une source de données (base OVH). */
 export type SourceKey = "es" | "ld" | "boutique";
@@ -66,10 +67,10 @@ export interface Book {
 
 /** Un livre avec ses champs de détail (fiche). */
 export interface BookDetail extends Book {
-  /** Présentation (HTML, ex-`post_content`). */
-  presentation: string;
-  /** « Pour aller plus loin » (HTML, champ ACF `plus_loin`). */
-  furtherReading: string | null;
+  /** Présentation (HTML nettoyé, ex-`post_content`). */
+  presentation: SafeHtml;
+  /** « Pour aller plus loin » (HTML nettoyé, champ ACF `plus_loin`). */
+  furtherReading: SafeHtml | null;
   /** Table des matières (PDF). */
   tocUrl: string | null;
   /** Extrait choisi (PDF). */

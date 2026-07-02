@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-const NUM_FR = new Intl.NumberFormat("fr-FR");
+import { formatInt } from "@/lib/format";
+import { useInView } from "@/hooks/use-in-view";
 
 type Marker = { value: number; label: string; reached: boolean };
 
@@ -10,6 +9,10 @@ type Marker = { value: number; label: string; reached: boolean };
  * Jauge de collecte : le fond porte les quatre couleurs de la palette en
  * blocs plats ; un cache couleur `line` se retire vers la droite à l'entrée
  * dans le viewport pour révéler la part collectée.
+ *
+ * Coquille de rendu : toute l'arithmétique de campagne (valeur, max, paliers
+ * atteints) est dérivée en amont par `lib/campaign` ; la jauge ne fait que
+ * peindre des positions et jouer l'effet de révélation.
  */
 export function Gauge({
   value,
@@ -22,25 +25,8 @@ export function Gauge({
   markers: Marker[];
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [filled, setFilled] = useState(false);
+  const [ref, filled] = useInView<HTMLDivElement>({ threshold: 0.4 });
   const pct = Math.min((value / max) * 100, 100);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setFilled(true);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.4 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   return (
     <div ref={ref} className={className}>
@@ -74,7 +60,7 @@ export function Gauge({
               style={{ left: `${left}%` }}
             >
               <span className="font-semibold text-ink">
-                {NUM_FR.format(m.value)}&nbsp;€{m.reached && " ✓"}
+                {formatInt(m.value)}&nbsp;€{m.reached && " ✓"}
               </span>
               <br />
               <span className="whitespace-nowrap">{m.label}</span>

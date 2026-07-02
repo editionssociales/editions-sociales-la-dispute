@@ -9,6 +9,7 @@ import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
+import { CAMPAIGN_2024 } from "@/lib/campaign";
 import { coverAspectRatio } from "@/lib/cover";
 import type { Accent } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
@@ -42,29 +43,10 @@ export const dynamic = "force-dynamic";
 /* ------------------------------------------------------------------ */
 /* Contenu repris de la campagne Ulule 2024                            */
 /* « Sauvez les Éditions sociales et La Dispute »                      */
+/*                                                                     */
+/* Faits + dérivations (collecte, paliers atteints, % de l'objectif,   */
+/* plafond de jauge, tuiles de stats) : voir lib/campaign.             */
 /* ------------------------------------------------------------------ */
-
-// Résultats finaux de la campagne (source : API Ulule).
-const CAMPAGNE_2024 = {
-  collecte: 85305,
-  objectifInitial: 50000,
-  contributeurs: 958,
-  messages: 419,
-  pourcentObjectif: 170,
-};
-
-const STATS_2024: { valeur: number; suffixe: string; label: string }[] = [
-  { valeur: CAMPAGNE_2024.collecte, suffixe: " €", label: "collectés en 39 jours" },
-  { valeur: CAMPAGNE_2024.contributeurs, suffixe: "", label: "contributeur·rices" },
-  { valeur: CAMPAGNE_2024.pourcentObjectif, suffixe: " %", label: "de l'objectif initial" },
-  { valeur: CAMPAGNE_2024.messages, suffixe: "", label: "messages de soutien" },
-];
-
-const PALIERS_2024 = [
-  { value: 50000, label: "Survie", reached: true },
-  { value: 75000, label: "Consolidation", reached: true },
-  { value: 100000, label: "Déploiement", reached: false },
-];
 
 // Les grands chantiers financés par la souscription (repris de la campagne).
 const CHANTIERS: { titre: string; desc: string; accent: Accent }[] = [
@@ -384,12 +366,12 @@ export default async function SouscriptionPage() {
             </p>
           </Reveal>
           <div className="mt-10 grid gap-[2px] bg-black p-[2px] sm:grid-cols-2 lg:grid-cols-4">
-            {STATS_2024.map((s, i) => (
+            {CAMPAIGN_2024.stats.map((s, i) => (
               <Reveal key={s.label} delay={i * 120} className="h-full">
                 <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
                   <CountUp
-                    value={s.valeur}
-                    suffix={s.suffixe}
+                    value={s.value}
+                    suffix={s.suffix}
                     className="font-sans text-4xl font-black italic text-black sm:text-5xl"
                   />
                   <p className="mt-1 text-sm font-semibold text-black">{s.label}</p>
@@ -400,9 +382,9 @@ export default async function SouscriptionPage() {
           <Reveal delay={200} className="mt-12">
             <div className="border-2 border-black bg-white p-6">
               <Gauge
-                value={CAMPAGNE_2024.collecte}
-                max={100000}
-                markers={PALIERS_2024}
+                value={CAMPAIGN_2024.gauge.value}
+                max={CAMPAIGN_2024.gauge.max}
+                markers={CAMPAIGN_2024.gauge.markers}
               />
             </div>
           </Reveal>

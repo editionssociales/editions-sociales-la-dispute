@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  NAV_HOUSES,
+  NAV_SECTIONS,
+  activeSections,
+  type NavSectionId,
+} from "@/lib/nav";
 
 /**
  * Navbar brutaliste — quadrillage noir 2px (conteneur `grid gap-[2px]
@@ -11,21 +17,31 @@ import { useEffect, useState } from "react";
  *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » | nav 2×2.
  * Mobile : empilé — 2 maisons pleine largeur, nav 2×2, puis « Nous soutenir ».
+ *
+ * Sections et maisons viennent du modèle de données `lib/nav` (label, href,
+ * matcher d'activité) ; ce composant n'ajoute que l'apparence.
  */
 
-type NavSection = "catalogue" | "geme" | "a-paraitre" | "agenda";
-
-const NAV_ACCENT_CLASS: Record<NavSection, string> = {
+const NAV_ACCENT_CLASS: Record<NavSectionId, string> = {
   catalogue: "bg-pop-pink",
   geme: "bg-pop-teal",
   "a-paraitre": "bg-pop-orange",
   agenda: "bg-pop-yellow",
 };
-const NAV_HOVER_CLASS: Record<NavSection, string> = {
+const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
   catalogue: "bg-white hover:bg-pop-pink",
   geme: "bg-white hover:bg-pop-teal",
   "a-paraitre": "bg-white hover:bg-pop-orange",
   agenda: "bg-white hover:bg-pop-yellow",
+};
+
+/** Placement en grille desktop (littéral : le JIT ne compile pas `col-start-${n}`). */
+const HOUSE_ROW = ["row-start-1", "row-start-2"];
+const SECTION_PLACEMENT: Record<NavSectionId, string> = {
+  catalogue: "col-start-3 row-start-1",
+  geme: "col-start-4 row-start-1",
+  "a-paraitre": "col-start-3 row-start-2",
+  agenda: "col-start-4 row-start-2",
 };
 
 // transition-all : la couleur (survol/actif) ET la taille (padding/police, au
@@ -49,7 +65,7 @@ function maisonCellClass(compact: boolean) {
   }`;
 }
 
-function navCellClass(section: NavSection, active: boolean, compact: boolean) {
+function navCellClass(section: NavSectionId, active: boolean, compact: boolean) {
   // Sur desktop la hauteur des cellules nav suit la rangée (py-0) ; le padding
   // vertical ne joue qu'en mobile.
   const size = compact
@@ -128,25 +144,9 @@ function SoutenirCell({ compact, placement }: { compact: boolean; placement: str
   );
 }
 
-/**
- * Section active d'après le pathname : sur l'accueil les 4 cellules restent
- * allumées ; sur une page de section, seule la cellule correspondante.
- */
-function useActiveSections(): Record<NavSection, boolean> {
-  const pathname = usePathname() ?? "/";
-  if (pathname === "/") {
-    return { catalogue: true, geme: true, "a-paraitre": true, agenda: true };
-  }
-  const isGeme = pathname.startsWith("/catalogue/editions-sociales");
-  const isCatalogue = pathname.startsWith("/catalogue") && !isGeme;
-  const isAgenda = pathname.startsWith("/rencontres");
-  return {
-    catalogue: isCatalogue,
-    geme: isGeme,
-    // À paraître partage /catalogue : on n'allume que CATALOGUE sur une section.
-    "a-paraitre": false,
-    agenda: isAgenda,
-  };
+/** Sections actives d'après le pathname (logique dans `lib/nav`). */
+function useActiveSections(): Record<NavSectionId, boolean> {
+  return activeSections(usePathname() ?? "/");
 }
 
 /**
@@ -195,92 +195,53 @@ export function SiteHeader() {
       <nav aria-label="Navigation principale" className="bg-black">
         {/* Mobile (< lg) : maisons pleine largeur, nav 2×2, puis « Nous soutenir ». */}
         <div className="grid grid-cols-2 gap-[2px] p-[2px] lg:hidden">
-          <Link href="/editions/la-dispute" className={`col-span-2 ${maisonCellClass(compact)}`}>
-            La Dispute
-          </Link>
-          <Link
-            href="/editions/editions-sociales"
-            className={`col-span-2 ${maisonCellClass(compact)}`}
-          >
-            Les Éditions sociales
-          </Link>
-          <Link
-            href="/catalogue"
-            aria-current={active.catalogue ? "page" : undefined}
-            className={navCellClass("catalogue", active.catalogue, compact)}
-          >
-            Catalogue
-          </Link>
-          <Link
-            href="/catalogue/editions-sociales?collection=geme"
-            aria-current={active.geme ? "page" : undefined}
-            className={navCellClass("geme", active.geme, compact)}
-          >
-            La Geme
-          </Link>
-          <Link
-            href="/catalogue?upcoming=1"
-            aria-current={active["a-paraitre"] ? "page" : undefined}
-            className={navCellClass("a-paraitre", active["a-paraitre"], compact)}
-          >
-            À paraître
-          </Link>
-          <Link
-            href="/rencontres"
-            aria-current={active.agenda ? "page" : undefined}
-            className={navCellClass("agenda", active.agenda, compact)}
-          >
-            Agenda
-          </Link>
+          {NAV_HOUSES.map((house) => (
+            <Link
+              key={house.href}
+              href={house.href}
+              className={`col-span-2 ${maisonCellClass(compact)}`}
+            >
+              {house.label}
+            </Link>
+          ))}
+          {NAV_SECTIONS.map((section) => (
+            <Link
+              key={section.id}
+              href={section.href}
+              aria-current={active[section.id] ? "page" : undefined}
+              className={navCellClass(section.id, active[section.id], compact)}
+            >
+              {section.label}
+            </Link>
+          ))}
           <SoutenirCell compact={compact} placement="col-span-2 py-4" />
         </div>
 
         {/* Desktop (lg+) : maisons | « Nous soutenir » | nav 2×2. */}
         <div className="hidden grid-cols-[1.3fr_1fr_0.9fr_0.9fr] grid-rows-2 gap-[2px] p-[2px] lg:grid">
-          <Link
-            href="/editions/la-dispute"
-            className={`col-start-1 row-start-1 ${maisonCellClass(compact)}`}
-          >
-            La Dispute
-          </Link>
-          <Link
-            href="/editions/editions-sociales"
-            className={`col-start-1 row-start-2 ${maisonCellClass(compact)}`}
-          >
-            Les Éditions sociales
-          </Link>
+          {NAV_HOUSES.map((house, i) => (
+            <Link
+              key={house.href}
+              href={house.href}
+              className={`col-start-1 ${HOUSE_ROW[i]} ${maisonCellClass(compact)}`}
+            >
+              {house.label}
+            </Link>
+          ))}
 
           {/* Cellule centrale (vide dans la maquette) : CTA « Nous soutenir ». */}
           <SoutenirCell compact={compact} placement="col-start-2 row-span-2 row-start-1" />
 
-          <Link
-            href="/catalogue"
-            aria-current={active.catalogue ? "page" : undefined}
-            className={`col-start-3 row-start-1 ${navCellClass("catalogue", active.catalogue, compact)}`}
-          >
-            Catalogue
-          </Link>
-          <Link
-            href="/catalogue/editions-sociales?collection=geme"
-            aria-current={active.geme ? "page" : undefined}
-            className={`col-start-4 row-start-1 ${navCellClass("geme", active.geme, compact)}`}
-          >
-            La Geme
-          </Link>
-          <Link
-            href="/catalogue?upcoming=1"
-            aria-current={active["a-paraitre"] ? "page" : undefined}
-            className={`col-start-3 row-start-2 ${navCellClass("a-paraitre", active["a-paraitre"], compact)}`}
-          >
-            À paraître
-          </Link>
-          <Link
-            href="/rencontres"
-            aria-current={active.agenda ? "page" : undefined}
-            className={`col-start-4 row-start-2 ${navCellClass("agenda", active.agenda, compact)}`}
-          >
-            Agenda
-          </Link>
+          {NAV_SECTIONS.map((section) => (
+            <Link
+              key={section.id}
+              href={section.href}
+              aria-current={active[section.id] ? "page" : undefined}
+              className={`${SECTION_PLACEMENT[section.id]} ${navCellClass(section.id, active[section.id], compact)}`}
+            >
+              {section.label}
+            </Link>
+          ))}
         </div>
       </nav>
     </header>

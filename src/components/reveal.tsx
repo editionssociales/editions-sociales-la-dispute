@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useInView } from "@/hooks/use-in-view";
 
 /**
  * Révèle son contenu (fondu + légère translation) à l'entrée dans le
@@ -15,24 +16,10 @@ export function Reveal({
   delay?: number;
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -40px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  const [ref, visible] = useInView<HTMLDivElement>({
+    threshold: 0.12,
+    rootMargin: "0px 0px -40px",
+  });
 
   return (
     <div
