@@ -288,11 +288,11 @@ function HeroShelf({ books }: { books: Book[] }) {
                 {book.authors[0] ? `, ${book.authors[0].name}` : ""}
               </span>
               {/* Titre, auteur, collection — fondu sous la barre de l'étagère.
-                  Même tampon (delay-150) que la sortie du livre au survol ;
-                  disparition immédiate au repos pour éviter tout chevauchement
-                  quand on balaie plusieurs dos. */}
+                  Même buffer que le livre : dwell de 150ms à l'aller, délai de
+                  440ms au repos pour rester synchrone avec le repli (l'animation
+                  déclenchée va au bout sans se couper). */}
               <span
-                className="pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:delay-150 group-focus-visible:opacity-100 group-focus-visible:delay-150 motion-reduce:transition-none"
+                className="pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 delay-[440ms] group-hover:opacity-100 group-hover:delay-150 group-focus-visible:opacity-100 group-focus-visible:delay-150 motion-reduce:transition-none"
                 style={{ left: -leftOffsets[i], top: "calc(100% + 16px)" }}
                 aria-hidden="true"
               >
