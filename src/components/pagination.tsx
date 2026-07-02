@@ -7,12 +7,16 @@ interface Props {
   hrefFor: (page: number) => string;
 }
 
-/** Flèches Précédent/Suivant — classes littérales complètes (contrainte JIT). */
+/** Parité clavier partagée : focus-visible = anneau ocre, cohérent avec le reste du site. */
+const FOCUS_CLASS =
+  "focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2";
+
+/** Flèches Précédent/Suivant — carrées 40px de haut, classes littérales complètes (contrainte JIT). */
 function arrowClass(disabled: boolean): string {
-  return `rounded-full px-4 py-2 text-sm font-medium transition-all motion-reduce:transition-none ${
+  return `flex h-10 items-center gap-1.5 border px-4 text-sm font-medium transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
     disabled
-      ? "pointer-events-none text-muted ring-1 ring-inset ring-line/60"
-      : "text-ink-soft ring-1 ring-inset ring-line hover:-translate-y-0.5 hover:bg-paper-2"
+      ? "pointer-events-none border-line/60 text-muted"
+      : "border-line bg-paper-2 text-ink-soft hover:bg-ink hover:text-paper"
   }`;
 }
 
@@ -25,17 +29,17 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
   return (
     <nav
       aria-label="Pagination"
-      className="mt-12 flex flex-wrap items-center justify-center gap-2"
+      className="mt-12 flex flex-wrap items-center justify-center gap-1.5"
     >
-      <Link
-        href={hrefFor(Math.max(1, page - 1))}
-        aria-disabled={page <= 1}
-        className={arrowClass(page <= 1)}
-      >
-        ← Précédent
-      </Link>
+      {page <= 1 ? (
+        <span className={arrowClass(true)}>← Précédent</span>
+      ) : (
+        <Link href={hrefFor(page - 1)} className={arrowClass(false)}>
+          ← Précédent
+        </Link>
+      )}
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {items.map((p, i) => (
           <span key={p} className="flex items-center">
             {i > 0 && p - items[i - 1] > 1 && (
@@ -46,10 +50,10 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
             <Link
               href={hrefFor(p)}
               aria-current={p === page ? "page" : undefined}
-              className={`min-w-9 rounded-full px-2.5 py-2 text-center text-sm transition-all motion-reduce:transition-none ${
+              className={`flex h-10 w-10 items-center justify-center border text-sm transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
                 p === page
-                  ? "bg-ink font-semibold text-paper"
-                  : "font-medium text-ink-soft hover:bg-paper-2 hover:ring-1 hover:ring-inset hover:ring-line"
+                  ? "border-ink bg-ink font-semibold text-paper"
+                  : "border-line bg-paper-2 font-medium text-ink-soft hover:bg-ink hover:text-paper"
               }`}
             >
               {p}
@@ -58,13 +62,13 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
         ))}
       </div>
 
-      <Link
-        href={hrefFor(Math.min(totalPages, page + 1))}
-        aria-disabled={page >= totalPages}
-        className={arrowClass(page >= totalPages)}
-      >
-        Suivant →
-      </Link>
+      {page >= totalPages ? (
+        <span className={arrowClass(true)}>Suivant →</span>
+      ) : (
+        <Link href={hrefFor(page + 1)} className={arrowClass(false)}>
+          Suivant →
+        </Link>
+      )}
     </nav>
   );
 }

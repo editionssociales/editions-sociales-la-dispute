@@ -224,7 +224,7 @@ export const getAllBooks = cache(async (): Promise<Book[]> => {
   return [...merged, ...extras];
 });
 
-const FILTER_KEYS = ["edition", "collection", "author", "q"] as const;
+const FILTER_KEYS = ["edition", "collection", "author", "q", "upcoming"] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 
 function matches(book: Book, filters: BookFilters, key: FilterKey): boolean {
@@ -243,6 +243,9 @@ function matches(book: Book, filters: BookFilters, key: FilterKey): boolean {
         book.authors.some((a) => a.name.toLowerCase().includes(needle))
       );
     }
+    case "upcoming":
+      // Le statut est résolu par `resolvePurchase` (boutique + dates) avant tout filtrage.
+      return !filters.upcoming || book.status === "upcoming";
   }
 }
 
@@ -297,13 +300,17 @@ function tally(books: Book[], terms: (b: Book) => Term[]): Facet[] {
  */
 export async function getFacets(
   filters: BookFilters = {},
-): Promise<{ collections: Facet[]; authors: Facet[] }> {
+): Promise<{ collections: Facet[]; authors: Facet[]; total: number }> {
   const all = await getAllBooks();
   const forCollections = filterBooks(all, filters, ["collection"]);
   const forAuthors = filterBooks(all, filters, ["author"]);
   return {
     collections: tally(forCollections, (b) => (b.collection ? [b.collection] : [])),
     authors: tally(forAuthors, (b) => b.authors),
+    // Total de la cellule « Tous les livres » du menu thèmes : les mêmes livres
+    // que la tally des collections (toutes les dimensions sauf collection),
+    // pas `allBooks.length` qui serait déjà restreint si une collection est active.
+    total: forCollections.length,
   };
 }
 

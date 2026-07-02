@@ -19,9 +19,10 @@ const SORTS = [
   { value: "titre", label: "Titre (A–Z)" },
 ];
 
-/** Champs de filtres — classes littérales complètes (contrainte JIT). */
+/** Champs de filtres — carrés, sans rounded, posés directement sur le fond paper de la page. */
 const FIELD_CLASS =
-  "w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm text-ink transition-shadow focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/25 motion-reduce:transition-none";
+  "border border-line bg-paper-2 px-3.5 py-2.5 text-sm text-ink transition-shadow focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-[-1px] motion-reduce:transition-none";
+const SELECT_CLASS = `${FIELD_CLASS} cursor-pointer`;
 
 export function CatalogueFilters({ collections, authors, lockedEdition }: Props) {
   const router = useRouter();
@@ -75,7 +76,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
   const clearAll = useCallback(() => {
     setQuery("");
     const next = new URLSearchParams(params.toString());
-    for (const key of ["q", "edition", "collection", "author"]) next.delete(key);
+    for (const key of ["q", "edition", "collection", "author", "upcoming"]) next.delete(key);
     navigate(next);
   }, [params, navigate]);
 
@@ -116,6 +117,9 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
       accent: "brick",
     });
   }
+  if (params.get("upcoming") === "1") {
+    chips.push({ param: "upcoming", type: "statut", label: "À paraître", accent: "ocher" });
+  }
 
   return (
     <div
@@ -123,12 +127,12 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
         isPending ? "opacity-70" : ""
       }`}
     >
-      <div
-        className={`grid gap-3 sm:grid-cols-2 ${
-          lockedEdition ? "lg:grid-cols-4" : "lg:grid-cols-5"
-        }`}
-      >
-        <label className="lg:col-span-1">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="mr-0.5 shrink-0 text-[11px] font-semibold uppercase tracking-[.16em] text-muted">
+          Affiner
+        </span>
+
+        <label className="block">
           <span className="sr-only">Rechercher</span>
           <input
             type="search"
@@ -139,7 +143,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
               setQuery(e.target.value);
               setParam("q", e.target.value);
             }}
-            className={FIELD_CLASS}
+            className={`${FIELD_CLASS} w-full min-w-[230px] sm:w-[230px]`}
           />
         </label>
 
@@ -148,7 +152,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
             aria-label="Maison d'édition"
             value={params.get("edition") ?? ""}
             onChange={(e) => setParam("edition", e.target.value)}
-            className={FIELD_CLASS}
+            className={SELECT_CLASS}
           >
             <option value="">Toutes les maisons</option>
             {EDITION_LIST.map((e) => (
@@ -163,7 +167,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
           aria-label="Collection"
           value={params.get("collection") ?? ""}
           onChange={(e) => setParam("collection", e.target.value)}
-          className={FIELD_CLASS}
+          className={SELECT_CLASS}
         >
           <option value="">Toutes les collections</option>
           {collections.map((c) => (
@@ -177,7 +181,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
           aria-label="Auteur"
           value={params.get("author") ?? ""}
           onChange={(e) => setParam("author", e.target.value)}
-          className={FIELD_CLASS}
+          className={SELECT_CLASS}
         >
           <option value="">Tous les auteurs</option>
           {authors.map((a) => (
@@ -191,7 +195,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
           aria-label="Trier"
           value={params.get("sort") ?? "recent"}
           onChange={(e) => setParam("sort", e.target.value)}
-          className={FIELD_CLASS}
+          className={SELECT_CLASS}
         >
           {SORTS.map((s) => (
             <option key={s.value} value={s.value}>

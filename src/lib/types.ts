@@ -84,6 +84,8 @@ export interface BookFilters {
   q?: string;
   sort?: BookSort;
   page?: number;
+  /** Ne garder que les livres à paraître (cible du bloc « À paraître » de la navbar). */
+  upcoming?: boolean;
 }
 
 export type BookSort = "recent" | "ancien" | "titre";

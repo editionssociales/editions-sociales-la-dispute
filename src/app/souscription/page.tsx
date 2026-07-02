@@ -252,21 +252,20 @@ const SPINES: { h: number; w: number }[] = [
   { h: 116, w: 28 },
 ];
 const SHELF_GAP = 6; // = gap-1.5 entre les dos
-/** Hauteur d'une couverture dépliée ; le texte fond dans le vide au-dessus. */
-const COVER_H = 160;
-
-// Classes littérales complètes (contrainte JIT) : le dos s'ouvre vers la
-// droite sur la moitié gauche de l'étagère, vers la gauche sur l'autre.
-const MORPH_SIDE = {
-  left: "left-0 origin-bottom-left group-hover:[transform:perspective(700px)_rotateY(-14deg)] group-focus-visible:[transform:perspective(700px)_rotateY(-14deg)]",
-  right: "right-0 origin-bottom-right group-hover:[transform:perspective(700px)_rotateY(14deg)] group-focus-visible:[transform:perspective(700px)_rotateY(14deg)]",
-} as const;
+/**
+ * Position (bottom, px) du bloc titre/auteur/collection : cale au-dessus de
+ * la plus haute couverture ouverte — la couverture ayant désormais la même
+ * hauteur que son dos (continuité physique), pas de hauteur uniforme — plus
+ * 40px de respiration, comme le COVER_H + 40 du prototype.
+ */
+const TEXT_BLOCK_BOTTOM = Math.max(...SPINES.map((s) => s.h)) + 40;
 
 /**
- * Étagère du héro : chaque dos dessiné porte une parution récente réelle.
- * Au survol ou au focus clavier, le rectangle lui-même morphe vers les
- * dimensions de la couverture (légère rotation 3D, comme un livre qu'on
- * tourne vers soi) et la couverture s'y fond ; titre, auteur et collection
+ * Étagère du héro : chaque dos dessiné porte une parution récente réelle. Au
+ * survol ou au focus clavier, le livre sort du rayon en 3D : il pivote sur
+ * l'arête de sa reliure (bord droit du dos) pour présenter sa couverture,
+ * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
+ * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
  * apparaissent en typo nue dans le vide au-dessus. CSS pur, aucun JS client.
  */
 function HeroShelf({ books }: { books: Book[] }) {
@@ -294,12 +293,13 @@ function HeroShelf({ books }: { books: Book[] }) {
             Math.max(book.cover.width / book.cover.height, 0.55),
             0.8,
           );
-          const side = i < SPINES.length / 2 ? MORPH_SIDE.left : MORPH_SIDE.right;
+          // Couverture physiquement continue : même hauteur que le dos.
+          const coverWidth = Math.round(s.h * ratio);
           return (
             <Link
               key={i}
               href={`/catalogue/${book.edition}/${book.slug}`}
-              className="group relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] hover:z-20 focus-visible:z-20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paper"
+              className={`book3d${i < 2 ? " book3d--edge" : ""} group relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] hover:z-30 focus-visible:z-30 focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-[-3px]`}
               style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
             >
               <span className="sr-only">
@@ -309,41 +309,45 @@ function HeroShelf({ books }: { books: Book[] }) {
               {/* Titre, auteur, collection — fondu dans l'espace vide au-dessus */}
               <span
                 className="pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
-                style={{ left: -leftOffsets[i], bottom: COVER_H + 20 }}
+                style={{ left: -leftOffsets[i], bottom: TEXT_BLOCK_BOTTOM }}
                 aria-hidden="true"
               >
-                <span className="block text-sm font-semibold text-paper">
+                <span className="block font-serif text-sm font-semibold text-paper">
                   {book.title}
                 </span>
                 {book.authors.length > 0 && (
-                  <span className="block text-sm text-paper/75">
+                  <span className="block text-sm text-paper/72">
                     {book.authors.map((a) => a.name).join(", ")}
                   </span>
                 )}
                 {book.collection && (
-                  <span className="mt-0.5 block text-xs text-paper/55">
+                  <span className="mt-0.5 block text-xs tracking-wide text-paper/50">
                     {book.collection.name}
                   </span>
                 )}
               </span>
-              {/* Le dos dessiné, qui morphe vers les dimensions de la couverture */}
-              <span
-                className={`absolute bottom-0 block h-full w-full overflow-hidden rounded-t-sm ${BG[ACCENTS[i % 4]]} transition-all duration-300 ease-out group-hover:h-[var(--ch)] group-hover:w-[var(--cw)] group-focus-visible:h-[var(--ch)] group-focus-visible:w-[var(--cw)] motion-reduce:transition-none ${side}`}
+              {/* Sortie 3D : le dos pivote sur son arête de reliure pour présenter sa couverture */}
+              <div
+                className="book3d-inner"
                 style={
                   {
-                    "--cw": `${Math.round(COVER_H * ratio)}px`,
-                    "--ch": `${COVER_H}px`,
+                    "--w": `${s.w}px`,
+                    "--h": `${s.h}px`,
+                    "--cw": `${coverWidth}px`,
                   } as React.CSSProperties
                 }
               >
-                <Image
-                  src={book.cover.url}
-                  alt=""
-                  fill
-                  sizes="128px"
-                  className="object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
-                />
-              </span>
+                <div className={`book3d-spine ${BG[ACCENTS[i % 4]]}`} />
+                <div className="book3d-cover">
+                  <Image
+                    src={book.cover.url}
+                    alt=""
+                    fill
+                    sizes="128px"
+                    className="object-cover"
+                  />
+                </div>
+              </div>
             </Link>
           );
         })}
