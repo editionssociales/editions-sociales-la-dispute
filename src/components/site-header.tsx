@@ -37,6 +37,12 @@ const FOCUS_DARK =
 const FOCUS_LIGHT =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white";
 
+// Fondu/échelle des deux calques du CTA « Nous soutenir » (cf. SoutenirCell) :
+// on anime opacité + transform (compositables, continus) et JAMAIS la police
+// d'un même libellé — dont le reflow 2 lignes ↔ 1 ligne « sauterait ».
+const MORPH_TRANSITION =
+  "transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none";
+
 function maisonCellClass(compact: boolean) {
   return `flex items-center bg-white px-6 font-sans font-bold italic uppercase leading-none tracking-[.01em] text-black hover:bg-black hover:text-white ${CELL_TRANSITION} ${FOCUS_DARK} ${
     compact ? "py-3 text-[14px]" : "py-7 text-[clamp(18px,1.5vw,23px)]"
@@ -54,41 +60,67 @@ function navCellClass(section: NavSection, active: boolean, compact: boolean) {
   }`;
 }
 
-function soutenirClass(compact: boolean, placement: string) {
-  // CTA « Nous soutenir » nettement grossi (~×3 vs les 14/12px d'origine) pour en
-  // faire le point d'accroche du header ; fluide (clamp) pour rester contenu sur
-  // mobile tout en atteignant la cible sur desktop. `relative` ancre la flèche
-  // posée en absolu dans le coin bas-droit (cf. SoutenirCell) : le libellé reste
-  // centré et la disposition est identique en navbar déployée ou compactée.
-  return `relative flex items-center justify-center bg-black px-4 text-center font-sans font-extrabold italic uppercase leading-[0.95] tracking-[.06em] text-white hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_LIGHT} ${
-    compact
-      ? // Compacté : libellé + flèche alignés sur une même ligne flex (gap-3),
-        // centrés verticalement — jamais de chevauchement. Le libellé est réduit
-        // pour tenir à côté de la grande flèche dans une cellule étroite.
-        "gap-3 text-[clamp(20px,2vw,28px)]"
-      : "text-[clamp(30px,3.2vw,42px)]"
-  } ${placement}`;
+function soutenirClass(placement: string) {
+  // Conteneur du CTA « Nous soutenir » : styles COMMUNS aux deux états (fond,
+  // survol, focus, graisse). Ni la taille ni le nombre de lignes ne sont animés
+  // ici — deux calques empilés s'en chargent (cf. SoutenirCell). `grid` sert de
+  // pile : les deux calques occupent la MÊME cellule ([grid-area:1/1]). `relative`
+  // ancre la flèche déployée (hors des calques, pour garder sa position d'origine).
+  return `relative grid bg-black px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-white hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_LIGHT} ${placement}`;
 }
 
 /**
- * Cellule CTA « Nous soutenir » : libellé centré dans la cellule, flèche « → »
- * calée en absolu dans le coin bas-droit — même disposition, navbar déployée
- * comme compactée. `placement` positionne la cellule dans chaque grille.
+ * Cellule CTA « Nous soutenir ». Deux calques SUPERPOSÉS dans la même cellule de
+ * grille ([grid-area:1/1]), chacun figé dans sa mise en page — on ne redimensionne
+ * jamais un libellé unique (dont le passage 2 lignes → 1 ligne « sauterait ») :
+ *
+ *  • calque DÉPLOYÉ  — grand corps, libellé sur ~2 lignes, flèche au coin bas-droit ;
+ *  • calque COMPACT  — corps réduit, libellé sur 1 ligne aligné à une grande flèche.
+ *
+ * On croise leur opacité + une légère échelle (grossit en se déployant, rétrécit
+ * en se compactant) : morphing fluide et continu, sans reflow. Le libellé est
+ * dupliqué visuellement mais chaque calque est `aria-hidden` ; le nom accessible
+ * unique et stable vient de l'`aria-label` du lien. `placement` place la cellule.
  */
 function SoutenirCell({ compact, placement }: { compact: boolean; placement: string }) {
   return (
-    <Link href="/souscription" className={soutenirClass(compact, placement)}>
-      <span className={compact ? "min-w-0" : undefined}>Nous soutenir</span>
+    <Link
+      href="/souscription"
+      aria-label="Nous soutenir"
+      className={soutenirClass(placement)}
+    >
+      {/* Calque DÉPLOYÉ : grand libellé (~2 lignes). Visible en haut de page ;
+          s'efface en rétrécissant au compactage. */}
       <span
         aria-hidden="true"
-        className={
-          compact
-            ? // En flux, centrée verticalement par le flex parent, séparée par gap-3 ;
-              // flèche réduite (cellule étroite) au diapason du libellé compacté.
-              "flex-none text-[clamp(22px,2.2vw,30px)] leading-none"
-            : // Déployée : posée en absolu dans le coin bas-droit, sous le libellé.
-              "pointer-events-none absolute bottom-2 right-4 text-[clamp(32px,3vw,44px)] leading-none"
-        }
+        className={`flex items-center justify-center [grid-area:1/1] ${MORPH_TRANSITION} ${
+          compact ? "scale-90 opacity-0" : "scale-100 opacity-100"
+        }`}
+      >
+        <span className="leading-[0.95] text-[clamp(30px,3.2vw,42px)]">Nous soutenir</span>
+      </span>
+
+      {/* Calque COMPACT : libellé 1 ligne + flèche alignés. Apparaît en rétrécissant au compactage. */}
+      <span
+        aria-hidden="true"
+        className={`flex items-center justify-center gap-3 [grid-area:1/1] ${MORPH_TRANSITION} ${
+          compact ? "scale-100 opacity-100" : "scale-110 opacity-0"
+        }`}
+      >
+        <span className="whitespace-nowrap leading-none text-[clamp(20px,2vw,28px)]">
+          Nous soutenir
+        </span>
+        <span className="flex-none leading-none text-[clamp(22px,2.2vw,30px)]">→</span>
+      </span>
+
+      {/* Flèche du calque déployé : ancrée au coin bas-droit de la cellule, contre le
+          lien (hors des calques transformés, pour garder sa position d'origine) ;
+          s'efface avec le grand libellé. */}
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute bottom-2 right-4 leading-none text-[clamp(32px,3vw,44px)] ${MORPH_TRANSITION} ${
+          compact ? "scale-90 opacity-0" : "scale-100 opacity-100"
+        }`}
       >
         →
       </span>
