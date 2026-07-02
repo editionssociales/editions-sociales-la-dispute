@@ -42,25 +42,45 @@ function easeOutBack(x: number): number {
  * légende sous le rail. Les transformations suivent le défilement image par
  * image (aucun re-rendu par pixel) ; la navigation (flèches, fin de glissé,
  * focus clavier) recentre avec un léger ressort.
+ *
+ * BOUCLE INFINIE : le catalogue est répété en plusieurs copies ; dès que la
+ * couverture centrée quitte la copie « canonique » (centrale), on ramène
+ * scrollLeft dans cette copie par saut d'un pas entier — le contenu étant
+ * identique, le saut est invisible. On défile donc sans fin, sans jamais de
+ * vide à gauche ni à droite. Seule la copie centrale est exposée au clavier et
+ * aux lecteurs d'écran (les autres sont `aria-hidden` / non focusables).
  */
 export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
-  // Départ centré sur le 2e livre (index 1) : la 1re couverture remplit alors le
-  // bord gauche, ce qui évite le grand vide qu'un 1er livre centré y laissait.
-  const initialIndex = books.length > 1 ? 1 : 0;
+  const n = books.length;
+  // On ne boucle qu'à partir de deux livres (un seul : rien à faire tourner).
+  const LOOP = n > 1;
+  // Assez de copies pour garnir le viewport de part et d'autre du centre, même
+  // avec peu de livres (≈ 12 cartes minimum au total).
+  const COPIES = LOOP ? Math.max(3, Math.ceil(12 / n)) : 1;
+  const MIDDLE = Math.floor(COPIES / 2); // copie « canonique » (centrale)
+  const middleStart = MIDDLE * n; // indice de sa 1re carte dans le rail cloné
+  // Carte centrée au départ : la 1re de la copie centrale — ses voisines de
+  // gauche (fin de la copie précédente) remplissent d'emblée le bord gauche.
+  const startIndex = LOOP ? middleStart : 0;
+
   const trackRef = useRef<HTMLUListElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const rafRef = useRef(0);
   const animRef = useRef(0);
-  const activeRef = useRef(initialIndex);
+  const activeRef = useRef(startIndex);
+  // Pas de la boucle (px) : distance entre une carte et son homologue de la
+  // copie suivante. Mesurée après mise en page (largeurs = ratios réels).
+  const setAdvanceRef = useRef(0);
   // Passe à true dès que l'utilisateur pilote le scroll (molette, glissé,
   // flèches, focus). On cesse alors de recentrer automatiquement au chargement
   // des couvertures — sinon ces recentrages contrarient son défilement pendant
   // les ~5 s où les images arrivent.
   const engagedRef = useRef(false);
-  const [active, setActive] = useState(initialIndex);
+  const [active, setActive] = useState(startIndex);
 
   /** Ajuste les marges de début/fin pour que la 1re et la dernière couverture
-   *  (de largeurs variables) puissent se centrer dans le viewport. */
+   *  (de largeurs variables) puissent se centrer dans le viewport. Inutile en
+   *  mode boucle (il y a toujours du contenu de part et d'autre). */
   const applyEndPadding = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
@@ -73,8 +93,51 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     el.style.paddingRight = `${Math.max(16, (cw - last) / 2)}px`;
   }, []);
 
+  /** Mesure le pas de la boucle : écart de centre entre la carte 0 et son
+   *  homologue de la copie suivante (carte n). Robuste aux largeurs variables. */
+  const measureAdvance = useCallback(() => {
+    const el = trackRef.current;
+    if (!el || !LOOP) return;
+    const cards = el.querySelectorAll<HTMLElement>("[data-card]");
+    if (cards.length <= n) return;
+    const a = cards[0].getBoundingClientRect();
+    const b = cards[n].getBoundingClientRect();
+    const adv = b.left + b.width / 2 - (a.left + a.width / 2);
+    if (adv > 0) setAdvanceRef.current = adv;
+  }, [LOOP, n]);
+
+  /** Cœur de la boucle : si la carte centrée sort de la copie centrale, on
+   *  ramène scrollLeft dans cette copie par sauts d'un pas entier (contenu
+   *  identique → saut invisible). On s'abstient pendant une animation/un glissé
+   *  et quand le focus clavier vit dans le rail (il reste en copie centrale, en
+   *  bande — un saut l'écarterait visuellement du centre). */
+  const maybeWrap = useCallback(() => {
+    const el = trackRef.current;
+    if (!el || !LOOP) return;
+    if (animRef.current || dragRef.current) return;
+    if (typeof document !== "undefined" && el.contains(document.activeElement)) return;
+    const advance = setAdvanceRef.current;
+    if (!advance) return;
+    let a = activeRef.current;
+    let shifted = false;
+    // Toujours ramener vers le centre : ces sauts éloignent des bords, jamais
+    // au-delà — pas de dépassement de scrollLeft à gérer.
+    while (a < middleStart) {
+      el.scrollLeft += advance;
+      a += n;
+      shifted = true;
+    }
+    while (a >= middleStart + n) {
+      el.scrollLeft -= advance;
+      a -= n;
+      shifted = true;
+    }
+    if (shifted) activeRef.current = a;
+  }, [LOOP, n, middleStart]);
+
   /** Applique échelle / opacité / profondeur à chaque couverture selon sa
-   *  distance au centre du viewport, et retient l'indice le plus centré. */
+   *  distance au centre du viewport, retient l'indice le plus centré, puis
+   *  recale la boucle. */
   const paint = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
@@ -118,7 +181,9 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       activeRef.current = nearest;
       setActive(nearest);
     }
-  }, []);
+
+    if (LOOP) maybeWrap();
+  }, [LOOP, maybeWrap]);
 
   const schedulePaint = useCallback(() => {
     if (rafRef.current) return;
@@ -129,43 +194,47 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   }, [paint]);
 
   /** Anime scrollLeft vers `target` avec un léger ressort (ou saut immédiat en reduced-motion). */
-  const springTo = useCallback((target: number) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    const dest = Math.max(0, Math.min(max, target));
-    if (animRef.current) cancelAnimationFrame(animRef.current);
-    // Le scroll-snap `mandatory` ramène de force scrollLeft sur un point de snap
-    // à chaque frame : tant qu'on pilote le scroll en JS il faut le neutraliser,
-    // sinon l'animation saute d'un cran à l'autre au lieu de glisser. On le
-    // rétablit à la fin — la destination est déjà un point de snap (couverture
-    // centrée), donc aucun à-coup au rétablissement.
-    if (prefersReducedMotion()) {
-      el.style.scrollSnapType = "";
-      el.scrollLeft = dest;
-      return;
-    }
-    const start = el.scrollLeft;
-    const dist = dest - start;
-    if (Math.abs(dist) < 1) {
-      el.style.scrollSnapType = "";
-      return;
-    }
-    el.style.scrollSnapType = "none";
-    const t0 = performance.now();
-    const duration = 560;
-    const stepFrame = (now: number) => {
-      const p = Math.min(1, (now - t0) / duration);
-      el.scrollLeft = start + dist * easeOutBack(p);
-      if (p < 1) {
-        animRef.current = requestAnimationFrame(stepFrame);
-      } else {
-        animRef.current = 0;
+  const springTo = useCallback(
+    (target: number) => {
+      const el = trackRef.current;
+      if (!el) return;
+      const max = el.scrollWidth - el.clientWidth;
+      const dest = Math.max(0, Math.min(max, target));
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      // Le scroll-snap `mandatory` ramène de force scrollLeft sur un point de snap
+      // à chaque frame : tant qu'on pilote le scroll en JS il faut le neutraliser,
+      // sinon l'animation saute d'un cran à l'autre au lieu de glisser. On le
+      // rétablit à la fin — la destination est déjà un point de snap (couverture
+      // centrée), donc aucun à-coup au rétablissement.
+      if (prefersReducedMotion()) {
         el.style.scrollSnapType = "";
+        el.scrollLeft = dest;
+        return;
       }
-    };
-    animRef.current = requestAnimationFrame(stepFrame);
-  }, []);
+      const start = el.scrollLeft;
+      const dist = dest - start;
+      if (Math.abs(dist) < 1) {
+        el.style.scrollSnapType = "";
+        return;
+      }
+      el.style.scrollSnapType = "none";
+      const t0 = performance.now();
+      const duration = 560;
+      const stepFrame = (now: number) => {
+        const p = Math.min(1, (now - t0) / duration);
+        el.scrollLeft = start + dist * easeOutBack(p);
+        if (p < 1) {
+          animRef.current = requestAnimationFrame(stepFrame);
+        } else {
+          animRef.current = 0;
+          el.style.scrollSnapType = "";
+          maybeWrap();
+        }
+      };
+      animRef.current = requestAnimationFrame(stepFrame);
+    },
+    [maybeWrap],
+  );
 
   /** Recentre la couverture d'indice `i` dans le viewport. */
   const centerCard = useCallback(
@@ -195,11 +264,13 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   useEffect(() => {
     const el = trackRef.current;
     if (!el) return;
-    applyEndPadding();
-    // Mise en place : on centre d'emblée le livre de départ (2e), par saut direct
-    // (sans ressort) pour qu'il n'y ait jamais de vide visible à gauche au chargement.
+    if (LOOP) measureAdvance();
+    else applyEndPadding();
+    // Mise en place : on centre d'emblée la carte de départ (1re de la copie
+    // centrale, en boucle) par saut direct (sans ressort) — jamais de vide
+    // visible à gauche au chargement.
     const startCards = el.querySelectorAll<HTMLElement>("[data-card]");
-    const startCard = startCards[initialIndex];
+    const startCard = startCards[startIndex];
     if (startCard) {
       const vp = el.getBoundingClientRect();
       const cr = startCard.getBoundingClientRect();
@@ -207,16 +278,18 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     }
     schedulePaint();
     const onResize = () => {
-      applyEndPadding();
+      if (LOOP) measureAdvance();
+      else applyEndPadding();
       centerCard(activeRef.current);
     };
     // Les couvertures se dimensionnent au ratio réel : leur largeur n'est exacte
-    // qu'une fois l'image chargée. On recale alors les marges, et on recentre —
-    // MAIS jamais pendant un glissé ni une fois que l'utilisateur a pris la main
-    // (engagedRef), pour ne pas contrarier son défilement (capture, car l'event
-    // `load` d'une image ne remonte pas).
+    // qu'une fois l'image chargée. On recale alors le pas / les marges, et on
+    // recentre — MAIS jamais pendant un glissé ni une fois que l'utilisateur a
+    // pris la main (engagedRef), pour ne pas contrarier son défilement (capture,
+    // car l'event `load` d'une image ne remonte pas).
     const onCoverLoad = () => {
-      applyEndPadding();
+      if (LOOP) measureAdvance();
+      else applyEndPadding();
       if (!dragRef.current && !engagedRef.current) centerCard(activeRef.current);
       schedulePaint();
     };
@@ -242,7 +315,14 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [applyEndPadding, schedulePaint, centerCard, initialIndex]);
+  }, [
+    LOOP,
+    startIndex,
+    applyEndPadding,
+    measureAdvance,
+    schedulePaint,
+    centerCard,
+  ]);
 
   // Glisser-déposer à la souris (le tactile garde son défilement natif + snap).
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLUListElement>) => {
@@ -299,8 +379,13 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     }
   }, []);
 
-  if (books.length === 0) return null;
-  const current = books[Math.min(active, books.length - 1)];
+  if (n === 0) return null;
+  const current = books[((active % n) + n) % n];
+  // Rail cloné (copie-major, livre-mineur) : l'indice global d'une carte vaut
+  // `copie * n + livre`, ce qui suit l'ordre du DOM (donc de querySelectorAll).
+  const slides = Array.from({ length: COPIES }, (_, copy) =>
+    books.map((book, real) => ({ book, copy, real })),
+  ).flat();
 
   return (
     <section aria-label="Nouveautés">
@@ -342,41 +427,58 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
-        className="flex cursor-grab items-center gap-[clamp(14px,1.6vw,26px)] overflow-x-auto px-[calc(50%_-_clamp(96px,11vw,132px))] pb-[clamp(20px,3vw,40px)] pt-[clamp(24px,4vw,52px)] [--cover-h:clamp(272px,32vw,392px)] [scroll-snap-type:x_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`flex cursor-grab items-center gap-[clamp(14px,1.6vw,26px)] overflow-x-auto pb-[clamp(20px,3vw,40px)] pt-[clamp(24px,4vw,52px)] [--cover-h:clamp(272px,32vw,392px)] [scroll-snap-type:x_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          // En boucle, aucun padding d'extrémité : les copies voisines
+          // garnissent les bords. Sinon, on centre le 1er/dernier livre.
+          LOOP ? "px-0" : "px-[calc(50%_-_clamp(96px,11vw,132px))]"
+        }`}
       >
-        {books.map((book, i) => (
-          <li
-            key={book.href}
-            data-card
-            className="flex-none [scroll-snap-align:center]"
-          >
-            <Link
-              href={book.href}
-              onClick={guardClick}
-              onFocus={() => {
-                engagedRef.current = true;
-                centerCard(i);
-              }}
-              draggable={false}
-              aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
-              className="block origin-center will-change-transform focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-4"
+        {slides.map(({ book, copy, real }) => {
+          const gi = copy * n + real; // indice global dans le rail
+          const primary = !LOOP || copy === MIDDLE; // seule copie exposée à l'AT/clavier
+          return (
+            <li
+              key={`${book.href}#${copy}`}
+              data-card
+              aria-hidden={primary ? undefined : true}
+              className="flex-none [scroll-snap-align:center]"
             >
-              {/* Hauteur commune fixée ; la largeur suit le ratio réel de
-                  l'image (aucune bande, jamais coupée). draggable=false : le
-                  drag HTML5 natif entrerait en conflit avec le glissé du rail. */}
-              <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[0_14px_34px_rgba(23,20,15,0.16)] ring-1 ring-line">
-                <Cover
-                  cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
-                  alt=""
-                  fit="height"
-                  sizes="(max-width: 640px) 42vw, 260px"
-                  draggable={false}
-                  className="block h-full w-auto select-none"
-                />
-              </div>
-            </Link>
-          </li>
-        ))}
+              <Link
+                href={book.href}
+                onClick={guardClick}
+                onFocus={
+                  primary
+                    ? () => {
+                        engagedRef.current = true;
+                        centerCard(gi);
+                      }
+                    : undefined
+                }
+                draggable={false}
+                tabIndex={primary ? undefined : -1}
+                aria-hidden={primary ? undefined : true}
+                aria-label={
+                  primary ? `${book.title}${book.author ? `, ${book.author}` : ""}` : undefined
+                }
+                className="block origin-center will-change-transform focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-4"
+              >
+                {/* Hauteur commune fixée ; la largeur suit le ratio réel de
+                    l'image (aucune bande, jamais coupée). draggable=false : le
+                    drag HTML5 natif entrerait en conflit avec le glissé du rail. */}
+                <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[0_14px_34px_rgba(23,20,15,0.16)] ring-1 ring-line">
+                  <Cover
+                    cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
+                    alt=""
+                    fit="height"
+                    sizes="(max-width: 640px) 42vw, 260px"
+                    draggable={false}
+                    className="block h-full w-auto select-none"
+                  />
+                </div>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
 
       {/* Légende du livre centré — remplace les étiquettes sur les couvertures. */}
