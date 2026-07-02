@@ -237,84 +237,112 @@ const FAQ = [
   },
 ];
 
-// Étagère décorative du héro : hauteurs en px, largeurs Tailwind.
-const SPINES: { h: number; w: string }[] = [
-  { h: 88, w: "w-6" },
-  { h: 120, w: "w-8" },
-  { h: 72, w: "w-5" },
-  { h: 132, w: "w-7" },
-  { h: 96, w: "w-9" },
-  { h: 148, w: "w-6" },
-  { h: 108, w: "w-7" },
-  { h: 84, w: "w-5" },
-  { h: 136, w: "w-8" },
-  { h: 100, w: "w-6" },
-  { h: 116, w: "w-7" },
+// Étagère du héro : dimensions en pixels des dos de livres dessinés.
+const SPINES: { h: number; w: number }[] = [
+  { h: 88, w: 24 },
+  { h: 120, w: 32 },
+  { h: 72, w: 20 },
+  { h: 132, w: 28 },
+  { h: 96, w: 36 },
+  { h: 148, w: 24 },
+  { h: 108, w: 28 },
+  { h: 84, w: 20 },
+  { h: 136, w: 32 },
+  { h: 100, w: 24 },
+  { h: 116, w: 28 },
 ];
+const SHELF_GAP = 6; // = gap-1.5 entre les dos
+/** Hauteur d'une couverture dépliée ; le texte fond dans le vide au-dessus. */
+const COVER_H = 160;
+
+// Classes littérales complètes (contrainte JIT) : le dos s'ouvre vers la
+// droite sur la moitié gauche de l'étagère, vers la gauche sur l'autre.
+const MORPH_SIDE = {
+  left: "left-0 origin-bottom-left group-hover:[transform:perspective(700px)_rotateY(-14deg)] group-focus-visible:[transform:perspective(700px)_rotateY(-14deg)]",
+  right: "right-0 origin-bottom-right group-hover:[transform:perspective(700px)_rotateY(14deg)] group-focus-visible:[transform:perspective(700px)_rotateY(14deg)]",
+} as const;
 
 /**
- * Étagère du héro : chaque dos coloré porte une parution récente réelle.
- * Au survol ou au focus clavier, la couverture et le titre surgissent
- * au-dessus du dos ; un clic mène à la fiche livre. CSS pur, aucun JS client.
+ * Étagère du héro : chaque dos dessiné porte une parution récente réelle.
+ * Au survol ou au focus clavier, le rectangle lui-même morphe vers les
+ * dimensions de la couverture (légère rotation 3D, comme un livre qu'on
+ * tourne vers soi) et la couverture s'y fond ; titre, auteur et collection
+ * apparaissent en typo nue dans le vide au-dessus. CSS pur, aucun JS client.
  */
 function HeroShelf({ books }: { books: Book[] }) {
+  // Décalage de chaque dos par rapport au bord gauche de l'étagère, pour
+  // ancrer le bloc de texte au même endroit quel que soit le dos survolé.
+  const leftOffsets = SPINES.map((_, i) =>
+    SPINES.slice(0, i).reduce((acc, s) => acc + s.w + SHELF_GAP, 0),
+  );
   return (
     <div className="hidden lg:block">
       <div className="flex items-end gap-1.5">
         {SPINES.map((s, i) => {
           const book = books[i];
-          const spine = (
-            <span
-              className={`block ${s.w} rounded-t-sm ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both] transition-transform duration-200 group-hover:-translate-y-2 group-focus-visible:-translate-y-2 motion-reduce:transition-none`}
-              style={{ height: s.h, animationDelay: `${i * 70}ms` }}
-            />
-          );
-          if (!book) {
+          if (!book?.cover) {
             return (
-              <div key={i} aria-hidden="true">
-                {spine}
-              </div>
+              <div
+                key={i}
+                aria-hidden="true"
+                className={`shrink-0 rounded-t-sm ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both]`}
+                style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
+              />
             );
           }
-          // Près des bords de l'étagère, la fiche ne peut pas être centrée.
-          const anchor =
-            i <= 1
-              ? "left-0"
-              : i >= SPINES.length - 3
-                ? "right-0"
-                : "left-1/2 -translate-x-1/2";
+          const ratio = Math.min(
+            Math.max(book.cover.width / book.cover.height, 0.55),
+            0.8,
+          );
+          const side = i < SPINES.length / 2 ? MORPH_SIDE.left : MORPH_SIDE.right;
           return (
             <Link
               key={i}
               href={`/catalogue/${book.edition}/${book.slug}`}
-              className="group relative rounded-t-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paper"
+              className="group relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] hover:z-20 focus-visible:z-20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paper"
+              style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
             >
               <span className="sr-only">
                 {book.title}
                 {book.authors[0] ? `, ${book.authors[0].name}` : ""}
               </span>
-              {spine}
+              {/* Titre, auteur, collection — fondu dans l'espace vide au-dessus */}
               <span
-                className={`pointer-events-none absolute bottom-full z-30 mb-3 block w-36 translate-y-2 rounded-lg bg-paper p-2.5 opacity-0 shadow-2xl shadow-ink/40 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 motion-reduce:transition-none ${anchor}`}
+                className="pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+                style={{ left: -leftOffsets[i], bottom: COVER_H + 20 }}
+                aria-hidden="true"
               >
-                {book.cover && (
-                  <Image
-                    src={book.cover.url}
-                    alt=""
-                    width={book.cover.width}
-                    height={book.cover.height}
-                    sizes="144px"
-                    className="w-full rounded-sm ring-1 ring-line"
-                  />
-                )}
-                <span className="mt-2 block font-serif text-xs font-semibold leading-snug text-ink">
+                <span className="block text-sm font-semibold text-paper">
                   {book.title}
                 </span>
                 {book.authors.length > 0 && (
-                  <span className="mt-0.5 block text-[11px] text-ink-soft">
+                  <span className="block text-sm text-paper/75">
                     {book.authors.map((a) => a.name).join(", ")}
                   </span>
                 )}
+                {book.collection && (
+                  <span className="mt-0.5 block text-xs text-paper/55">
+                    {book.collection.name}
+                  </span>
+                )}
+              </span>
+              {/* Le dos dessiné, qui morphe vers les dimensions de la couverture */}
+              <span
+                className={`absolute bottom-0 block h-full w-full overflow-hidden rounded-t-sm ${BG[ACCENTS[i % 4]]} transition-all duration-300 ease-out group-hover:h-[var(--ch)] group-hover:w-[var(--cw)] group-focus-visible:h-[var(--ch)] group-focus-visible:w-[var(--cw)] motion-reduce:transition-none ${side}`}
+                style={
+                  {
+                    "--cw": `${Math.round(COVER_H * ratio)}px`,
+                    "--ch": `${COVER_H}px`,
+                  } as React.CSSProperties
+                }
+              >
+                <Image
+                  src={book.cover.url}
+                  alt=""
+                  fill
+                  sizes="128px"
+                  className="object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+                />
               </span>
             </Link>
           );
