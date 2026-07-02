@@ -35,6 +35,8 @@ export default function RootLayout({
       className={`${inter.variable} ${spectral.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-paper text-ink">
+        {/* Effra via Adobe Fonts (kit Typekit) — React 19 hisse ce <link> dans <head>. */}
+        <link rel="stylesheet" href="https://use.typekit.net/fwz0kkx.css" />
         <a
           href="#contenu"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-paper"

@@ -111,6 +111,12 @@ export function SiteHeader() {
           >
             Agenda
           </Link>
+          <Link
+            href="/souscription"
+            className="col-span-2 flex items-center justify-center gap-2 bg-black px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-white transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white"
+          >
+            Nous soutenir <span aria-hidden="true">→</span>
+          </Link>
         </div>
 
         {/* Desktop (lg+) : maisons | vide | nav 2×2. */}
@@ -128,7 +134,13 @@ export function SiteHeader() {
             Les Éditions sociales
           </Link>
 
-          <div aria-hidden="true" className="col-start-2 row-span-2 row-start-1 bg-white" />
+          {/* Cellule centrale (vide dans la maquette) : CTA « Nous soutenir ». */}
+          <Link
+            href="/souscription"
+            className="col-start-2 row-span-2 row-start-1 flex items-center justify-center gap-2 bg-black px-4 text-center font-sans text-[14px] font-extrabold uppercase tracking-[.08em] text-white transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white"
+          >
+            Nous soutenir <span aria-hidden="true">→</span>
+          </Link>
 
           <Link
             href="/catalogue"
