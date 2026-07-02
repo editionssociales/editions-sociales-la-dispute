@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBook } from "@/lib/catalogue";
+import { Cover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { CollectionTag } from "@/components/collection-tag";
 import { BuyLinksList } from "@/components/buy-links";
@@ -70,21 +70,20 @@ export default async function BookPage({
 
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <div
-            className="relative w-full overflow-hidden rounded-sm bg-paper-2 ring-1 ring-line"
-            style={{ aspectRatio: book.cover ? `${book.cover.width} / ${book.cover.height}` : "2 / 3" }}
-          >
+          {/* Largeur fixée par la colonne ; la hauteur suit le ratio réel de
+              la couverture — jamais recadrée, jamais de bande. */}
+          <div className="relative w-full overflow-hidden rounded-sm bg-paper-2 ring-1 ring-line">
             {book.cover ? (
-              <Image
-                src={book.cover.url}
+              <Cover
+                cover={book.cover}
                 alt={`Couverture de « ${book.title} »`}
-                fill
+                fit="width"
                 sizes="300px"
-                className="object-contain"
-                priority
+                preload
+                className="block h-auto w-full"
               />
             ) : (
-              <span className="flex h-full items-center justify-center p-6 text-center font-serif text-muted">
+              <span className="flex aspect-[2/3] items-center justify-center p-6 text-center font-serif text-muted">
                 {book.title}
               </span>
             )}

@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Book } from "@/lib/types";
+import { Cover } from "@/lib/cover";
 import { formatPrice, purchaseLabel, yearOf } from "@/lib/format";
 import { CollectionTag } from "./collection-tag";
 
@@ -10,16 +10,19 @@ export function BookCard({ book }: { book: Book }) {
   const year = yearOf(book.publishedAt);
   const linkProps = external ? { target: "_blank" as const, rel: "noreferrer" } : {};
 
+  // Largeur fixée par la colonne de la grille ; la hauteur suit le ratio réel
+  // de la couverture (jamais recadrée, jamais de bande). Sans couverture, la
+  // vignette garde une forme 2/3 par défaut pour le titre de repli.
   const cover = book.cover ? (
-    <Image
-      src={book.cover.url}
+    <Cover
+      cover={book.cover}
       alt={`Couverture de « ${book.title} »`}
-      fill
+      fit="width"
       sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 220px"
-      className="object-contain transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
+      className="block h-auto w-full transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
     />
   ) : (
-    <span className="flex h-full items-center justify-center p-4 text-center font-serif text-sm text-muted">
+    <span className="flex aspect-[2/3] items-center justify-center p-4 text-center font-serif text-sm text-muted">
       {book.title}
     </span>
   );
@@ -31,7 +34,6 @@ export function BookCard({ book }: { book: Book }) {
           href={href}
           {...linkProps}
           className="relative block w-full overflow-hidden rounded-sm bg-paper-2 shadow-ink/10 ring-1 ring-line transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg motion-reduce:transition-none"
-          style={{ aspectRatio: book.cover ? `${book.cover.width} / ${book.cover.height}` : "2 / 3" }}
         >
           {cover}
           {book.status === "upcoming" && (
@@ -41,10 +43,7 @@ export function BookCard({ book }: { book: Book }) {
           )}
         </Link>
       ) : (
-        <div
-          className="relative w-full overflow-hidden rounded-sm bg-paper-2 ring-1 ring-line"
-          style={{ aspectRatio: book.cover ? `${book.cover.width} / ${book.cover.height}` : "2 / 3" }}
-        >
+        <div className="relative w-full overflow-hidden rounded-sm bg-paper-2 ring-1 ring-line">
           {cover}
         </div>
       )}

@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Cover } from "@/lib/cover";
 import { Kicker } from "./kicker";
 
 /** Un livre déjà mis en forme par la page serveur — aucune fonction, uniquement des données sérialisables. */
@@ -17,46 +17,192 @@ export interface NouveauteBook {
   imprint: string;
 }
 
-/** Doit rester synchronisé avec la classe `gap-[18px]` du rail ci-dessous. */
-const CARD_GAP_PX = 18;
-
 interface DragState {
   startX: number;
   startScrollLeft: number;
   moved: boolean;
 }
 
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Ressort doux : dépasse légèrement la cible puis revient (feeling « spring »). */
+function easeOutBack(x: number): number {
+  const c1 = 1.28;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+
 /**
- * Rangée « Dernières parutions » : défilement horizontal avec ancrage (scroll
- * snap), flèches, glisser-déposer à la souris et couvertures réelles.
- * Aucun état React pour le glissement — tout passe par des refs et des
- * mutations DOM directes, pour ne jamais re-rendre à chaque pixel déplacé.
+ * Carrousel « spring » des dernières parutions : les couvertures défilent en
+ * coverflow — la couverture centrale est zoomée et pleinement opaque, les
+ * latérales reculent (échelle, opacité, légère rotation 3D). Chaque couverture
+ * est affichée à son ratio réel (hauteur commune, largeur variable) : aucune
+ * bande, jamais coupée. Le titre et l'auteur du livre centré s'affichent en
+ * légende sous le rail. Les transformations suivent le défilement image par
+ * image (aucun re-rendu par pixel) ; la navigation (flèches, fin de glissé,
+ * focus clavier) recentre avec un léger ressort.
  */
 export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   const trackRef = useRef<HTMLUListElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const rafRef = useRef(0);
+  const animRef = useRef(0);
+  const activeRef = useRef(0);
+  const [active, setActive] = useState(0);
 
-  const scrollByCard = useCallback((dir: -1 | 1) => {
+  /** Ajuste les marges de début/fin pour que la 1re et la dernière couverture
+   *  (de largeurs variables) puissent se centrer dans le viewport. */
+  const applyEndPadding = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
-    const card = el.querySelector<HTMLElement>("[data-card]");
-    const width = card ? card.getBoundingClientRect().width : 240;
-    const delta = dir * (width + CARD_GAP_PX);
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      el.scrollLeft += delta;
-    } else {
-      el.scrollBy({ left: delta, behavior: "smooth" });
+    const cards = el.querySelectorAll<HTMLElement>("[data-card]");
+    if (cards.length === 0) return;
+    const cw = el.clientWidth;
+    const first = cards[0].getBoundingClientRect().width;
+    const last = cards[cards.length - 1].getBoundingClientRect().width;
+    el.style.paddingLeft = `${Math.max(16, (cw - first) / 2)}px`;
+    el.style.paddingRight = `${Math.max(16, (cw - last) / 2)}px`;
+  }, []);
+
+  /** Applique échelle / opacité / profondeur à chaque couverture selon sa
+   *  distance au centre du viewport, et retient l'indice le plus centré. */
+  const paint = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const cards = el.querySelectorAll<HTMLElement>("[data-card]");
+    if (cards.length === 0) return;
+    const rect = el.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+
+    // Pas de référence entre deux couvertures voisines (largeurs variables).
+    let pitch = cards[0].getBoundingClientRect().width;
+    if (cards.length > 1) {
+      const a = cards[0].getBoundingClientRect();
+      const b = cards[1].getBoundingClientRect();
+      pitch = Math.abs(b.left + b.width / 2 - (a.left + a.width / 2)) || pitch;
+    }
+
+    let nearest = 0;
+    let nearestDist = Infinity;
+    cards.forEach((card, i) => {
+      const r = card.getBoundingClientRect();
+      const d = r.left + r.width / 2 - centerX; // px, signé
+      const abs = Math.abs(d);
+      if (abs < nearestDist) {
+        nearestDist = abs;
+        nearest = i;
+      }
+      const t = Math.min(abs / pitch, 2.4); // distance normalisée
+      const norm = Math.max(-1.4, Math.min(1.4, d / pitch));
+      const scale = Math.max(0.72, 1.12 - 0.3 * t);
+      const opacity = Math.max(0.32, 1 - 0.42 * t);
+      const rotate = -norm * 13; // rotation 3D douce, côté opposé au centre
+      const slide = card.firstElementChild as HTMLElement | null;
+      if (slide) {
+        slide.style.transform = `perspective(1400px) rotateY(${rotate.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+        slide.style.opacity = opacity.toFixed(3);
+        slide.style.zIndex = String(100 - Math.round(t * 10));
+      }
+    });
+
+    if (nearest !== activeRef.current) {
+      activeRef.current = nearest;
+      setActive(nearest);
     }
   }, []);
 
-  // Glisser-déposer à la souris uniquement (le tactile garde son défilement natif).
+  const schedulePaint = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      paint();
+    });
+  }, [paint]);
+
+  /** Anime scrollLeft vers `target` avec un léger ressort (ou saut immédiat en reduced-motion). */
+  const springTo = useCallback((target: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const dest = Math.max(0, Math.min(max, target));
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    if (prefersReducedMotion()) {
+      el.scrollLeft = dest;
+      return;
+    }
+    const start = el.scrollLeft;
+    const dist = dest - start;
+    if (Math.abs(dist) < 1) return;
+    const t0 = performance.now();
+    const duration = 560;
+    const stepFrame = (now: number) => {
+      const p = Math.min(1, (now - t0) / duration);
+      el.scrollLeft = start + dist * easeOutBack(p);
+      if (p < 1) animRef.current = requestAnimationFrame(stepFrame);
+    };
+    animRef.current = requestAnimationFrame(stepFrame);
+  }, []);
+
+  /** Recentre la couverture d'indice `i` dans le viewport. */
+  const centerCard = useCallback(
+    (i: number) => {
+      const el = trackRef.current;
+      if (!el) return;
+      const cards = el.querySelectorAll<HTMLElement>("[data-card]");
+      const card = cards[Math.max(0, Math.min(cards.length - 1, i))];
+      if (!card) return;
+      const rect = el.getBoundingClientRect();
+      const r = card.getBoundingClientRect();
+      const delta = r.left + r.width / 2 - (rect.left + rect.width / 2);
+      springTo(el.scrollLeft + delta);
+    },
+    [springTo],
+  );
+
+  const step = useCallback(
+    (dir: -1 | 1) => centerCard(activeRef.current + dir),
+    [centerCard],
+  );
+
+  // Peinture initiale + marges d'extrémité, puis à chaque défilement / redimensionnement.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    applyEndPadding();
+    schedulePaint();
+    const onResize = () => {
+      applyEndPadding();
+      centerCard(activeRef.current);
+    };
+    // Les couvertures se dimensionnent au ratio réel : leur largeur n'est exacte
+    // qu'une fois l'image chargée. On recale alors marges et centrage (capture,
+    // car l'évènement `load` d'une image ne remonte pas). On ne recentre pas
+    // pendant un glissé pour ne pas contrarier l'utilisateur.
+    const onCoverLoad = () => {
+      applyEndPadding();
+      if (!dragRef.current) centerCard(activeRef.current);
+      schedulePaint();
+    };
+    el.addEventListener("scroll", schedulePaint, { passive: true });
+    el.addEventListener("load", onCoverLoad, { capture: true });
+    window.addEventListener("resize", onResize);
+    return () => {
+      el.removeEventListener("scroll", schedulePaint);
+      el.removeEventListener("load", onCoverLoad, { capture: true });
+      window.removeEventListener("resize", onResize);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [applyEndPadding, schedulePaint, centerCard]);
+
+  // Glisser-déposer à la souris (le tactile garde son défilement natif + snap).
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLUListElement>) => {
     if (e.pointerType !== "mouse") return;
     const el = trackRef.current;
     if (!el) return;
+    if (animRef.current) cancelAnimationFrame(animRef.current);
     dragRef.current = { startX: e.clientX, startScrollLeft: el.scrollLeft, moved: false };
     el.style.cursor = "grabbing";
   }, []);
@@ -68,25 +214,26 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     const dx = e.clientX - drag.startX;
     if (Math.abs(dx) > 4 && !drag.moved) {
       drag.moved = true;
-      // Capture au franchissement du seuil seulement : capturer dès le
-      // pointerdown re-ciblerait aussi les clics simples vers le rail.
       e.currentTarget.setPointerCapture(e.pointerId);
     }
     el.scrollLeft = drag.startScrollLeft - dx;
   }, []);
 
-  const onPointerUp = useCallback((e: React.PointerEvent<HTMLUListElement>) => {
-    const el = trackRef.current;
-    if (el) el.style.cursor = "grab";
-    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-    // Le clic éventuel est dispatché avant ce timer : guardClick voit encore
-    // `moved` et bloque la navigation, puis on réarme pour le clic suivant.
-    setTimeout(() => {
-      if (dragRef.current) dragRef.current.moved = false;
-    }, 0);
-  }, []);
+  const onPointerUp = useCallback(
+    (e: React.PointerEvent<HTMLUListElement>) => {
+      const el = trackRef.current;
+      if (el) el.style.cursor = "grab";
+      if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+      // Fin de glissé : recentre la couverture la plus proche avec un ressort.
+      if (dragRef.current?.moved) centerCard(activeRef.current);
+      setTimeout(() => {
+        if (dragRef.current) dragRef.current.moved = false;
+      }, 0);
+    },
+    [centerCard],
+  );
 
   // Empêche la navigation si le pointeur vient de glisser (>4px) plutôt que de cliquer.
   const guardClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -97,6 +244,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   }, []);
 
   if (books.length === 0) return null;
+  const current = books[Math.min(active, books.length - 1)];
 
   return (
     <section aria-labelledby="nouveautes-heading">
@@ -114,7 +262,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           <button
             type="button"
             aria-label="Couverture précédente"
-            onClick={() => scrollByCard(-1)}
+            onClick={() => step(-1)}
             className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
           >
             ←
@@ -122,7 +270,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           <button
             type="button"
             aria-label="Couverture suivante"
-            onClick={() => scrollByCard(1)}
+            onClick={() => step(1)}
             className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
           >
             →
@@ -137,55 +285,57 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
-        className="flex cursor-grab gap-[18px] overflow-x-auto px-[clamp(16px,4vw,64px)] pb-3.5 pt-1.5 [scroll-padding-left:clamp(16px,4vw,64px)] [scroll-snap-type:x_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex cursor-grab items-center gap-[clamp(14px,1.6vw,26px)] overflow-x-auto px-[calc(50%_-_clamp(96px,11vw,132px))] pb-[clamp(20px,3vw,40px)] pt-[clamp(24px,4vw,52px)] [--cover-h:clamp(272px,32vw,392px)] [scroll-snap-type:x_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {books.map((book) => (
+        {books.map((book, i) => (
           <li
             key={book.href}
             data-card
-            className="w-[clamp(186px,21vw,252px)] flex-none [scroll-snap-align:start]"
+            className="flex-none [scroll-snap-align:center]"
           >
             <Link
               href={book.href}
               onClick={guardClick}
+              onFocus={() => centerCard(i)}
               draggable={false}
-              className="block focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-4"
+              aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
+              className="block origin-center will-change-transform focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-4"
             >
-              <div
-                className="relative overflow-hidden bg-paper-2"
-                style={{ aspectRatio: `${book.coverW} / ${book.coverH}` }}
-              >
-                {/* draggable=false : le drag HTML5 natif de l'image entrerait
-                    en conflit avec le glissé-défilement du rail. */}
-                <Image
-                  src={book.coverUrl}
-                  alt={`Couverture de « ${book.title} »`}
-                  fill
-                  sizes="260px"
+              {/* Hauteur commune fixée ; la largeur suit le ratio réel de
+                  l'image (aucune bande, jamais coupée). draggable=false : le
+                  drag HTML5 natif entrerait en conflit avec le glissé du rail. */}
+              <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[0_14px_34px_rgba(23,20,15,0.16)] ring-1 ring-line">
+                <Cover
+                  cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
+                  alt=""
+                  fit="height"
+                  sizes="(max-width: 640px) 42vw, 260px"
                   draggable={false}
-                  className="object-contain"
+                  className="block h-full w-auto select-none"
                 />
-                {book.upcoming && (
-                  <span className="absolute left-0 top-0 bg-paper px-[9px] py-[5px] text-[10px] font-bold uppercase tracking-[0.13em] text-ink">
-                    À paraître
-                  </span>
-                )}
-                <span className="absolute right-0 top-0 bg-paper/90 px-1.5 py-[3px] text-[9.5px] font-medium uppercase tracking-[0.16em] text-ink-soft">
-                  {book.imprint}
-                </span>
-              </div>
-              <div className="pt-3">
-                <p className="font-serif text-base font-semibold leading-tight text-ink">
-                  {book.title}
-                </p>
-                {book.author && (
-                  <p className="mt-0.5 text-[13px] text-muted">{book.author}</p>
-                )}
               </div>
             </Link>
           </li>
         ))}
       </ul>
+
+      {/* Légende du livre centré — remplace les étiquettes sur les couvertures. */}
+      <div
+        aria-hidden="true"
+        className="mx-auto mt-[clamp(14px,2vw,26px)] min-h-[68px] max-w-[42ch] px-6 text-center"
+      >
+        {current.upcoming && (
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ocher-text">
+            À paraître
+          </p>
+        )}
+        <p className="mt-1 font-serif text-[clamp(19px,2vw,26px)] font-semibold leading-tight text-ink">
+          {current.title}
+        </p>
+        {current.author && (
+          <p className="mt-1 text-sm text-muted">{current.author}</p>
+        )}
+      </div>
     </section>
   );
 }

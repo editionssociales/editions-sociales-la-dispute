@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import type { Book } from "@/lib/types";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
+import { ShelfCover } from "@/components/shelf-cover";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
+import { coverAspectRatio } from "@/lib/cover";
 import { ColorStripe } from "@/components/color-stripe";
 import type { Accent } from "@/lib/format";
 import {
@@ -255,15 +256,15 @@ const SHELF_GAP = 6; // = gap-1.5 entre les dos
 /**
  * Hauteur uniforme (px) du livre déplié au survol. Les dos gardent leur
  * hauteur variée au repos (l'étagère), mais tous les livres atteignent cette
- * hauteur une fois sortis, pour que les petits dos ne donnent pas des livres
- * minuscules. Voir --bh dans .book3d-inner (globals.css).
+ * hauteur une fois sortis — grand format, pour bien présenter la couverture.
+ * Voir --bh dans .book3d-inner (globals.css).
  */
-const BOOK_HOVER_H = 150;
+const BOOK_HOVER_H = 320;
 /**
  * Position (bottom, px) du bloc titre/auteur/collection : cale au-dessus du
  * livre déplié (hauteur uniforme) plus une marge de respiration.
  */
-const TEXT_BLOCK_BOTTOM = BOOK_HOVER_H + 44;
+const TEXT_BLOCK_BOTTOM = BOOK_HOVER_H + 40;
 
 /**
  * Étagère du héro : chaque dos dessiné porte une parution récente réelle. Au
@@ -294,12 +295,6 @@ function HeroShelf({ books }: { books: Book[] }) {
               />
             );
           }
-          const ratio = Math.min(
-            Math.max(book.cover.width / book.cover.height, 0.55),
-            0.8,
-          );
-          // Largeur de couverture calée sur la hauteur uniforme du survol.
-          const coverWidth = Math.round(BOOK_HOVER_H * ratio);
           return (
             <Link
               key={i}
@@ -339,20 +334,16 @@ function HeroShelf({ books }: { books: Book[] }) {
                     "--w": `${s.w}px`,
                     "--h": `${s.h}px`,
                     "--bh": `${BOOK_HOVER_H}px`,
-                    "--cw": `${coverWidth}px`,
                   } as React.CSSProperties
                 }
               >
                 <div className={`book3d-spine ${BG[ACCENTS[i % 4]]}`} />
-                <div className="book3d-cover">
-                  <Image
-                    src={book.cover.url}
-                    alt=""
-                    fill
-                    sizes="128px"
-                    className="object-cover"
-                  />
-                </div>
+                {/* La face couverture adopte le format exact de l'image : ratio
+                    DB au rendu serveur, ratio réel dès le chargement. */}
+                <ShelfCover
+                  url={book.cover.url}
+                  ratio={coverAspectRatio(book.cover)}
+                />
               </div>
             </Link>
           );
@@ -396,58 +387,39 @@ export default async function SouscriptionPage() {
 
   return (
     <>
-      {/* Héro — grand format, c'est l'entrée principale du site pendant le lancement */}
+      {/* Héro — la phrase qui a tout déclenché en 2024, en très grand */}
       <section className="bg-ink text-paper">
-        <Container className="py-20 sm:py-28">
-          <div className="grid items-end gap-12 lg:grid-cols-[1fr_auto]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-paper/70">
-                Souscription de lancement
-              </p>
-              <h1 className="mt-4 max-w-4xl font-serif text-5xl font-semibold leading-[1.05] sm:text-6xl">
-                Un nouveau chapitre pour la{" "}
-                <span className="text-ocher">pensée critique</span>
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg text-paper/85 sm:text-xl">
-                Les Éditions sociales et La Dispute rejoignent une même maison :
-                deux catalogues, une seule équipe d&apos;éditrices, un même
-                engagement. Pour financer ce nouveau départ, nous lançons une
-                souscription — directe, sans commission d&apos;intermédiaire.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-paper/80">
-                {[
-                  `${totalBooks} titres au catalogue`,
-                  "Près de 30 ans d'édition indépendante",
-                  "2 maisons, 1 équipe",
-                ].map((label, i) => (
-                  <span key={label} className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rotate-45 ${BG[ACCENTS[i % 4]]}`} />
-                    {label}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <a
-                  href="#paliers"
-                  className="inline-flex rounded-full bg-paper px-7 py-3.5 text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 hover:bg-paper/90"
-                >
-                  Choisir un palier
-                </a>
-                <Link
-                  href="/catalogue"
-                  className="inline-flex rounded-full px-7 py-3.5 text-sm font-semibold text-paper ring-1 ring-inset ring-paper/40 transition-colors hover:bg-paper/10"
-                >
-                  Découvrir le catalogue
-                </Link>
-              </div>
-            </div>
-            <HeroShelf books={shelfBooks} />
+        <Container className="py-24 sm:py-32">
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-paper/70">
+            Nous soutenir · Souscription de lancement
+          </p>
+          <h1 className="mt-6 max-w-5xl font-serif text-4xl font-semibold leading-[1.1] sm:text-6xl">
+            «&nbsp;Renforcer la puissance de penser et d&apos;agir de celles et
+            ceux qui veulent{" "}
+            <span className="text-ocher">
+              transformer le monde et changer la vie
+            </span>
+            .&nbsp;»
+          </h1>
+          <p className="mt-6 text-sm text-paper/70">
+            Campagne 2024, «&nbsp;Sauvez les Éditions sociales et La Dispute&nbsp;»
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <a
+              href="#paliers"
+              className="inline-flex rounded-full bg-paper px-7 py-3.5 text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 hover:bg-paper/90"
+            >
+              Choisir un palier
+            </a>
+            <Link
+              href="/catalogue"
+              className="inline-flex rounded-full px-7 py-3.5 text-sm font-semibold text-paper ring-1 ring-inset ring-paper/40 transition-colors hover:bg-paper/10"
+            >
+              Découvrir le catalogue
+            </Link>
           </div>
         </Container>
       </section>
-
-      {/* Bandeau défilant : les collections des deux maisons */}
-      <Marquee />
 
       {/* L'an dernier : résultats de la campagne Ulule 2024 */}
       <section className="border-b border-line">
@@ -491,76 +463,60 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
-      {/* Qui nous sommes : deux maisons, trois éditrices, un même engagement */}
-      <Container className="py-16 sm:py-20">
-        <div className="grid gap-10 lg:grid-cols-[3fr_2fr] lg:items-center">
-          <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brick">
-              Qui nous sommes
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold sm:text-4xl">
-              Deux maisons, trois éditrices, un même engagement
-            </h2>
-            <div className="mt-5 space-y-4 text-ink-soft">
-              <p>
-                En France, l&apos;édition vit écrasée par une poignée de grands
-                groupes capitalistes, qui possèdent des centaines
-                d&apos;éditeurs, des réseaux de diffusion et une quantité de
-                médias à leur service. Les Éditions sociales et La Dispute font
-                partie des éditeurs qui s&apos;opposent à ces empires.
-              </p>
-              <p>
-                Deux maisons, deux catalogues, mais une seule équipe
-                d&apos;éditrices, au service d&apos;une même ambition : publier
-                des livres exigeants pour transmettre des savoirs populaires et
-                reconstruire un espace de débats marxistes. À notre échelle,
-                celle de petits éditeurs indépendants et autonomes — sans
-                mécène, en comptant simplement sur la vente de nos livres et,
-                aujourd&apos;hui, sur vous.
-              </p>
-            </div>
-          </Reveal>
-          <Reveal delay={150}>
-            <blockquote className="rounded-xl bg-brick p-8 text-paper sm:p-10">
-              <p className="font-serif text-2xl font-semibold leading-snug">
-                « Renforcer la puissance de penser et d&apos;agir de celles et
-                ceux qui veulent transformer le monde et changer la vie. »
-              </p>
-              <footer className="mt-4 text-sm text-paper/80">
-                Campagne 2024, « Sauvez les Éditions sociales et La Dispute »
-              </footer>
-            </blockquote>
-          </Reveal>
-        </div>
-      </Container>
+      {/* Bandeau défilant : les collections des deux maisons */}
+      <Marquee />
 
-      {/* Les chantiers : où va votre argent */}
-      <section className="border-y border-line bg-paper-2">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-ocher-text">
-              Où va votre argent
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold sm:text-4xl">
-              Cinq chantiers pour la suite
-            </h2>
-          </Reveal>
-          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-6">
-            {CHANTIERS.map((c, i) => (
-              <Reveal
-                key={c.titre}
-                delay={i * 100}
-                className={i < 3 ? "lg:col-span-2" : "lg:col-span-3"}
-              >
-                <div className="flex h-full flex-col rounded-xl border border-line bg-paper p-6">
-                  <span className={`font-serif text-3xl font-semibold ${TEXT[c.accent]}`}>
-                    {String(i + 1).padStart(2, "0")}
+      {/* Souscription de lancement — le projet en bref (fusion « qui nous
+          sommes ») et l'étagère de nos parutions. Fond sombre : l'étagère 3D
+          et sa typo claire y sont pensées. */}
+      <section className="bg-ink text-paper">
+        <Container className="py-16 sm:py-24">
+          <div className="grid items-end gap-12 lg:grid-cols-[1fr_auto]">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-paper/70">
+                Souscription de lancement
+              </p>
+              <h2 className="mt-4 max-w-3xl font-serif text-3xl font-semibold leading-[1.1] sm:text-5xl">
+                Un nouveau chapitre pour la{" "}
+                <span className="text-ocher">pensée critique</span>
+              </h2>
+              <div className="mt-6 max-w-2xl space-y-4 text-paper/85">
+                <p>
+                  Les Éditions sociales et La Dispute rejoignent une même
+                  maison : deux catalogues, une seule équipe d&apos;éditrices, un
+                  même engagement. Pour financer ce nouveau départ, nous lançons
+                  une souscription — directe, sans commission d&apos;intermédiaire.
+                </p>
+                <p>
+                  Face aux empires capitalistes qui écrasent l&apos;édition, nous
+                  restons deux maisons indépendantes et autonomes, sans mécène :
+                  nous comptons sur la vente de nos livres et, aujourd&apos;hui,
+                  sur vous — pour publier des livres exigeants, transmettre des
+                  savoirs populaires et reconstruire un espace de débats marxistes.
+                </p>
+              </div>
+              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-paper/80">
+                {[
+                  `${totalBooks} titres au catalogue`,
+                  "Près de 30 ans d'édition indépendante",
+                  "2 maisons, 1 équipe",
+                ].map((label, i) => (
+                  <span key={label} className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rotate-45 ${BG[ACCENTS[i % 4]]}`} />
+                    {label}
                   </span>
-                  <h3 className="mt-2 font-serif text-xl font-semibold">{c.titre}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-soft">{c.desc}</p>
-                </div>
-              </Reveal>
-            ))}
+                ))}
+              </div>
+              <div className="mt-9">
+                <a
+                  href="#paliers"
+                  className="inline-flex rounded-full bg-paper px-7 py-3.5 text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 hover:bg-paper/90"
+                >
+                  Choisir un palier
+                </a>
+              </div>
+            </div>
+            <HeroShelf books={shelfBooks} />
           </div>
         </Container>
       </section>
@@ -654,7 +610,38 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
-      {/* Perspectives des deux maisons */}
+      {/* Les chantiers : où va votre argent */}
+      <section className="border-y border-line bg-paper-2">
+        <Container className="py-16 sm:py-20">
+          <Reveal>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-ocher-text">
+              Où va votre argent
+            </p>
+            <h2 className="mt-3 font-serif text-3xl font-semibold sm:text-4xl">
+              Cinq chantiers pour la suite
+            </h2>
+          </Reveal>
+          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-6">
+            {CHANTIERS.map((c, i) => (
+              <Reveal
+                key={c.titre}
+                delay={i * 100}
+                className={i < 3 ? "lg:col-span-2" : "lg:col-span-3"}
+              >
+                <div className="flex h-full flex-col rounded-xl border border-line bg-paper p-6">
+                  <span className={`font-serif text-3xl font-semibold ${TEXT[c.accent]}`}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="mt-2 font-serif text-xl font-semibold">{c.titre}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-soft">{c.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* Et après : les perspectives des deux maisons — la suite */}
       <section className="border-t border-line">
         <Container className="py-16 sm:py-20">
           <Reveal>
