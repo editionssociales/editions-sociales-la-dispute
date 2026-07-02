@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import type { Book } from "@/lib/types";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
 import { CountUp } from "@/components/count-up";
@@ -250,6 +252,84 @@ const SPINES: { h: number; w: string }[] = [
   { h: 116, w: "w-7" },
 ];
 
+/**
+ * Étagère du héro : chaque dos coloré porte une parution récente réelle.
+ * Au survol ou au focus clavier, la couverture et le titre surgissent
+ * au-dessus du dos ; un clic mène à la fiche livre. CSS pur, aucun JS client.
+ */
+function HeroShelf({ books }: { books: Book[] }) {
+  return (
+    <div className="hidden lg:block">
+      <div className="flex items-end gap-1.5">
+        {SPINES.map((s, i) => {
+          const book = books[i];
+          const spine = (
+            <span
+              className={`block ${s.w} rounded-t-sm ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both] transition-transform duration-200 group-hover:-translate-y-2 group-focus-visible:-translate-y-2 motion-reduce:transition-none`}
+              style={{ height: s.h, animationDelay: `${i * 70}ms` }}
+            />
+          );
+          if (!book) {
+            return (
+              <div key={i} aria-hidden="true">
+                {spine}
+              </div>
+            );
+          }
+          // Près des bords de l'étagère, la fiche ne peut pas être centrée.
+          const anchor =
+            i <= 1
+              ? "left-0"
+              : i >= SPINES.length - 3
+                ? "right-0"
+                : "left-1/2 -translate-x-1/2";
+          return (
+            <Link
+              key={i}
+              href={`/catalogue/${book.edition}/${book.slug}`}
+              className="group relative rounded-t-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paper"
+            >
+              <span className="sr-only">
+                {book.title}
+                {book.authors[0] ? `, ${book.authors[0].name}` : ""}
+              </span>
+              {spine}
+              <span
+                className={`pointer-events-none absolute bottom-full z-30 mb-3 block w-36 translate-y-2 rounded-lg bg-paper p-2.5 opacity-0 shadow-2xl shadow-ink/40 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 motion-reduce:transition-none ${anchor}`}
+              >
+                {book.cover && (
+                  <Image
+                    src={book.cover.url}
+                    alt=""
+                    width={book.cover.width}
+                    height={book.cover.height}
+                    sizes="144px"
+                    className="w-full rounded-sm ring-1 ring-line"
+                  />
+                )}
+                <span className="mt-2 block font-serif text-xs font-semibold leading-snug text-ink">
+                  {book.title}
+                </span>
+                {book.authors.length > 0 && (
+                  <span className="mt-0.5 block text-[11px] text-ink-soft">
+                    {book.authors.map((a) => a.name).join(", ")}
+                  </span>
+                )}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+      <div className="h-1.5 rounded bg-paper/25" />
+      {books.length > 0 && (
+        <p className="mt-3 text-right text-xs text-paper/60">
+          Sur l&apos;étagère&nbsp;: nos dernières parutions.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Marquee() {
   return (
     <div className="overflow-hidden border-b border-line bg-paper-2 py-3" aria-hidden="true">
@@ -266,10 +346,15 @@ function Marquee() {
 }
 
 export default async function SouscriptionPage() {
-  const [newReleases, totalBooks] = await Promise.all([
-    getNewReleases(4),
+  const [releases, totalBooks] = await Promise.all([
+    getNewReleases(18),
     countBooks(),
   ]);
+  const newReleases = releases.slice(0, 4);
+  // L'étagère du héro porte de vraies parutions : couverture + fiche interne requises.
+  const shelfBooks = releases
+    .filter((b) => b.cover && b.edition)
+    .slice(0, SPINES.length);
 
   return (
     <>
@@ -318,19 +403,7 @@ export default async function SouscriptionPage() {
                 </Link>
               </div>
             </div>
-            {/* Étagère stylisée : des dos de livres aux couleurs des couvertures */}
-            <div className="hidden lg:block" aria-hidden="true">
-              <div className="flex items-end gap-1.5">
-                {SPINES.map((s, i) => (
-                  <div
-                    key={i}
-                    className={`${s.w} rounded-t-sm ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both] transition-transform hover:-translate-y-2`}
-                    style={{ height: s.h, animationDelay: `${i * 70}ms` }}
-                  />
-                ))}
-              </div>
-              <div className="mt-0 h-1.5 rounded bg-paper/25" />
-            </div>
+            <HeroShelf books={shelfBooks} />
           </div>
         </Container>
       </section>
