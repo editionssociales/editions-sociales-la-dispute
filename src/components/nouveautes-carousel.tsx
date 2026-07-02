@@ -50,6 +50,11 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   const rafRef = useRef(0);
   const animRef = useRef(0);
   const activeRef = useRef(0);
+  // Passe à true dès que l'utilisateur pilote le scroll (molette, glissé,
+  // flèches, focus). On cesse alors de recentrer automatiquement au chargement
+  // des couvertures — sinon ces recentrages contrarient son défilement pendant
+  // les ~5 s où les images arrivent.
+  const engagedRef = useRef(false);
   const [active, setActive] = useState(0);
 
   /** Ajuste les marges de début/fin pour que la 1re et la dernière couverture
@@ -177,7 +182,10 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   );
 
   const step = useCallback(
-    (dir: -1 | 1) => centerCard(activeRef.current + dir),
+    (dir: -1 | 1) => {
+      engagedRef.current = true;
+      centerCard(activeRef.current + dir);
+    },
     [centerCard],
   );
 
@@ -192,20 +200,33 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       centerCard(activeRef.current);
     };
     // Les couvertures se dimensionnent au ratio réel : leur largeur n'est exacte
-    // qu'une fois l'image chargée. On recale alors marges et centrage (capture,
-    // car l'évènement `load` d'une image ne remonte pas). On ne recentre pas
-    // pendant un glissé pour ne pas contrarier l'utilisateur.
+    // qu'une fois l'image chargée. On recale alors les marges, et on recentre —
+    // MAIS jamais pendant un glissé ni une fois que l'utilisateur a pris la main
+    // (engagedRef), pour ne pas contrarier son défilement (capture, car l'event
+    // `load` d'une image ne remonte pas).
     const onCoverLoad = () => {
       applyEndPadding();
-      if (!dragRef.current) centerCard(activeRef.current);
+      if (!dragRef.current && !engagedRef.current) centerCard(activeRef.current);
       schedulePaint();
+    };
+    // Molette / trackpad : l'utilisateur prend la main. On coupe tout recentrage
+    // auto en cours (sinon il lutte contre le scroll) et on rend le snap natif.
+    const onWheel = () => {
+      engagedRef.current = true;
+      if (animRef.current) {
+        cancelAnimationFrame(animRef.current);
+        animRef.current = 0;
+      }
+      el.style.scrollSnapType = "";
     };
     el.addEventListener("scroll", schedulePaint, { passive: true });
     el.addEventListener("load", onCoverLoad, { capture: true });
+    el.addEventListener("wheel", onWheel, { passive: true });
     window.addEventListener("resize", onResize);
     return () => {
       el.removeEventListener("scroll", schedulePaint);
       el.removeEventListener("load", onCoverLoad, { capture: true });
+      el.removeEventListener("wheel", onWheel);
       window.removeEventListener("resize", onResize);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -217,6 +238,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     if (e.pointerType !== "mouse") return;
     const el = trackRef.current;
     if (!el) return;
+    engagedRef.current = true;
     if (animRef.current) cancelAnimationFrame(animRef.current);
     // Snap coupé pendant le glissé souris : `mandatory` happerait scrollLeft à
     // chaque frame et rendrait le glissé saccadé. Rétabli au relâchement.
@@ -319,7 +341,10 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
             <Link
               href={book.href}
               onClick={guardClick}
-              onFocus={() => centerCard(i)}
+              onFocus={() => {
+                engagedRef.current = true;
+                centerCard(i);
+              }}
               draggable={false}
               aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
               className="block origin-center will-change-transform focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-4"
