@@ -22,7 +22,7 @@ import {
 export const metadata: Metadata = {
   title: "Souscription",
   description:
-    "Soutenez les Éditions sociales et La Dispute : deux maisons, trois éditrices, un même engagement. Souscription directe, sans commission — contreparties de 15 à 1 000 €.",
+    "Face à la concentration capitaliste de l'édition, Les Éditions sociales et La Dispute tiennent deux catalogues marxistes et critiques — Marx et Engels, savoirs populaires, féminismes matérialistes —, sans mécène ni actionnaire. Une souscription pour continuer. Contreparties de 15 à 1 000 €.",
 };
 
 export const dynamic = "force-dynamic";
@@ -52,20 +52,6 @@ const PALIERS_2024 = [
   { value: 50000, label: "Survie", reached: true },
   { value: 75000, label: "Consolidation", reached: true },
   { value: 100000, label: "Déploiement", reached: false },
-];
-
-// Bandeau défilant : collections et mots d'ordre des deux maisons.
-const MARQUEE = [
-  "Travail et salariat",
-  "Le genre du monde",
-  "L'enjeu scolaire",
-  "Les éclairées",
-  "Découvrir",
-  "GEME — Grande édition Marx-Engels",
-  "Entretiens",
-  "Savoirs populaires",
-  "Féminismes matérialistes",
-  "Pédagogies critiques",
 ];
 
 // Les grands chantiers financés par la souscription (repris de la campagne).
@@ -359,21 +345,6 @@ function HeroShelf({ books }: { books: Book[] }) {
   );
 }
 
-function Marquee() {
-  return (
-    <div className="overflow-hidden border-b border-line bg-paper-2 py-3" aria-hidden="true">
-      <div className="animate-marquee flex w-max items-center gap-8 whitespace-nowrap">
-        {[...MARQUEE, ...MARQUEE].map((label, i) => (
-          <span key={i} className="flex items-center gap-8">
-            <span className="text-sm font-medium tracking-wide text-ink-soft">{label}</span>
-            <span className={`h-2 w-2 rotate-45 ${BG[ACCENTS[i % 4]]}`} />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default async function SouscriptionPage() {
   const [releases, totalBooks] = await Promise.all([
     getNewReleases(18),
@@ -387,50 +358,18 @@ export default async function SouscriptionPage() {
 
   return (
     <>
-      {/* Héro — la phrase qui a tout déclenché en 2024, en très grand */}
-      <section className="bg-ink text-paper">
-        <Container className="py-24 sm:py-32">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-paper/70">
-            Nous soutenir · Souscription de lancement
-          </p>
-          <h1 className="mt-6 max-w-5xl font-serif text-4xl font-semibold leading-[1.1] sm:text-6xl">
-            «&nbsp;Renforcer la puissance de penser et d&apos;agir de celles et
-            ceux qui veulent{" "}
-            <span className="text-ocher">
-              transformer le monde et changer la vie
-            </span>
-            .&nbsp;»
-          </h1>
-          <p className="mt-6 text-sm text-paper/70">
-            Campagne 2024, «&nbsp;Sauvez les Éditions sociales et La Dispute&nbsp;»
-          </p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <a
-              href="#paliers"
-              className="inline-flex rounded-full bg-paper px-7 py-3.5 text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 hover:bg-paper/90"
-            >
-              Choisir un palier
-            </a>
-            <Link
-              href="/catalogue"
-              className="inline-flex rounded-full px-7 py-3.5 text-sm font-semibold text-paper ring-1 ring-inset ring-paper/40 transition-colors hover:bg-paper/10"
-            >
-              Découvrir le catalogue
-            </Link>
-          </div>
-        </Container>
-      </section>
-
-      {/* L'an dernier : résultats de la campagne Ulule 2024 */}
+      {/* Ouverture (fond clair) : ce que la souscription de 2024 a déjà
+          permis — stats + jauge. Fond clair pour préserver l'alternance de
+          couleurs des sections suivantes. */}
       <section className="border-b border-line">
-        <Container className="py-16 sm:py-20">
+        <Container className="py-16 sm:py-24">
           <Reveal>
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-bottle">
-              Vous l&apos;avez déjà fait
+              Nous soutenir
             </p>
-            <h2 className="mt-3 max-w-3xl font-serif text-3xl font-semibold sm:text-4xl">
+            <h1 className="mt-3 max-w-3xl font-serif text-3xl font-semibold sm:text-4xl">
               En 2024, vous avez sauvé nos maisons
-            </h2>
+            </h1>
             <p className="mt-4 max-w-2xl text-ink-soft">
               En deux semaines, la campagne « Sauvez les Éditions sociales et
               La Dispute » atteignait les 50&nbsp;000&nbsp;€ nécessaires pour
@@ -463,9 +402,6 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
-      {/* Bandeau défilant : les collections des deux maisons */}
-      <Marquee />
-
       {/* Souscription de lancement — le projet en bref (fusion « qui nous
           sommes ») et l'étagère de nos parutions. Fond sombre : l'étagère 3D
           et sa typo claire y sont pensées. */}
@@ -477,43 +413,27 @@ export default async function SouscriptionPage() {
                 Souscription de lancement
               </p>
               <h2 className="mt-4 max-w-3xl font-serif text-3xl font-semibold leading-[1.1] sm:text-5xl">
-                Un nouveau chapitre pour la{" "}
-                <span className="text-ocher">pensée critique</span>
+                Tenir une édition marxiste{" "}
+                <span className="text-ocher">et indépendante</span>
               </h2>
-              <div className="mt-6 max-w-2xl space-y-4 text-paper/85">
-                <p>
-                  Les Éditions sociales et La Dispute rejoignent une même
-                  maison : deux catalogues, une seule équipe d&apos;éditrices, un
-                  même engagement. Pour financer ce nouveau départ, nous lançons
-                  une souscription — directe, sans commission d&apos;intermédiaire.
-                </p>
-                <p>
-                  Face aux empires capitalistes qui écrasent l&apos;édition, nous
-                  restons deux maisons indépendantes et autonomes, sans mécène :
-                  nous comptons sur la vente de nos livres et, aujourd&apos;hui,
-                  sur vous — pour publier des livres exigeants, transmettre des
-                  savoirs populaires et reconstruire un espace de débats marxistes.
-                </p>
-              </div>
+              <p className="mt-6 max-w-2xl text-paper/85">
+                Deux catalogues marxistes et critiques, une seule petite équipe
+                d&apos;éditrices, et un principe : rester indépendants face à la
+                poignée de groupes capitalistes qui accaparent l&apos;édition, la
+                diffusion et les médias. Sans mécène ni actionnaire, nous vivons
+                de la vente de nos livres — et, pour tenir, de cette souscription.
+              </p>
               <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-paper/80">
                 {[
                   `${totalBooks} titres au catalogue`,
-                  "Près de 30 ans d'édition indépendante",
-                  "2 maisons, 1 équipe",
+                  "Le plus grand fonds marxiste en français",
+                  "Sans mécène ni actionnaire",
                 ].map((label, i) => (
                   <span key={label} className="flex items-center gap-2">
                     <span className={`h-2 w-2 rotate-45 ${BG[ACCENTS[i % 4]]}`} />
                     {label}
                   </span>
                 ))}
-              </div>
-              <div className="mt-9">
-                <a
-                  href="#paliers"
-                  className="inline-flex rounded-full bg-paper px-7 py-3.5 text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 hover:bg-paper/90"
-                >
-                  Choisir un palier
-                </a>
               </div>
             </div>
             <HeroShelf books={shelfBooks} />
