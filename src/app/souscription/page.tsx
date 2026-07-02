@@ -246,11 +246,6 @@ const SHELF_GAP = 6; // = gap-1.5 entre les dos
  * Voir --bh dans .book3d-inner (globals.css).
  */
 const BOOK_HOVER_H = 320;
-/**
- * Position (bottom, px) du bloc titre/auteur/collection : cale au-dessus du
- * livre déplié (hauteur uniforme) plus une marge de respiration.
- */
-const TEXT_BLOCK_BOTTOM = BOOK_HOVER_H + 40;
 
 /**
  * Étagère du héro : chaque dos dessiné porte une parution récente réelle. Au
@@ -258,7 +253,7 @@ const TEXT_BLOCK_BOTTOM = BOOK_HOVER_H + 40;
  * l'arête de sa reliure (bord droit du dos) pour présenter sa couverture,
  * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
  * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
- * apparaissent en typo nue dans le vide au-dessus. CSS pur, aucun JS client.
+ * apparaissent en typo nue sous la barre de l'étagère. CSS pur, aucun JS client.
  */
 function HeroShelf({ books }: { books: Book[] }) {
   // Décalage de chaque dos par rapport au bord gauche de l'étagère, pour
@@ -292,10 +287,13 @@ function HeroShelf({ books }: { books: Book[] }) {
                 {book.title}
                 {book.authors[0] ? `, ${book.authors[0].name}` : ""}
               </span>
-              {/* Titre, auteur, collection — fondu dans l'espace vide au-dessus */}
+              {/* Titre, auteur, collection — fondu sous la barre de l'étagère.
+                  Même tampon (delay-150) que la sortie du livre au survol ;
+                  disparition immédiate au repos pour éviter tout chevauchement
+                  quand on balaie plusieurs dos. */}
               <span
-                className="pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
-                style={{ left: -leftOffsets[i], bottom: TEXT_BLOCK_BOTTOM }}
+                className="pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:delay-150 group-focus-visible:opacity-100 group-focus-visible:delay-150 motion-reduce:transition-none"
+                style={{ left: -leftOffsets[i], top: "calc(100% + 16px)" }}
                 aria-hidden="true"
               >
                 <span className="block font-serif text-sm font-semibold text-paper">
@@ -336,11 +334,9 @@ function HeroShelf({ books }: { books: Book[] }) {
         })}
       </div>
       <div className="h-1.5 rounded bg-paper/25" />
-      {books.length > 0 && (
-        <p className="mt-3 text-right text-xs text-paper/60">
-          Sur l&apos;étagère&nbsp;: nos dernières parutions.
-        </p>
-      )}
+      {/* Zone réservée sous la barre : l'encart titre/auteur/collection du dos
+          survolé s'y affiche (positionné en absolu depuis chaque lien). */}
+      <div aria-hidden="true" className="h-20" />
     </div>
   );
 }

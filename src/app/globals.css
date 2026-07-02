@@ -61,19 +61,12 @@ h1, h2, h3, h4 {
   color: var(--color-paper);
 }
 
-/* Animations de la page de souscription (bandeau défilant, étagère du héro). */
-@keyframes marquee {
-  to { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 45s linear infinite;
-}
+/* Animations de la page de souscription (étagère du héro). */
 @keyframes spine-rise {
   from { opacity: 0; transform: translateY(28px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee,
   [class*="spine-rise"] {
     animation: none;
   }
@@ -109,14 +102,19 @@ h1, h2, h3, h4 {
 .book3d:hover .book3d-inner,
 .book3d:focus-visible .book3d-inner {
   height: var(--bh);
-  transform: translateX(-30px) translateY(-26px) translateZ(52px) rotateY(-78deg);
+  transform: translateX(-30px) translateY(-60px) translateZ(52px) rotateY(-78deg);
+  /* Tampon : léger délai avant la sortie, pour ne pas relancer l'animation
+     dès qu'on effleure un autre dos en balayant l'étagère. Le repli reste
+     immédiat (aucun délai à l'état de repos). */
+  transition-delay: 150ms;
 }
 /* Dos proches du bord gauche de l'étagère : sortie latérale réduite pour ne
    pas déborder de la page (écart assumé au prototype, X_SHIFT 30 → 20). */
 .book3d--edge:hover .book3d-inner,
 .book3d--edge:focus-visible .book3d-inner {
   height: var(--bh);
-  transform: translateX(-20px) translateY(-26px) translateZ(52px) rotateY(-78deg);
+  transform: translateX(-20px) translateY(-60px) translateZ(52px) rotateY(-78deg);
+  transition-delay: 150ms;
 }
 .book3d-spine {
   position: absolute;
