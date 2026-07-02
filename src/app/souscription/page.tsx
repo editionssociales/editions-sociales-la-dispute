@@ -21,7 +21,7 @@ import {
 export const metadata: Metadata = {
   title: "Souscription",
   description:
-    "Soutenez les Éditions sociales et La Dispute : deux maisons, trois éditrices, un même engagement. Souscription directe, sans commission — contreparties de 15 à 1 000 €.",
+    "Face à la concentration capitaliste de l'édition, Les Éditions sociales et La Dispute tiennent deux catalogues marxistes et critiques — Marx et Engels, savoirs populaires, féminismes matérialistes —, sans mécène ni actionnaire. Une souscription pour continuer. Contreparties de 15 à 1 000 €.",
 };
 
 export const dynamic = "force-dynamic";
@@ -367,20 +367,21 @@ export default async function SouscriptionPage() {
                 Souscription de lancement
               </p>
               <h1 className="mt-4 max-w-4xl font-serif text-5xl font-semibold leading-[1.05] sm:text-6xl">
-                Un nouveau chapitre pour la{" "}
-                <span className="text-ocher">pensée critique</span>
+                Tenir une édition marxiste{" "}
+                <span className="text-ocher">et indépendante</span>
               </h1>
               <p className="mt-6 max-w-2xl text-lg text-paper/85 sm:text-xl">
-                Les Éditions sociales et La Dispute rejoignent une même maison :
-                deux catalogues, une seule équipe d&apos;éditrices, un même
-                engagement. Pour financer ce nouveau départ, nous lançons une
-                souscription — directe, sans commission d&apos;intermédiaire.
+                Deux catalogues marxistes et critiques, une seule petite équipe
+                d&apos;éditrices, et un principe : rester indépendants face à la
+                poignée de groupes capitalistes qui accaparent l&apos;édition, la
+                diffusion et les médias. Sans mécène ni actionnaire, nous vivons
+                de la vente de nos livres — et, pour tenir, de cette souscription.
               </p>
               <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-paper/80">
                 {[
                   `${totalBooks} titres au catalogue`,
-                  "Près de 30 ans d'édition indépendante",
-                  "2 maisons, 1 équipe",
+                  "Le plus grand fonds marxiste en français",
+                  "Sans mécène ni actionnaire",
                 ].map((label, i) => (
                   <span key={label} className="flex items-center gap-2">
                     <span className={`h-2 w-2 rotate-45 ${BG[ACCENTS[i % 4]]}`} />
