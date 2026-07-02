@@ -128,19 +128,34 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     const max = el.scrollWidth - el.clientWidth;
     const dest = Math.max(0, Math.min(max, target));
     if (animRef.current) cancelAnimationFrame(animRef.current);
+    // Le scroll-snap `mandatory` ramène de force scrollLeft sur un point de snap
+    // à chaque frame : tant qu'on pilote le scroll en JS il faut le neutraliser,
+    // sinon l'animation saute d'un cran à l'autre au lieu de glisser. On le
+    // rétablit à la fin — la destination est déjà un point de snap (couverture
+    // centrée), donc aucun à-coup au rétablissement.
     if (prefersReducedMotion()) {
+      el.style.scrollSnapType = "";
       el.scrollLeft = dest;
       return;
     }
     const start = el.scrollLeft;
     const dist = dest - start;
-    if (Math.abs(dist) < 1) return;
+    if (Math.abs(dist) < 1) {
+      el.style.scrollSnapType = "";
+      return;
+    }
+    el.style.scrollSnapType = "none";
     const t0 = performance.now();
     const duration = 560;
     const stepFrame = (now: number) => {
       const p = Math.min(1, (now - t0) / duration);
       el.scrollLeft = start + dist * easeOutBack(p);
-      if (p < 1) animRef.current = requestAnimationFrame(stepFrame);
+      if (p < 1) {
+        animRef.current = requestAnimationFrame(stepFrame);
+      } else {
+        animRef.current = 0;
+        el.style.scrollSnapType = "";
+      }
     };
     animRef.current = requestAnimationFrame(stepFrame);
   }, []);
@@ -203,6 +218,9 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     const el = trackRef.current;
     if (!el) return;
     if (animRef.current) cancelAnimationFrame(animRef.current);
+    // Snap coupé pendant le glissé souris : `mandatory` happerait scrollLeft à
+    // chaque frame et rendrait le glissé saccadé. Rétabli au relâchement.
+    el.style.scrollSnapType = "none";
     dragRef.current = { startX: e.clientX, startScrollLeft: el.scrollLeft, moved: false };
     el.style.cursor = "grabbing";
   }, []);
@@ -226,8 +244,13 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
         e.currentTarget.releasePointerCapture(e.pointerId);
       }
-      // Fin de glissé : recentre la couverture la plus proche avec un ressort.
-      if (dragRef.current?.moved) centerCard(activeRef.current);
+      if (dragRef.current?.moved) {
+        // Fin de glissé : recentre au ressort (springTo rétablit le snap à la fin).
+        centerCard(activeRef.current);
+      } else if (el) {
+        // Survol/clic sans glissé : on rétablit le snap coupé au pointerdown.
+        el.style.scrollSnapType = "";
+      }
       setTimeout(() => {
         if (dragRef.current) dragRef.current.moved = false;
       }, 0);
