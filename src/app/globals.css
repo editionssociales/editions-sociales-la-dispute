@@ -1,26 +1,91 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-spectral), Georgia, "Times New Roman", serif;
+
+  --color-paper: #faf7f2;
+  --color-paper-2: #f2ece1;
+  --color-ink: #17140f;
+  --color-ink-soft: #4a463d;
+  --color-muted: #8a8578;
+  --color-line: #e4ded1;
+
+  /*
+   * Palette inspirée des couvertures Éditions sociales : blocs de couleur
+   * plats à poids égal (marine, bouteille, ocre, brique) — aucune couleur
+   * de marque dominante. L'action principale (boutons, liens) reste sur
+   * `ink`, ces accents ne servent qu'à distinguer collections/étiquettes.
+   */
+  --color-navy: #262a5c;
+  --color-bottle: #1f5c53;
+  --color-ocher: #c97a2b;
+  --color-brick: #a8422b;
+  /* Variante assombrie de l'ocre pour le TEXTE sur fonds clairs :
+     #c97a2b ne tient pas le contraste AA (3,1:1 sur paper) en petit corps. */
+  --color-ocher-text: #9a5a17;
+
+  --color-accent: var(--color-navy);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Défilement fluide vers les ancres (#paliers…), hors reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Les ancres ne doivent pas disparaître sous le header sticky. */
+[id] {
+  scroll-margin-top: 5.5rem;
 }
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+/* Animations de la page de souscription (bandeau défilant, étagère du héro). */
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 45s linear infinite;
+}
+@keyframes spine-rise {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  [class*="spine-rise"] {
+    animation: none;
+  }
+}
+
+/* Rendu du HTML éditorial (présentations de livres, pages). */
+.prose-book {
+  line-height: 1.7;
+  color: var(--color-ink-soft);
+}
+.prose-book p { margin: 0 0 1rem; }
+.prose-book a { color: var(--color-ink); text-decoration: underline; text-underline-offset: 2px; }
+.prose-book h2, .prose-book h3 { color: var(--color-ink); margin: 1.6rem 0 0.6rem; }
+.prose-book ul { list-style: disc; padding-left: 1.25rem; margin: 0 0 1rem; }
+.prose-book img { max-width: 100%; height: auto; border-radius: 0.25rem; }
