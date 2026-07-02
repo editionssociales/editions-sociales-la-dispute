@@ -1,228 +1,165 @@
-import { ColorStripe } from "./color-stripe";
-import { BlockMenu, BlockMenuItem, SocialCircles, type BlockCell } from "./block-menu";
-import { SiteMenuMobile } from "./site-menu-mobile";
+"use client";
 
-const COMPACT_LINK_LABEL_CLASS = "font-sans text-[12.5px] font-bold uppercase tracking-[.06em]";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-/** Bandeau compact (desktop) : recouvert par l'affiche au chargement, révélé au scroll — voir SiteHeader. */
-const COMPACT_CELLS: BlockCell[] = [
-  {
-    key: "home",
-    variant: "lien",
-    href: "/",
-    className: "flex min-w-0 flex-1 items-center whitespace-nowrap px-[clamp(16px,2vw,26px)]",
-    label: (
-      <>
-        Éditions sociales <span className="px-[7px] opacity-50">×</span> La Dispute
-      </>
-    ),
-    labelClassName: "font-serif text-[15px] font-semibold tracking-[.01em]",
-  },
-  {
-    key: "catalogue",
-    variant: "lien",
-    href: "/catalogue",
-    className: "flex items-center whitespace-nowrap px-[clamp(13px,1.4vw,20px)]",
-    label: "Catalogue",
-    labelClassName: COMPACT_LINK_LABEL_CLASS,
-  },
-  {
-    key: "a-paraitre",
-    variant: "lien",
-    href: "/catalogue?upcoming=1",
-    className: "flex items-center whitespace-nowrap px-[clamp(13px,1.4vw,20px)]",
-    label: "À paraître",
-    labelClassName: COMPACT_LINK_LABEL_CLASS,
-  },
-  {
-    key: "rencontres",
-    variant: "lien",
-    href: "/rencontres",
-    className: "flex items-center whitespace-nowrap px-[clamp(13px,1.4vw,20px)]",
-    label: "Rencontres",
-    labelClassName: COMPACT_LINK_LABEL_CLASS,
-  },
-  {
-    key: "geme",
-    variant: "lien",
-    href: "/catalogue/editions-sociales?collection=geme",
-    className: "flex items-center whitespace-nowrap px-[clamp(13px,1.4vw,20px)]",
-    label: "La GEME",
-    labelClassName: COMPACT_LINK_LABEL_CLASS,
-  },
-  {
-    key: "soutenir",
-    variant: "cta",
-    href: "/souscription",
-    className: "flex items-center gap-2 whitespace-nowrap px-[clamp(16px,1.8vw,24px)]",
-    label: (
-      <>
-        Nous soutenir <span aria-hidden="true">→</span>
-      </>
-    ),
-    labelClassName: "font-sans text-[12.5px] font-extrabold uppercase tracking-[.06em]",
-  },
-];
+/**
+ * Navbar brutaliste — quadrillage noir 2px (recette : conteneur
+ * `grid gap-[2px] bg-black p-[2px]`, les gaps + le padding forment les
+ * lignes ; les cellules enfant portent leur propre fond blanc/pop).
+ *
+ * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | vide | nav 2×2.
+ * Mobile : empilé — 2 maisons pleine largeur puis nav 2×2 (cellule vide
+ * masquée, elle n'a pas de contenu).
+ */
 
-const MAISON_KICKER_CLASS = "font-sans text-[11px] uppercase tracking-[.2em] opacity-55";
-const MAISON_LABEL_CLASS =
-  "font-serif text-[clamp(22px,2.5vw,38px)] font-semibold uppercase leading-[0.98] tracking-[.005em]";
-const NUMERO_LABEL_CLASS =
-  "font-sans text-[clamp(17px,1.7vw,24px)] font-bold uppercase leading-none tracking-[.05em]";
+type NavSection = "catalogue" | "geme" | "a-paraitre" | "agenda";
 
-/** Affiche (poster navbar) desktop : grille 4 colonnes × 6 rangées. */
-const POSTER_CELLS: BlockCell[] = [
-  {
-    key: "la-dispute",
-    variant: "lien",
-    href: "/editions/la-dispute",
-    colStart: 1,
-    rowStart: 1,
-    rowSpan: 2,
-    className: "flex flex-col justify-end gap-[5px] px-7 py-6",
-    kicker: "Maison",
-    kickerClassName: MAISON_KICKER_CLASS,
-    label: "La Dispute",
-    labelClassName: MAISON_LABEL_CLASS,
-  },
-  {
-    key: "editions-sociales",
-    variant: "lien",
-    href: "/editions/editions-sociales",
-    colStart: 1,
-    rowStart: 3,
-    rowSpan: 2,
-    className: "flex flex-col justify-end gap-[5px] px-7 py-6",
-    kicker: "Maison",
-    kickerClassName: MAISON_KICKER_CLASS,
-    label: "Les Éditions sociales",
-    labelClassName: MAISON_LABEL_CLASS,
-  },
-  {
-    key: "nous-suivre",
-    variant: "socials",
-    colStart: 1,
-    rowStart: 5,
-    rowSpan: 2,
-    className: "flex items-center gap-4 px-7 py-[18px]",
-    content: (
-      <>
-        <span className="whitespace-nowrap font-sans text-[11px] uppercase tracking-[.22em] opacity-50">
-          Nous suivre
-        </span>
-        <SocialCircles size="desktop" />
-      </>
-    ),
-  },
-  {
-    key: "soutenir",
-    // Le proto inverse ce grand bloc en paper/ink comme les autres cellules de
-    // l'affiche ; le hover ocre est réservé au bandeau compact et au mobile.
-    variant: "lien",
-    href: "/souscription",
-    colStart: 2,
-    rowStart: 1,
-    rowSpan: 6,
-    className: "flex flex-col justify-between px-6 py-[26px]",
-    // Le kicker du proto (« Souscription 2025 ») est erroné : aucune année n'est actée.
-    kicker: "Souscription",
-    kickerClassName: "font-sans text-[11px] uppercase tracking-[.2em] opacity-60",
-    label: (
-      <>
-        Nous
-        <br />
-        soutenir
-      </>
-    ),
-    labelClassName:
-      "font-serif text-[clamp(30px,3.5vw,54px)] font-semibold uppercase leading-[0.94] tracking-[.004em]",
-    note: (
-      <>
-        Soutenir les deux maisons <span aria-hidden="true">→</span>
-      </>
-    ),
-    noteClassName: "font-sans text-[13px] tracking-[.02em] opacity-70",
-  },
-  {
-    key: "catalogue",
-    variant: "lien",
-    href: "/catalogue",
-    colStart: 3,
-    rowStart: 1,
-    rowSpan: 3,
-    numero: "01",
-    className: "flex flex-col justify-end gap-1.5 p-[22px]",
-    label: "Catalogue",
-    labelClassName: NUMERO_LABEL_CLASS,
-  },
-  {
-    key: "a-paraitre",
-    variant: "lien",
-    href: "/catalogue?upcoming=1",
-    colStart: 4,
-    rowStart: 1,
-    rowSpan: 3,
-    numero: "02",
-    className: "flex flex-col justify-end gap-1.5 p-[22px]",
-    label: "À paraître",
-    labelClassName: NUMERO_LABEL_CLASS,
-  },
-  {
-    key: "rencontres",
-    variant: "lien",
-    href: "/rencontres",
-    colStart: 3,
-    rowStart: 4,
-    rowSpan: 3,
-    numero: "03",
-    className: "flex flex-col justify-end gap-1.5 p-[22px]",
-    label: "Rencontres",
-    labelClassName: NUMERO_LABEL_CLASS,
-  },
-  {
-    key: "geme",
-    variant: "lien",
-    href: "/catalogue/editions-sociales?collection=geme",
-    colStart: 4,
-    rowStart: 4,
-    rowSpan: 3,
-    numero: "04",
-    className: "flex flex-col justify-end gap-1.5 p-[22px]",
-    label: "La GEME",
-    labelClassName: NUMERO_LABEL_CLASS,
-  },
-];
+const MAISON_CELL_CLASS =
+  "flex items-center bg-white px-5 py-4 font-sans text-[15px] font-bold italic uppercase leading-none tracking-[.01em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black";
+
+const NAV_LABEL_CLASS =
+  "flex items-center justify-center px-4 py-6 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-black transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black lg:py-0";
+
+/** Fond par section quand active ; blanc + survol coloré sinon. */
+const NAV_ACCENT_CLASS: Record<NavSection, string> = {
+  catalogue: "bg-pop-pink",
+  geme: "bg-pop-teal",
+  "a-paraitre": "bg-pop-orange",
+  agenda: "bg-pop-yellow",
+};
+
+const NAV_HOVER_CLASS: Record<NavSection, string> = {
+  catalogue: "bg-white hover:bg-pop-pink",
+  geme: "bg-white hover:bg-pop-teal",
+  "a-paraitre": "bg-white hover:bg-pop-orange",
+  agenda: "bg-white hover:bg-pop-yellow",
+};
+
+function navCellClass(section: NavSection, active: boolean) {
+  return `${NAV_LABEL_CLASS} ${active ? NAV_ACCENT_CLASS[section] : NAV_HOVER_CLASS[section]}`;
+}
+
+/**
+ * Détermine la section active à partir du pathname (voir spec) : sur
+ * l'accueil, les 4 cellules restent allumées ; sur une page de section,
+ * seule la cellule correspondante l'est.
+ */
+function useActiveSections(): Record<NavSection, boolean> {
+  const pathname = usePathname() ?? "/";
+
+  if (pathname === "/") {
+    return { catalogue: true, geme: true, "a-paraitre": true, agenda: true };
+  }
+
+  const isGeme = pathname.startsWith("/catalogue/editions-sociales");
+  const isCatalogue = pathname.startsWith("/catalogue") && !isGeme;
+  const isAgenda = pathname.startsWith("/rencontres");
+
+  return {
+    catalogue: isCatalogue,
+    geme: isGeme,
+    // À paraître partage le chemin /catalogue : on n'allume que CATALOGUE sur
+    // une page de section (une seule cellule active, comme la maquette).
+    "a-paraitre": false,
+    agenda: isAgenda,
+  };
+}
 
 export function SiteHeader() {
+  const active = useActiveSections();
+
   return (
-    // `contents` : le <header> ne crée pas de boîte, ses enfants deviennent
-    // des enfants directs du <body> (pleine hauteur de page). Indispensable
-    // pour que le bandeau compact sticky colle au-delà de la hauteur du
-    // header — un sticky ne dépasse jamais les limites de son parent.
-    <header className="contents">
-      <ColorStripe className="h-1" />
+    <header>
+      <nav aria-label="Navigation principale" className="bg-black">
+        {/* Mobile (< lg) : maisons pleine largeur puis nav 2×2. */}
+        <div className="grid grid-cols-2 gap-[2px] p-[2px] lg:hidden">
+          <Link href="/editions/la-dispute" className={`col-span-2 ${MAISON_CELL_CLASS}`}>
+            La Dispute
+          </Link>
+          <Link
+            href="/editions/editions-sociales"
+            className={`col-span-2 ${MAISON_CELL_CLASS}`}
+          >
+            Les Éditions sociales
+          </Link>
+          <Link
+            href="/catalogue"
+            aria-current={active.catalogue ? "page" : undefined}
+            className={navCellClass("catalogue", active.catalogue)}
+          >
+            Catalogue
+          </Link>
+          <Link
+            href="/catalogue/editions-sociales?collection=geme"
+            aria-current={active.geme ? "page" : undefined}
+            className={navCellClass("geme", active.geme)}
+          >
+            La Geme
+          </Link>
+          <Link
+            href="/catalogue?upcoming=1"
+            aria-current={active["a-paraitre"] ? "page" : undefined}
+            className={navCellClass("a-paraitre", active["a-paraitre"])}
+          >
+            À paraître
+          </Link>
+          <Link
+            href="/rencontres"
+            aria-current={active.agenda ? "page" : undefined}
+            className={navCellClass("agenda", active.agenda)}
+          >
+            Agenda
+          </Link>
+        </div>
 
-      {/*
-        Bandeau compact desktop : sticky, hauteur 56px, margin-bottom négatif de la même
-        valeur. L'affiche qui suit (position relative, z-index supérieur) le recouvre au
-        chargement ; au scroll, l'affiche défile normalement hors du viewport tandis que
-        le bandeau reste collé en haut — pur CSS, aucun JavaScript.
-      */}
-      <div className="sticky top-0 z-40 -mb-14 hidden h-14 shadow-[0_1px_0_rgba(23,20,15,.12),0_10px_24px_rgba(23,20,15,.10)] lg:flex lg:gap-[3px] lg:bg-paper">
-        {COMPACT_CELLS.map((cell) => (
-          <BlockMenuItem key={cell.key} cell={cell} />
-        ))}
-      </div>
+        {/* Desktop (lg+) : maisons | vide | nav 2×2. */}
+        <div className="hidden grid-cols-[1.3fr_1fr_0.9fr_0.9fr] grid-rows-2 gap-[2px] p-[2px] lg:grid">
+          <Link
+            href="/editions/la-dispute"
+            className={`col-start-1 row-start-1 ${MAISON_CELL_CLASS}`}
+          >
+            La Dispute
+          </Link>
+          <Link
+            href="/editions/editions-sociales"
+            className={`col-start-1 row-start-2 ${MAISON_CELL_CLASS}`}
+          >
+            Les Éditions sociales
+          </Link>
 
-      <BlockMenu
-        cells={POSTER_CELLS}
-        ariaLabel="Navigation principale"
-        cols="lg:grid-cols-[1.72fr_1.04fr_1.06fr_1.06fr]"
-        rows="lg:grid-rows-6"
-        className="relative z-[41] hidden h-[clamp(330px,40vw,424px)] lg:grid"
-      />
+          <div aria-hidden="true" className="col-start-2 row-span-2 row-start-1 bg-white" />
 
-      <SiteMenuMobile />
+          <Link
+            href="/catalogue"
+            aria-current={active.catalogue ? "page" : undefined}
+            className={`col-start-3 row-start-1 ${navCellClass("catalogue", active.catalogue)}`}
+          >
+            Catalogue
+          </Link>
+          <Link
+            href="/catalogue/editions-sociales?collection=geme"
+            aria-current={active.geme ? "page" : undefined}
+            className={`col-start-4 row-start-1 ${navCellClass("geme", active.geme)}`}
+          >
+            La Geme
+          </Link>
+          <Link
+            href="/catalogue?upcoming=1"
+            aria-current={active["a-paraitre"] ? "page" : undefined}
+            className={`col-start-3 row-start-2 ${navCellClass("a-paraitre", active["a-paraitre"])}`}
+          >
+            À paraître
+          </Link>
+          <Link
+            href="/rencontres"
+            aria-current={active.agenda ? "page" : undefined}
+            className={`col-start-4 row-start-2 ${navCellClass("agenda", active.agenda)}`}
+          >
+            Agenda
+          </Link>
+        </div>
+      </nav>
     </header>
   );
 }

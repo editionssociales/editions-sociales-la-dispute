@@ -6,7 +6,6 @@ import { Cover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { CollectionTag } from "@/components/collection-tag";
 import { BuyLinksList } from "@/components/buy-links";
-import { Kicker } from "@/components/kicker";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { excerptFromHtml, formatDateFr } from "@/lib/format";
 import { ACCENT_BG } from "@/lib/accents";
@@ -28,12 +27,15 @@ export async function generateMetadata({
   };
 }
 
+/** Métadonnée du livre en cellule de la grille encadrée noir/blanc. */
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   if (value == null || value === "") return null;
   return (
-    <div className="flex justify-between gap-4 border-b border-line py-2 text-sm first:pt-0 last:border-b-0 last:pb-0">
-      <dt className="text-muted">{label}</dt>
-      <dd className="text-right font-medium text-ink">{value}</dd>
+    <div className="flex flex-col gap-1 bg-white px-3.5 py-3">
+      <dt className="font-sans text-[10px] font-bold uppercase tracking-[.08em] text-black/50">
+        {label}
+      </dt>
+      <dd className="font-sans text-sm font-bold text-black">{value}</dd>
     </div>
   );
 }
@@ -54,16 +56,33 @@ export default async function BookPage({
   const accentBg = ACCENT_BG[editionInfo.accent];
 
   return (
-    <Container className="py-12">
+    <Container className="bg-white py-12">
       <nav
         aria-label="Fil d'ariane"
-        className="mb-8 flex flex-wrap items-center gap-2.5 text-sm text-muted"
+        className="mb-8 font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
       >
-        <Link href="/catalogue" className="transition-colors hover:text-ink">
+        <Link
+          href="/"
+          className="transition-colors motion-reduce:transition-none hover:text-black"
+        >
+          Accueil
+        </Link>
+        <span aria-hidden="true" className="px-1.5">
+          /
+        </span>
+        <Link
+          href="/catalogue"
+          className="transition-colors motion-reduce:transition-none hover:text-black"
+        >
           Catalogue
         </Link>
-        <span className={`h-1.5 w-1.5 rotate-45 ${accentBg}`} aria-hidden="true" />
-        <Link href={`/catalogue/${edition}`} className="transition-colors hover:text-ink">
+        <span aria-hidden="true" className="px-1.5">
+          /
+        </span>
+        <Link
+          href={`/catalogue/${edition}`}
+          className="transition-colors motion-reduce:transition-none hover:text-black"
+        >
           {editionInfo.name}
         </Link>
       </nav>
@@ -71,8 +90,9 @@ export default async function BookPage({
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         <div className="lg:sticky lg:top-24 lg:self-start">
           {/* Largeur fixée par la colonne ; la hauteur suit le ratio réel de
-              la couverture — jamais recadrée, jamais de bande. */}
-          <div className="relative w-full overflow-hidden rounded-sm bg-paper-2 ring-1 ring-line">
+              la couverture — jamais recadrée, jamais de bande. Couverture
+              encadrée d'un contour noir 2px, comme les vignettes du catalogue. */}
+          <div className="relative w-full overflow-hidden border-2 border-black bg-paper-2">
             {book.cover ? (
               <Cover
                 cover={book.cover}
@@ -83,66 +103,70 @@ export default async function BookPage({
                 className="block h-auto w-full"
               />
             ) : (
-              <span className="flex aspect-[2/3] items-center justify-center p-6 text-center font-serif text-muted">
+              <span className="flex aspect-[2/3] items-center justify-center p-6 text-center font-sans text-sm font-bold uppercase text-black">
                 {book.title}
               </span>
             )}
           </div>
 
           <div className="mt-6">
-            <p className="mb-2 text-sm font-semibold text-ink">Acheter</p>
+            <p className="mb-2 font-sans text-xs font-bold uppercase tracking-[.08em] text-black">
+              Acheter
+            </p>
             <BuyLinksList book={book} />
           </div>
 
-          <dl className="mt-6 rounded-xl border border-line bg-paper-2 p-5">
+          <dl className="mt-6 grid grid-cols-2 gap-[2px] bg-black p-[2px]">
             <Info label="Collection" value={book.collection?.name} />
             <Info label="Parution" value={formatDateFr(book.publishedAt)} />
             <Info label="Pages" value={book.pages ? `${book.pages} p.` : null} />
             <Info label="ISBN" value={book.isbn} />
           </dl>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {book.tocUrl && (
-              <a
-                href={book.tocUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition-colors hover:bg-paper-2 motion-reduce:transition-none"
-              >
-                Table des matières
-              </a>
-            )}
-            {book.excerptUrl && (
-              <a
-                href={book.excerptUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition-colors hover:bg-paper-2 motion-reduce:transition-none"
-              >
-                Extrait choisi
-              </a>
-            )}
-          </div>
+          {(book.tocUrl || book.excerptUrl) && (
+            <div className="mt-4 flex flex-wrap gap-[2px] bg-black p-[2px]">
+              {book.tocUrl && (
+                <a
+                  href={book.tocUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center bg-white px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]"
+                >
+                  Table des matières
+                </a>
+              )}
+              {book.excerptUrl && (
+                <a
+                  href={book.excerptUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center bg-white px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]"
+                >
+                  Extrait choisi
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
         <article>
-          <Kicker accent={editionInfo.accent} className="mb-2">
+          <p className="mb-2 font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
             {editionInfo.name}
-          </Kicker>
+          </p>
           {book.collection && <CollectionTag collection={book.collection} className="mb-3" />}
-          <h1 className="font-serif text-4xl font-semibold leading-tight">
+          <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-black">
             {book.title}
           </h1>
           <div className={`mt-4 h-1 w-16 ${accentBg}`} aria-hidden="true" />
           {book.authors.length > 0 && (
-            <p className="mt-4 text-lg text-ink-soft">
+            <p className="mt-4 font-sans text-lg font-bold text-black/80">
               {book.authors.map((a) => a.name).join(", ")}
             </p>
           )}
 
           {book.presentation && (
             <section className="mt-8">
-              <h2 className="mb-3 flex items-center gap-2.5 font-serif text-xl font-semibold">
+              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-black">
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
                   aria-hidden="true"
@@ -158,7 +182,7 @@ export default async function BookPage({
 
           {book.furtherReading && (
             <section className="mt-8">
-              <h2 className="mb-3 flex items-center gap-2.5 font-serif text-xl font-semibold">
+              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-black">
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
                   aria-hidden="true"

@@ -10,15 +10,26 @@ import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
 import { coverAspectRatio } from "@/lib/cover";
-import { ColorStripe } from "@/components/color-stripe";
 import type { Accent } from "@/lib/format";
-import {
-  ACCENTS,
-  ACCENT_BG as BG,
-  ACCENT_TEXT as TEXT,
-  ACCENT_BORDER_T as BORDER_T,
-  ACCENT_BORDER_L as BORDER_L,
-} from "@/lib/accents";
+import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
+
+/**
+ * Grammaire brutaliste (voir AGENTS.md) : quadrillage noir 2px
+ * (`grid gap-[2px] bg-black p-[2px]`, cellules `bg-white`), Effra en
+ * italique gras pour les titres, libellés en majuscules. Les quatre aplats
+ * « pop » codent ici les paliers et étiquettes (pas les sections de nav).
+ */
+const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
+
+/** Étiquette de section : carré pop + libellé noir majuscule. */
+function Kicker({ dot, children }: { dot: string; children: React.ReactNode }) {
+  return (
+    <p className="flex items-center gap-2 font-sans text-xs font-extrabold uppercase tracking-[.22em] text-black">
+      <span aria-hidden="true" className={`h-2.5 w-2.5 ${dot}`} />
+      {children}
+    </p>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Souscription",
@@ -357,16 +368,14 @@ export default async function SouscriptionPage() {
       {/* Ouverture (fond clair) : ce que la souscription de 2024 a déjà
           permis — stats + jauge. Fond clair pour préserver l'alternance de
           couleurs des sections suivantes. */}
-      <section className="border-b border-line">
+      <section className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-24">
           <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-bottle">
-              Nous soutenir
-            </p>
-            <h1 className="mt-3 max-w-3xl font-serif text-3xl font-semibold sm:text-4xl">
+            <Kicker dot="bg-pop-teal">Nous soutenir</Kicker>
+            <h1 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
               En 2024, vous avez sauvé nos maisons
             </h1>
-            <p className="mt-4 max-w-2xl text-ink-soft">
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
               En deux semaines, la campagne « Sauvez les Éditions sociales et
               La Dispute » atteignait les 50&nbsp;000&nbsp;€ nécessaires pour
               sortir la tête de l&apos;eau. À l&apos;arrivée, l&apos;objectif
@@ -374,26 +383,28 @@ export default async function SouscriptionPage() {
               nouvelle souscription en écrit la suite.
             </p>
           </Reveal>
-          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-[2px] bg-black p-[2px] sm:grid-cols-2 lg:grid-cols-4">
             {STATS_2024.map((s, i) => (
-              <Reveal key={s.label} delay={i * 120}>
-                <div>
+              <Reveal key={s.label} delay={i * 120} className="h-full">
+                <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
                   <CountUp
                     value={s.valeur}
                     suffix={s.suffixe}
-                    className={`font-serif text-5xl font-semibold ${TEXT[ACCENTS[i % 4]]}`}
+                    className="font-sans text-4xl font-black italic text-black sm:text-5xl"
                   />
-                  <p className="mt-1 text-sm text-ink-soft">{s.label}</p>
+                  <p className="mt-1 text-sm font-semibold text-black">{s.label}</p>
                 </div>
               </Reveal>
             ))}
           </div>
           <Reveal delay={200} className="mt-12">
-            <Gauge
-              value={CAMPAGNE_2024.collecte}
-              max={100000}
-              markers={PALIERS_2024}
-            />
+            <div className="border-2 border-black bg-white p-6">
+              <Gauge
+                value={CAMPAGNE_2024.collecte}
+                max={100000}
+                markers={PALIERS_2024}
+              />
+            </div>
           </Reveal>
         </Container>
       </section>
@@ -405,12 +416,12 @@ export default async function SouscriptionPage() {
         <Container className="py-16 sm:py-24">
           <div className="grid items-end gap-12 lg:grid-cols-[1fr_auto]">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-paper/70">
+              <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
                 Souscription de lancement
               </p>
-              <h2 className="mt-4 max-w-3xl font-serif text-3xl font-semibold leading-[1.1] sm:text-5xl">
+              <h2 className="mt-4 max-w-3xl font-sans text-3xl font-black italic leading-[1.02] sm:text-5xl">
                 Tenir une édition marxiste{" "}
-                <span className="text-ocher">et indépendante</span>
+                <span className="text-pop-yellow">et indépendante</span>
               </h2>
               <p className="mt-6 max-w-2xl text-paper/85">
                 Deux catalogues marxistes et critiques, une seule petite équipe
@@ -419,14 +430,14 @@ export default async function SouscriptionPage() {
                 diffusion et les médias. Sans mécène ni actionnaire, nous vivons
                 de la vente de nos livres — et, pour tenir, de cette souscription.
               </p>
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-paper/80">
+              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-paper/80">
                 {[
                   `${totalBooks} titres au catalogue`,
                   "Le plus grand fonds marxiste en français",
                   "Sans mécène ni actionnaire",
                 ].map((label, i) => (
                   <span key={label} className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rotate-45 ${BG[ACCENTS[i % 4]]}`} />
+                    <span className={`h-2 w-2 ${POP_BG[i % 4]}`} />
                     {label}
                   </span>
                 ))}
@@ -438,84 +449,87 @@ export default async function SouscriptionPage() {
       </section>
 
       {/* Contreparties */}
-      <section id="paliers">
+      <section id="paliers" className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-navy">
-              Les paliers
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold sm:text-4xl">
+            <Kicker dot="bg-pop-pink">Les paliers</Kicker>
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
               Choisissez votre contrepartie
             </h2>
-            <p className="mt-4 max-w-2xl text-ink-soft">
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
               Les contreparties de notre campagne 2024, de retour pour la
               souscription de lancement. Contributions directes, sans
               intermédiaire — 100&nbsp;% pour la maison. Et bien sûr, notre
               reconnaissance éternelle est comprise dans tous les paliers.
             </p>
           </Reveal>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-[2px] bg-black p-[2px] sm:grid-cols-2 lg:grid-cols-4">
             {CONTREPARTIES.map((p, i) => {
-              const accent = ACCENTS[i % 4];
+              const pop = POP_BG[i % 4];
               return (
                 <Reveal key={p.montant} delay={(i % 4) * 90} className="h-full">
-                  <div
-                    className={`relative flex h-full flex-col rounded-xl border border-line border-t-4 bg-paper p-6 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/5 ${BORDER_T[accent]}`}
-                  >
+                  <div className="relative flex h-full flex-col bg-white">
+                    <div aria-hidden="true" className={`h-2 ${pop}`} />
                     {p.populaire && (
-                      <span className="absolute -top-3.5 right-4 rounded-full bg-ocher px-3 py-1 text-xs font-semibold text-ink">
+                      <span className="bg-black px-3 py-1.5 text-center font-sans text-[10px] font-extrabold uppercase tracking-[.08em] text-pop-yellow">
                         Le plus choisi en 2024
                       </span>
                     )}
-                    <span className={`font-serif text-4xl font-semibold ${TEXT[accent]}`}>
-                      {p.montant}&nbsp;€
-                    </span>
-                    <span className="mt-1 font-semibold">{p.titre}</span>
-                    <ul className="mt-4 flex-1 space-y-2 text-sm text-ink-soft">
-                      {p.items.map((item) => (
-                        <li key={item} className="flex gap-2.5">
-                          <span
-                            className={`mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45 ${BG[accent]}`}
-                          />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-4 text-xs text-muted">
-                      {p.soutiens2024} soutiens en 2024
-                    </p>
-                    <button
-                      type="button"
-                      className="mt-3 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition-opacity hover:opacity-90"
-                    >
-                      Contribuer
-                    </button>
+                    <div className="flex flex-1 flex-col p-6">
+                      <span className="font-sans text-4xl font-black italic text-black">
+                        {p.montant}&nbsp;€
+                      </span>
+                      <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-black">
+                        {p.titre}
+                      </span>
+                      <ul className="mt-4 flex-1 space-y-2 text-sm text-black/70">
+                        {p.items.map((item) => (
+                          <li key={item} className="flex gap-2.5">
+                            <span
+                              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45 ${pop}`}
+                            />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-black/50">
+                        {p.soutiens2024} soutiens en 2024
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-3 border-2 border-black bg-black px-4 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black"
+                      >
+                        Contribuer
+                      </button>
+                    </div>
                   </div>
                 </Reveal>
               );
             })}
           </div>
           {/* Grands paliers : cartes inversées */}
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div className="mt-[2px] grid gap-[2px] bg-black p-[2px] md:grid-cols-2">
             {MECENES.map((p, i) => (
               <Reveal key={p.montant} delay={i * 120} className="h-full">
-                <div className="relative flex h-full flex-col overflow-hidden rounded-xl bg-ink p-8 text-paper transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/20">
+                <div className="relative flex h-full flex-col overflow-hidden bg-black p-8 text-white">
                   <div className="absolute inset-x-0 top-0 grid h-1.5 grid-cols-4" aria-hidden="true">
-                    {ACCENTS.map((a) => (
-                      <div key={a} className={BG[a]} />
+                    {POP_BG.map((c) => (
+                      <div key={c} className={c} />
                     ))}
                   </div>
-                  <span className="font-serif text-5xl font-semibold">
+                  <span className="font-sans text-5xl font-black italic text-white">
                     {p.montant.toLocaleString("fr-FR")}&nbsp;€
                   </span>
-                  <span className="mt-1 text-lg font-semibold text-paper/90">{p.titre}</span>
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-paper/80">{p.desc}</p>
-                  <p className="mt-4 text-xs text-paper/60">
+                  <span className="mt-1 font-sans text-lg font-extrabold uppercase tracking-[.02em] text-white/90">
+                    {p.titre}
+                  </span>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-white/80">{p.desc}</p>
+                  <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-white/60">
                     {p.soutiens2024} soutiens en 2024
                   </p>
                   <button
                     type="button"
-                    className="mt-3 self-start rounded-full bg-paper px-6 py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+                    className="mt-3 self-start border-2 border-white bg-white px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
                   >
                     Contribuer
                   </button>
@@ -527,29 +541,27 @@ export default async function SouscriptionPage() {
       </section>
 
       {/* Les chantiers : où va votre argent */}
-      <section className="border-y border-line bg-paper-2">
+      <section className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-ocher-text">
-              Où va votre argent
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold sm:text-4xl">
+            <Kicker dot="bg-pop-orange">Où va votre argent</Kicker>
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
               Cinq chantiers pour la suite
             </h2>
           </Reveal>
-          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-6">
+          <div className="mt-10 grid gap-[2px] bg-black p-[2px] md:grid-cols-2 lg:grid-cols-6">
             {CHANTIERS.map((c, i) => (
               <Reveal
                 key={c.titre}
                 delay={i * 100}
-                className={i < 3 ? "lg:col-span-2" : "lg:col-span-3"}
+                className={`h-full ${i < 3 ? "lg:col-span-2" : "lg:col-span-3"}`}
               >
-                <div className="flex h-full flex-col rounded-xl border border-line bg-paper p-6">
-                  <span className={`font-serif text-3xl font-semibold ${TEXT[c.accent]}`}>
+                <div className="flex h-full flex-col bg-white p-6">
+                  <span className={`font-sans text-3xl font-black italic ${TEXT[c.accent]}`}>
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <h3 className="mt-2 font-serif text-xl font-semibold">{c.titre}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-soft">{c.desc}</p>
+                  <h3 className="mt-2 font-sans text-xl font-black italic text-black">{c.titre}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-black/70">{c.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -558,35 +570,34 @@ export default async function SouscriptionPage() {
       </section>
 
       {/* Et après : les perspectives des deux maisons — la suite */}
-      <section className="border-t border-line">
+      <section className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-bottle">
-              Et après
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold sm:text-4xl">
+            <Kicker dot="bg-pop-teal">Et après</Kicker>
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
               Des projets, on en a plein
             </h2>
           </Reveal>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="mt-10 grid gap-[2px] bg-black p-[2px] md:grid-cols-2">
             {MAISONS.map((m, i) => (
               <Reveal key={m.nom} delay={i * 120} className="h-full">
-                <div
-                  className={`flex h-full flex-col rounded-xl border border-line border-l-4 bg-paper p-7 ${BORDER_L[m.accent]}`}
-                >
-                  <h3 className={`font-serif text-2xl font-semibold ${TEXT[m.accent]}`}>
-                    {m.nom}
-                  </h3>
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">{m.desc}</p>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {m.chips.map((chip) => (
-                      <span
-                        key={chip}
-                        className="rounded-full bg-paper-2 px-3 py-1 text-xs font-medium text-ink-soft ring-1 ring-inset ring-line"
-                      >
-                        {chip}
-                      </span>
-                    ))}
+                <div className="flex h-full flex-col bg-white">
+                  <div aria-hidden="true" className={`h-2 ${BG[m.accent]}`} />
+                  <div className="flex flex-1 flex-col p-7">
+                    <h3 className={`font-sans text-2xl font-black italic ${TEXT[m.accent]}`}>
+                      {m.nom}
+                    </h3>
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-black/70">{m.desc}</p>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {m.chips.map((chip) => (
+                        <span
+                          key={chip}
+                          className="border border-black px-3 py-1 font-sans text-xs font-bold uppercase tracking-[.03em] text-black"
+                        >
+                          {chip}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </Reveal>
@@ -597,21 +608,21 @@ export default async function SouscriptionPage() {
 
       {/* Aperçu du catalogue */}
       {newReleases.length > 0 && (
-        <section className="border-t border-line bg-paper-2">
+        <section className="border-b-2 border-black bg-white">
           <Container className="py-16">
             <Reveal>
               <div className="mb-8 flex items-end justify-between">
                 <div>
-                  <h2 className="font-serif text-2xl font-semibold">
+                  <h2 className="font-sans text-2xl font-black italic text-black">
                     En attendant, le catalogue vous attend
                   </h2>
-                  <p className="mt-1 text-ink-soft">
+                  <p className="mt-1 text-black/70">
                     Dernières parutions des deux fonds réunis.
                   </p>
                 </div>
                 <Link
                   href="/catalogue"
-                  className="text-sm font-semibold text-ink hover:underline"
+                  className="shrink-0 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black hover:underline"
                 >
                   Tout voir →
                 </Link>
@@ -623,30 +634,28 @@ export default async function SouscriptionPage() {
       )}
 
       {/* FAQ */}
-      <section className="border-t border-line">
+      <section className="bg-white">
         <Container className="max-w-3xl py-16 sm:py-20">
           <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-brick">
-              FAQ
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold">
+            <Kicker dot="bg-pop-yellow">FAQ</Kicker>
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-black">
               Questions fréquentes
             </h2>
           </Reveal>
-          <div className="mt-8 space-y-3">
+          <div className="mt-8 divide-y-2 divide-black border-2 border-black">
             {FAQ.map((item, i) => (
               <Reveal key={item.q} delay={i * 80}>
-                <details className="group rounded-xl border border-line bg-paper open:bg-paper-2">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold [&::-webkit-details-marker]:hidden">
+                <details className="group bg-white">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-sans font-bold text-black [&::-webkit-details-marker]:hidden">
                     {item.q}
                     <span
-                      className={`shrink-0 font-serif text-xl leading-none transition-transform group-open:rotate-45 ${TEXT[ACCENTS[i % 4]]}`}
+                      className="shrink-0 font-sans text-xl leading-none text-pop-orange transition-transform group-open:rotate-45"
                       aria-hidden="true"
                     >
                       +
                     </span>
                   </summary>
-                  <p className="px-5 pb-5 text-ink-soft">{item.a}</p>
+                  <p className="px-5 pb-5 text-black/70">{item.a}</p>
                 </details>
               </Reveal>
             ))}
@@ -655,21 +664,25 @@ export default async function SouscriptionPage() {
       </section>
 
       {/* CTA final */}
-      <section className="bg-ink text-paper">
-        <ColorStripe />
+      <section className="bg-black text-white">
+        <div className="grid grid-cols-4" aria-hidden="true">
+          {POP_BG.map((c) => (
+            <div key={c} className={`h-1.5 ${c}`} />
+          ))}
+        </div>
         <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="font-serif text-2xl font-semibold sm:text-3xl">
+            <h2 className="font-sans text-2xl font-black italic sm:text-3xl">
               Prêt·e à écrire la suite avec nous&nbsp;?
             </h2>
-            <p className="mt-2 text-paper/75">
+            <p className="mt-2 text-white/75">
               En 2024, vous étiez 958. Cette fois, chaque contribution va
               intégralement à la maison.
             </p>
           </div>
           <a
             href="#paliers"
-            className="shrink-0 rounded-full bg-paper px-7 py-3.5 text-sm font-semibold text-ink transition-transform hover:-translate-y-0.5 hover:bg-paper/90"
+            className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
           >
             Choisir un palier
           </a>

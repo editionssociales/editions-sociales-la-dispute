@@ -3,10 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBooks, getFacets } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
-import { BlockMenu, type BlockCell } from "@/components/block-menu";
 import { CatalogueFilters } from "@/components/catalogue-filters";
 import { Container } from "@/components/container";
-import { Kicker } from "@/components/kicker";
 import { Pagination } from "@/components/pagination";
 import { parseBookFilters, serializeBookFilters } from "@/lib/parse-filters";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
@@ -27,8 +25,9 @@ export async function generateMetadata({
 export const dynamic = "force-dynamic";
 
 /**
- * Poids visuel d'une cellule du menu thèmes selon son nombre de titres —
- * identique à /catalogue (voir ce fichier pour le détail de la pondération).
+ * Poids visuel d'une cellule de la mosaïque de thèmes selon son nombre de
+ * titres — grille brutaliste (quadrillage noir 2px), cellule active inversée
+ * en noir/blanc comme les étiquettes de CatalogueFilters ci-dessous.
  */
 const THEME_TIERS: { min: number; span: string; text: string }[] = [
   {
@@ -44,6 +43,40 @@ const THEME_TIERS: { min: number; span: string; text: string }[] = [
 
 function themeTier(count: number) {
   return THEME_TIERS.find((t) => count >= t.min) ?? THEME_TIERS[THEME_TIERS.length - 1];
+}
+
+/** Cellule de la mosaïque de thèmes — inversion noir/blanc à l'état actif. */
+function ThemeCell({
+  href,
+  active,
+  span,
+  textClass,
+  label,
+  count,
+}: {
+  href: string;
+  active: boolean;
+  span: string;
+  textClass: string;
+  label: string;
+  count: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`relative flex flex-col justify-end gap-1.5 overflow-hidden px-[17px] py-[15px] transition-colors motion-reduce:transition-none focus-visible:z-[2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px] ${span} ${
+        active ? "bg-black text-white" : "bg-white text-black hover:bg-black hover:text-white"
+      }`}
+    >
+      <span className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] ${textClass}`}>
+        {label}
+      </span>
+      <span className="font-sans text-[11px] font-bold uppercase tracking-[.05em] opacity-60">
+        {count} titres{active ? " · actif" : ""}
+      </span>
+    </Link>
+  );
 }
 
 export default async function EditionCataloguePage({
@@ -76,68 +109,74 @@ export default async function EditionCataloguePage({
     { name: "Tous les livres", slug: null, count: facets.total },
     ...facets.collections,
   ];
-  const themeCells: BlockCell[] = themeItems.map((item) => {
-    const tier = themeTier(item.count);
-    const active = (item.slug ?? undefined) === filters.collection;
-    const qs = serializeBookFilters({
-      ...filters,
-      edition: undefined,
-      collection: item.slug ?? undefined,
-      page: undefined,
-    });
-    const s = qs.toString();
-    return {
-      key: item.slug ?? "all",
-      variant: active ? "actif" : "lien",
-      href: s ? `${basePath}?${s}` : basePath,
-      ariaCurrent: active,
-      className: `relative flex flex-col justify-end gap-1.5 overflow-hidden px-[17px] py-[15px] ${tier.span}`,
-      label: item.name,
-      labelClassName: `font-sans font-bold uppercase leading-[1.02] tracking-[.04em] ${tier.text}`,
-      note: `${item.count} titres${active ? " · actif" : ""}`,
-      noteClassName: "font-sans text-[11px] tracking-[.05em] opacity-60",
-    };
-  });
 
   return (
-    <Container className="py-12">
-      <nav aria-label="Fil d'ariane" className="font-sans text-[13px] text-muted">
+    <Container className="bg-white py-12">
+      <nav
+        aria-label="Fil d'ariane"
+        className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
+      >
         <Link
           href="/"
-          className="text-ink-soft transition-colors motion-reduce:transition-none hover:text-ink"
+          className="transition-colors motion-reduce:transition-none hover:text-black"
         >
           Accueil
         </Link>
-        <span aria-hidden="true" className="px-1.5 opacity-50">
+        <span aria-hidden="true" className="px-1.5">
           /
         </span>
         <Link
           href="/catalogue"
-          className="text-ink-soft transition-colors motion-reduce:transition-none hover:text-ink"
+          className="transition-colors motion-reduce:transition-none hover:text-black"
         >
           Catalogue
         </Link>
-        <span aria-hidden="true" className="px-1.5 opacity-50">
+        <span aria-hidden="true" className="px-1.5">
           /
         </span>
-        <span className="text-ink">{info.name}</span>
+        <span className="text-black">{info.name}</span>
       </nav>
 
       <div className="mt-3.5 max-w-2xl">
-        <Kicker accent="ocher">Explorer</Kicker>
-        <h1 className="mt-2 font-serif text-4xl font-bold sm:text-5xl">{info.name}</h1>
-        <p className="mt-3.5 text-[15px] leading-relaxed text-ink-soft">
-          {info.tagline} Chaque bloc est une collection de la maison&nbsp;; sa taille dépend du
-          nombre de titres. Cliquez pour filtrer — le bloc actif reste en blanc.
+        <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+          Explorer
+        </p>
+        <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+          {info.name}
+        </h1>
+        <p className="mt-3.5 text-[15px] leading-relaxed text-black/70">
+          {info.tagline} Chaque cellule est une collection de la maison&nbsp;; sa taille dépend
+          du nombre de titres. Cliquez pour filtrer — la cellule active s&rsquo;inverse en noir.
         </p>
       </div>
 
-      <BlockMenu
-        cells={themeCells}
-        ariaLabel={`Thèmes du catalogue ${info.name}`}
-        cols="grid-cols-2 lg:grid-cols-6"
-        className="mt-6 grid grid-flow-row-dense auto-rows-[clamp(62px,7vw,92px)] sm:mt-7"
-      />
+      <nav
+        aria-label={`Thèmes du catalogue ${info.name}`}
+        className="mt-6 grid grid-flow-row-dense auto-rows-[clamp(62px,7vw,92px)] grid-cols-2 gap-[2px] bg-black p-[2px] sm:mt-7 lg:grid-cols-6"
+      >
+        {themeItems.map((item) => {
+          const tier = themeTier(item.count);
+          const active = (item.slug ?? undefined) === filters.collection;
+          const qs = serializeBookFilters({
+            ...filters,
+            edition: undefined,
+            collection: item.slug ?? undefined,
+            page: undefined,
+          });
+          const s = qs.toString();
+          return (
+            <ThemeCell
+              key={item.slug ?? "all"}
+              href={s ? `${basePath}?${s}` : basePath}
+              active={active}
+              span={tier.span}
+              textClass={tier.text}
+              label={item.name}
+              count={item.count}
+            />
+          );
+        })}
+      </nav>
 
       <div className="mt-6">
         <CatalogueFilters
@@ -147,12 +186,12 @@ export default async function EditionCataloguePage({
         />
       </div>
 
-      <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-line pt-[18px]">
-        <span className="font-sans text-[13px] text-ink-soft">
+      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-black pt-[18px]">
+        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-black">
           {allBooks.length} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
         {totalPages > 1 && (
-          <span className="font-sans text-xs text-muted">
+          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/50">
             Page {page} sur {totalPages}
           </span>
         )}

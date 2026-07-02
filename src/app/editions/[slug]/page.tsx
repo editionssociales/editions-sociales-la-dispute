@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
-import { Kicker } from "@/components/kicker";
 import { Reveal } from "@/components/reveal";
 import { ACCENT_BG } from "@/lib/accents";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
@@ -33,30 +32,57 @@ export default async function EditionPage({
 
   return (
     <>
-      {/* Héro pleine couleur, dans l'accent de la maison */}
-      <section className={`${ACCENT_BG[info.accent]} text-paper`}>
-        <Container className="py-16 sm:py-24">
+      {/* Héro plein cadre, dans l'accent de la maison */}
+      <section className={`border-b-2 border-black ${ACCENT_BG[info.accent]}`}>
+        <Container className="py-14 sm:py-20">
           <Reveal>
-            <Kicker light>{info.name}</Kicker>
-            <h1 className="mt-4 max-w-4xl font-serif text-4xl font-semibold leading-[1.08] sm:text-6xl">
-              {info.tagline}
+            <nav
+              aria-label="Fil d'ariane"
+              className="font-sans text-xs font-bold uppercase tracking-[.06em] text-white/70"
+            >
+              <Link
+                href="/"
+                className="transition-colors motion-reduce:transition-none hover:text-white"
+              >
+                Accueil
+              </Link>
+              <span aria-hidden="true" className="px-1.5">
+                /
+              </span>
+              <Link
+                href="/editions"
+                className="transition-colors motion-reduce:transition-none hover:text-white"
+              >
+                Nos collections
+              </Link>
+              <span aria-hidden="true" className="px-1.5">
+                /
+              </span>
+              <span className="text-white">{info.shortName}</span>
+            </nav>
+            <h1 className="mt-5 max-w-4xl font-sans text-4xl font-black italic uppercase leading-[0.94] text-white sm:text-6xl">
+              {info.name}
             </h1>
-            <p className="mt-6 max-w-2xl text-lg text-paper/85">
+            <p className="mt-4 max-w-2xl font-sans text-lg font-bold leading-snug text-white/90">
+              {info.tagline}
+            </p>
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/80">
               {info.description}
             </p>
-            <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
-              <p className="flex items-baseline gap-2">
-                <span className="font-serif text-4xl font-semibold">
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <p className="flex items-baseline gap-2 border-2 border-white px-4 py-2.5">
+                <span className="font-sans text-2xl font-black italic text-white">
                   {books.length}
                 </span>
-                <span className="text-sm text-paper/85">titres au catalogue</span>
+                <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-white/80">
+                  titres au catalogue
+                </span>
               </p>
-              <span className="hidden h-8 w-px bg-paper/30 sm:block" aria-hidden="true" />
               <a
                 href={info.legacyUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex rounded-full px-5 py-2.5 text-sm font-semibold text-paper ring-1 ring-inset ring-paper/40 transition-colors hover:bg-paper/10"
+                className="inline-flex items-center gap-1 border-2 border-white px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white"
               >
                 Site historique
                 <span aria-hidden="true">&nbsp;↗</span>
@@ -67,17 +93,19 @@ export default async function EditionPage({
       </section>
 
       {/* Parutions récentes — liste utilitaire, sans effet d'apparition */}
-      <Container className="py-12 sm:py-16">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <Container className="bg-white py-12 sm:py-16">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b-2 border-black pb-4 sm:mb-8">
           <div>
-            <Kicker accent={info.accent}>{info.shortName}</Kicker>
-            <h2 className="mt-2 font-serif text-2xl font-semibold sm:text-3xl">
+            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+              {info.shortName}
+            </p>
+            <h2 className="mt-2 font-sans text-2xl font-black italic uppercase leading-[0.96] text-black sm:text-3xl">
               Parutions récentes
             </h2>
           </div>
           <Link
             href={`/catalogue/${slug}`}
-            className="text-sm font-semibold text-ink hover:underline"
+            className="font-sans text-sm font-bold uppercase tracking-[.03em] text-black hover:underline"
           >
             Tout le catalogue →
           </Link>
@@ -86,15 +114,15 @@ export default async function EditionPage({
       </Container>
 
       {/* Bandeau final, discret, vers le catalogue de la maison */}
-      <section className="border-t border-line bg-paper-2">
-        <Container className="flex flex-col items-start gap-5 py-12 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-xl text-ink-soft">
+      <section className="border-t-2 border-black bg-white">
+        <Container className="flex flex-col items-start gap-5 py-10 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-xl text-[15px] leading-relaxed text-black/70">
             Le fonds {info.shortName} compte {books.length} titres — tous
             réunis dans le catalogue de la maison.
           </p>
           <Link
             href={`/catalogue/${slug}`}
-            className="shrink-0 rounded-full bg-ink px-6 py-3 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5"
+            className="shrink-0 border-2 border-black bg-black px-6 py-3.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
           >
             Parcourir tout le fonds
           </Link>

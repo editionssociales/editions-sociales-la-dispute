@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-spectral), Georgia, "Times New Roman", serif;
+  /* Effra (maquette « essai site ») en priorité ; repli sur Inter tant que les
+     fichiers ne sont pas déposés (voir @font-face plus bas et public/fonts/). */
+  --font-sans: "Effra", var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* La maquette « essai site » est tout en Effra : « serif » pointe donc aussi
+     vers Effra (repli Inter) pour que les composants existants utilisant
+     font-serif basculent sur Effra sans réécriture. */
+  --font-serif: "Effra", var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --color-paper: #faf7f2;
   --color-paper-2: #f2ece1;
@@ -26,10 +31,55 @@
   --color-ocher-text: #9a5a17;
 
   --color-accent: var(--color-navy);
+
+  /*
+   * Palette « pop » — refonte grille brutaliste (maquette « essai site »).
+   * Aplats vifs qui codent les sections de nav (catalogue, la Geme, à
+   * paraître, agenda) ; texte NOIR dessus pour le contraste.
+   */
+  --color-pop-pink: #f4a9c6;
+  --color-pop-teal: #5fd0c4;
+  --color-pop-orange: #f04e1f;
+  --color-pop-yellow: #ffed00;
 }
 
 :root {
   color-scheme: light;
+}
+
+/*
+ * Effra — typographie de la maquette « essai site ». Fichiers à déposer dans
+ * public/fonts/ (voir public/fonts/README.txt) ; d'ici là, --font-sans replie
+ * proprement sur Inter (var(--font-inter)) puisque ces @font-face restent
+ * simplement inutilisées tant que les .woff2 sont absents.
+ */
+@font-face {
+  font-family: "Effra";
+  src: url("/fonts/Effra-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Effra";
+  src: url("/fonts/Effra-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Effra";
+  src: url("/fonts/Effra-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Effra";
+  src: url("/fonts/Effra-BoldItalic.woff2") format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
 }
 
 /* Défilement fluide vers les ancres (#paliers…), hors reduced-motion. */
@@ -51,8 +101,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Direction « essai site » : titres en Effra (font-sans), pas en serif. */
 h1, h2, h3, h4 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   letter-spacing: -0.01em;
 }
 

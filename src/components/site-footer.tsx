@@ -1,87 +1,148 @@
 import Link from "next/link";
-import { Container } from "./container";
-import { ColorStripe } from "./color-stripe";
-import { ACCENT_BG } from "@/lib/accents";
-import { EDITION_LIST } from "@/lib/editions";
 
-function ColTitle({ accent, children }: { accent: "navy" | "bottle" | "ocher" | "brick"; children: React.ReactNode }) {
+/**
+ * Pied de page brutaliste — même recette de quadrillage noir 2px que la
+ * navbar (`grid gap-[2px] bg-black p-[2px]`, cellules enfant `bg-white`) :
+ * gauche « Adresse » / « Mentions légales » empilées, cellule centrale vide,
+ * droite « S'abonner à la newsletter » / « Diffusion-Distribution » empilées.
+ *
+ * Desktop (lg+) : 3 colonnes × 2 rangées — gauche | vide | droite.
+ * Mobile : empilé — les 4 cellules de contenu pleine largeur (la cellule
+ * vide n'a pas de contenu, elle est masquée).
+ */
+
+const CELL_CLASS = "flex flex-col gap-3 bg-white p-6 font-sans sm:p-7";
+const HEADING_CLASS =
+  "text-xs font-extrabold uppercase tracking-[.08em] text-black";
+const BODY_CLASS = "text-sm leading-relaxed text-black/70";
+const LINK_CLASS =
+  "inline-flex w-fit font-bold text-black underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
+
+function AdresseCell({ className = "" }: { className?: string }) {
   return (
-    <p className="mb-3 flex items-center gap-2 font-semibold uppercase tracking-wider text-muted">
-      <span className={`h-1.5 w-1.5 rotate-45 ${ACCENT_BG[accent]}`} aria-hidden="true" />
-      {children}
-    </p>
+    <div className={`${CELL_CLASS} ${className}`}>
+      <p className={HEADING_CLASS}>Adresse</p>
+      <p className="text-base font-black italic uppercase leading-tight text-black">
+        Les Éditions sociales <span className="not-italic text-black/40">×</span>{" "}
+        La Dispute
+      </p>
+      <p className={BODY_CLASS}>
+        La maison de la pensée critique, des sciences sociales et du
+        mouvement ouvrier. Paris, France.
+      </p>
+      <nav aria-label="Liens utiles">
+        <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <li>
+            <Link href="/a-propos" className={LINK_CLASS}>
+              À propos
+            </Link>
+          </li>
+          <li>
+            <Link href="/panier" className={LINK_CLASS}>
+              Panier
+            </Link>
+          </li>
+          <li>
+            <Link href="/souscription" className={LINK_CLASS}>
+              Souscription
+            </Link>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  );
+}
+
+function MentionsCell({ className = "", year }: { className?: string; year: number }) {
+  return (
+    <div className={`${CELL_CLASS} ${className}`}>
+      <p className={HEADING_CLASS}>Mentions légales</p>
+      <Link href="/mentions-legales" className={`${LINK_CLASS} text-sm`}>
+        Consulter les mentions légales
+      </Link>
+      <p className="mt-auto text-xs text-black/60">
+        © {year} Les Éditions sociales × La Dispute
+      </p>
+    </div>
+  );
+}
+
+function NewsletterCell({ className = "" }: { className?: string }) {
+  return (
+    <div className={`${CELL_CLASS} ${className}`}>
+      <p className={HEADING_CLASS}>S&apos;abonner à la newsletter</p>
+      <p className={BODY_CLASS}>
+        Parutions, rencontres et souscriptions : l&apos;essentiel, une fois
+        par mois.
+      </p>
+      <form
+        action="#"
+        method="get"
+        className="mt-1 flex border-2 border-black"
+      >
+        <label htmlFor="footer-newsletter-email" className="sr-only">
+          Adresse e-mail
+        </label>
+        <input
+          id="footer-newsletter-email"
+          name="email"
+          type="email"
+          required
+          placeholder="vous@exemple.fr"
+          className="min-w-0 flex-1 bg-white px-3 py-2 text-sm text-black placeholder:text-black/40 focus-visible:outline-none"
+        />
+        <button
+          type="submit"
+          className="shrink-0 border-l-2 border-black bg-black px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
+        >
+          S&apos;abonner
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function DiffusionCell({ className = "" }: { className?: string }) {
+  return (
+    <div className={`${CELL_CLASS} ${className}`}>
+      <p className={HEADING_CLASS}>Diffusion-Distribution</p>
+      <p className={BODY_CLASS}>
+        Vente directe et distribution indépendante — sans mécène ni
+        actionnaire.
+      </p>
+      <Link href="/catalogue" className={`${LINK_CLASS} text-sm`}>
+        Parcourir le catalogue
+      </Link>
+    </div>
   );
 }
 
 export function SiteFooter() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="mt-24 border-t border-line bg-paper-2">
-      <ColorStripe className="h-1" />
-      <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="sm:col-span-2 lg:col-span-1">
-          <p className="font-serif text-lg font-semibold">
-            Les Éditions sociales <span className="text-muted">x</span> La Dispute
-          </p>
-          <p className="mt-3 max-w-xs text-sm text-ink-soft">
-            La maison de la pensée critique, des sciences sociales et du
-            mouvement ouvrier.
-          </p>
-          <p className="mt-4 text-xs text-muted">
-            Deux maisons, une équipe — indépendantes depuis près de 30 ans.
-          </p>
-        </div>
+    <footer className="bg-black">
+      {/* Mobile (< lg) : cellules empilées pleine largeur ; la cellule
+          centrale vide n'a pas de contenu, elle est masquée. */}
+      <div className="grid grid-cols-1 gap-[2px] p-[2px] lg:hidden">
+        <AdresseCell />
+        <MentionsCell year={year} />
+        <NewsletterCell />
+        <DiffusionCell />
+      </div>
 
-        <nav aria-label="Catalogue" className="text-sm">
-          <ColTitle accent="navy">Catalogue</ColTitle>
-          <ul className="space-y-2">
-            <li>
-              <Link href="/catalogue" className="text-ink-soft hover:text-ink">
-                Tous les livres
-              </Link>
-            </li>
-            {EDITION_LIST.map((e) => (
-              <li key={e.slug}>
-                <Link
-                  href={`/catalogue/${e.slug}`}
-                  className="text-ink-soft hover:text-ink"
-                >
-                  {e.name}
-                </Link>
-              </li>
-            ))}
-            <li>
-              <Link href="/panier" className="text-ink-soft hover:text-ink">
-                Panier
-              </Link>
-            </li>
-          </ul>
-        </nav>
-
-        <nav aria-label="La maison" className="text-sm">
-          <ColTitle accent="bottle">La maison</ColTitle>
-          <ul className="space-y-2">
-            <li><Link href="/editions" className="text-ink-soft hover:text-ink">Nos collections</Link></li>
-            <li><Link href="/rencontres" className="text-ink-soft hover:text-ink">Rencontres</Link></li>
-            <li><Link href="/a-propos" className="text-ink-soft hover:text-ink">À propos</Link></li>
-          </ul>
-        </nav>
-
-        <nav aria-label="Souscription" className="text-sm">
-          <ColTitle accent="brick">Souscription</ColTitle>
-          <ul className="space-y-2">
-            <li><Link href="/souscription" className="text-ink-soft hover:text-ink">Participer</Link></li>
-          </ul>
-          <Link
-            href="/souscription"
-            className="mt-4 inline-flex rounded-full bg-ink px-4 py-2 text-xs font-semibold text-paper transition-all hover:-translate-y-0.5 hover:opacity-90"
-          >
-            Choisir un palier
-          </Link>
-        </nav>
-      </Container>
-      <Container className="flex flex-col gap-2 border-t border-line py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} Les Éditions sociales x La Dispute</p>
-      </Container>
+      {/* Desktop (lg+) : gauche (Adresse / Mentions légales) | vide |
+          droite (Newsletter / Diffusion-Distribution). */}
+      <div className="hidden grid-cols-[1fr_1fr_1fr] grid-rows-2 gap-[2px] p-[2px] lg:grid">
+        <AdresseCell className="col-start-1 row-start-1" />
+        <MentionsCell className="col-start-1 row-start-2" year={year} />
+        <div
+          aria-hidden="true"
+          className="col-start-2 row-span-2 row-start-1 bg-white"
+        />
+        <NewsletterCell className="col-start-3 row-start-1" />
+        <DiffusionCell className="col-start-3 row-start-2" />
+      </div>
     </footer>
   );
 }

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
-import { Kicker } from "@/components/kicker";
 import { Reveal } from "@/components/reveal";
 import { CountUp } from "@/components/count-up";
-import { ACCENT_TEXT, ACCENT_BORDER_L } from "@/lib/accents";
+import { ACCENT_BG } from "@/lib/accents";
 import { EDITION_LIST } from "@/lib/editions";
 import { countBooks } from "@/lib/catalogue";
 
@@ -21,48 +20,74 @@ export default async function EditionsPage() {
   );
 
   return (
-    <Container className="py-12 sm:py-16">
+    <Container className="bg-white py-12">
+      <nav
+        aria-label="Fil d'ariane"
+        className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
+      >
+        <Link
+          href="/"
+          className="transition-colors motion-reduce:transition-none hover:text-black"
+        >
+          Accueil
+        </Link>
+        <span aria-hidden="true" className="px-1.5">
+          /
+        </span>
+        <span className="text-black">Nos collections</span>
+      </nav>
+
       <Reveal>
-        <header className="max-w-2xl">
-          <Kicker accent="bottle">Deux maisons, une équipe</Kicker>
-          <h1 className="mt-3 font-serif text-4xl font-semibold sm:text-5xl">
+        <div className="mt-3.5 max-w-2xl">
+          <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            Deux maisons, une équipe
+          </p>
+          <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.96] text-black sm:text-5xl">
             Nos collections
           </h1>
-          <p className="mt-4 text-lg text-ink-soft">
+          <p className="mt-3.5 max-w-xl text-[15px] leading-relaxed text-black/70">
             Deux fonds éditoriaux, chacun avec son identité, réunis dans le
             même catalogue.
           </p>
-        </header>
+        </div>
       </Reveal>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
+      <div className="mt-8 grid gap-[2px] bg-black p-[2px] sm:mt-10 sm:grid-cols-2">
         {EDITION_LIST.map((e, i) => (
           <Reveal key={e.slug} delay={i * 120} className="h-full">
-            <section
-              className={`flex h-full flex-col rounded-xl border border-line border-l-4 bg-paper p-8 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/5 ${ACCENT_BORDER_L[e.accent]}`}
-            >
-              <Kicker accent={e.accent}>{e.name}</Kicker>
-              <h2 className="mt-3 font-serif text-2xl font-semibold sm:text-3xl">
-                {e.tagline}
+            <section className="flex h-full flex-col bg-white p-7 sm:p-8">
+              <span
+                aria-hidden="true"
+                className={`block h-[6px] w-16 ${ACCENT_BG[e.accent]}`}
+              />
+              <h2 className="mt-5 font-sans text-3xl font-black italic uppercase leading-[0.96] text-black sm:text-4xl">
+                {e.name}
               </h2>
-              <p className="mt-3 flex-1 text-ink-soft">{e.description}</p>
+              <p className="mt-3 text-[15px] font-bold leading-snug text-black/80">
+                {e.tagline}
+              </p>
+              <p className="mt-4 flex-1 text-[15px] leading-relaxed text-black/70">
+                {e.description}
+              </p>
               <p className="mt-6 flex items-baseline gap-2">
                 <CountUp
                   value={counts[i]}
-                  className={`font-serif text-4xl font-semibold ${ACCENT_TEXT[e.accent]}`}
+                  className="font-sans text-4xl font-black italic text-black"
                 />
-                <span className="text-sm text-ink-soft">titres au catalogue</span>
+                <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-black/50">
+                  titres au catalogue
+                </span>
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   href={`/editions/${e.slug}`}
-                  className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5"
+                  className="border-2 border-black bg-black px-5 py-3 font-sans text-[13px] font-bold uppercase tracking-[.04em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
                 >
                   Découvrir
                 </Link>
                 <Link
                   href={`/catalogue/${e.slug}`}
-                  className="rounded-full px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition-colors hover:bg-paper-2"
+                  className="border-2 border-black bg-white px-5 py-3 font-sans text-[13px] font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
                 >
                   Le catalogue
                 </Link>

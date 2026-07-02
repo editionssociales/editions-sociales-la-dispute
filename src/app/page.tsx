@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { NouveautesCarousel, type NouveauteBook } from "@/components/nouveautes-carousel";
-import { ACCENTS, ACCENT_BG } from "@/lib/accents";
 import { getNewReleases } from "@/lib/catalogue";
 import { EDITIONS } from "@/lib/editions";
 import type { Book, Cover, EditionSlug } from "@/lib/types";
@@ -36,30 +35,37 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="pt-[clamp(30px,4.5vw,60px)] pb-[clamp(38px,6vw,76px)]">
-      <NouveautesCarousel books={books} />
+    <div className="bg-white pb-[clamp(38px,6vw,76px)]">
+      <div className="border-b-2 border-black bg-white px-[clamp(16px,4vw,64px)] pb-[clamp(20px,3vw,30px)] pt-[clamp(26px,4vw,44px)]">
+        <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+          Les Éditions sociales × La Dispute
+        </p>
+        <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-black">
+          Nouveautés
+        </h1>
+      </div>
+
+      <div className="pt-[clamp(28px,4.5vw,52px)]">
+        <NouveautesCarousel books={books} />
+      </div>
 
       <Container className="mt-[clamp(30px,4.5vw,60px)]">
-        <div className="flex flex-wrap items-center justify-between gap-6 border border-line bg-paper-2 px-6 py-6 sm:px-7">
-          <div className="flex min-w-0 items-stretch gap-4 sm:gap-5">
-            <div className="grid w-2 flex-none grid-rows-4" aria-hidden="true">
-              {ACCENTS.map((a) => (
-                <div key={a} className={ACCENT_BG[a]} />
-              ))}
-            </div>
-            <div>
-              <p className="font-serif text-[clamp(18px,2vw,25px)] font-semibold leading-[1.1] text-ink">
-                La souscription est ouverte
-              </p>
-              <p className="mt-1.5 max-w-[56ch] text-sm text-ink-soft">
-                Soutenez les Éditions sociales et La Dispute — chaque
-                souscription finance les prochains titres.
-              </p>
-            </div>
+        <div className="grid grid-cols-1 gap-[2px] bg-black p-[2px] sm:grid-cols-[1fr_auto]">
+          <div className="flex min-w-0 flex-col justify-center gap-1.5 bg-pop-yellow px-6 py-6 sm:px-7">
+            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/60">
+              Souscription
+            </p>
+            <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-black">
+              La souscription est ouverte
+            </p>
+            <p className="mt-0.5 max-w-[56ch] text-sm text-black/70">
+              Soutenez les Éditions sociales et La Dispute — chaque
+              souscription finance les prochains titres.
+            </p>
           </div>
           <Link
             href="/souscription"
-            className="flex-none whitespace-nowrap bg-ink px-[22px] py-3.5 text-sm font-bold uppercase tracking-[0.04em] text-paper transition-colors hover:bg-ocher-text focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
+            className="flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-black px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-white transition-colors hover:bg-pop-orange hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow motion-reduce:transition-none"
           >
             Souscrire <span aria-hidden="true">→</span>
           </Link>

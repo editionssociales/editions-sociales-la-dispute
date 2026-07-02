@@ -7,16 +7,14 @@ interface Props {
   hrefFor: (page: number) => string;
 }
 
-/** Parité clavier partagée : focus-visible = anneau ocre, cohérent avec le reste du site. */
+/** Focus visible partagé : anneau jaune pop, lisible sur fond blanc comme noir. */
 const FOCUS_CLASS =
-  "focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2";
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
 
-/** Flèches Précédent/Suivant — carrées 40px de haut, classes littérales complètes (contrainte JIT). */
+/** Flèches Précédent/Suivant — cellules carrées 40px de haut, grille encadrée. */
 function arrowClass(disabled: boolean): string {
-  return `flex h-10 items-center gap-1.5 border px-4 text-sm font-medium transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
-    disabled
-      ? "pointer-events-none border-line/60 text-muted"
-      : "border-line bg-paper-2 text-ink-soft hover:bg-ink hover:text-paper"
+  return `flex h-10 items-center gap-1.5 bg-white px-4 text-sm font-bold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
+    disabled ? "pointer-events-none text-black/30" : "hover:bg-black hover:text-white"
   }`;
 }
 
@@ -29,7 +27,7 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
   return (
     <nav
       aria-label="Pagination"
-      className="mt-12 flex flex-wrap items-center justify-center gap-1.5"
+      className="mt-12 flex flex-wrap items-stretch gap-[2px] bg-black p-[2px]"
     >
       {page <= 1 ? (
         <span className={arrowClass(true)}>← Précédent</span>
@@ -39,21 +37,24 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
         </Link>
       )}
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-stretch gap-[2px]">
         {items.map((p, i) => (
-          <span key={p} className="flex items-center">
+          <span key={p} className="flex items-stretch">
             {i > 0 && p - items[i - 1] > 1 && (
-              <span className="px-1 text-muted" aria-hidden="true">
+              <span
+                className="flex h-10 w-6 items-center justify-center bg-white text-black/40"
+                aria-hidden="true"
+              >
                 …
               </span>
             )}
             <Link
               href={hrefFor(p)}
               aria-current={p === page ? "page" : undefined}
-              className={`flex h-10 w-10 items-center justify-center border text-sm transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
+              className={`flex h-10 w-10 items-center justify-center text-sm font-bold transition-colors motion-reduce:transition-none ${FOCUS_CLASS} ${
                 p === page
-                  ? "border-ink bg-ink font-semibold text-paper"
-                  : "border-line bg-paper-2 font-medium text-ink-soft hover:bg-ink hover:text-paper"
+                  ? "bg-black text-white"
+                  : "bg-white text-black hover:bg-black hover:text-white"
               }`}
             >
               {p}

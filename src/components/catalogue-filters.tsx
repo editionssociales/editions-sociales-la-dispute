@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { Facet } from "@/lib/types";
@@ -11,6 +12,8 @@ interface Props {
   authors: Facet[];
   /** Si défini, l'édition est verrouillée (pages /catalogue/[edition]). */
   lockedEdition?: string;
+  /** Nombre total de titres, pour l'étiquette « Tous les livres ». */
+  totalCount?: number;
 }
 
 const SORTS = [
@@ -19,12 +22,42 @@ const SORTS = [
   { value: "titre", label: "Titre (A–Z)" },
 ];
 
-/** Champs de filtres — carrés, sans rounded, posés directement sur le fond paper de la page. */
-const FIELD_CLASS =
-  "border border-line bg-paper-2 px-3.5 py-2.5 text-sm text-ink transition-shadow focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-[-1px] motion-reduce:transition-none";
+/**
+ * Grille brutaliste : le quadrillage noir vient du fond noir du conteneur
+ * qui transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
+ * par-dessus (recette « grille encadrée », voir AGENTS.md).
+ */
+const FOCUS_CLASS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
+const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-black";
+const FIELD_CLASS = `bg-white px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_CLASS}`;
 const SELECT_CLASS = `${FIELD_CLASS} cursor-pointer`;
 
-export function CatalogueFilters({ collections, authors, lockedEdition }: Props) {
+/** Étiquette cliquable (thème, maison) — inversion noir/blanc à l'état actif. */
+function Tag({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${FOCUS_CLASS} ${
+        active ? "bg-black text-white" : "bg-white text-black hover:bg-black hover:text-white"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function CatalogueFilters({ collections, authors, lockedEdition, totalCount }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -80,45 +113,32 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
     navigate(next);
   }, [params, navigate]);
 
-  // Chips des filtres actifs — libellés repris des facettes et des maisons,
-  // puce losange colorée par type de filtre.
+  const activeCollection = params.get("collection") ?? "";
+  const activeEdition = params.get("edition") ?? "";
+
+  // Chips des filtres actifs — libellés repris des facettes et des maisons.
   const chips: FilterChip[] = [];
   const q = params.get("q");
   if (q) {
-    chips.push({ param: "q", type: "recherche", label: `« ${q} »`, accent: "ocher" });
+    chips.push({ param: "q", type: "recherche", label: `« ${q} »` });
   }
   const edition = params.get("edition");
   if (edition && !lockedEdition) {
     const e = EDITION_LIST.find((x) => x.slug === edition);
-    chips.push({
-      param: "edition",
-      type: "maison",
-      label: e?.name ?? edition,
-      accent: "navy",
-    });
+    chips.push({ param: "edition", type: "maison", label: e?.name ?? edition });
   }
   const collection = params.get("collection");
   if (collection) {
     const c = collections.find((x) => x.slug === collection);
-    chips.push({
-      param: "collection",
-      type: "collection",
-      label: c?.name ?? collection,
-      accent: "bottle",
-    });
+    chips.push({ param: "collection", type: "thème", label: c?.name ?? collection });
   }
   const author = params.get("author");
   if (author) {
     const a = authors.find((x) => x.slug === author);
-    chips.push({
-      param: "author",
-      type: "auteur",
-      label: a?.name ?? author,
-      accent: "brick",
-    });
+    chips.push({ param: "author", type: "auteur", label: a?.name ?? author });
   }
   if (params.get("upcoming") === "1") {
-    chips.push({ param: "upcoming", type: "statut", label: "À paraître", accent: "ocher" });
+    chips.push({ param: "upcoming", type: "statut", label: "À paraître" });
   }
 
   return (
@@ -127,12 +147,36 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
         isPending ? "opacity-70" : ""
       }`}
     >
-      <div className="flex flex-wrap items-center gap-2.5">
-        <span className="mr-0.5 shrink-0 text-[11px] font-semibold uppercase tracking-[.16em] text-muted">
-          Affiner
-        </span>
+      <div
+        role="group"
+        aria-label="Thèmes et filtres du catalogue"
+        className="flex flex-wrap items-stretch gap-[2px] bg-black p-[2px]"
+      >
+        <Tag active={activeCollection === ""} onClick={() => setParam("collection", "")}>
+          Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
+        </Tag>
+        {collections.map((c) => (
+          <Tag
+            key={c.slug}
+            active={activeCollection === c.slug}
+            onClick={() => setParam("collection", c.slug)}
+          >
+            {c.name} ({c.count})
+          </Tag>
+        ))}
 
-        <label className="block">
+        {!lockedEdition &&
+          EDITION_LIST.map((e) => (
+            <Tag
+              key={e.slug}
+              active={activeEdition === e.slug}
+              onClick={() => setParam("edition", activeEdition === e.slug ? "" : e.slug)}
+            >
+              {e.shortName}
+            </Tag>
+          ))}
+
+        <label className="flex items-center bg-white px-3.5">
           <span className="sr-only">Rechercher</span>
           <input
             type="search"
@@ -143,39 +187,9 @@ export function CatalogueFilters({ collections, authors, lockedEdition }: Props)
               setQuery(e.target.value);
               setParam("q", e.target.value);
             }}
-            className={`${FIELD_CLASS} w-full min-w-[230px] sm:w-[230px]`}
+            className={`w-full min-w-[190px] bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-black/40 ${CELL_TEXT} ${FOCUS_CLASS}`}
           />
         </label>
-
-        {!lockedEdition && (
-          <select
-            aria-label="Maison d'édition"
-            value={params.get("edition") ?? ""}
-            onChange={(e) => setParam("edition", e.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="">Toutes les maisons</option>
-            {EDITION_LIST.map((e) => (
-              <option key={e.slug} value={e.slug}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-        )}
-
-        <select
-          aria-label="Collection"
-          value={params.get("collection") ?? ""}
-          onChange={(e) => setParam("collection", e.target.value)}
-          className={SELECT_CLASS}
-        >
-          <option value="">Toutes les collections</option>
-          {collections.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name} ({c.count})
-            </option>
-          ))}
-        </select>
 
         <select
           aria-label="Auteur"
