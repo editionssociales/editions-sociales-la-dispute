@@ -4,6 +4,7 @@ import type { Book } from "@/lib/types";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
 import { ShelfCover } from "@/components/shelf-cover";
+import { ShelfLock } from "@/components/shelf-lock";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
@@ -262,7 +263,7 @@ function HeroShelf({ books }: { books: Book[] }) {
     SPINES.slice(0, i).reduce((acc, s) => acc + s.w + SHELF_GAP, 0),
   );
   return (
-    <div className="hidden lg:block">
+    <ShelfLock className="hidden lg:block">
       <div className="flex items-end gap-1.5">
         {SPINES.map((s, i) => {
           const book = books[i];
@@ -280,7 +281,7 @@ function HeroShelf({ books }: { books: Book[] }) {
             <Link
               key={i}
               href={`/catalogue/${book.edition}/${book.slug}`}
-              className={`book3d${i < 2 ? " book3d--edge" : ""} group relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] hover:z-30 focus-visible:z-30 focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-[-3px]`}
+              className={`book3d${i < 2 ? " book3d--edge" : ""} relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] focus-visible:z-30 focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-[-3px]`}
               style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
             >
               <span className="sr-only">
@@ -288,11 +289,10 @@ function HeroShelf({ books }: { books: Book[] }) {
                 {book.authors[0] ? `, ${book.authors[0].name}` : ""}
               </span>
               {/* Titre, auteur, collection — fondu sous la barre de l'étagère.
-                  Même buffer que le livre : dwell de 150ms à l'aller, délai de
-                  440ms au repos pour rester synchrone avec le repli (l'animation
-                  déclenchée va au bout sans se couper). */}
+                  Affiché quand le dos est ouvert (classe is-open pilotée par
+                  ShelfLock) ou au focus clavier ; cf. .book3d-cap (globals.css). */}
               <span
-                className="pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 delay-[440ms] group-hover:opacity-100 group-hover:delay-150 group-focus-visible:opacity-100 group-focus-visible:delay-150 motion-reduce:transition-none"
+                className="book3d-cap pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 motion-reduce:transition-none"
                 style={{ left: -leftOffsets[i], top: "calc(100% + 16px)" }}
                 aria-hidden="true"
               >
@@ -335,9 +335,9 @@ function HeroShelf({ books }: { books: Book[] }) {
       </div>
       <div className="h-1.5 rounded bg-paper/25" />
       {/* Zone réservée sous la barre : l'encart titre/auteur/collection du dos
-          survolé s'y affiche (positionné en absolu depuis chaque lien). */}
+          ouvert s'y affiche (positionné en absolu depuis chaque lien). */}
       <div aria-hidden="true" className="h-20" />
-    </div>
+    </ShelfLock>
   );
 }
 
