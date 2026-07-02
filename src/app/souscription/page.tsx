@@ -253,12 +253,17 @@ const SPINES: { h: number; w: number }[] = [
 ];
 const SHELF_GAP = 6; // = gap-1.5 entre les dos
 /**
- * Position (bottom, px) du bloc titre/auteur/collection : cale au-dessus de
- * la plus haute couverture ouverte — la couverture ayant désormais la même
- * hauteur que son dos (continuité physique), pas de hauteur uniforme — plus
- * 40px de respiration, comme le COVER_H + 40 du prototype.
+ * Hauteur uniforme (px) du livre déplié au survol. Les dos gardent leur
+ * hauteur variée au repos (l'étagère), mais tous les livres atteignent cette
+ * hauteur une fois sortis, pour que les petits dos ne donnent pas des livres
+ * minuscules. Voir --bh dans .book3d-inner (globals.css).
  */
-const TEXT_BLOCK_BOTTOM = Math.max(...SPINES.map((s) => s.h)) + 40;
+const BOOK_HOVER_H = 150;
+/**
+ * Position (bottom, px) du bloc titre/auteur/collection : cale au-dessus du
+ * livre déplié (hauteur uniforme) plus une marge de respiration.
+ */
+const TEXT_BLOCK_BOTTOM = BOOK_HOVER_H + 44;
 
 /**
  * Étagère du héro : chaque dos dessiné porte une parution récente réelle. Au
@@ -293,8 +298,8 @@ function HeroShelf({ books }: { books: Book[] }) {
             Math.max(book.cover.width / book.cover.height, 0.55),
             0.8,
           );
-          // Couverture physiquement continue : même hauteur que le dos.
-          const coverWidth = Math.round(s.h * ratio);
+          // Largeur de couverture calée sur la hauteur uniforme du survol.
+          const coverWidth = Math.round(BOOK_HOVER_H * ratio);
           return (
             <Link
               key={i}
@@ -333,6 +338,7 @@ function HeroShelf({ books }: { books: Book[] }) {
                   {
                     "--w": `${s.w}px`,
                     "--h": `${s.h}px`,
+                    "--bh": `${BOOK_HOVER_H}px`,
                     "--cw": `${coverWidth}px`,
                   } as React.CSSProperties
                 }

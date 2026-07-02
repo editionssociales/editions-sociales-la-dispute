@@ -81,10 +81,13 @@ h1, h2, h3, h4 {
 
 /*
  * Étagère du héro (page souscription) : sortie de rayon 3D au survol/focus
- * du lien. Le livre pivote sur l'arête de sa reliure (bord droit du dos)
- * pour présenter sa couverture, qui reste physiquement continue avec le dos
- * (même hauteur). Dimensions par livre en variables CSS inline --w/--h/--cw ;
- * réglages (angle, sortie, easing) repris du prototype de design.
+ * du lien. Le livre pivote sur l'arête de sa reliure (bord droit du dos) pour
+ * présenter sa couverture. Au repos, dos et couverture ont la hauteur du dos
+ * (--h) : la couverture, vue par la tranche, se cache derrière le dos (aucun
+ * sliver). Au survol, le livre grandit vers une hauteur uniforme (--bh) ancrée
+ * en bas, pour que les petits dos ne donnent pas des livres minuscules.
+ * Dimensions par livre en variables CSS inline --w/--h/--bh/--cw ; réglages
+ * (angle, sortie, easing) repris du prototype de design.
  */
 .book3d {
   perspective: 1000px;
@@ -98,17 +101,21 @@ h1, h2, h3, h4 {
   transform-style: preserve-3d;
   transform-origin: 100% 100%;
   transform: translateX(0) translateY(0) translateZ(0) rotateY(0deg);
-  transition: transform 440ms cubic-bezier(0.34, 1.28, 0.5, 1);
-  will-change: transform;
+  transition:
+    transform 440ms cubic-bezier(0.34, 1.28, 0.5, 1),
+    height 440ms cubic-bezier(0.34, 1.28, 0.5, 1);
+  will-change: transform, height;
 }
 .book3d:hover .book3d-inner,
 .book3d:focus-visible .book3d-inner {
+  height: var(--bh);
   transform: translateX(-30px) translateY(-26px) translateZ(52px) rotateY(-78deg);
 }
 /* Dos proches du bord gauche de l'étagère : sortie latérale réduite pour ne
    pas déborder de la page (écart assumé au prototype, X_SHIFT 30 → 20). */
 .book3d--edge:hover .book3d-inner,
 .book3d--edge:focus-visible .book3d-inner {
+  height: var(--bh);
   transform: translateX(-20px) translateY(-26px) translateZ(52px) rotateY(-78deg);
 }
 .book3d-spine {
@@ -123,12 +130,15 @@ h1, h2, h3, h4 {
   bottom: 0;
   left: var(--w);
   width: var(--cw);
-  height: var(--h);
+  height: 100%; /* suit la hauteur de --inner : --h au repos, --bh au survol */
   transform-origin: 0% 100%;
   transform: rotateY(90deg);
   border-radius: 1px;
   overflow: hidden;
   backface-visibility: hidden;
+  /* Contour clair discret : détache la couverture (souvent sombre) du fond
+     ink du héros et adoucit le bord de l'image. */
+  border: 1px solid rgb(250 247 242 / 0.18);
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
 }
 @media (prefers-reduced-motion: reduce) {
