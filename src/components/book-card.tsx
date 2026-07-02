@@ -36,11 +36,6 @@ export function BookCard({ book }: { book: Book }) {
           className="relative block w-full overflow-hidden border-2 border-black bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-2"
         >
           {cover}
-          {book.status === "upcoming" && (
-            <span className="absolute left-2 top-2 border border-black bg-pop-orange px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
-              À paraître
-            </span>
-          )}
         </Link>
       ) : (
         <div className="relative w-full overflow-hidden border-2 border-black bg-paper-2">{cover}</div>
@@ -66,6 +61,12 @@ export function BookCard({ book }: { book: Book }) {
           {year && <span className="text-black/50">{year}</span>}
           {book.status === "available" || book.status === "external" ? (
             <span className="ml-auto text-black">{formatPrice(book.price)}</span>
+          ) : book.status === "upcoming" ? (
+            // Même badge que jadis en haut de la couverture, mais posé à
+            // l'emplacement du prix (plus de doublon avec l'étiquette collante).
+            <span className="ml-auto border border-black bg-pop-orange px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
+              À paraître
+            </span>
           ) : (
             <span className="ml-auto text-black/70">{purchaseLabel(book.status)}</span>
           )}

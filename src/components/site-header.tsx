@@ -55,9 +55,45 @@ function navCellClass(section: NavSection, active: boolean, compact: boolean) {
 }
 
 function soutenirClass(compact: boolean, placement: string) {
-  return `flex items-center justify-center gap-2 bg-black px-4 text-center font-sans font-extrabold uppercase tracking-[.08em] text-white hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_LIGHT} ${
-    compact ? "text-[12px]" : "text-[14px]"
+  // CTA « Nous soutenir » nettement grossi (~×3 vs les 14/12px d'origine) pour en
+  // faire le point d'accroche du header ; fluide (clamp) pour rester contenu sur
+  // mobile tout en atteignant la cible sur desktop. `relative` ancre la flèche
+  // posée en absolu dans le coin bas-droit (cf. SoutenirCell) : le libellé reste
+  // centré et la disposition est identique en navbar déployée ou compactée.
+  return `relative flex items-center justify-center bg-black px-4 text-center font-sans font-extrabold italic uppercase leading-[0.95] tracking-[.06em] text-white hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_LIGHT} ${
+    compact
+      ? // Compacté : libellé + flèche alignés sur une même ligne flex (gap-3),
+        // centrés verticalement — jamais de chevauchement. Le libellé est réduit
+        // pour tenir à côté de la grande flèche dans une cellule étroite.
+        "gap-3 text-[clamp(20px,2vw,28px)]"
+      : "text-[clamp(30px,3.2vw,42px)]"
   } ${placement}`;
+}
+
+/**
+ * Cellule CTA « Nous soutenir » : libellé centré dans la cellule, flèche « → »
+ * calée en absolu dans le coin bas-droit — même disposition, navbar déployée
+ * comme compactée. `placement` positionne la cellule dans chaque grille.
+ */
+function SoutenirCell({ compact, placement }: { compact: boolean; placement: string }) {
+  return (
+    <Link href="/souscription" className={soutenirClass(compact, placement)}>
+      <span className={compact ? "min-w-0" : undefined}>Nous soutenir</span>
+      <span
+        aria-hidden="true"
+        className={
+          compact
+            ? // En flux, centrée verticalement par le flex parent, séparée par gap-3 ;
+              // flèche réduite (cellule étroite) au diapason du libellé compacté.
+              "flex-none text-[clamp(22px,2.2vw,30px)] leading-none"
+            : // Déployée : posée en absolu dans le coin bas-droit, sous le libellé.
+              "pointer-events-none absolute bottom-2 right-4 text-[clamp(32px,3vw,44px)] leading-none"
+        }
+      >
+        →
+      </span>
+    </Link>
+  );
 }
 
 /**
@@ -81,15 +117,40 @@ function useActiveSections(): Record<NavSection, boolean> {
   };
 }
 
-/** Passe à `true` dès qu'on quitte le haut de page (défilement > seuil). */
-function useCompactOnScroll(threshold = 12): boolean {
+/**
+ * Passe à `true` dès qu'on quitte le haut de page. HYSTÉRÉSIS (deux seuils) : on
+ * se compacte en dépassant `enter`, on ne se re-déploie qu'en repassant sous
+ * `exit` — la bande morte entre les deux tue le papillotement autour d'un seuil
+ * unique.
+ *
+ * NB : la vraie cause du yo-yo lent était le *scroll anchoring* du navigateur.
+ * Le header est sticky (donc dans le flux) ; en se compactant il libère ~sa
+ * moitié de hauteur, et le navigateur réajustait alors scrollY vers le haut pour
+ * garder le contenu stable — ce qui refaisait passer scrollY sous le seuil et
+ * re-déployait la navbar, en boucle. On neutralise ce réajustement via
+ * `overflow-anchor: none` (globals.css) ; l'hystérésis ci-dessous ne fait plus
+ * que blinder d'éventuelles micro-oscillations résiduelles.
+ */
+function useCompactOnScroll(enter = 72, exit = 16): boolean {
   const [compact, setCompact] = useState(false);
   useEffect(() => {
-    const onScroll = () => setCompact(window.scrollY > threshold);
-    onScroll();
+    let raf = 0;
+    const read = () => {
+      raf = 0;
+      const y = window.scrollY;
+      setCompact((prev) => (prev ? y > exit : y > enter));
+    };
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(read);
+    };
+    read();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [threshold]);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [enter, exit]);
   return compact;
 }
 
@@ -139,9 +200,7 @@ export function SiteHeader() {
           >
             Agenda
           </Link>
-          <Link href="/souscription" className={soutenirClass(compact, "col-span-2 py-4")}>
-            Nous soutenir <span aria-hidden="true">→</span>
-          </Link>
+          <SoutenirCell compact={compact} placement="col-span-2 py-4" />
         </div>
 
         {/* Desktop (lg+) : maisons | « Nous soutenir » | nav 2×2. */}
@@ -160,12 +219,7 @@ export function SiteHeader() {
           </Link>
 
           {/* Cellule centrale (vide dans la maquette) : CTA « Nous soutenir ». */}
-          <Link
-            href="/souscription"
-            className={soutenirClass(compact, "col-start-2 row-span-2 row-start-1")}
-          >
-            Nous soutenir <span aria-hidden="true">→</span>
-          </Link>
+          <SoutenirCell compact={compact} placement="col-start-2 row-span-2 row-start-1" />
 
           <Link
             href="/catalogue"

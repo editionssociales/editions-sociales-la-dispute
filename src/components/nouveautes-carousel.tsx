@@ -44,17 +44,20 @@ function easeOutBack(x: number): number {
  * focus clavier) recentre avec un léger ressort.
  */
 export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
+  // Départ centré sur le 2e livre (index 1) : la 1re couverture remplit alors le
+  // bord gauche, ce qui évite le grand vide qu'un 1er livre centré y laissait.
+  const initialIndex = books.length > 1 ? 1 : 0;
   const trackRef = useRef<HTMLUListElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const rafRef = useRef(0);
   const animRef = useRef(0);
-  const activeRef = useRef(0);
+  const activeRef = useRef(initialIndex);
   // Passe à true dès que l'utilisateur pilote le scroll (molette, glissé,
   // flèches, focus). On cesse alors de recentrer automatiquement au chargement
   // des couvertures — sinon ces recentrages contrarient son défilement pendant
   // les ~5 s où les images arrivent.
   const engagedRef = useRef(false);
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(initialIndex);
 
   /** Ajuste les marges de début/fin pour que la 1re et la dernière couverture
    *  (de largeurs variables) puissent se centrer dans le viewport. */
@@ -193,6 +196,15 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     const el = trackRef.current;
     if (!el) return;
     applyEndPadding();
+    // Mise en place : on centre d'emblée le livre de départ (2e), par saut direct
+    // (sans ressort) pour qu'il n'y ait jamais de vide visible à gauche au chargement.
+    const startCards = el.querySelectorAll<HTMLElement>("[data-card]");
+    const startCard = startCards[initialIndex];
+    if (startCard) {
+      const vp = el.getBoundingClientRect();
+      const cr = startCard.getBoundingClientRect();
+      el.scrollLeft += cr.left + cr.width / 2 - (vp.left + vp.width / 2);
+    }
     schedulePaint();
     const onResize = () => {
       applyEndPadding();
@@ -230,7 +242,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [applyEndPadding, schedulePaint, centerCard]);
+  }, [applyEndPadding, schedulePaint, centerCard, initialIndex]);
 
   // Glisser-déposer à la souris (le tactile garde son défilement natif + snap).
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLUListElement>) => {
@@ -292,10 +304,17 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
   return (
     <section aria-label="Nouveautés">
-      {/* Le titre de la section est porté par l'en-tête « Nouveautés » de la
-          page (mieux stylisé, évite le doublon) : ici on ne garde que les
-          flèches de navigation, alignées à droite. */}
-      <div className="mb-[clamp(18px,2.4vw,28px)] flex items-center justify-end gap-4 px-[clamp(16px,4vw,64px)]">
+      {/* Titre de section sur la même rangée que les flèches (titre à gauche,
+          flèches à droite) — même mise en forme que l'ancien en-tête de page. */}
+      <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-between gap-4 px-[clamp(16px,4vw,64px)]">
+        <div className="min-w-0">
+          <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            Les Éditions sociales × La Dispute
+          </p>
+          <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-black">
+            Nouveautés
+          </h1>
+        </div>
         <div className="flex flex-none gap-2">
           <button
             type="button"

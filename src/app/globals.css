@@ -63,6 +63,12 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* Le header sticky se compacte au défilement : en libérant sa hauteur, il
+     déclenchait le « scroll anchoring » du navigateur, qui réajustait scrollY
+     vers le haut et refaisait osciller navbar ↔ contenu à défilement lent.
+     On désactive ce réajustement automatique — la navbar reste seule maîtresse
+     de son état de compactage. */
+  overflow-anchor: none;
 }
 
 /* Direction « essai site » : titres en Effra (font-sans), pas en serif. */

@@ -36,15 +36,6 @@ export default async function HomePage() {
 
   return (
     <div className="bg-white pb-[clamp(38px,6vw,76px)]">
-      <div className="border-b-2 border-black bg-white px-[clamp(16px,4vw,64px)] pb-[clamp(20px,3vw,30px)] pt-[clamp(26px,4vw,44px)]">
-        <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
-          Les Éditions sociales × La Dispute
-        </p>
-        <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-black">
-          Nouveautés
-        </h1>
-      </div>
-
       <div className="pt-[clamp(28px,4.5vw,52px)]">
         <NouveautesCarousel books={books} />
       </div>
