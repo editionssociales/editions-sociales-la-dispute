@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
-import { Kicker } from "./kicker";
 
 /** Un livre déjà mis en forme par la page serveur — aucune fonction, uniquement des données sérialisables. */
 export interface NouveauteBook {
@@ -292,17 +291,11 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   const current = books[Math.min(active, books.length - 1)];
 
   return (
-    <section aria-labelledby="nouveautes-heading">
-      <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-between gap-4 px-[clamp(16px,4vw,64px)]">
-        <div>
-          <Kicker accent="ocher">Nouveautés</Kicker>
-          <h2
-            id="nouveautes-heading"
-            className="mt-2 font-serif text-[clamp(28px,3.3vw,46px)] font-semibold leading-none text-ink"
-          >
-            Dernières parutions
-          </h2>
-        </div>
+    <section aria-label="Nouveautés">
+      {/* Le titre de la section est porté par l'en-tête « Nouveautés » de la
+          page (mieux stylisé, évite le doublon) : ici on ne garde que les
+          flèches de navigation, alignées à droite. */}
+      <div className="mb-[clamp(18px,2.4vw,28px)] flex items-center justify-end gap-4 px-[clamp(16px,4vw,64px)]">
         <div className="flex flex-none gap-2">
           <button
             type="button"
