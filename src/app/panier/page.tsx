@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { FramedGrid } from "@/components/framed-grid";
 import { ACCENTS, ACCENT_BG } from "@/lib/accents";
 
 export const metadata: Metadata = { title: "Panier" };
@@ -24,21 +26,7 @@ const SPINES: { h: number; w: string }[] = [
 export default function PanierPage() {
   return (
     <Container className="bg-white py-12">
-      <nav
-        aria-label="Fil d'ariane"
-        className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
-      >
-        <Link
-          href="/"
-          className="transition-colors motion-reduce:transition-none hover:text-black"
-        >
-          Accueil
-        </Link>
-        <span aria-hidden="true" className="px-1.5">
-          /
-        </span>
-        <span className="text-black">Panier</span>
-      </nav>
+      <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Panier" }]} />
 
       <div className="mt-3.5 max-w-2xl">
         <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
@@ -49,7 +37,7 @@ export default function PanierPage() {
         </h1>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-[2px] bg-black p-[2px] sm:mt-7 sm:grid-cols-2">
+      <FramedGrid className="mt-6 grid-cols-1 sm:mt-7 sm:grid-cols-2">
         {/* Étagère vide qui attend ses livres */}
         <div className="flex flex-col items-center gap-7 bg-white px-6 py-16 text-center sm:col-span-2">
           <div className="w-fit" aria-hidden="true">
@@ -88,7 +76,7 @@ export default function PanierPage() {
         >
           Soutenir la maison
         </Link>
-      </div>
+      </FramedGrid>
     </Container>
   );
 }

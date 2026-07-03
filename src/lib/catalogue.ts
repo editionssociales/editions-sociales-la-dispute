@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { buildCatalogueView, type CatalogueView } from "./browse";
 import { httpCatalogueSource } from "./catalogue-http";
 import {
   buildBookDetail,
@@ -10,6 +11,8 @@ import {
   queryBooks,
 } from "./catalogue-core";
 import type { Book, BookDetail, BookFilters, EditionSlug, Facet } from "./types";
+
+export type { CatalogueView } from "./browse";
 
 /**
  * Façade du catalogue unifié (server-only).
@@ -54,13 +57,21 @@ export async function getFacets(
   return computeFacets(await getAllBooks(), filters);
 }
 
-/** Fiche complète d'un livre (par édition + slug). Absent pour un article boutique-only. */
-export async function getBook(edition: EditionSlug, slug: string): Promise<BookDetail | null> {
-  const raw = await source.getBook(edition, slug);
-  if (!raw) return null;
-  const products = await source.listProducts();
-  return buildBookDetail(edition, raw, products);
+/** Vue catalogue complète (livres paginés + facettes) pour une page donnée. */
+export async function catalogueView(filters: BookFilters = {}): Promise<CatalogueView> {
+  const [all, facets] = await Promise.all([getBooks(filters), getFacets(filters)]);
+  return buildCatalogueView(all, facets, filters);
 }
+
+/** Fiche complète d'un livre (par édition + slug). Absent pour un article boutique-only. */
+export const getBook = cache(
+  async (edition: EditionSlug, slug: string): Promise<BookDetail | null> => {
+    const raw = await source.getBook(edition, slug);
+    if (!raw) return null;
+    const products = await source.listProducts();
+    return buildBookDetail(edition, raw, products);
+  },
+);
 
 /** Paramètres de génération statique pour les fiches (livres issus d'une fiche catalogue). */
 export async function getAllBookParams(): Promise<{ edition: EditionSlug; slug: string }[]> {

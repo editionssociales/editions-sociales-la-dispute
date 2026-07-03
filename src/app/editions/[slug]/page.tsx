@@ -8,7 +8,11 @@ import { ACCENT_BG } from "@/lib/accents";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { getBooks } from "@/lib/catalogue";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
+
+export function generateStaticParams() {
+  return [{ slug: "editions-sociales" }, { slug: "la-dispute" }];
+}
 
 export async function generateMetadata({
   params,

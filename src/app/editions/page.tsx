@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { CountUp } from "@/components/count-up";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { FramedGrid } from "@/components/framed-grid";
 import { ACCENT_BG } from "@/lib/accents";
 import { EDITION_LIST } from "@/lib/editions";
 import { countBooks } from "@/lib/catalogue";
@@ -12,7 +14,7 @@ export const metadata: Metadata = {
   description: "Les fonds Éditions sociales et La Dispute, au sein d'une même maison.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
 
 export default async function EditionsPage() {
   const counts = await Promise.all(
@@ -21,21 +23,9 @@ export default async function EditionsPage() {
 
   return (
     <Container className="bg-white py-12">
-      <nav
-        aria-label="Fil d'ariane"
-        className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
-      >
-        <Link
-          href="/"
-          className="transition-colors motion-reduce:transition-none hover:text-black"
-        >
-          Accueil
-        </Link>
-        <span aria-hidden="true" className="px-1.5">
-          /
-        </span>
-        <span className="text-black">Nos collections</span>
-      </nav>
+      <Breadcrumb
+        trail={[{ label: "Accueil", href: "/" }, { label: "Nos collections" }]}
+      />
 
       <Reveal>
         <div className="mt-3.5 max-w-2xl">
@@ -52,7 +42,7 @@ export default async function EditionsPage() {
         </div>
       </Reveal>
 
-      <div className="mt-8 grid gap-[2px] bg-black p-[2px] sm:mt-10 sm:grid-cols-2">
+      <FramedGrid className="mt-8 sm:mt-10 sm:grid-cols-2">
         {EDITION_LIST.map((e, i) => (
           <Reveal key={e.slug} delay={i * 120} className="h-full">
             <section className="flex h-full flex-col bg-white p-7 sm:p-8">
@@ -95,7 +85,7 @@ export default async function EditionsPage() {
             </section>
           </Reveal>
         ))}
-      </div>
+      </FramedGrid>
     </Container>
   );
 }

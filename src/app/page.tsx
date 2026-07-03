@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
+import { FramedGrid } from "@/components/framed-grid";
 import { NouveautesCarousel, type NouveauteBook } from "@/components/nouveautes-carousel";
 import { getNewReleases } from "@/lib/catalogue";
 import { EDITIONS } from "@/lib/editions";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
     "Les Éditions sociales x La Dispute : dernières parutions, catalogue unifié des deux maisons et souscription de lancement.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
 
 /** Un livre est éligible au carrousel s'il a une couverture et une fiche d'origine (édition connue). */
 function readyForCarousel(
@@ -41,7 +42,7 @@ export default async function HomePage() {
       </div>
 
       <Container className="mt-[clamp(30px,4.5vw,60px)]">
-        <div className="grid grid-cols-1 gap-[2px] bg-black p-[2px] sm:grid-cols-[1fr_auto]">
+        <FramedGrid className="grid-cols-1 sm:grid-cols-[1fr_auto]">
           <div className="flex min-w-0 flex-col justify-center gap-1.5 bg-pop-yellow px-6 py-6 sm:px-7">
             <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/60">
               Souscription
@@ -60,7 +61,7 @@ export default async function HomePage() {
           >
             Souscrire <span aria-hidden="true">→</span>
           </Link>
-        </div>
+        </FramedGrid>
       </Container>
     </div>
   );

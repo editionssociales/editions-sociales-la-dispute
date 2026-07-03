@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FramedGrid } from "@/components/framed-grid";
 import { FOCUS_RING, invertingCell } from "@/lib/ui";
 
 interface Props {
@@ -22,9 +23,11 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
   const items = [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
 
   return (
-    <nav
+    <FramedGrid
+      as="nav"
+      flow="flex"
       aria-label="Pagination"
-      className="mt-12 flex flex-wrap items-stretch gap-[2px] bg-black p-[2px]"
+      className="mt-12 items-stretch"
     >
       {page <= 1 ? (
         <span className={arrowClass(true)}>← Précédent</span>
@@ -63,6 +66,6 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
           Suivant →
         </Link>
       )}
-    </nav>
+    </FramedGrid>
   );
 }

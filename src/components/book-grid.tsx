@@ -1,5 +1,6 @@
 import type { Book } from "@/lib/types";
 import { BookCard } from "./book-card";
+import { FramedGrid } from "./framed-grid";
 
 export function BookGrid({ books }: { books: Book[] }) {
   if (books.length === 0) {
@@ -15,10 +16,10 @@ export function BookGrid({ books }: { books: Book[] }) {
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-[2px] bg-black p-[2px] sm:grid-cols-3 lg:grid-cols-4">
+    <FramedGrid className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
       {books.map((book) => (
         <BookCard key={`${book.edition ?? book.origin}-${book.id}`} book={book} />
       ))}
-    </div>
+    </FramedGrid>
   );
 }

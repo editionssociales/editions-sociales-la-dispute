@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FramedGrid } from "@/components/framed-grid";
 
 /**
  * Pied de page brutaliste — même recette de quadrillage noir 2px que la
@@ -124,16 +125,16 @@ export function SiteFooter() {
     <footer className="bg-black">
       {/* Mobile (< lg) : cellules empilées pleine largeur ; la cellule
           centrale vide n'a pas de contenu, elle est masquée. */}
-      <div className="grid grid-cols-1 gap-[2px] p-[2px] lg:hidden">
+      <FramedGrid className="grid-cols-1 lg:hidden">
         <AdresseCell />
         <MentionsCell year={year} />
         <NewsletterCell />
         <DiffusionCell />
-      </div>
+      </FramedGrid>
 
       {/* Desktop (lg+) : gauche (Adresse / Mentions légales) | vide |
           droite (Newsletter / Diffusion-Distribution). */}
-      <div className="hidden grid-cols-[1fr_1fr_1fr] grid-rows-2 gap-[2px] p-[2px] lg:grid">
+      <FramedGrid className="hidden grid-cols-[1fr_1fr_1fr] grid-rows-2 lg:grid">
         <AdresseCell className="col-start-1 row-start-1" />
         <MentionsCell className="col-start-1 row-start-2" year={year} />
         <div
@@ -142,7 +143,7 @@ export function SiteFooter() {
         />
         <NewsletterCell className="col-start-3 row-start-1" />
         <DiffusionCell className="col-start-3 row-start-2" />
-      </div>
+      </FramedGrid>
     </footer>
   );
 }

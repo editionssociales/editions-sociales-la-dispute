@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { Container } from "@/components/container";
+import { FramedGrid } from "@/components/framed-grid";
 import { Reveal } from "@/components/reveal";
 
 export const metadata: Metadata = {
@@ -24,21 +26,7 @@ export default function RencontresPage() {
     <>
       {/* Héro */}
       <Container className="bg-white pb-16 pt-10 sm:pb-24 sm:pt-14">
-        <nav
-          aria-label="Fil d'ariane"
-          className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
-        >
-          <Link
-            href="/"
-            className={`transition-colors motion-reduce:transition-none hover:text-black ${FOCUS_CLASS}`}
-          >
-            Accueil
-          </Link>
-          <span aria-hidden="true" className="px-1.5">
-            /
-          </span>
-          <span className="text-black">Rencontres</span>
-        </nav>
+        <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Rencontres" }]} />
         <Reveal>
           <div className="mt-6 max-w-3xl">
             <span className="inline-flex border-2 border-black bg-pop-yellow px-3 py-1 font-sans text-xs font-extrabold uppercase tracking-[.08em] text-black">
@@ -74,10 +62,7 @@ export default function RencontresPage() {
           </Reveal>
 
           {/* Cartes fantômes : décor, en attendant les vraies dates */}
-          <div
-            className="mt-10 grid gap-[2px] bg-black p-[2px] sm:grid-cols-2 lg:grid-cols-3"
-            aria-hidden="true"
-          >
+          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
             {GHOSTS.map((g, i) => (
               <Reveal key={g} delay={i * 120} className="h-full">
                 <article className="flex h-full select-none flex-col bg-white">
@@ -107,7 +92,7 @@ export default function RencontresPage() {
                 </article>
               </Reveal>
             ))}
-          </div>
+          </FramedGrid>
         </Container>
       </section>
 

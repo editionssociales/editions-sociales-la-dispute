@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activeChips,
+  buildCatalogueView,
   catalogueHref,
   clearFilters,
   paginate,
@@ -8,8 +9,31 @@ import {
   withFilter,
   withoutFilter,
 } from "./browse";
+import type { Book, Facet } from "./types";
 
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
+
+/** Fabrique un `Book` minimal pour les fixtures (seuls `id`/`title` varient). */
+const makeBook = (id: number, overrides: Partial<Book> = {}): Book => ({
+  id,
+  edition: "editions-sociales",
+  origin: "catalogue",
+  slug: `livre-${id}`,
+  title: `Livre ${id}`,
+  authors: [],
+  collection: null,
+  isbn: null,
+  price: null,
+  pages: null,
+  publishedAt: null,
+  cover: null,
+  buy: { boutique: null, parislibrairies: null, lalibrairie: null },
+  status: "available",
+  permalink: null,
+  ...overrides,
+});
+
+const noFacets = { collections: [] as Facet[], authors: [] as Facet[], total: 0 };
 
 describe("paginate", () => {
   it("borne, découpe et compte (page pleine)", () => {
@@ -144,5 +168,49 @@ describe("activeChips", () => {
     expect(locked.some((c) => c.param === "edition")).toBe(false);
     const free = activeChips({ edition: "la-dispute" }, ctx);
     expect(free.some((c) => c.param === "edition")).toBe(true);
+  });
+});
+
+describe("buildCatalogueView", () => {
+  const books = range(50).map((i) => makeBook(i));
+
+  it("découpe la fenêtre de pagination et reporte le total sur tout `all`", () => {
+    const view = buildCatalogueView(books, noFacets, { page: 1 });
+    expect(view.books).toHaveLength(24);
+    expect(view.books[0]).toBe(books[0]);
+    expect(view.page).toBe(1);
+    expect(view.totalPages).toBe(3); // ceil(50/24)
+    expect(view.total).toBe(50);
+  });
+
+  it("borne une page trop haute au dernier index et découpe la fenêtre restante", () => {
+    const view = buildCatalogueView(books, noFacets, { page: 99 });
+    expect(view.page).toBe(3);
+    expect(view.books).toEqual(books.slice(48, 50));
+    expect(view.total).toBe(50);
+  });
+
+  it("isUpcoming reflète filters.upcoming (true seulement si strictement `true`)", () => {
+    expect(buildCatalogueView(books, noFacets, {}).isUpcoming).toBe(false);
+    expect(buildCatalogueView(books, noFacets, { upcoming: true }).isUpcoming).toBe(true);
+    expect(buildCatalogueView(books, noFacets, { upcoming: false }).isUpcoming).toBe(false);
+  });
+
+  it("passe les facettes telles quelles", () => {
+    const facets = {
+      collections: [{ slug: "geme", name: "GEME", count: 3 }],
+      authors: [{ slug: "marx", name: "Karl Marx", count: 5 }],
+      total: 8,
+    };
+    const view = buildCatalogueView(books, facets, {});
+    expect(view.facets).toBe(facets);
+  });
+
+  it("gère la liste vide (une page, aucun livre)", () => {
+    const view = buildCatalogueView([], noFacets, {});
+    expect(view.books).toEqual([]);
+    expect(view.page).toBe(1);
+    expect(view.totalPages).toBe(1);
+    expect(view.total).toBe(0);
   });
 });

@@ -106,3 +106,50 @@ export function Cover({
     />
   );
 }
+
+/**
+ * Couverture avec repli : si l'ouvrage n'a pas d'image, affiche le titre en
+ * placeholder plutôt que de laisser un vide. Rassemble la décision « couverture
+ * encadrée OU titre de repli » dupliquée jusqu'ici entre la vignette du
+ * catalogue et la fiche livre. `fallbackClassName` fixe le padding du repli
+ * (`p-4` en vignette, `p-6` en fiche) ; par défaut `p-4`.
+ */
+export function BookCover({
+  cover,
+  title,
+  alt,
+  fit,
+  sizes,
+  className,
+  preload,
+  fallbackClassName,
+}: {
+  cover: Pick<Cover, "url" | "width" | "height"> | null | undefined;
+  title: string;
+  alt: string;
+  fit: CoverFit;
+  sizes: string;
+  className?: string;
+  preload?: boolean;
+  fallbackClassName?: string;
+}) {
+  if (cover) {
+    return (
+      <Cover
+        cover={cover}
+        alt={alt}
+        fit={fit}
+        sizes={sizes}
+        className={className}
+        preload={preload}
+      />
+    );
+  }
+  return (
+    <span
+      className={`flex aspect-[2/3] items-center justify-center text-center font-sans text-sm font-bold uppercase text-black ${fallbackClassName ?? "p-4"}`}
+    >
+      {title}
+    </span>
+  );
+}

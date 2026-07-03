@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { getBooks, getFacets } from "@/lib/catalogue";
+import { catalogueView } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { parseBookFilters } from "@/lib/parse-filters";
-import { catalogueHref, paginate } from "@/lib/browse";
+import { catalogueHref } from "@/lib/browse";
 
 export const metadata: Metadata = {
   title: "Catalogue",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
 
 export default async function CataloguePage({
   searchParams,
@@ -24,30 +24,13 @@ export default async function CataloguePage({
   searchParams: Promise<SearchParams>;
 }) {
   const filters = parseBookFilters(await searchParams);
-  const [allBooks, facets] = await Promise.all([getBooks(filters), getFacets(filters)]);
-
-  const { items: books, page, totalPages } = paginate(allBooks, filters.page);
-  const isUpcoming = filters.upcoming === true;
+  const { books, page, totalPages, total, isUpcoming, facets } = await catalogueView(filters);
 
   const hrefFor = (p: number) => catalogueHref({ ...filters, page: p });
 
   return (
     <Container className="bg-white py-12">
-      <nav
-        aria-label="Fil d'ariane"
-        className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
-      >
-        <Link
-          href="/"
-          className="transition-colors motion-reduce:transition-none hover:text-black"
-        >
-          Accueil
-        </Link>
-        <span aria-hidden="true" className="px-1.5">
-          /
-        </span>
-        <span className="text-black">Catalogue</span>
-      </nav>
+      <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
 
       <div className="mt-3.5 max-w-2xl">
         <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
@@ -72,7 +55,7 @@ export default async function CataloguePage({
 
       <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-black pt-[18px]">
         <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-black">
-          {allBooks.length} {isUpcoming ? "titres à paraître" : "résultats"}
+          {total} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
         {totalPages > 1 && (
           <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/50">

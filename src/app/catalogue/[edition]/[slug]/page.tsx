@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBook } from "@/lib/catalogue";
-import { Cover } from "@/lib/cover";
+import { getAllBookParams, getBook } from "@/lib/catalogue";
+import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { CollectionTag } from "@/components/collection-tag";
 import { BuyLinksList } from "@/components/buy-links";
+import { FramedGrid } from "@/components/framed-grid";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
@@ -41,7 +42,11 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  return getAllBookParams();
+}
 
 export default async function BookPage({
   params,
@@ -94,20 +99,16 @@ export default async function BookPage({
               la couverture — jamais recadrée, jamais de bande. Couverture
               encadrée d'un contour noir 2px, comme les vignettes du catalogue. */}
           <div className="relative w-full overflow-hidden border-2 border-black bg-paper-2">
-            {book.cover ? (
-              <Cover
-                cover={book.cover}
-                alt={`Couverture de « ${book.title} »`}
-                fit="width"
-                sizes="300px"
-                preload
-                className="block h-auto w-full"
-              />
-            ) : (
-              <span className="flex aspect-[2/3] items-center justify-center p-6 text-center font-sans text-sm font-bold uppercase text-black">
-                {book.title}
-              </span>
-            )}
+            <BookCover
+              cover={book.cover}
+              title={book.title}
+              alt={`Couverture de « ${book.title} »`}
+              fit="width"
+              sizes="300px"
+              preload
+              className="block h-auto w-full"
+              fallbackClassName="p-6"
+            />
           </div>
 
           <div className="mt-6">
@@ -117,15 +118,15 @@ export default async function BookPage({
             <BuyLinksList book={book} />
           </div>
 
-          <dl className="mt-6 grid grid-cols-2 gap-[2px] bg-black p-[2px]">
+          <FramedGrid as="dl" className="mt-6 grid-cols-2">
             <Info label="Collection" value={book.collection?.name} />
             <Info label="Parution" value={formatDateFr(book.publishedAt)} />
             <Info label="Pages" value={book.pages ? `${book.pages} p.` : null} />
             <Info label="ISBN" value={book.isbn} />
-          </dl>
+          </FramedGrid>
 
           {(book.tocUrl || book.excerptUrl) && (
-            <div className="mt-4 flex flex-wrap gap-[2px] bg-black p-[2px]">
+            <FramedGrid as="div" flow="flex" className="mt-4">
               {book.tocUrl && (
                 <a
                   href={book.tocUrl}
@@ -146,7 +147,7 @@ export default async function BookPage({
                   Extrait choisi
                 </a>
               )}
-            </div>
+            </FramedGrid>
           )}
         </div>
 

@@ -1,4 +1,4 @@
-"use client";
+import { FramedGrid } from "@/components/framed-grid";
 
 /** Un filtre actif, affiché en « chip » sous la grille de thèmes/filtres. */
 export interface FilterChip {
@@ -27,7 +27,7 @@ export function FilterChips({
   if (chips.length === 0) return null;
 
   return (
-    <div className="mt-[2px] flex flex-wrap items-stretch gap-[2px] bg-black p-[2px]">
+    <FramedGrid flow="flex" className="mt-[2px] items-stretch">
       <span className="sr-only">Filtres actifs&nbsp;:</span>
       {chips.map((chip) => (
         <span
@@ -52,6 +52,6 @@ export function FilterChips({
       >
         Tout effacer
       </button>
-    </div>
+    </FramedGrid>
   );
 }

@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { Book } from "@/lib/types";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
+import { FramedGrid } from "@/components/framed-grid";
+import { Button } from "@/components/button";
 import { ShelfCover } from "@/components/shelf-cover";
 import { ShelfLock } from "@/components/shelf-lock";
 import { CountUp } from "@/components/count-up";
@@ -38,7 +40,7 @@ export const metadata: Metadata = {
     "Face à la concentration capitaliste de l'édition, Les Éditions sociales et La Dispute tiennent deux catalogues marxistes et critiques — Marx et Engels, savoirs populaires, féminismes matérialistes —, sans mécène ni actionnaire. Une souscription pour continuer. Contreparties de 15 à 1 000 €.",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
 
 /* ------------------------------------------------------------------ */
 /* Contenu repris de la campagne Ulule 2024                            */
@@ -365,7 +367,7 @@ export default async function SouscriptionPage() {
               nouvelle souscription en écrit la suite.
             </p>
           </Reveal>
-          <div className="mt-10 grid gap-[2px] bg-black p-[2px] sm:grid-cols-2 lg:grid-cols-4">
+          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-4">
             {CAMPAIGN_2024.stats.map((s, i) => (
               <Reveal key={s.label} delay={i * 120} className="h-full">
                 <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
@@ -378,7 +380,7 @@ export default async function SouscriptionPage() {
                 </div>
               </Reveal>
             ))}
-          </div>
+          </FramedGrid>
           <Reveal delay={200} className="mt-12">
             <div className="border-2 border-black bg-white p-6">
               <Gauge
@@ -445,7 +447,7 @@ export default async function SouscriptionPage() {
               reconnaissance éternelle est comprise dans tous les paliers.
             </p>
           </Reveal>
-          <div className="mt-10 grid gap-[2px] bg-black p-[2px] sm:grid-cols-2 lg:grid-cols-4">
+          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-4">
             {CONTREPARTIES.map((p, i) => {
               const pop = POP_BG[i % 4];
               return (
@@ -477,20 +479,20 @@ export default async function SouscriptionPage() {
                       <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-black/50">
                         {p.soutiens2024} soutiens en 2024
                       </p>
-                      <button
-                        type="button"
-                        className="mt-3 border-2 border-black bg-black px-4 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black"
+                      <Button
+                        variant="solid"
+                        className="mt-3 px-4 py-2.5 text-sm tracking-[.03em]"
                       >
                         Contribuer
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </Reveal>
               );
             })}
-          </div>
+          </FramedGrid>
           {/* Grands paliers : cartes inversées */}
-          <div className="mt-[2px] grid gap-[2px] bg-black p-[2px] md:grid-cols-2">
+          <FramedGrid className="mt-[2px] md:grid-cols-2">
             {MECENES.map((p, i) => (
               <Reveal key={p.montant} delay={i * 120} className="h-full">
                 <div className="relative flex h-full flex-col overflow-hidden bg-black p-8 text-white">
@@ -518,7 +520,7 @@ export default async function SouscriptionPage() {
                 </div>
               </Reveal>
             ))}
-          </div>
+          </FramedGrid>
         </Container>
       </section>
 
@@ -531,7 +533,7 @@ export default async function SouscriptionPage() {
               Cinq chantiers pour la suite
             </h2>
           </Reveal>
-          <div className="mt-10 grid gap-[2px] bg-black p-[2px] md:grid-cols-2 lg:grid-cols-6">
+          <FramedGrid className="mt-10 md:grid-cols-2 lg:grid-cols-6">
             {CHANTIERS.map((c, i) => (
               <Reveal
                 key={c.titre}
@@ -547,7 +549,7 @@ export default async function SouscriptionPage() {
                 </div>
               </Reveal>
             ))}
-          </div>
+          </FramedGrid>
         </Container>
       </section>
 
@@ -560,7 +562,7 @@ export default async function SouscriptionPage() {
               Des projets, on en a plein
             </h2>
           </Reveal>
-          <div className="mt-10 grid gap-[2px] bg-black p-[2px] md:grid-cols-2">
+          <FramedGrid className="mt-10 md:grid-cols-2">
             {MAISONS.map((m, i) => (
               <Reveal key={m.nom} delay={i * 120} className="h-full">
                 <div className="flex h-full flex-col bg-white">
@@ -584,7 +586,7 @@ export default async function SouscriptionPage() {
                 </div>
               </Reveal>
             ))}
-          </div>
+          </FramedGrid>
         </Container>
       </section>
 

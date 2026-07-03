@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBooks, getFacets } from "@/lib/catalogue";
+import { catalogueView } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { FramedGrid } from "@/components/framed-grid";
 import { parseBookFilters } from "@/lib/parse-filters";
-import { catalogueHref, paginate } from "@/lib/browse";
+import { catalogueHref } from "@/lib/browse";
 import { FOCUS_RING, invertingCell } from "@/lib/ui";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 
@@ -23,7 +25,7 @@ export async function generateMetadata({
   return { title: EDITIONS[edition].name };
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
 
 /**
  * Poids visuel d'une cellule de la mosaïque de thèmes selon son nombre de
@@ -90,10 +92,7 @@ export default async function EditionCataloguePage({
   const info = EDITIONS[edition];
 
   const filters = { ...parseBookFilters(await searchParams), edition };
-  const [allBooks, facets] = await Promise.all([getBooks(filters), getFacets(filters)]);
-
-  const { items: books, page, totalPages } = paginate(allBooks, filters.page);
-  const isUpcoming = filters.upcoming === true;
+  const { books, page, totalPages, total, isUpcoming, facets } = await catalogueView(filters);
   const basePath = `/catalogue/${edition}`;
 
   const hrefFor = (p: number) =>
@@ -106,30 +105,13 @@ export default async function EditionCataloguePage({
 
   return (
     <Container className="bg-white py-12">
-      <nav
-        aria-label="Fil d'ariane"
-        className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
-      >
-        <Link
-          href="/"
-          className="transition-colors motion-reduce:transition-none hover:text-black"
-        >
-          Accueil
-        </Link>
-        <span aria-hidden="true" className="px-1.5">
-          /
-        </span>
-        <Link
-          href="/catalogue"
-          className="transition-colors motion-reduce:transition-none hover:text-black"
-        >
-          Catalogue
-        </Link>
-        <span aria-hidden="true" className="px-1.5">
-          /
-        </span>
-        <span className="text-black">{info.name}</span>
-      </nav>
+      <Breadcrumb
+        trail={[
+          { label: "Accueil", href: "/" },
+          { label: "Catalogue", href: "/catalogue" },
+          { label: info.name },
+        ]}
+      />
 
       <div className="mt-3.5 max-w-2xl">
         <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
@@ -144,9 +126,10 @@ export default async function EditionCataloguePage({
         </p>
       </div>
 
-      <nav
+      <FramedGrid
+        as="nav"
         aria-label={`Thèmes du catalogue ${info.name}`}
-        className="mt-6 grid grid-flow-row-dense auto-rows-[clamp(62px,7vw,92px)] grid-cols-2 gap-[2px] bg-black p-[2px] sm:mt-7 lg:grid-cols-6"
+        className="mt-6 grid-flow-row-dense auto-rows-[clamp(62px,7vw,92px)] grid-cols-2 sm:mt-7 lg:grid-cols-6"
       >
         {themeItems.map((item) => {
           const tier = themeTier(item.count);
@@ -167,7 +150,7 @@ export default async function EditionCataloguePage({
             />
           );
         })}
-      </nav>
+      </FramedGrid>
 
       <div className="mt-6">
         <CatalogueFilters
@@ -179,7 +162,7 @@ export default async function EditionCataloguePage({
 
       <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-black pt-[18px]">
         <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-black">
-          {allBooks.length} {isUpcoming ? "titres à paraître" : "résultats"}
+          {total} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
         {totalPages > 1 && (
           <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/50">

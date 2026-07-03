@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Book } from "@/lib/types";
-import { Cover } from "@/lib/cover";
+import { BookCover } from "@/lib/cover";
 import { formatPrice, purchaseLabel, yearOf } from "@/lib/format";
 import { CollectionTag } from "./collection-tag";
 
@@ -13,18 +13,16 @@ export function BookCard({ book }: { book: Book }) {
   // Largeur fixée par la colonne de la grille ; la hauteur suit le ratio réel
   // de la couverture (jamais recadrée, jamais de bande). Sans couverture, la
   // vignette garde une forme 2/3 par défaut pour le titre de repli.
-  const cover = book.cover ? (
-    <Cover
+  const cover = (
+    <BookCover
       cover={book.cover}
+      title={book.title}
       alt={`Couverture de « ${book.title} »`}
       fit="width"
       sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 220px"
       className="block h-auto w-full transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
+      fallbackClassName="p-4"
     />
-  ) : (
-    <span className="flex aspect-[2/3] items-center justify-center p-4 text-center font-sans text-sm font-bold uppercase text-black">
-      {book.title}
-    </span>
   );
 
   return (

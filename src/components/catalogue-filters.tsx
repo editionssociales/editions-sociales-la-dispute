@@ -16,6 +16,7 @@ import {
 } from "@/lib/browse";
 import { FOCUS_RING, invertingCell } from "@/lib/ui";
 import { FilterChips } from "@/components/filter-chips";
+import { FramedGrid } from "@/components/framed-grid";
 
 interface Props {
   collections: Facet[];
@@ -119,10 +120,11 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
         isPending ? "opacity-70" : ""
       }`}
     >
-      <div
+      <FramedGrid
+        flow="flex"
         role="group"
         aria-label="Thèmes et filtres du catalogue"
-        className="flex flex-wrap items-stretch gap-[2px] bg-black p-[2px]"
+        className="items-stretch"
       >
         <Tag active={activeCollection === ""} onClick={() => setFilter("collection", "")}>
           Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
@@ -189,7 +191,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
             </option>
           ))}
         </select>
-      </div>
+      </FramedGrid>
 
       <FilterChips chips={chips} onRemove={removeFilter} onClearAll={clearAll} />
     </div>

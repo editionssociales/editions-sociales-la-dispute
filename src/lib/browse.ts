@@ -1,6 +1,6 @@
 import { EDITION_LIST, isEditionSlug } from "./editions";
 import { parseBookFilters, serializeBookFilters } from "./parse-filters";
-import { PAGE_SIZE, type BookFilters, type BookSort } from "./types";
+import { PAGE_SIZE, type Book, type BookFilters, type BookSort, type Facet } from "./types";
 
 /**
  * Algèbre de navigation du catalogue — filtres ↔ URL ↔ pagination, en un seul
@@ -32,6 +32,35 @@ export function paginate<T>(all: T[], page = 1, size: number = PAGE_SIZE): Page<
     page: current,
     totalPages,
     total,
+  };
+}
+
+/* ------------------------------- vue catalogue ------------------------------ */
+
+/** Vue complète du catalogue pour une page (livres paginés + facettes). */
+export interface CatalogueView {
+  books: Book[];
+  page: number;
+  totalPages: number;
+  total: number;
+  isUpcoming: boolean;
+  facets: { collections: Facet[]; authors: Facet[]; total: number };
+}
+
+/** Assemble la vue catalogue à partir des livres filtrés, des facettes et des filtres actifs. */
+export function buildCatalogueView(
+  all: Book[],
+  facets: { collections: Facet[]; authors: Facet[]; total: number },
+  filters: BookFilters,
+): CatalogueView {
+  const { items, page, totalPages, total } = paginate(all, filters.page);
+  return {
+    books: items,
+    page,
+    totalPages,
+    total,
+    isUpcoming: filters.upcoming === true,
+    facets,
   };
 }
 

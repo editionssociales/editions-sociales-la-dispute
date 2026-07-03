@@ -4,6 +4,9 @@ import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { EDITION_LIST } from "@/lib/editions";
 import { ACCENT_BORDER_T } from "@/lib/accents";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { FramedGrid } from "@/components/framed-grid";
+import { Button } from "@/components/button";
 
 export const metadata: Metadata = {
   title: "À propos",
@@ -26,21 +29,9 @@ export default function AProposPage() {
     <>
       {/* Héro : qui nous sommes */}
       <Container className="bg-white pb-16 pt-10 sm:pb-24 sm:pt-14">
-        <nav
-          aria-label="Fil d'ariane"
-          className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
-        >
-          <Link
-            href="/"
-            className={`transition-colors motion-reduce:transition-none hover:text-black ${FOCUS_CLASS}`}
-          >
-            Accueil
-          </Link>
-          <span aria-hidden="true" className="px-1.5">
-            /
-          </span>
-          <span className="text-black">À propos</span>
-        </nav>
+        <Breadcrumb
+          trail={[{ label: "Accueil", href: "/" }, { label: "À propos" }]}
+        />
         <Reveal>
           <div className="mt-6 max-w-3xl">
             <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
@@ -79,7 +70,7 @@ export default function AProposPage() {
               Deux catalogues, une seule équipe d&apos;éditrices
             </h2>
           </Reveal>
-          <div className="mt-8 grid gap-[2px] bg-black p-[2px] md:grid-cols-2">
+          <FramedGrid className="mt-8 md:grid-cols-2">
             {EDITION_LIST.map((e, i) => (
               <Reveal key={e.slug} delay={i * 120} className="h-full">
                 <article
@@ -104,7 +95,7 @@ export default function AProposPage() {
                 </article>
               </Reveal>
             ))}
-          </div>
+          </FramedGrid>
         </Container>
       </section>
 
@@ -143,18 +134,19 @@ export default function AProposPage() {
                 parcourir dès maintenant.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link
+                <Button
                   href="/catalogue"
-                  className={`inline-flex border-2 border-black bg-black px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black ${FOCUS_CLASS}`}
+                  className="px-7 py-3.5 text-sm tracking-[.04em]"
                 >
                   Parcourir le catalogue
-                </Link>
-                <Link
+                </Button>
+                <Button
                   href="/souscription"
-                  className={`inline-flex border-2 border-black px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_CLASS}`}
+                  variant="outline"
+                  className="px-7 py-3.5 text-sm tracking-[.04em]"
                 >
                   Soutenir la souscription
-                </Link>
+                </Button>
               </div>
             </div>
           </Reveal>
