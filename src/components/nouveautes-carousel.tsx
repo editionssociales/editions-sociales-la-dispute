@@ -53,6 +53,10 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
   const trackRef = useRef<HTMLUListElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  // Le `click` suit le `pointerup` : on mémorise ici « le geste précédent était
+  // un drag » pour annuler la navigation, sans garder `dragRef` en vie (ce qui
+  // faisait coller le rail à la souris au survol suivant).
+  const suppressClickRef = useRef(false);
   const rafRef = useRef(0);
   const activeRef = useRef(0);
   // Dernier z-index appliqué par carte : on n'écrit le z-index que lorsqu'il
@@ -199,6 +203,15 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     const el = trackRef.current;
     const drag = dragRef.current;
     if (!el || !drag) return;
+    // Sécurité : plus aucun bouton pressé ⇒ le `pointerup` a été manqué (relâché
+    // hors fenêtre / hors élément sans capture). On termine le drag ici, sinon
+    // `dragRef` survivrait et le rail « collerait » à la souris au survol.
+    if (e.buttons === 0) {
+      dragRef.current = null;
+      el.style.cursor = "grab";
+      el.style.scrollSnapType = "";
+      return;
+    }
     const dx = e.clientX - drag.startX;
     if (Math.abs(dx) > 4 && !drag.moved) {
       drag.moved = true;
@@ -209,6 +222,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
   const onPointerUp = useCallback((e: React.PointerEvent<HTMLUListElement>) => {
     const el = trackRef.current;
+    const drag = dragRef.current;
     if (el) {
       el.style.cursor = "grab";
       el.style.scrollSnapType = "";
@@ -216,18 +230,24 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
-    // On NE remet PAS `moved` à false ici : le `click` qui suit doit encore le
-    // voir (via guardClick) pour annuler la navigation. Il est remis à false au
-    // prochain pointerdown (dragRef recréé) — fiable, contrairement à un timer
-    // qui pouvait griller avant le click et laisser passer la navigation.
-    if (dragRef.current?.moved) centerCard(activeRef.current);
+    if (drag?.moved) {
+      // Le geste était un drag : on annule le `click` de navigation qui suit
+      // (via un flag dédié, lu par guardClick), puis on recentre.
+      suppressClickRef.current = true;
+      centerCard(activeRef.current);
+    }
+    // On relâche la référence de drag. Sans ça, `onPointerMove` (qui se déclenche
+    // aussi au simple survol souris, bouton relâché) continuait à scroller depuis
+    // `startScroll`/`startX` figés au clic précédent → le rail « collait » à la
+    // souris avec saut instantané. dragRef null ⇒ le prochain move sort aussitôt.
+    dragRef.current = null;
   }, [centerCard]);
 
   // Empêche la navigation si le pointeur vient de glisser plutôt que de cliquer.
   const guardClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (dragRef.current?.moved) {
+    if (suppressClickRef.current) {
       e.preventDefault();
-      dragRef.current.moved = false;
+      suppressClickRef.current = false;
     }
   }, []);
 
