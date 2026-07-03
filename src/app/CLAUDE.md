@@ -27,9 +27,11 @@ catalogue via la façade `src/lib` (`catalogueView`, `getBook`, `getBooks`,
   ISR. `a-propos`, `rencontres` et `panier` n'ont aucune donnée externe et restent
   statiques par défaut, sans `revalidate`. `boutique` est une redirection vers
   `/catalogue`.
-- Seule la fiche livre injecte du HTML éditorial via `dangerouslySetInnerHTML`, et
-  uniquement à partir de champs typés `SafeHtml` (sanitisés en amont dans `src/lib`) —
-  aucun autre HTML brut n'est injecté ailleurs dans l'arborescence.
+- La fiche livre est la seule route à injecter via `dangerouslySetInnerHTML` :
+  le HTML éditorial (uniquement depuis des champs typés `SafeHtml`, sanitisés en amont
+  dans `src/lib`) et un script JSON-LD `Book` (schema.org) sérialisé et échappé côté
+  serveur — donnée structurée SEO, pas du HTML éditorial. Aucun autre HTML brut n'est
+  injecté ailleurs dans l'arborescence.
 
 ## Work Guidance
 

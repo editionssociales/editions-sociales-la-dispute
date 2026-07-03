@@ -33,16 +33,9 @@ export default async function CataloguePage({
       <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
 
       <div className="mt-3.5 max-w-2xl">
-        <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
-          Explorer
-        </p>
-        <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
           {isUpcoming ? "Les livres à paraître" : "Le catalogue par thèmes"}
         </h1>
-        <p className="mt-3.5 text-[15px] leading-relaxed text-black/70">
-          Chaque étiquette filtre le catalogue des deux maisons. Cliquez pour affiner — l&rsquo;étiquette
-          active s&rsquo;inverse en noir.
-        </p>
       </div>
 
       <div className="mt-6 sm:mt-7">
