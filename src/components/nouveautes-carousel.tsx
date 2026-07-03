@@ -17,9 +17,15 @@ export interface NouveauteBook {
 }
 
 interface DragState {
+  /** Dernière position X du pointeur (modèle incrémental : robuste au wrap en cours de glissé). */
+  lastX: number;
+  /** Position X initiale — sert au seuil de « vrai glissé » et à la garde de clic. */
   startX: number;
-  startScrollLeft: number;
   moved: boolean;
+  /** Vitesse de scroll lissée (px/ms, signe = sens du scrollLeft). */
+  vx: number;
+  /** Timestamp du dernier mouvement — pour ignorer l'inertie si on relâche après une pause. */
+  lastT: number;
 }
 
 const prefersReducedMotion = () =>
@@ -33,6 +39,12 @@ function easeOutBack(x: number): number {
   return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
 }
 
+// Réglages de l'inertie (glissé souris avec élan). Ajustables au feeling.
+const FLING_MIN = 0.2; // px/ms : en-dessous, on recentre simplement (pas d'élan)
+const FRICTION_PER_FRAME = 0.985; // décélération par frame de 60 Hz (proche de 1 = coasting long)
+const V_STOP = 0.08; // px/ms : sous ce seuil, l'inertie cède la main au ressort de fin
+const V_STALE_MS = 60; // au relâchement, on ignore la vitesse si le dernier mouvement date de plus
+
 /**
  * Carrousel « spring » des dernières parutions : les couvertures défilent en
  * coverflow — la couverture centrale est zoomée et pleinement opaque, les
@@ -43,20 +55,26 @@ function easeOutBack(x: number): number {
  * image (aucun re-rendu par pixel) ; la navigation (flèches, fin de glissé,
  * focus clavier) recentre avec un léger ressort.
  *
- * BOUCLE INFINIE : le catalogue est répété en plusieurs copies ; dès que la
- * couverture centrée quitte la copie « canonique » (centrale), on ramène
- * scrollLeft dans cette copie par saut d'un pas entier — le contenu étant
- * identique, le saut est invisible. On défile donc sans fin, sans jamais de
- * vide à gauche ni à droite. Seule la copie centrale est exposée au clavier et
- * aux lecteurs d'écran (les autres sont `aria-hidden` / non focusables).
+ * BOUCLE INFINIE : le catalogue est répété en plusieurs copies. Le contenu est
+ * périodique (période = `advance`, largeur d'une copie) : on maintient donc en
+ * permanence `scrollLeft` dans une fenêtre d'une largeur de copie autour d'une
+ * position « home » (copie centrale). Dès qu'on en sort — d'un cran ou de
+ * plusieurs tours d'un coup — on ramène `scrollLeft` par sauts entiers de
+ * `advance` : le contenu étant identique, le saut est invisible. Ce recadrage
+ * tourne à CHAQUE frame (glissé, inertie, ressort, molette), si bien qu'on ne
+ * bute jamais sur le bord physique du rail, quelle que soit la force du geste.
+ * Seule la copie centrale est exposée au clavier et aux lecteurs d'écran (les
+ * autres sont `aria-hidden` / non focusables).
  */
 export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   const n = books.length;
   // On ne boucle qu'à partir de deux livres (un seul : rien à faire tourner).
   const LOOP = n > 1;
   // Assez de copies pour garnir le viewport de part et d'autre du centre, même
-  // avec peu de livres (≈ 12 cartes minimum au total).
-  const COPIES = LOOP ? Math.max(3, Math.ceil(12 / n)) : 1;
+  // avec peu de livres, ET pour garder ≥ 2 copies de marge de chaque côté de la
+  // copie centrale — l'inertie peut alors déborder la fenêtre d'une demi-copie
+  // sans jamais révéler le bord du rail.
+  const COPIES = LOOP ? Math.max(5, Math.ceil(20 / n)) : 1;
   const MIDDLE = Math.floor(COPIES / 2); // copie « canonique » (centrale)
   const middleStart = MIDDLE * n; // indice de sa 1re carte dans le rail cloné
   // Carte centrée au départ : la 1re de la copie centrale — ses voisines de
@@ -71,6 +89,9 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   // Pas de la boucle (px) : distance entre une carte et son homologue de la
   // copie suivante. Mesurée après mise en page (largeurs = ratios réels).
   const setAdvanceRef = useRef(0);
+  // Position « home » (px) : scrollLeft absolu qui centre la 1re carte de la
+  // copie centrale. Ancre stable de la fenêtre de recadrage.
+  const homeRef = useRef(0);
   // Passe à true dès que l'utilisateur pilote le scroll (molette, glissé,
   // flèches, focus). On cesse alors de recentrer automatiquement au chargement
   // des couvertures — sinon ces recentrages contrarient son défilement pendant
@@ -93,9 +114,11 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     el.style.paddingRight = `${Math.max(16, (cw - last) / 2)}px`;
   }, []);
 
-  /** Mesure le pas de la boucle : écart de centre entre la carte 0 et son
-   *  homologue de la copie suivante (carte n). Robuste aux largeurs variables. */
-  const measureAdvance = useCallback(() => {
+  /** Mesure le pas de la boucle (écart de centre entre la carte 0 et son
+   *  homologue de la copie suivante, carte n) et la position « home »
+   *  (scrollLeft absolu centrant la 1re carte de la copie centrale). Robuste aux
+   *  largeurs variables et indépendant du scrollLeft courant. */
+  const measureLoop = useCallback(() => {
     const el = trackRef.current;
     if (!el || !LOOP) return;
     const cards = el.querySelectorAll<HTMLElement>("[data-card]");
@@ -104,36 +127,41 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     const b = cards[n].getBoundingClientRect();
     const adv = b.left + b.width / 2 - (a.left + a.width / 2);
     if (adv > 0) setAdvanceRef.current = adv;
-  }, [LOOP, n]);
-
-  /** Cœur de la boucle : si la carte centrée sort de la copie centrale, on
-   *  ramène scrollLeft dans cette copie par sauts d'un pas entier (contenu
-   *  identique → saut invisible). On s'abstient pendant une animation/un glissé
-   *  et quand le focus clavier vit dans le rail (il reste en copie centrale, en
-   *  bande — un saut l'écarterait visuellement du centre). */
-  const maybeWrap = useCallback(() => {
-    const el = trackRef.current;
-    if (!el || !LOOP) return;
-    if (animRef.current || dragRef.current) return;
-    if (typeof document !== "undefined" && el.contains(document.activeElement)) return;
-    const advance = setAdvanceRef.current;
-    if (!advance) return;
-    let a = activeRef.current;
-    let shifted = false;
-    // Toujours ramener vers le centre : ces sauts éloignent des bords, jamais
-    // au-delà — pas de dépassement de scrollLeft à gérer.
-    while (a < middleStart) {
-      el.scrollLeft += advance;
-      a += n;
-      shifted = true;
+    const homeCard = cards[middleStart];
+    if (homeCard) {
+      const vp = el.getBoundingClientRect();
+      const r = homeCard.getBoundingClientRect();
+      // scrollLeft + (centre carte − centre viewport) est invariant au scroll.
+      homeRef.current = el.scrollLeft + (r.left + r.width / 2 - (vp.left + vp.width / 2));
     }
-    while (a >= middleStart + n) {
-      el.scrollLeft -= advance;
-      a -= n;
-      shifted = true;
-    }
-    if (shifted) activeRef.current = a;
   }, [LOOP, n, middleStart]);
+
+  /** Cœur de la boucle : ramène `scrollLeft` dans la fenêtre [home − pas/2,
+   *  home + pas/2) par sauts entiers de `advance` (contenu périodique → saut
+   *  invisible). Décous du calcul de la carte centrée : sûr à appeler à
+   *  n'importe quelle frame. Les boucles `while` encaissent un débordement de
+   *  plusieurs copies (fling très fort). Par défaut on s'abstient quand le focus
+   *  clavier vit dans le rail (un saut écarterait la carte focalisée du centre) ;
+   *  `force` outrepasse cette garde pendant un geste piloté (drag/inertie). */
+  const wrap = useCallback(
+    (force = false) => {
+      const el = trackRef.current;
+      if (!el || !LOOP) return;
+      const advance = setAdvanceRef.current;
+      if (!advance) return;
+      if (!force && typeof document !== "undefined" && el.contains(document.activeElement)) {
+        return;
+      }
+      const lo = homeRef.current - advance / 2;
+      const hi = homeRef.current + advance / 2;
+      let s = el.scrollLeft;
+      if (s >= lo && s < hi) return;
+      while (s < lo) s += advance;
+      while (s >= hi) s -= advance;
+      el.scrollLeft = s;
+    },
+    [LOOP],
+  );
 
   /** Applique échelle / opacité / profondeur à chaque couverture selon sa
    *  distance au centre du viewport, retient l'indice le plus centré, puis
@@ -141,6 +169,12 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   const paint = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
+    // Recadrage AVANT de mesurer/appliquer les transforms : sinon le saut de
+    // boucle (scrollLeft) précède d'une frame la mise à jour du coverflow, et
+    // la carte centrale porte un instant les transforms d'une latérale (flash
+    // au passage de la limite). En recadrant d'abord, scrollLeft et transforms
+    // restent cohérents dans la même frame.
+    if (LOOP) wrap();
     const cards = el.querySelectorAll<HTMLElement>("[data-card]");
     if (cards.length === 0) return;
     const rect = el.getBoundingClientRect();
@@ -181,9 +215,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       activeRef.current = nearest;
       setActive(nearest);
     }
-
-    if (LOOP) maybeWrap();
-  }, [LOOP, maybeWrap]);
+  }, [LOOP, wrap]);
 
   const schedulePaint = useCallback(() => {
     if (rafRef.current) return;
@@ -193,50 +225,64 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     });
   }, [paint]);
 
-  /** Anime scrollLeft vers `target` avec un léger ressort (ou saut immédiat en reduced-motion). */
-  const springTo = useCallback(
-    (target: number) => {
+  /** Anime `scrollLeft` d'un déplacement RELATIF `dist` avec un léger ressort.
+   *  Le pilotage relatif (on applique la différence eased frame à frame) rend
+   *  l'animation insensible aux recadrages de boucle qui surviennent en
+   *  parallèle : on peut donc `wrap()` à chaque frame sans jamais corrompre la
+   *  trajectoire. En mode non-boucle, on borne `scrollLeft` à [0, max]. */
+  const springBy = useCallback(
+    (dist: number) => {
       const el = trackRef.current;
       if (!el) return;
-      const max = el.scrollWidth - el.clientWidth;
-      const dest = Math.max(0, Math.min(max, target));
       if (animRef.current) cancelAnimationFrame(animRef.current);
-      // Le scroll-snap `mandatory` ramène de force scrollLeft sur un point de snap
-      // à chaque frame : tant qu'on pilote le scroll en JS il faut le neutraliser,
-      // sinon l'animation saute d'un cran à l'autre au lieu de glisser. On le
-      // rétablit à la fin — la destination est déjà un point de snap (couverture
-      // centrée), donc aucun à-coup au rétablissement.
+
+      const clampNonLoop = () => {
+        if (LOOP) return;
+        const max = el.scrollWidth - el.clientWidth;
+        el.scrollLeft = Math.max(0, Math.min(max, el.scrollLeft));
+      };
+
       if (prefersReducedMotion()) {
         el.style.scrollSnapType = "";
-        el.scrollLeft = dest;
+        el.scrollLeft += dist;
+        clampNonLoop();
+        if (LOOP) wrap(true);
         return;
       }
-      const start = el.scrollLeft;
-      const dist = dest - start;
       if (Math.abs(dist) < 1) {
         el.style.scrollSnapType = "";
+        if (LOOP) wrap(true);
         return;
       }
+      // Le scroll-snap `mandatory` happe scrollLeft sur un point de snap à chaque
+      // frame : on le neutralise tant qu'on pilote le scroll en JS, rétabli à la
+      // fin (la destination est déjà un point de snap → aucun à-coup).
       el.style.scrollSnapType = "none";
       const t0 = performance.now();
       const duration = 560;
+      let applied = 0;
       const stepFrame = (now: number) => {
         const p = Math.min(1, (now - t0) / duration);
-        el.scrollLeft = start + dist * easeOutBack(p);
+        const target = easeOutBack(p) * dist;
+        el.scrollLeft += target - applied;
+        applied = target;
+        clampNonLoop();
+        if (LOOP) wrap(true);
+        paint();
         if (p < 1) {
           animRef.current = requestAnimationFrame(stepFrame);
         } else {
           animRef.current = 0;
           el.style.scrollSnapType = "";
-          maybeWrap();
+          if (LOOP) wrap(true);
         }
       };
       animRef.current = requestAnimationFrame(stepFrame);
     },
-    [maybeWrap],
+    [LOOP, wrap, paint],
   );
 
-  /** Recentre la couverture d'indice `i` dans le viewport. */
+  /** Recentre la couverture d'indice `i` dans le viewport (ressort). */
   const centerCard = useCallback(
     (i: number) => {
       const el = trackRef.current;
@@ -247,14 +293,51 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       const rect = el.getBoundingClientRect();
       const r = card.getBoundingClientRect();
       const delta = r.left + r.width / 2 - (rect.left + rect.width / 2);
-      springTo(el.scrollLeft + delta);
+      springBy(delta);
     },
-    [springTo],
+    [springBy],
+  );
+
+  /** Inertie : le rail continue sur sa lancée en décélérant (recadrage de boucle
+   *  à chaque frame → traverse autant de tours que la vitesse le permet, sans
+   *  jamais casser l'affichage), puis cède la main au ressort de fin dès que la
+   *  vitesse retombe → arrêt en douceur, recentré sur la carte la plus proche. */
+  const momentum = useCallback(
+    (v0: number) => {
+      const el = trackRef.current;
+      if (!el) return;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      el.style.scrollSnapType = "none";
+      let v = v0; // px/ms
+      let last = performance.now();
+      const frame = (now: number) => {
+        const dt = Math.min(now - last, 40); // borne les gros gaps (onglet en fond)
+        last = now;
+        el.scrollLeft += v * dt;
+        if (LOOP) wrap(true);
+        paint();
+        v *= Math.pow(FRICTION_PER_FRAME, dt / 16.667);
+        if (Math.abs(v) <= V_STOP) {
+          animRef.current = 0;
+          // Arrêt en douceur : ressort vers la carte la plus proche (paint vient
+          // de rafraîchir activeRef sur la position recadrée).
+          centerCard(activeRef.current);
+        } else {
+          animRef.current = requestAnimationFrame(frame);
+        }
+      };
+      animRef.current = requestAnimationFrame(frame);
+    },
+    [LOOP, wrap, paint, centerCard],
   );
 
   const step = useCallback(
     (dir: -1 | 1) => {
       engagedRef.current = true;
+      if (animRef.current) {
+        cancelAnimationFrame(animRef.current);
+        animRef.current = 0;
+      }
       centerCard(activeRef.current + dir);
     },
     [centerCard],
@@ -264,7 +347,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   useEffect(() => {
     const el = trackRef.current;
     if (!el) return;
-    if (LOOP) measureAdvance();
+    if (LOOP) measureLoop();
     else applyEndPadding();
     // Mise en place : on centre d'emblée la carte de départ (1re de la copie
     // centrale, en boucle) par saut direct (sans ressort) — jamais de vide
@@ -278,7 +361,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     }
     schedulePaint();
     const onResize = () => {
-      if (LOOP) measureAdvance();
+      if (LOOP) measureLoop();
       else applyEndPadding();
       centerCard(activeRef.current);
     };
@@ -288,7 +371,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     // pris la main (engagedRef), pour ne pas contrarier son défilement (capture,
     // car l'event `load` d'une image ne remonte pas).
     const onCoverLoad = () => {
-      if (LOOP) measureAdvance();
+      if (LOOP) measureLoop();
       else applyEndPadding();
       if (!dragRef.current && !engagedRef.current) centerCard(activeRef.current);
       schedulePaint();
@@ -319,47 +402,87 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     LOOP,
     startIndex,
     applyEndPadding,
-    measureAdvance,
+    measureLoop,
     schedulePaint,
     centerCard,
   ]);
 
   // Glisser-déposer à la souris (le tactile garde son défilement natif + snap).
-  const onPointerDown = useCallback((e: React.PointerEvent<HTMLUListElement>) => {
-    if (e.pointerType !== "mouse") return;
-    const el = trackRef.current;
-    if (!el) return;
-    engagedRef.current = true;
-    if (animRef.current) cancelAnimationFrame(animRef.current);
-    // Snap coupé pendant le glissé souris : `mandatory` happerait scrollLeft à
-    // chaque frame et rendrait le glissé saccadé. Rétabli au relâchement.
-    el.style.scrollSnapType = "none";
-    dragRef.current = { startX: e.clientX, startScrollLeft: el.scrollLeft, moved: false };
-    el.style.cursor = "grabbing";
-  }, []);
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLUListElement>) => {
+      if (e.pointerType !== "mouse") return;
+      const el = trackRef.current;
+      if (!el) return;
+      engagedRef.current = true;
+      if (animRef.current) {
+        cancelAnimationFrame(animRef.current);
+        animRef.current = 0;
+      }
+      // Pas/home peuvent avoir bougé (images chargées après coup) : on rafraîchit
+      // avant le geste pour un recadrage exact.
+      if (LOOP) measureLoop();
+      // Snap coupé pendant le glissé souris : `mandatory` happerait scrollLeft à
+      // chaque frame et rendrait le glissé saccadé. Rétabli au relâchement.
+      el.style.scrollSnapType = "none";
+      dragRef.current = {
+        startX: e.clientX,
+        lastX: e.clientX,
+        moved: false,
+        vx: 0,
+        lastT: performance.now(),
+      };
+      el.style.cursor = "grabbing";
+    },
+    [LOOP, measureLoop],
+  );
 
-  const onPointerMove = useCallback((e: React.PointerEvent<HTMLUListElement>) => {
-    const el = trackRef.current;
-    const drag = dragRef.current;
-    if (!el || !drag) return;
-    const dx = e.clientX - drag.startX;
-    if (Math.abs(dx) > 4 && !drag.moved) {
-      drag.moved = true;
-      e.currentTarget.setPointerCapture(e.pointerId);
-    }
-    el.scrollLeft = drag.startScrollLeft - dx;
-  }, []);
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLUListElement>) => {
+      const el = trackRef.current;
+      const drag = dragRef.current;
+      if (!el || !drag) return;
+      // Modèle incrémental : on avance de la différence depuis le dernier
+      // mouvement — insensible à un recadrage de boucle survenu entre-temps.
+      const dx = e.clientX - drag.lastX;
+      const now = performance.now();
+      const dt = now - drag.lastT || 16;
+      drag.lastX = e.clientX;
+      drag.lastT = now;
+      if (!drag.moved && Math.abs(e.clientX - drag.startX) > 4) {
+        drag.moved = true;
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }
+      el.scrollLeft -= dx;
+      if (LOOP) wrap(true);
+      // Vitesse de scroll lissée (EMA) ; le scroll va à l'inverse du pointeur.
+      const inst = -dx / dt;
+      drag.vx = 0.7 * inst + 0.3 * drag.vx;
+      // paint() synchrone (et non schedulePaint) : les transforms se recalculent
+      // dans la meme frame que le recadrage -> aucun flash au passage de la limite.
+      paint();
+    },
+    [LOOP, wrap, paint],
+  );
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent<HTMLUListElement>) => {
       const el = trackRef.current;
+      const drag = dragRef.current;
       if (el) el.style.cursor = "grab";
       if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
         e.currentTarget.releasePointerCapture(e.pointerId);
       }
-      if (dragRef.current?.moved) {
-        // Fin de glissé : recentre au ressort (springTo rétablit le snap à la fin).
-        centerCard(activeRef.current);
+      if (drag?.moved && el) {
+        // Vitesse retenue seulement si le geste était encore vif au lâcher.
+        const fresh = performance.now() - drag.lastT <= V_STALE_MS;
+        const v = fresh ? drag.vx : 0;
+        if (!prefersReducedMotion() && Math.abs(v) >= FLING_MIN) {
+          // Élan : traverse plusieurs tours puis s'arrête en douceur.
+          momentum(v);
+        } else {
+          // Glissé sans élan : recentre au ressort (springBy rétablit le snap).
+          centerCard(activeRef.current);
+        }
       } else if (el) {
         // Survol/clic sans glissé : on rétablit le snap coupé au pointerdown.
         el.style.scrollSnapType = "";
@@ -368,7 +491,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
         if (dragRef.current) dragRef.current.moved = false;
       }, 0);
     },
-    [centerCard],
+    [centerCard, momentum],
   );
 
   // Empêche la navigation si le pointeur vient de glisser (>4px) plutôt que de cliquer.
