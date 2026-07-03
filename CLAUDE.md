@@ -58,6 +58,9 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
   respecte les avis de dépréciation.
 - Ne casse pas le contrat de données WordPress ; préserve le mu-plugin (`wp-headless`).
 - Refactor = **iso-rendu** : conserve les chaînes de classes et le DOM produits.
+- **Devis / migration / hybrides** : partir de `LEGACY-STACK.md` (inventaire vérifié
+  OVH + 4 installs WordPress, source de vérité ; ré-vérifiable via l'API OVH) — ne pas
+  refaire la reconnaissance.
 
 ## Verification
 
