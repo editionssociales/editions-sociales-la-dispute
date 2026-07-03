@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Cover } from "@/lib/cover";
 
 /** Un livre déjà mis en forme par la page serveur — aucune fonction, uniquement des données sérialisables. */
@@ -50,10 +50,12 @@ const V_STALE_MS = 60; // au relâchement, on ignore la vitesse si le dernier mo
  * coverflow — la couverture centrale est zoomée et pleinement opaque, les
  * latérales reculent (échelle, opacité, légère rotation 3D). Chaque couverture
  * est affichée à son ratio réel (hauteur commune, largeur variable) : aucune
- * bande, jamais coupée. Le titre et l'auteur du livre centré s'affichent en
- * légende sous le rail. Les transformations suivent le défilement image par
- * image (aucun re-rendu par pixel) ; la navigation (flèches, fin de glissé,
- * focus clavier) recentre avec un léger ressort.
+ * bande, jamais coupée. Couverture seule : aucune légende texte — titre/auteur
+ * restent accessibles via l'aria-label du lien, et les livres à paraître
+ * portent une pastille « À paraître » en overlay sur la couverture. Les
+ * transformations suivent le défilement image par image (aucun re-rendu par
+ * pixel) ; la navigation (flèches, fin de glissé, focus clavier) recentre avec
+ * un léger ressort.
  *
  * BOUCLE INFINIE : le catalogue est répété en plusieurs copies. Le contenu est
  * périodique (période = `advance`, largeur d'une copie) : on maintient donc en
@@ -97,7 +99,6 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   // des couvertures — sinon ces recentrages contrarient son défilement pendant
   // les ~5 s où les images arrivent.
   const engagedRef = useRef(false);
-  const [active, setActive] = useState(startIndex);
 
   /** Ajuste les marges de début/fin pour que la 1re et la dernière couverture
    *  (de largeurs variables) puissent se centrer dans le viewport. Inutile en
@@ -213,7 +214,6 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
     if (nearest !== activeRef.current) {
       activeRef.current = nearest;
-      setActive(nearest);
     }
   }, [LOOP, wrap]);
 
@@ -503,7 +503,6 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   }, []);
 
   if (n === 0) return null;
-  const current = books[((active % n) + n) % n];
   // Rail cloné (copie-major, livre-mineur) : l'indice global d'une carte vaut
   // `copie * n + livre`, ce qui suit l'ordre du DOM (donc de querySelectorAll).
   const slides = Array.from({ length: COPIES }, (_, copy) =>
@@ -516,10 +515,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           flèches à droite) — même mise en forme que l'ancien en-tête de page. */}
       <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-between gap-4 px-[clamp(16px,4vw,64px)]">
         <div className="min-w-0">
-          <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
-            Les Éditions sociales × La Dispute
-          </p>
-          <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-black">
+          <h1 className="font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-black">
             Nouveautés
           </h1>
         </div>
@@ -581,7 +577,9 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
                 tabIndex={primary ? undefined : -1}
                 aria-hidden={primary ? undefined : true}
                 aria-label={
-                  primary ? `${book.title}${book.author ? `, ${book.author}` : ""}` : undefined
+                  primary
+                    ? `${book.title}${book.author ? `, ${book.author}` : ""}${book.upcoming ? ", à paraître" : ""}`
+                    : undefined
                 }
                 className="block origin-center will-change-transform focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-4"
               >
@@ -589,6 +587,14 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
                     l'image (aucune bande, jamais coupée). draggable=false : le
                     drag HTML5 natif entrerait en conflit avec le glissé du rail. */}
                 <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[0_14px_34px_rgba(23,20,15,0.16)] ring-1 ring-line">
+                  {book.upcoming && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-0 z-[1] border-b-2 border-r-2 border-black bg-pop-orange px-1.5 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black"
+                    >
+                      À paraître
+                    </span>
+                  )}
                   <Cover
                     cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
                     alt=""
@@ -603,24 +609,6 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           );
         })}
       </ul>
-
-      {/* Légende du livre centré — remplace les étiquettes sur les couvertures. */}
-      <div
-        aria-hidden="true"
-        className="mx-auto mt-[clamp(14px,2vw,26px)] min-h-[68px] max-w-[42ch] px-6 text-center"
-      >
-        {current.upcoming && (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ocher-text">
-            À paraître
-          </p>
-        )}
-        <p className="mt-1 font-serif text-[clamp(19px,2vw,26px)] font-semibold leading-tight text-ink">
-          {current.title}
-        </p>
-        {current.author && (
-          <p className="mt-1 text-sm text-muted">{current.author}</p>
-        )}
-      </div>
     </section>
   );
 }

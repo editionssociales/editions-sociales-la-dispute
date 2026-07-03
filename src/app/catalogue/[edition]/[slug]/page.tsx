@@ -42,6 +42,30 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+type PersonLd = { "@type": "Person"; name: string };
+type OfferLd = {
+  "@type": "Offer";
+  price: string;
+  priceCurrency: string;
+  availability: string;
+  url?: string;
+};
+/** Structured data `Book` (schema.org) — canaux légitimes (JSON-LD), pas de texte visible dupliqué. */
+type BookJsonLd = {
+  "@context": "https://schema.org";
+  "@type": "Book";
+  name: string;
+  author?: PersonLd[];
+  inLanguage: string;
+  isbn?: string;
+  numberOfPages?: number;
+  datePublished?: string;
+  publisher: { "@type": "Organization"; name: string };
+  image?: string;
+  description?: string;
+  offers?: OfferLd;
+};
+
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
@@ -61,8 +85,46 @@ export default async function BookPage({
   const editionInfo = EDITIONS[edition];
   const accentBg = ACCENT_BG[editionInfo.accent];
 
+  const authorsLd: PersonLd[] = book.authors.map((a) => ({
+    "@type": "Person",
+    name: a.name,
+  }));
+  const descriptionLd = cmsExcerpt(book.presentation, 300) || undefined;
+  const canOffer =
+    book.price != null && (book.status === "available" || book.status === "external");
+
+  const bookJsonLd: BookJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Book",
+    name: book.title,
+    ...(authorsLd.length > 0 ? { author: authorsLd } : {}),
+    inLanguage: "fr",
+    ...(book.isbn != null ? { isbn: book.isbn } : {}),
+    ...(book.pages != null ? { numberOfPages: book.pages } : {}),
+    ...(book.publishedAt != null ? { datePublished: book.publishedAt } : {}),
+    publisher: { "@type": "Organization", name: editionInfo.name },
+    ...(book.cover?.url ? { image: book.cover.url } : {}),
+    ...(descriptionLd ? { description: descriptionLd } : {}),
+    ...(canOffer
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: String(book.price),
+            priceCurrency: "EUR",
+            availability: "https://schema.org/InStock",
+            ...(book.permalink ? { url: book.permalink } : {}),
+          } satisfies OfferLd,
+        }
+      : {}),
+  };
+  const bookJsonLdScript = JSON.stringify(bookJsonLd).replace(/</g, "\\u003c");
+
   return (
     <Container className="bg-white py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: bookJsonLdScript }}
+      />
       <nav
         aria-label="Fil d'ariane"
         className="mb-8 font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"

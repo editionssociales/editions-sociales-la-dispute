@@ -44,9 +44,6 @@ export default async function HomePage() {
       <Container className="mt-[clamp(30px,4.5vw,60px)]">
         <FramedGrid className="grid-cols-1 sm:grid-cols-[1fr_auto]">
           <div className="flex min-w-0 flex-col justify-center gap-1.5 bg-pop-yellow px-6 py-6 sm:px-7">
-            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/60">
-              Souscription
-            </p>
             <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-black">
               La souscription est ouverte
             </p>

@@ -114,16 +114,10 @@ export default async function EditionCataloguePage({
       />
 
       <div className="mt-3.5 max-w-2xl">
-        <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
-          Explorer
-        </p>
-        <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
           {info.name}
         </h1>
-        <p className="mt-3.5 text-[15px] leading-relaxed text-black/70">
-          {info.tagline} Chaque cellule est une collection de la maison&nbsp;; sa taille dépend
-          du nombre de titres. Cliquez pour filtrer — la cellule active s&rsquo;inverse en noir.
-        </p>
+        <p className="mt-3.5 text-[15px] leading-relaxed text-black/70">{info.tagline}</p>
       </div>
 
       <FramedGrid
