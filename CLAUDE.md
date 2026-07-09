@@ -62,8 +62,12 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
   OVH + 4 installs WordPress, source de vérité ; ré-vérifiable via l'API OVH) — ne pas
   refaire la reconnaissance.
 - **Chantier accepté (base de données propre, back-office, commerce natif,
-  extinction WordPress)** : partir de `IMPLEMENTATION-PROMPT.md` — enchaînement des
-  phases restantes, à ne pas re-planifier de zéro à chaque session.
+  extinction WordPress)** : partir de `IMPLEMENTATION-PLAN.md` (plan détaillé, phase par
+  phase) — dont `IMPLEMENTATION-PROMPT.md` est le cadrage haut niveau. Ne pas
+  re-planifier de zéro à chaque session.
+- **Dépôt, CI/CD, comptes, secrets, bloqueurs** : `DEVOPS.md`. Les runbooks de bascule
+  de compte (transfert GitHub/Vercel) touchent des comptes tiers — **ne jamais les
+  exécuter sans accord explicite**.
 
 ## Verification
 
