@@ -22,8 +22,10 @@
   **transfert de propriété**, pas une réécriture.
 - **Aucune CI n'existe** : 4 PR ont été fusionnées sans qu'aucune vérification
   automatique ne tourne. Corrigé par `.github/workflows/ci.yml` (ce commit).
-- **Vercel n'est pas relié à Git** : les déploiements se font à la main
-  (`vercel deploy`). Il n'y a donc **ni preview par PR, ni build vérifié avant merge**.
+- **Vercel *est* relié à Git** — contrairement à ce qu'affirmait `COHABITATION.md`.
+  `vercel[bot]` déploie `main` en **Production** et chaque branche en **Preview** depuis
+  le 2026-07-02. Le build est donc déjà vérifié avant merge ; ce qui manque n'est pas la
+  liaison, c'est la **propriété** (le projet vit sur la team provisoire `solidz`).
 - Trois secrets sont posés dans `site/.env`. **Un seul est exploitable en l'état** :
 
   | Variable | État vérifié (2026-07-09) | Conséquence |
@@ -61,7 +63,7 @@ Branches distantes résiduelles à nettoyer : `feat/catalogue-couverture-seule`,
 | Projet | `editions-sociales-la-dispute` (`.vercel/project.json`) |
 | Team | `solidz` — **provisoire**, prestataire |
 | URL beta | `https://editions-sociales-la-dispute.vercel.app` |
-| Intégration Git | **absente** → déploiements CLI manuels |
+| Intégration Git | **active** (`vercel[bot]`, depuis le 2026-07-02) : `main` → Production, branche → Preview |
 | Variables d'env prod | posées à la main (non auditables depuis le dépôt) |
 
 ### 1.3 Base de référence (vérifiée sur `main`, commit `012fe02`)
@@ -115,7 +117,7 @@ engagement contractuel, pas une préférence.
 |---|---|---|---|---|
 | Code source | GitHub `yourimerad` (privé) | GitHub **`editionssociales`** (privé) | Client | 🟠 à transférer |
 | Intégration continue | néant | GitHub Actions (typecheck/lint/test) | Client | 🟢 posée (ce commit) |
-| Build / preview | `vercel deploy` manuel | Vercel **relié à Git** : PR → preview, `main` → prod | Client | 🔴 à brancher |
+| Build / preview | Vercel relié à Git : PR → preview, `main` → prod | identique, sur le compte client | Client | 🟢 fonctionne · suit le transfert (§6.2) |
 | Hébergement app | Vercel team `solidz` | Vercel, compte client (Pro ~20 €/mois) | Client | 🟠 à transférer |
 | Secrets / env | `.env.local` sur le portable | Vercel env (Production / Preview / Development) | Client | 🔴 à poser |
 | Base de données | néant (lit WordPress) | **PostgreSQL** managé, sauvegarde nocturne | Client | ⚪ phase 3 |
@@ -187,6 +189,10 @@ Règle : **aucune clé `live` en Preview.** Une PR ne doit pas pouvoir encaisser
        Vercel Production Deployment
 ```
 
+Ce pipeline est **vérifié**, pas souhaité : la PR #5 a fait tourner les deux branches
+(Actions vert en 32 s, preview Vercel verte), et l'historique des déploiements GitHub
+montre `vercel[bot]` promouvant chaque `main` en Production depuis le 2026-07-02.
+
 ### Pourquoi le `build` n'est pas dans GitHub Actions
 
 `generateStaticParams` pré-rend 295 fiches, et `catalogue-http.getBook()` fait **une
@@ -198,6 +204,14 @@ déploiement preview Vercel.
 
 Cette contrainte disparaît à la **phase 3** (catalogue en PostgreSQL) : le build
 redevient hermétique et le job `build` peut rejoindre `ci.yml`.
+
+**Corollaire mesuré sur cette PR** : chaque commit poussé, *y compris un commit qui ne
+touche que des `.md`*, déclenche un build preview complet — donc ~300 requêtes vers
+l'OVH du client. Les deux commits de la PR #5 en ont déclenché deux. Correctif à un
+coup : un *Ignored Build Step* Vercel (ou `vercel.json` → `ignoreCommand`) qui saute le
+build quand le diff ne touche ni `src/`, ni `public/`, ni les fichiers de conf.
+**Non appliqué ici** : cela modifie le comportement de déploiement d'un projet en
+production — à valider avant, pas à glisser dans une PR d'outillage.
 
 ### 🔴 Risque actif : le catalogue tronqué en silence
 
@@ -255,7 +269,10 @@ git push origin --delete feat/catalogue-couverture-seule \
   worktree-claude-md-index-update worktree-site-build worktree-souscription-copy
 ```
 
-### 6.2 Vérifier et relier Vercel à Git
+### 6.2 Transférer le projet Vercel
+
+La liaison Git **existe déjà et fonctionne** (§1.2) : il n'y a rien à « brancher ».
+Ce runbook déplace la **propriété**, pas la plomberie.
 
 **D'abord identifier le propriétaire du `VERCEL_TOKEN`** — tant que ce n'est pas fait,
 ne rien exécuter :
@@ -269,16 +286,22 @@ vercel teams ls --token "$VERCEL_TOKEN"
 - S'il appartient à `solidz` → il sert au **transfert**, pas à la cible.
 - S'il appartient à un compte client → c'est la destination.
 
-Le projet Vercel se transfère entre comptes **sans perte d'historique de déploiement**
-(interface : *Project Settings → Advanced → Transfer*). Une fois chez le client :
+Le projet se transfère **sans perte d'historique de déploiement**
+(*Project Settings → Advanced → Transfer*). Puis, sur le poste du dev :
 
 ```bash
-vercel link                                    # relier le dossier au projet client
-vercel git connect                             # brancher le dépôt GitHub → previews auto
+vercel link                                    # re-lier le dossier au projet transféré
 ```
 
-À partir de là, `vercel deploy` manuel n'a plus lieu d'être : `main` déploie en prod,
-chaque PR produit une preview.
+> ⚠️ **Piège d'ordonnancement.** Le transfert du dépôt GitHub (§6.1) **casse** la
+> liaison Vercel↔Git : l'app GitHub « Vercel » est autorisée sur `yourimerad`, pas sur
+> `editionssociales`. Tant qu'elle n'est pas réinstallée sur le nouveau propriétaire,
+> **les previews et les déploiements de production cessent silencieusement** — aucun
+> message d'erreur, simplement plus de `vercel[bot]`.
+>
+> Ordre sûr : transférer le dépôt → réinstaller/autoriser l'app Vercel sur le compte
+> client → transférer le projet Vercel → **vérifier qu'une PR de test produit bien une
+> preview** avant de considérer la bascule faite.
 
 ### 6.3 Poser les variables d'environnement
 

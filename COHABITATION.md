@@ -69,11 +69,11 @@ disparaît puisque le domaine ne servira plus WordPress.
       (team Vercel `solidz`, **provisoire** — projet transférable sans perte
       d'historique vers un compte dédié au client dès qu'il existe). Catalogue
       + boutique vérifiés avec données réelles ; les 3 sites WP restent à 200.
-      ⚠️ Pas encore de repo GitHub connecté (déploiement fait en direct via
-      `vercel deploy` CLI) → le workflow *push git → build → preview* décrit
-      par le client n'est pas encore branché : il manque la création du repo
-      (à faire par le client/Youri, pas unilatéralement par l'agent) puis
-      `vercel link` au repo pour activer les déploiements auto par branche.
+- [x] Workflow *push git → build → preview* **branché et vérifié** : dépôt
+      `yourimerad/editions-sociales-la-dispute` (privé), `vercel[bot]` déploie
+      `main` en Production et chaque branche en Preview depuis le 2026-07-02.
+      CI GitHub Actions (typecheck/lint/test) depuis le 2026-07-09.
+      Reste la **propriété** des comptes, pas la plomberie — cf. `DEVOPS.md` §6.
 - [ ] Phase 2 — hostnames CMS découplés.
 - [ ] Phase 3 — redirections 301 + cutover DNS.
 - [ ] Phase 4 — retrait des front-ends WP.

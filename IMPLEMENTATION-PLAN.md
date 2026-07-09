@@ -51,9 +51,11 @@ où (6 gagne à être faite tôt : elle rend les incidents visibles).
       la même version de pnpm.
 - [x] `DEVOPS.md`, `IMPLEMENTATION-PLAN.md`.
 - [ ] **Transfert de propriété** (dépôt → `editionssociales`, Vercel → compte client),
-      liaison Vercel↔Git, variables d'environnement, protection de `main`.
+      variables d'environnement, protection de `main`.
       → Runbooks prêts dans `DEVOPS.md` §6, **non exécutés** : ils touchent des comptes
-      tiers. Attendent un accord explicite.
+      tiers. Attendent un accord explicite. Attention à l'ordre : transférer le dépôt
+      **casse** la liaison Vercel↔Git jusqu'à réautorisation de l'app GitHub sur le
+      nouveau propriétaire — previews et prod s'arrêtent sans message d'erreur.
 
 **Vérification.** La PR de ce commit est le premier build vert de l'histoire du dépôt.
 
