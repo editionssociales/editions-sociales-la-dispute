@@ -61,6 +61,9 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
 - **Devis / migration / hybrides** : partir de `LEGACY-STACK.md` (inventaire vérifié
   OVH + 4 installs WordPress, source de vérité ; ré-vérifiable via l'API OVH) — ne pas
   refaire la reconnaissance.
+- **Chantier accepté (base de données propre, back-office, commerce natif,
+  extinction WordPress)** : partir de `IMPLEMENTATION-PROMPT.md` — enchaînement des
+  phases restantes, à ne pas re-planifier de zéro à chaque session.
 
 ## Verification
 
