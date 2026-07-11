@@ -43,3 +43,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# payload — médias uploadés en local (dev sans Vercel Blob)
+/media
+
+# payload — rapports + fichiers temporaires de la migration WordPress→Postgres
+scripts/migrate-catalogue/out/

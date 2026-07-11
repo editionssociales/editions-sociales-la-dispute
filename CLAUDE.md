@@ -69,6 +69,11 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
 - **Dépôt, CI/CD, comptes, secrets, bloqueurs** : `DEVOPS.md`. Les runbooks de bascule
   de compte (transfert GitHub/Vercel) touchent des comptes tiers — **ne jamais les
   exécuter sans accord explicite**.
+- **Payload/back-office** : Next et Payload montent **en tandem** (versions épinglées
+  ensemble, jamais l'un sans l'autre) ; tout script d'écriture Payload passe
+  `context.migration`/`context.disableRevalidate` (neutralise les hooks de rendu
+  pendant les imports) ; URL Neon **poolée** pour l'app et les builds, URL **directe**
+  (`DATABASE_URL_UNPOOLED`) réservée à `payload migrate` et `pg_dump`.
 
 ## Verification
 
@@ -91,3 +96,6 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
 - **`wp-headless`** — mu-plugin + contrat de données WordPress à préserver.
 - **`plan`** — plan directeur de la refonte (option B) : 7 plans de phase, stack,
   calendrier consolidé, engagements du devis.
+- **`src/payload`** — collections + accès du back-office (schéma catalogue, rôles
+  admin/editor).
+- **`scripts/migrate-catalogue`** — migration WordPress→Postgres, idempotente.
