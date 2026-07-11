@@ -65,6 +65,14 @@ Chemin critique secondaire : gate Payload (10/07) → import complet (12/07) →
 
 ### Juillet — dons + catalogue + back-office + mise en production
 
+> ⚠️ **Décalage d'ancrage (constaté sam 11/07)** : le plan a été établi le jeu 09/07 avec
+> un J0 au ven 10/07 — qui n'a pas eu lieu. Le week-end 11–12/07 (déjà compté comme
+> régime de chantier) absorbe le glissement : exécuter les actions « Ven 10/07 »
+> **immédiatement** (le mail client groupé en tout premier — le KYC Stripe est le chemin
+> critique et le client ne lira peut-être qu'à lundi 13/07). Les jalons (démo 15/07,
+> swap 20/07, flips 21 et 24/07, dons réels avant fin juillet, butée de secours 07/08)
+> restent inchangés.
+
 | Quand | Quoi |
 |---|---|
 | **Ven 10/07** | Mail client groupé (pièces + décisions). Youri : merge PR #5, mu-plugin redéployé, provisioning Neon/Blob/Sentry-UE, arbitrage des 2 gates (Stripe local, `withPayload`). Agents : P1 E1–E8 (dons complet en local), P3 E0–E2 (schéma), P2 E1/E2/E4 (légales, SEO, redirections), P6 S1a (Sentry SDK) |
