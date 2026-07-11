@@ -1,0 +1,148 @@
+# Phase 5 — Newsletter et contact
+
+## Objectif et livrable
+
+Périmètre vendu (devis §5, poste « Newsletter (2 848 abonnés → Brevo) + formulaires », bloc 3.4, **0,5 j / 100 €**) :
+
+1. **Import Brevo** des abonnés newsletter confirmés de la boutique WooCommerce, avec **preuve de consentement conservée** (archive remise au client).
+2. **Formulaire d'inscription newsletter** sur le nouveau site (double opt-in Brevo) — la cellule footer existe déjà, inerte (`site-footer.tsx:71-104`, `<form action="#">`).
+3. **Formulaire de contact unique** (page `/contact`), remplaçant les 3 outils redondants du legacy (Contact Form 7 + WPForms sur Boutique, Everest Forms sur LD) — remplacés fonctionnellement ici, désinstallés physiquement aux phases d'extinction.
+
+Livrable de recette : tableau de bord Brevo peuplé et vérifié, deux formulaires en production sur le site, archive de consentement remise. **Hors périmètre de ce poste** (zéro scope creep) : éditeur de campagnes, automation, gestion des abonnés dans Payload (l'outil de l'équipe = le dashboard Brevo), case newsletter au checkout — et les **« mises en avant ponctuelles » (C32, remplaçant les 2 Popup Builder)** : c'est bien un engagement du même bloc 3.4 du devis (§3.4 + annexe §11 « Remplacé : mises en avant natives »), mais il n'est pas couvert par le poste 0,5 j « Newsletter + formulaires » ; son affectation est **tranchée : phase 3 (catalogue), étape E6bis** (collection Payload `highlight` + bandeau d'accueil, voir `plan/03-catalogue.md`), avec traçage en recette globale — voir « Dépendances et interfaces », rien à construire ici et il ne disparaît pas silencieusement.
+
+**Fait nouveau vérifié pendant ce cadrage** (base locale port 3307, `editionsk884.mod973_options → newsletter_subscription_lists`) : les deux listes ne sont **pas** ES/LD comme supposé par la recon R2, mais **`list_1` = « Libraires 102020 » (1 976 confirmés)** et **`list_2` = « informations trimestrielle (amis, lecteurs, etc.) » (875)**, recouvrement 3, soit exactement 2 848. La segmentation métier (libraires vs lecteurs) est à préserver. Autre trouvaille : `newsletter_main_info.footer_legal` = `ecrire@editionssociales.fr` — une adresse de contact candidate non documentée (cf. Questions ouvertes).
+
+## Preconditions et provisioning (comptes, cles, acces — qui fait quoi, client vs Youri)
+
+| Élément | Qui | Détail |
+|---|---|---|
+| **Compte Brevo** | **Client** (créé au nom de la structure, décision stack §4 + devis §9) ; Youri invité admin | ⚠️ Recon R4 : le DNS `editionssociales.fr` porte **déjà** `brevo1/brevo2._domainkey` (CNAME → dkim.brevo.com), un TXT `brevo-code:…` et un DMARC `p=none; rua=…@dmarc.brevo.com` → **un compte Brevo authentifié sur ce domaine existe déjà quelque part**. Question client n°1 : le retrouver. S'il est accessible → le réutiliser (domaine déjà authentifié, zéro DNS à toucher), **après inventaire de son contenu existant** (étape 4). Sinon → compte neuf + nouveaux enregistrements **additifs uniquement** (TXT `brevo-code`, DKIM) ; **les MX ne sont JAMAIS touchés** (état hybride MX Plan/Email Pro fragile, R4 §3.3). **Le provisioning Brevo est un singleton partagé avec la phase Dons — mais il n'est pas acquis que Dons le crée** : si Dons retient les reçus natifs Stripe (`receipt_email`), Brevo n'y sert à rien et c'est CETTE phase qui le crée (cf. Dépendances). L'étape 1 porte le provisioning dans les deux cas. |
+| `BREVO_API_KEY` | Youri (générée dans le compte retenu) | À poser dans `site/.env` + env Vercel (production + development, comme les 4 vars existantes). Jamais affichée. Provisionnée une seule fois, par la première phase qui en a besoin — vérifier avant de la créer qu'elle n'existe pas déjà (phase Dons). |
+| Domaine d'envoi | Youri, via zone OVH (API `ovh-use es`) | Newsletter : `editionssociales.fr` (DKIM déjà posé si compte existant réutilisé). Transactionnel (contact + éventuels reçus dons) : sous-domaine dédié (stack §4, ex. `mail.editionssociales.fr`) — décidé par la phase Dons si elle utilise Brevo, sinon posé ici — enregistrements TXT/CNAME **additifs**. |
+| Boîte destinataire du contact | **Client** confirme | Défaut `toutes@editionssociales.fr` (seule boîte Email Pro vérifiée, R4) ; alternative `ecrire@` si elle existe en redirection (`/email/domain` OVH à vérifier, 5 min). |
+| Accès base locale | Acquis | MariaDB `127.0.0.1:3307`, dump `editionsk884.20260701.sql.gz` chargé (vérifié fonctionnel pendant ce cadrage). |
+| Contenus | **Client** | Texte du mail DOI (gabarit fourni par Youri), texte page `/contact`, validation du framing « consentement 2020 » (cf. Risques), et **mentions légales / politique de confidentialité** : le gabarit est promis au client pour le vendredi 10/07 (devis §10) — nécessaire pour la mention RGPD sous les formulaires (étapes 6-7). |
+
+## Etapes (ordonnees, numerotees ; pour chaque etape : quoi, fichiers/ressources touches, comment verifier)
+
+**Étape 1 — Trancher le compte Brevo, croiser avec la phase Dons, provisionner (0,05–0,2 j + délai client).**
+Quoi : (a) croiser avec le plan de la phase Dons : mécanisme de reçus retenu (Brevo transactionnel ou `receipt_email` natif Stripe) — détermine qui crée le compte/clé/sous-domaine d'envoi ; (b) poser les 3 questions client (compte Brevo existant, destinataire contact, framing consentement) — au plus tard à la démo du **mercredi 15/07** ; (c) créer/récupérer le compte, générer `BREVO_API_KEY`, vérifier l'authentification du domaine dans Brevo (Senders & domains). Si l'héritage Dons n'a pas lieu, cette étape absorbe le provisioning complet (+0,1–0,15 j, cf. Calage).
+Ressources : dashboard Brevo ; zone OVH via API si enregistrements à ajouter (additifs).
+Vérif : domaine « authentifié » dans Brevo ; `dig TXT/CNAME` des enregistrements ; **envoi/réception d'un mail à `toutes@` avant et après tout ajout DNS** (preuve MX intouchés).
+
+**Étape 2 — Structure Brevo : dossier, listes, attributs, template DOI (0,1 j).**
+Quoi : dossier « Éditions sociales × La Dispute » ; **4 listes** : `Libraires (import WP 2020)`, `Lecteurs — infos trimestrielles (import WP 2020)`, `Inscrits site (2026)` (les nouveaux inscrits DOI vont dans la 3ᵉ — consentement propre, jamais mélangé à l'import legacy), `Désinscrits (import WP 2020)` (cible technique de l'import blacklisté, cf. étape 4) ; attributs contacts : `PRENOM`, `NOM` (standards), `CONSENTEMENT_DATE` (date), `CONSENTEMENT_IP` (texte), `SOURCE` (texte) ; template DOI en français (type « Double opt-in confirmation », gabarit Brevo, charte sobre).
+Ressources : dashboard Brevo (plus rapide que l'API pour du one-shot) ; noter `BREVO_DOI_TEMPLATE_ID` et `BREVO_LIST_ID_SITE`.
+Vérif : template de test envoyé à soi-même ; IDs des 4 listes relevés.
+
+**Étape 3 — Script d'extraction + archive de consentement (0,15 j).**
+Quoi : script `site/scripts/newsletter-export.mjs` (réutilise la dépendance `mysql2` déjà présente et morte — recon R1 §surprises) lisant la base locale 3307. Détail en section « Donnees et migration ». Produit **3 CSV** alignés sur la structure d'import de l'étape 4 : `libraires.csv` (1 976), `lecteurs.csv` (875 — les 3 emails communs figurent dans les deux fichiers), `desinscrits.csv` (7).
+Fichiers : `site/scripts/newsletter-export.mjs` ; sorties sous `/Users/yourihamon/marina_es/_exports/newsletter-20260722/` (hors repo — pas de données personnelles en git).
+Vérif : comptages exacts attendus (voir section migration) ; rapport d'anomalies vide ou expliqué.
+
+**Étape 4 — Inventaire du compte, import Brevo en 3 appels, vérification (0,1 j).**
+Quoi : (a) **inventaire préalable du compte** (obligatoire si compte réutilisé, ~10 min) : export des listes et contacts existants avant tout import — protège les données client préexistantes et donne l'état de référence du rollback ; (b) import via `POST https://api.brevo.com/v3/contacts/import` ([doc re-vérifiée ce jour](https://developers.brevo.com/reference/import-contacts.md) : `fileBody` CSV ≤ 10 Mo — nos fichiers ≈ 300 Ko —, réponse 202 + `processId` ; **contrainte structurante : `listIds` s'applique à TOUS les contacts de l'appel** — « Ids of the lists in which the contacts shall be imported » —, pas d'affectation par ligne, et `listIds` est « Mandatory if newList is not defined », y compris pour un import blacklisté). D'où **3 appels** :
+  1. `libraires.csv` (1 976) → `listIds=[Libraires]` ;
+  2. `lecteurs.csv` (875) → `listIds=[Lecteurs]` — les 3 emails communs, présents dans les deux fichiers, **fusionnent par email côté Brevo** et se retrouvent membres des deux listes ;
+  3. `desinscrits.csv` (7) → `emailBlacklist: true` + `listIds=[Désinscrits (import WP 2020)]` (satisfait la contrainte listIds/newList) — leur opt-out est préservé dans le nouvel outil au lieu d'être perdu.
+Chaque appel est asynchrone : suivre les 3 `processId` jusqu'à complétion avant de vérifier.
+Ressources : script `site/scripts/newsletter-import.mjs` (appels API, suivi des processId) ; `BREVO_API_KEY`.
+Vérif : dashboard Brevo — 2 848 contacts actifs uniques + 7 blacklistés ; listes à **1 976 / 875** ; les **3** contacts communs membres des deux listes ; échantillon de 10 contacts avec attributs corrects (accents UTF-8 compris) ; les données préexistantes du compte (inventaire (a)) intactes.
+
+**Étape 5 — Gate Next 16 + choix de la surface serveur (0,05 j).**
+Quoi : lire `node_modules/next/dist/docs/01-app/` (server actions vs route handlers, gestion des formulaires) **avant tout code** — obligation projet (`AGENTS.md`). Si la phase Dons a déjà posé la première surface serveur du repo et/ou `src/lib/brevo.ts`, s'aligner sur son pattern et étendre au lieu de dupliquer ; sinon cette phase crée la première surface serveur (décision route handler vs server action prise sur les docs embarquées, pas sur les acquis).
+Vérif : décision notée dans le message de PR ; aucun doublon de client Brevo dans `src/lib`.
+
+**Étape 6 — Formulaire d'inscription newsletter (0,2 j).**
+Quoi : câbler la cellule footer existante. Extraire le `<form>` de `NewsletterCell` vers un îlot client `src/components/newsletter-form.tsx` — **chaînes de classes et DOM existants conservés à l'identique ; seuls des éléments additifs sont autorisés** (honeypot masqué, zone de message d'état) : c'est la lecture correcte du contrat iso-rendu de `site/CLAUDE.md` pour un câblage fonctionnel. Soumission → surface serveur qui appelle `POST /v3/contacts/doubleOptinConfirmation` ([doc vérifiée](https://developers.brevo.com/reference/create-doi-contact) : `email`, `includeListIds=[Inscrits site]`, `templateId`, `redirectionUrl`, `attributes.SOURCE="site-2026"`). Anti-abus **sans jeton signé serveur** — le footer vit dans des pages statiques/ISR (fenêtre 3600 s) : un timestamp émis au rendu daterait du rendu ISR et ne contrôlerait rien ; à la place : champ honeypot + timestamp généré **côté client dans l'îlot** au montage (délai minimal best-effort, sans secret), bornes de longueur, validation serveur, réponse toujours générique (« vérifiez votre boîte mail ») contre l'énumération d'emails — et le DOI garantit que rien n'atteint une liste sans clic du destinataire. **Mention RGPD** sous le champ : finalité + Brevo sous-traitant + lien `/mentions-legales` (le lien footer existe, `site-footer.tsx:61`). Page statique `src/app/newsletter/confirmation/page.tsx` (cible du `redirectionUrl`, construit depuis `NEXT_PUBLIC_SITE_URL`).
+Fichiers : `src/components/site-footer.tsx`, `src/components/newsletter-form.tsx` (client), `src/lib/brevo.ts` (server-only, créé ou étendu), `src/lib/newsletter.ts` (validation pure : email, honeypot, bornes — testable vitest), `src/app/newsletter/confirmation/page.tsx`, surface serveur selon étape 5.
+Vérif : `pnpm typecheck · lint · test · build` ; inscription réelle avec une adresse de test → mail DOI reçu → clic → page de confirmation → contact visible dans « Inscrits site (2026) » ; soumission avec honeypot rempli → aucun appel Brevo (test unitaire sur le module pur + log).
+
+**Étape 7 — Page et formulaire de contact (0,25 j).**
+Quoi : `src/app/contact/page.tsx` (server component, full statique) + îlot `src/components/contact-form.tsx` (nom, email, sujet, message — un seul destinataire, sobre) ; soumission → surface serveur → `POST /v3/smtp/email` (transactionnel Brevo) vers `CONTACT_TO_EMAIL`, `replyTo` = adresse du visiteur, expéditeur = adresse authentifiée du domaine d'envoi (jamais l'adresse du visiteur — DMARC) ; mêmes protections qu'à l'étape 6 (honeypot, délai client best-effort, bornes, validation serveur — module pur `src/lib/contact-form.ts`, testé) ; **mention RGPD** sous le formulaire (finalité, destinataire, Brevo sous-traitant, lien `/mentions-legales`) ; lien « Contact » ajouté au footer (cellule Adresse ou Mentions) et à `/a-propos` si pertinent ; **mise à jour de `src/app/sitemap.ts`** (créé en phase 2 — il ne connaît pas cette nouvelle route) pour y ajouter `/contact`, dans la PR de cette étape.
+Fichiers : ci-dessus + `src/components/site-footer.tsx` (lien) + `src/app/sitemap.ts` (route `/contact`).
+Vérif : message de test → reçu dans la boîte cible, « Répondre » adresse bien le visiteur ; honeypot → rien d'envoyé ; a11y (labels, clavier, focus ring `FOCUS_RING` de `ui.ts`) ; mobile.
+
+**Étape 8 — Env, déploiement, e2e prod (0,05 j).**
+Quoi : ajouter `BREVO_API_KEY`, `BREVO_DOI_TEMPLATE_ID`, `BREVO_LIST_ID_SITE`, `CONTACT_TO_EMAIL`, `NEXT_PUBLIC_SITE_URL` à `site/.env`, `.env.example` (clés seules) et env Vercel (aucun secret de signature à provisionner — l'anti-abus n'en utilise pas, cf. étape 6) ; push → preview → merge main → prod. Vérifier que la page `/mentions-legales` (phase Mise en production) est en ligne ; sinon, mention autosuffisante sous les formulaires en attendant (cf. Risques).
+Vérif : parcours DOI et contact rejoués **sur l'URL de production** (les previews sont derrière SSO Vercel — R4 : le client ne peut pas les ouvrir) ; aucune valeur de secret dans les logs ni le bundle client (seule `NEXT_PUBLIC_SITE_URL` est publique).
+
+**Étape 9 — Recette client + remise de l'archive (0,05 j).**
+Quoi : démo à l'équipe (dashboard Brevo : listes, un contact, comment faire une campagne — 15 min) ; remise de l'archive de consentement ; consigne écrite pour la suite : **ré-export de réconciliation de `mod973_newsletter` avant l'extinction de la Boutique** (phase commerce/cutover) pour rattraper d'éventuels désabonnements via les anciens liens.
+Vérif : critères de recette ci-dessous cochés avec le client.
+
+## Donnees et migration
+
+**Source exacte** (vérifiée ce jour sur la base locale) : `editionsk884.mod973_newsletter` (plugin The Newsletter), dump du 2026-07-01. Liste **figée depuis octobre 2020** (min/max `created` = 2020-10-20 / 2020-10-21, re-vérifié ; 3 emails envoyés en tout — R2 §2.6) → le dump du 01/07 est une source fiable ; seule dérive possible = désabonnements récents, quasi improbables et rattrapés par le ré-export de réconciliation avant extinction Boutique.
+
+**Requête** :
+```sql
+SELECT email, name, surname, status, created, ip, token, wp_user_id, list_1, list_2
+FROM mod973_newsletter WHERE status IN ('C','U');
+```
+
+**Comptages attendus** (vérifiés, corrigent la recon R2 qui donnait list_1=1983 toutes statuts confondus) : `C` = **2 848**, `U` = **7** ; parmi les C : `list_1` (« Libraires 102020 ») = **1 976**, `list_2` (« informations trimestrielle ») = **875**, les deux = **3** (1 976 + 875 − 3 = 2 848 ✓). Preuves de consentement disponibles : `status='C'`, `created` (import 2020-10-20/21), `ip` renseignée sur **20 lignes seulement**, `token`. C'est ce qui existe — l'archive conserve tout, et la fragilité est signalée au client (cf. Risques).
+
+**Script** : `newsletter-export.mjs` — normalise (trim, lowercase email, UTF-8), valide syntaxiquement les emails, détecte les doublons, produit **3 fichiers d'import** calés sur la sémantique `listIds` de l'API (un fichier = une liste cible, cf. étape 4) : `libraires.csv` (1 976) et `lecteurs.csv` (875) avec colonnes Brevo `EMAIL;PRENOM;NOM;CONSENTEMENT_DATE;CONSENTEMENT_IP;SOURCE` (`SOURCE=import-wp-2020-10` — cet attribut est aussi la **clé du rollback ciblé**), les 3 emails communs présents dans les deux ; `desinscrits.csv` (7 U) ; plus `rapport.txt` (comptages, invalides, doublons), copie de la requête SQL et checksum du dump. L'ensemble = **l'archive de consentement remise au client** (principe absolu n°1 : rien n'est détruit côté WP, la table reste intacte jusqu'à l'extinction de la Boutique avec export global des données boutique).
+
+**Import** : étape 4 ci-dessus (3 appels `/v3/contacts/import`, 202 + processId chacun ; import dashboard en repli — il exige la déclaration de consentement, cohérente avec notre archive ; il permet aussi l'affectation par liste, mais un fichier par liste reste nécessaire).
+
+**Vérification** : comptages croisés Brevo vs rapport (2 848 actifs, 7 blacklistés, 1 976/875/3), échantillon 10 contacts (attributs, accents), données préexistantes du compte intactes (inventaire étape 4a).
+
+**Rollback** : **ciblé, jamais destructif pour l'existant** — suppression des seuls contacts portant `SOURCE="import-wp-2020-10"` (filtre attribut) + des 4 listes créées à l'étape 2 si elles sont vides ensuite ; l'inventaire préalable (étape 4a) sert d'état de référence. Si le compte est neuf et vide, la suppression du compte reste l'option simple. La source WordPress n'a jamais été touchée (lecture seule) ; ré-import rejouable à l'identique depuis l'archive.
+
+## Recette et criteres d'acceptation (testables, du point de vue du client)
+
+1. Dans **mon** compte Brevo (au nom de la structure, Youri invité), je vois 2 848 contacts actifs répartis en « Libraires » (1 976) et « Lecteurs » (875) — dont 3 dans les deux —, plus 7 désinscrits blacklistés ; un contact pris au hasard porte sa date d'import 2020 en attribut ; si mon compte contenait déjà des listes ou contacts, ils sont intacts.
+2. Je m'inscris depuis le footer du site avec mon adresse personnelle : je reçois un email de confirmation en français aux couleurs de la maison ; je clique ; j'arrive sur une page de confirmation du site ; j'apparais dans la liste « Inscrits site (2026) ».
+3. Le lien de désinscription d'un email de test Brevo fonctionne et le contact passe désinscrit.
+4. J'envoie un message via `/contact` : il arrive dans la boîte convenue (`toutes@` par défaut) et « Répondre » répond bien à l'expéditeur du message.
+5. Un robot qui remplit le champ caché ou soumet instantanément ne génère aucun email (démontré par Youri).
+6. Mes adresses `@editionssociales.fr` fonctionnent exactement comme avant (MX intouchés — test d'envoi/réception avant/après).
+7. L'archive de consentement (CSV + rapport + référence du dump) m'a été remise.
+8. Chaque formulaire affiche une mention d'information (finalité, Brevo, lien vers les mentions légales) et les deux fonctionnent au clavier et sur téléphone.
+
+## Risques et parades
+
+| Risque | Parade |
+|---|---|
+| **Compte Brevo « fantôme »** : le DNS est déjà câblé Brevo (DKIM + DMARC + brevo-code, R4) mais on ignore qui contrôle ce compte. | Question client n°1 (15/07). Si introuvable/inaccessible : compte neuf, enregistrements additifs (un 2ᵉ TXT `brevo-code` coexiste sans conflit) ; ne pas modifier le DMARC existant tant que la propriété n'est pas éclaircie ; MX jamais touchés. Si retrouvé et réutilisé : inventaire préalable obligatoire (étape 4a) avant tout import — protège listes/contacts préexistants et prévient les collisions d'attributs. |
+| **Consentement fragile** : import unique d'oct. 2020, 5 ans ½ sans envoi, 20 IP conservées sur 2 848, 3 emails envoyés en tout (R2). Risque juridique (RGPD) et de délivrabilité (bounces massifs, plaintes) au premier envoi — ce qui abîmerait la réputation du domaine **dont dépendent aussi les emails transactionnels**. | Signalement écrit au client (fait au plus tard à la recette) ; recommandation : premier envoi = campagne de **ré-engagement** courte, jamais d'envoi de masse sans validation ; transactionnel isolé sur sous-domaine dédié (stack §4) ; l'hygiène des bounces est gérée par Brevo. L'envoi de campagnes est hors périmètre : décision et exécution côté client. |
+| **Erreur de structure d'import** (sémantique `listIds` globale à l'appel) : un import mono-appel mettrait les 2 848 dans les deux listes et détruirait la segmentation. | Neutralisé par conception : 3 appels, un fichier par liste (étape 4, doc API re-vérifiée ce jour) ; vérification de comptage 1 976/875/3 avant recette ; rollback ciblé `SOURCE` rejouable si besoin. |
+| Spam sur le formulaire de contact / abus du endpoint DOI (bombing d'adresses tierces). | Honeypot + délai minimal généré côté client (best-effort — pas de jeton signé serveur : inopérant sous ISR, cf. étape 6) + bornes de longueur + réponses génériques ; le DOI fait que rien n'atteint une liste sans clic du destinataire ; escalade **seulement si abus constaté** : règle Vercel Firewall par IP, puis Cloudflare Turnstile (léger, pas de captcha lourd) en dernier recours. |
+| **Formulaires en prod avant la page légale** : mention RGPD au point de collecte requise dès le 22/07, or `/mentions-legales` relève de la phase Mise en production (contenu client promis pour le 10/07, devis §10). | Mention d'information sous chaque formulaire dès la livraison (étapes 6-7) ; si la page légale n'est pas en ligne au 22/07, la mention est autosuffisante (finalité + Brevo + contact) et le lien est ajouté dès la mise en ligne de la page ; séquençage vérifié à l'étape 8. |
+| **Héritage phase Dons non acquis** : si Dons retient les reçus natifs Stripe, ni compte Brevo, ni clé, ni `src/lib/brevo.ts`, ni surface serveur ne préexistent. | Croisement explicite à l'étape 1 ; le provisioning bascule alors sur cette phase (+0,1–0,15 j, chiffré au Calage) ; la décision compte Brevo du 15/07 reste posée par cette phase dans tous les cas. |
+| Quota Brevo Free (300 emails/jour) partagé entre DOI, contact et éventuels reçus de dons. | Volumes courants dérisoires ; passage **Starter avant le 15/08** déjà budgété (stack §4) pour le mois de campagne. |
+| Désabonnements via les anciens liens WP après l'import (divergence Brevo/WP). | Quasi nul (3 emails historiques) ; ré-export de réconciliation avant extinction Boutique (consigne écrite, étape 9). |
+| Prévisualisations Vercel derrière SSO → client ne peut pas tester avant merge. | Recette sur l'URL de production ; (le déblocage des previews est un sujet de la phase mise en prod/démo, R4 §MANQUE 3). |
+| Next 16 ≠ acquis des modèles (formulaires/server actions). | Gate obligatoire étape 5 : lecture des docs embarquées + alignement sur le pattern éventuellement posé par la phase Dons. |
+
+## Dependances et interfaces avec les autres phases
+
+- **Phase Dons (amont, à croiser — pas présumée)** : le plan Dons peut fournir compte Brevo + `BREVO_API_KEY` + expéditeur transactionnel (sous-domaine dédié) + première surface serveur + `src/lib/brevo.ts`… **ou pas** : Stripe Checkout envoie nativement ses reçus (`receipt_email`) sans Brevo, et c'est la voie la plus simple pour tenir le 15/08. L'étape 1 vérifie le mécanisme retenu ; si Stripe natif, le provisioning Brevo complet est porté par cette phase (ré-estimation au Calage). Dans les deux cas le provisioning Brevo reste un singleton : créé une fois, par la première phase qui en a besoin.
+- **Engagement C32 — « Mises en avant ponctuelles » (hand-off explicite)** : engagement du bloc 3.4 du devis (§3.4 : « Mises en avant ponctuelles (parution, campagne) » ; annexe §11 : Popup Builder ×2 → « Remplacé : mises en avant natives »), **non couvert par le poste 0,5 j de cette phase**. **Affectation tranchée : phase 3 (catalogue), étape E6bis** — collection Payload `highlight` + bandeau sur l'accueil, voir `plan/03-catalogue.md` (E6bis). **Rien à construire en phase 5** ; reste à **tracer dans la recette globale B** — le forfait ferme (devis §9) interdit qu'un livrable vendu disparaisse entre les phases.
+- **Phase Mise en production** : la politique de confidentialité (pages légales) doit couvrir newsletter (Brevo sous-traitant) et formulaire de contact — les formulaires embarquent leur mention dès le 22/07 et pointent `/mentions-legales` dès qu'elle existe (gabarit client promis pour le 10/07, devis §10) ; `/contact` entre dans le sitemap via la PR de l'étape 7 (le `sitemap.ts` créé en phase 2 ne connaît pas cette route) ; `NEXT_PUBLIC_SITE_URL` bascule vers le domaine définitif au cutover DNS (les liens DOI émis avant pointent vers `…vercel.app` — acceptable, à re-tester après bascule).
+- **Phase Commerce (septembre, B phasé)** : emails de commande sur le même compte Brevo ; **avant extinction de la Boutique WP** : ré-export de réconciliation de `mod973_newsletter` (désabonnements) + la table part dans l'archive globale boutique. Les plugins de formulaires legacy (CF7, WPForms, Everest) et les 2 Popup Builder disparaissent avec les extinctions WP — rien à faire ici sinon avoir rendu leurs remplaçants opérationnels (formulaires : cette phase ; mises en avant : C32, cf. ci-dessus).
+- **Back-office Payload** : aucune interface pour les abonnés (ils vivent dans Brevo, pas en base Postgres — périmètre discipliné) ; l'interface C32 (collection `highlight`) est portée par la phase 3, étape E6bis — rien ici.
+- **Phase Surveillance** : les surfaces serveur créées ici remonteront dans Sentry une fois posé ; moniteur Better Stack optionnel sur `/contact` (GET).
+
+## Calage calendrier (dates concretes vu le calendrier des FAITS ; effort estime vs jours vendus)
+
+- **Mer 15/07 (démo back-office)** : poser les 3 décisions client (compte Brevo, destinataire, framing consentement) + croiser le mécanisme de reçus avec la phase Dons — étape 1. Le compte Brevo étant potentiellement nécessaire aux reçus de dons, cette décision **ne peut pas glisser** au-delà.
+- **Lun 20 – mar 21/07** : étapes 2, 3, 5, 6, 7 (structure Brevo, extraction, formulaires).
+- **Mer 22/07** : étapes 4 et 8 (inventaire + import en 3 appels + prod + e2e).
+- **Jeu 23 → fin juillet** : étape 9, intégrée à la recette globale « B phasé » (dons + catalogue + back-office fin juillet), **avant la fermeture d'août** du client.
+
+**Effort estimé : ~0,8–1 j si l'héritage Dons (compte Brevo, clé, surface serveur) est réel ; ~0,95–1,15 j sinon** — vs **0,5 j vendu** ; écart signalé, non gonflé silencieusement. Facteurs qui le compressent vers 0,5–0,75 j : la cellule newsletter du footer est déjà dessinée (juste à câbler), le DNS Brevo est déjà posé si le compte existant est récupéré, et le client Brevo/surface serveur sont hérités si Dons passe par Brevo. Facteur d'inflation principal : la page `/contact` complète (page + validation + anti-spam + tests). Si l'enveloppe doit être tenue strictement : réduire `/contact` à sa forme minimale (un seul destinataire, sujet libre, zéro option) — c'est le défaut recommandé de toute façon. Le dépassement résiduel (~0,25–0,4 j) est absorbable dans la semaine de recette ; à arbitrer avec Youri, pas à masquer.
+
+## Questions ouvertes / decisions client
+
+1. **Qui contrôle le compte Brevo déjà authentifié sur editionssociales.fr ?** (DKIM/DMARC/brevo-code présents en zone, non documentés). À trancher au plus tard le **mer 15/07**. Défaut : si le client y a accès → le réutiliser (après inventaire, étape 4a) ; sinon compte neuf au nom de la structure, enregistrements additifs, MX intouchés.
+2. **Destinataire du formulaire de contact** : `toutes@editionssociales.fr` (seule boîte Email Pro vérifiée) ou `ecrire@editionssociales.fr` (adresse trouvée dans la config du plugin newsletter — existe-t-elle en boîte/redirection ?). Au plus tard le **20/07**. Défaut : `toutes@`.
+3. **Framing du consentement 2020** : importer tel quel (statut « confirmé » dans l'outil source, archive conservée) et s'engager à une campagne de ré-engagement avant tout envoi de masse — ou re-permissionner d'abord ? À trancher **avant le premier envoi de campagne** (pas bloquant pour l'import du 22/07). Défaut : importer + recommandation écrite de ré-engagement ; aucun envoi de masse sans validation client.
+4. **Conserver la segmentation Libraires / Lecteurs ?** À trancher à l'import (**22/07**). Défaut : oui — deux listes distinctes + liste « Inscrits site (2026) » séparée pour les consentements propres (+ liste technique « Désinscrits »).
+5. **Expéditeur (From) des newsletters** : adresse réelle répondable. À trancher **avant le premier envoi de campagne**. Défaut : `toutes@editionssociales.fr` (le transactionnel, lui, part du sous-domaine dédié — posé par la phase Dons ou par celle-ci selon l'arbitrage de l'étape 1).
+6. **Formulaire de contact : sujets prédéfinis** (ES / La Dispute / presse / commandes) avec routage, ou champ sujet libre ? Au plus tard le **20/07**. Défaut : sujet libre, un seul destinataire — sobre, extensible plus tard sans migration.
+7. **(À destination de l'orchestrateur, pas du client — RÉSOLUE)** : affectation ferme de **C32** (mises en avant ponctuelles) tranchée : **phase 3 (catalogue), étape E6bis** (collection Payload `highlight` + bandeau d'accueil, voir `plan/03-catalogue.md`). Reste l'ajout à la check-list de recette globale B.
+
+Sources vérifiées pour les endpoints Brevo : [Import contacts](https://developers.brevo.com/reference/import-contacts.md) (re-vérifiée ce jour : `listIds` global à l'appel, « Mandatory if newList is not defined », fileBody ≤ 10 Mo) · [Create Contact via DOI](https://developers.brevo.com/reference/create-doi-contact)
