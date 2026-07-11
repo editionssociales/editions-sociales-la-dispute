@@ -51,15 +51,23 @@ du 15/07 montre schéma + import — le front ne bouge pas.
 ## Chemin critique
 
 ```
-KYC Stripe (lancé 10/07, externe)  →  pages légales (client, 10–17/07)
+pages légales + contenus 2026 (client, →17/07)
   →  dons en RÉEL (21–24/07, butée de secours 07/08)  →  campagne 15/08
 ```
 
-Tout le reste a du flottement par rapport au seul jalon existentiel (dons avant le
-15/08). Le seul risque non compressible est **externe** : le KYC Stripe et les pièces
-client — d'où le mail groupé unique du 10/07 (une seule liste de pièces, §Décisions).
-Chemin critique secondaire : gate Payload (10/07) → import complet (12/07) → merge
-(14/07) → **démo back-office 15/07**.
+> ✅ **Le risque KYC Stripe est LEVÉ (vérifié par API le 11/07)** : le compte live
+> `acct_1TqsjgL6ffEZ7VRj` « Éditions sociales » est opérationnel (`charges_enabled` +
+> `payouts_enabled`, zéro pièce en attente) et sa clé secrète est dans `site/.env`.
+> ⚠️ Correctif d'acquis associé : la boutique legacy encaisse via **Paybox** (0 commande
+> Stripe depuis 2018 — vérifié en base et par un checkout de test le 11/07, commande
+> 7730) ; « vos lecteurs paient déjà via Stripe » (devis §3.2) est à **recadrer auprès
+> du client** — la bascule commerce de septembre est un vrai changement de PSP
+> (traité : plan 04, risque 1 ; résiliation Paybox après drainage).
+
+Le chemin critique restant est **entièrement côté client** : pièces légales (SIRET,
+directeur de publication), paliers/objectif 2026 — d'où le mail groupé unique
+(une seule liste de pièces, §Décisions). Chemin critique secondaire : gate Payload →
+import complet → merge → **démo back-office 15/07**.
 
 ## Calendrier consolidé (B phasé)
 
@@ -68,8 +76,9 @@ Chemin critique secondaire : gate Payload (10/07) → import complet (12/07) →
 > ⚠️ **Décalage d'ancrage (constaté sam 11/07)** : le plan a été établi le jeu 09/07 avec
 > un J0 au ven 10/07 — qui n'a pas eu lieu. Le week-end 11–12/07 (déjà compté comme
 > régime de chantier) absorbe le glissement : exécuter les actions « Ven 10/07 »
-> **immédiatement** (le mail client groupé en tout premier — le KYC Stripe est le chemin
-> critique et le client ne lira peut-être qu'à lundi 13/07). Les jalons (démo 15/07,
+> **immédiatement** (le mail client groupé en tout premier — les pièces légales et les
+> contenus 2026 sont le chemin critique et le client ne lira peut-être qu'à lundi
+> 13/07 ; le KYC Stripe, lui, est déjà levé). Les jalons (démo 15/07,
 > swap 20/07, flips 21 et 24/07, dons réels avant fin juillet, butée de secours 07/08)
 > restent inchangés.
 
@@ -89,7 +98,7 @@ Chemin critique secondaire : gate Payload (10/07) → import complet (12/07) →
 ### Août — fermeture client, mou du calendrier
 
 Surveillance ; correctifs sécurité boutique uniquement ; butée de secours dons **07/08**
-si le KYC a glissé ; **~10–14/08** checklist campagne (moniteurs, quotas, dump < 24 h,
+si le passage en réel a glissé ; **~10–14/08** checklist campagne (moniteurs, quotas, dump < 24 h,
 webhooks) ; **sam 15/08 : lancement, Youri disponible**. Rien d'irréversible en août.
 
 ### Septembre — commerce (kickoff lun 07/09)
@@ -173,8 +182,9 @@ restants sont traités ainsi :
 
 ## Feuille de décisions client (consolidée — ne pas les éparpiller)
 
-**Mail groupé du ven 10/07 (pièces et prérequis, une seule liste)** : activation Stripe
-live + invitation ; mentions légales (SIRET, directeur de publication) ; paliers/objectif
+**Mail groupé du ven 10/07 (pièces et prérequis, une seule liste)** : accès Dashboard
+Stripe pour Youri + vérif IBAN de payout (le compte live est opérationnel — vérifié
+11/07) ; mentions légales (SIRET, directeur de publication) ; paliers/objectif
 2026 ; statut juridique (association ? → conditionne Stripe vs HelloAsso, CGV, reçus
 fiscaux) ; comptes équipe back-office ; compte Google (GSC) ; compte Brevo existant ;
 modalités de transfert de propriété.
@@ -208,8 +218,10 @@ validation écrite des 301 ; confirmation écrite des archives catalogue.
 
 ## Risques d'ordonnancement résiduels
 
-1. **KYC Stripe** — seul risque hors de contrôle sur le jalon existentiel. Parades :
-   lancement le 10/07, suivi, plan B (compte neuf / HelloAsso) déclenché au 01/08.
+1. ~~KYC Stripe~~ **levé le 11/07** (compte live opérationnel, vérifié par API). Le
+   risque externe restant sur le jalon existentiel : les **pièces client** (légales,
+   paliers 2026) — relances + butée de secours 07/08 ; HelloAsso reste le plan B
+   documenté (Q1 du plan dons) si le client le préfère pour les reçus fiscaux.
 2. **Semaine du 13/07** (la plus dense) — variable d'ajustement : P2 E3, glissable au
    14–15/07 sans casser de dépendance.
 3. **Semaine du 28–31/07** — l'ordre recette → 301 → transfert → extinction douce est

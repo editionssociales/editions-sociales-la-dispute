@@ -109,6 +109,7 @@ Inventaire complet. Voici le document final.
 - `_payment_method` : **`paybox_std` 5 566 + `paybox_3x` 40 + `cheque` 97. ZÉRO commande Stripe, jamais** (2018→2026-07, dernières commandes du 01/07/2026 incluses en Paybox).
 - `woocommerce_stripe_settings` : **`enabled = "no"`** — la passerelle Stripe est installée mais **désactivée**, et le compte Stripe caché en option est un **compte TEST** (`wcstripe_cache_test_account_data`, acct_1SQlxX…, webhooks test lancés ~26/06/2026 — vraisemblablement une tentative récente de configuration).
 - **Paybox n'est pas « morte » : c'est la passerelle de production active** (~1 500 commandes/an, table dédiée `mod973_wc_paybox_payment`). Le postulat « ils sont déjà sur Stripe, migration invisible » **est faux en l'état des données** : la bascule Stripe sera un vrai changement de PSP pour les payouts (le compte Stripe existant est en mode test, à passer en live ou à remplacer).
+- **→ Mise à jour 11/07 (orchestrateur)** : constat confirmé en live (checkout de test du 11/07, commande 7730 → formulaire `PBX_*` Paybox, `PBX_VERSION woocommerce-paybox-0.9.9.9`). Et tranché : un **nouveau compte Stripe live opérationnel** existe (`acct_1TqsjgL6ffEZ7VRj` « Éditions sociales », charges/payouts activés, 0 pièce due — vérifié par API), clé dans `site/.env`. Le compte test `acct_1SQlxX…` est abandonné (nettoyage de ses webhooks : phase 7).
 
 ### 2.5 Clients
 
@@ -176,4 +177,4 @@ Réglages : `woocommerce_weight_unit = g`, **ventes restreintes** `woocommerce_a
 - **Archive commandes/clients** : `mod973_posts`(shop_order)+`mod973_postmeta`+`mod973_woocommerce_order_items`+`_itemmeta`+`mod973_users`/`usermeta`+`mod973_wc_customer_lookup` (HPOS vide, ne pas s'y fier).
 - **Newsletter** : `mod973_newsletter` WHERE `status='C'` (2 848 ; consentement = import 2020, à signaler au client avant Brevo).
 - **Port/livraison** : grille de la section 2.7 à recopier (décider avec le client du sort des trous 10–11 € / 24–25 € et de la règle « manifeste »).
-- **À remonter à l'orchestrateur en priorité** : Stripe Woo désactivé + compte test (le postulat payouts unifiés est à re-valider), Paybox = passerelle vivante, TVA non calculée en base, guest checkout interdit aujourd'hui, newsletter figée depuis 2020, Legacy REST API sans consommateur.
+- **À remonter à l'orchestrateur en priorité** : Stripe Woo désactivé + compte test (le postulat payouts unifiés est à re-valider — **tranché le 11/07 : nouveau compte live opérationnel, cf. §2.4**), Paybox = passerelle vivante, TVA non calculée en base, guest checkout interdit aujourd'hui, newsletter figée depuis 2020, Legacy REST API sans consommateur.

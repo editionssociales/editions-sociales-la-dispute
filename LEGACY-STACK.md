@@ -34,7 +34,9 @@
 - **Versions WordPress désynchronisées** : ES 6.3 · La Dispute 6.9.4 · BioMarx
   6.4.8 · Boutique 7.0.
 - **33 extensions** (27 distinctes). Boutique = 19, dont une **dette de
-  sécurité** (Legacy REST API réactivée) et **Stripe déjà en place**.
+  sécurité** (Legacy REST API réactivée). ⚠️ La passerelle de paiement **réellement
+  active est Paybox** (0 commande Stripe depuis 2018 — l'extension Stripe est
+  installée mais `enabled=no`, compte test ; corrigé 2026-07-11, cf. §8).
 - **Ce qui reste quoi qu'il arrive** : les **domaines OVH** et l'**Email Pro**.
 
 | Site | Rôle | Base | Serveur SQL | Préfixe | WP | PHP (host) | Thème | Ext. |
@@ -271,11 +273,11 @@ Sites : **ES**=www · **LD**=LaDispute · **GM**=BioMarx · **Bq**=Boutique.
 | Advanced Order Export (woo-order-export-lite) | 4.1.0 | Bq | **Export commandes → compta** (besoin réel) |
 | File Upload Types | 1.5.0 | Bq | Types de fichiers autorisés à l'upload |
 
-### Paiement — *→ Stripe natif (déjà là), Paybox retiré*
+### Paiement — *→ Stripe natif, Paybox résilié après drainage*
 | Extension | Version | Où | Rôle |
 |---|---|---|---|
-| WooCommerce Stripe Gateway | 10.8.3 | Bq | **Stripe déjà en place & à jour** ✅ |
-| Paybox WooCommerce Gateway | 0.9.9.9 | Bq | Passerelle Paybox héritée, pré-1.0, non maintenue |
+| WooCommerce Stripe Gateway | 10.8.3 | Bq | Extension à jour mais **jamais utilisée en production** (`enabled=no`, compte mode test `acct_1SQlxX…`, 0 commande Stripe depuis 2018 — tentative de config juin 2026) ⚠️ |
+| Paybox WooCommerce Gateway | 0.9.9.9 | Bq | **La passerelle de production réelle** (~1 500 commandes/an, 5 606 commandes au total) — pré-1.0, non maintenue ; vérifiée vivante par checkout de test le 2026-07-11 (commande 7730) |
 
 ### Dette technique & sécurité — *→ à supprimer*
 | Extension | Version | Où | Rôle |
@@ -316,9 +318,17 @@ Sites : **ES**=www · **LD**=LaDispute · **GM**=BioMarx · **Bq**=Boutique.
 
 - **WooCommerce 10.9.1** (thème Storefront), sur `boutique.editionssociales.fr`
   (rattaché au slot Pro, DB `editionsk884`, préfixe `mod973_`).
-- **Deux passerelles** : **Stripe** (`woocommerce-gateway-stripe` 10.8.3, à jour,
-  **active**) + **Paybox** (0.9.9.9, héritée). → **Ils sont déjà sur Stripe** :
-  migrer vers un **Stripe natif** est à faible risque et familier.
+- **Deux passerelles** — ⚠️ correction 2026-07-11 (le relevé initial « Stripe active »
+  était faux) : **Paybox** (0.9.9.9) est **la passerelle de production réelle**
+  (`_payment_method` : 5 566 `paybox_std` + 40 `paybox_3x` + 97 `cheque`, **zéro
+  commande Stripe depuis 2018** ; confirmé par checkout de test le 11/07/2026,
+  commande 7730). L'extension **Stripe** (10.8.3) est installée mais `enabled=no`,
+  adossée à un compte **mode test** (`acct_1SQlxX…`, webhooks d'essai juin 2026).
+  → La migration commerce est une **bascule de PSP** (Paybox→Stripe), pas une
+  continuité — à présenter ainsi au client. Elle reste à faible risque : un compte
+  Stripe **live et opérationnel** existe depuis juillet 2026
+  (`acct_1TqsjgL6ffEZ7VRj` « Éditions sociales », charges/payouts activés, 0 pièce
+  due — vérifié par API le 11/07) et sert d'abord aux dons.
 - **Legacy REST API** réactivée → dette de sécurité + dépendance à identifier.
 - Besoins métier confirmés par les extensions : **frais de port par poids/zone**
   (flexible-shipping), **export commandes pour la compta** (order-export),
@@ -378,7 +388,8 @@ Grâce aux ports & adaptateurs, chaque couche peut être migrée seule :
   CPT-dans-le-thème). **Garder la Boutique WooCommerce** un temps (achat = renvoi
   Woo). Retire 2 des 4 installs et le risque le plus grave. Le front ne bouge pas.
 - **H3 — Commerce natif d'abord** : migrer paiement/boutique vers **Stripe +
-  commerce léger** (ils sont déjà sur Stripe), éteindre `Boutique`+DB
+  commerce léger** (compte Stripe live opérationnel depuis juillet 2026 ; la
+  passerelle legacy réelle est Paybox, cf. §8), éteindre `Boutique`+DB
   `editionsk884` ; garder le catalogue sur WP/REST encore un temps. Bon si la
   douleur boutique > douleur catalogue.
 - **H4 — Refonte complète (« Chemin B »)** : tout migrer, éteindre les 4 WP +

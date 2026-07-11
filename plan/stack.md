@@ -74,7 +74,7 @@
 | Brevo | **Client** (email de la structure), Youri invité admin | Import des 2 848 abonnés ; SPF/DKIM/DMARC additifs dans la zone OVH — **MX intouchés** |
 | Sentry | **Au nom de la structure**, Youri seul siège | **Région UE à la création (irréversible)** |
 | Better Stack | **Au nom de la structure**, Youri invité | Transfert par changement de propriétaire |
-| Stripe | Existe (client) | Provisionner la vraie `STRIPE_SECRET_KEY` (remplacer le placeholder de `site/.env` + env Vercel) — payouts unifiés avec la passerelle Woo |
+| Stripe | **Existe et opérationnel** (vérifié API 11/07 : `acct_1TqsjgL6ffEZ7VRj` « Éditions sociales », charges + payouts activés, 0 pièce due) | Clé live déjà dans `site/.env` ; reste : `pk_live_…` + `whsec_…` (naît avec l'endpoint webhook) en env Vercel, clés test en dev/preview. ⚠️ La passerelle legacy réelle est **Paybox** (0 commande Stripe depuis 2018) — l'ancien compte test Woo `acct_1SQlxX…` est abandonné (nettoyage phase 7), le contrat Paybox se résilie après drainage (phases 4/7) |
 | OVH | Existe (client) | Résilier le seul slot Performance « ladispi » (vide, PHP 7.3 EOL) ; **jamais** le slot Pro (GEME) ni les MX |
 
 ## (3) Risques résiduels de la stack retenue
