@@ -2,6 +2,7 @@
   "name": "site",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10.34.3",
   "scripts": {
     "dev": "next dev",
@@ -10,15 +11,31 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "payload": "payload",
+    "generate:importmap": "payload generate:importmap",
+    "generate:types": "payload generate:types",
+    "migrate": "payload migrate",
+    "migrate:create": "payload migrate:create",
+    "migrate:prod": "DATABASE_URL=\"${DATABASE_URL_UNPOOLED:-$DATABASE_URL}\" payload migrate",
+    "vercel-build": "if [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm migrate:prod && if [ -n \"$PAYLOAD_SEED_ADMIN_PASSWORD\" ]; then pnpm seed:users; fi; fi && next build",
+    "migrate:catalogue": "payload run scripts/migrate-catalogue/index.ts",
+    "seed:users": "payload run scripts/seed-users.ts"
   },
   "dependencies": {
-    "mysql2": "^3.22.5",
+    "@payloadcms/db-postgres": "3.79.1",
+    "@payloadcms/next": "3.79.1",
+    "@payloadcms/richtext-lexical": "3.79.1",
+    "@payloadcms/storage-vercel-blob": "3.79.1",
+    "@payloadcms/translations": "3.79.1",
+    "graphql": "16.12.0",
     "next": "16.2.9",
+    "payload": "3.79.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "sanitize-html": "^2.17.5",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -29,7 +46,10 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "eslint-formatter-compact": "^9.0.1",
+    "jsdom": "^29.1.1",
+    "mysql2": "^3.22.6",
     "tailwindcss": "^4",
+    "tsx": "4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }

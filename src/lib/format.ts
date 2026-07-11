@@ -108,6 +108,12 @@ const NAMED_ENTITIES: Record<string, string> = {
   laquo: "«",
   raquo: "»",
   hellip: "…",
+  rsquo: "\u2019",
+  lsquo: "\u2018",
+  rdquo: "\u201d",
+  ldquo: "\u201c",
+  ndash: "\u2013",
+  mdash: "\u2014",
 };
 
 /** Décode les entités HTML renvoyées par l'API REST WordPress (titres, etc.). */
