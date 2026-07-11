@@ -5,8 +5,8 @@
 > réel, et les **runbooks** de bascule. Document interne, non destiné au client.
 >
 > Complète — sans les remplacer — `LEGACY-STACK.md` (inventaire de l'existant OVH/WP),
-> `COHABITATION.md` (plan de migration côté WordPress) et `IMPLEMENTATION-PLAN.md`
-> (phases produit).
+> `COHABITATION.md` (plan de migration côté WordPress) et `plan/`
+> (phases produit, entrée : `plan/README.md`).
 >
 > **Relevé effectué le 2026-07-09.** Voir §2 pour tout re-vérifier.
 >
@@ -353,7 +353,7 @@ sans lui ; les dons, non.
 
 ## 8. Références
 
-- `IMPLEMENTATION-PLAN.md` — les phases produit, séquencées contre l'échéance du 15 août.
+- `plan/` — les phases produit, séquencées contre l'échéance du 15 août (entrée : `plan/README.md`).
 - `IMPLEMENTATION-PROMPT.md` — le cadrage haut niveau dont ce plan est la mise en œuvre.
 - `LEGACY-STACK.md` — inventaire vérifié OVH + 4 WordPress (source de vérité).
 - `COHABITATION.md` — les 4 phases de migration côté WordPress.
