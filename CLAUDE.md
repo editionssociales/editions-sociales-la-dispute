@@ -66,11 +66,19 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
   phases restantes, à ne pas re-planifier de zéro à chaque session. Le plan détaillé
   (7 phases, stack décidée, calendrier, contrats d'interface) est dans `plan/` —
   entrée : `plan/README.md`.
+- **Dépôt, CI/CD, comptes, secrets, bloqueurs** : `DEVOPS.md`. Les runbooks de bascule
+  de compte (transfert GitHub/Vercel) touchent des comptes tiers — **ne jamais les
+  exécuter sans accord explicite**.
 
 ## Verification
 
-- `pnpm typecheck` (tsc) · `pnpm lint` (eslint) · `pnpm test` (vitest).
-- `pnpm build` pour vérifier le rendu statique/ISR (les fiches livre pré-rendues).
+- `pnpm typecheck` (tsc) · `pnpm lint` (eslint) · `pnpm test` (vitest) — rejoués sur
+  chaque PR par `.github/workflows/ci.yml`.
+- `pnpm build` vérifie le rendu statique/ISR (les fiches livre pré-rendues). **Hors CI
+  à dessein** : `getBook()` fait une requête REST par slug, donc un build à froid envoie
+  ~300 requêtes PHP à l'OVH mutualisé du client. C'est le déploiement *preview* Vercel
+  qui l'exerce, une seule fois par PR. Le job rejoindra la CI quand le catalogue lira
+  PostgreSQL (build hermétique) — cf. `DEVOPS.md`.
 
 ## Child Index
 
