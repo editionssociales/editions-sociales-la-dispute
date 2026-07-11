@@ -6,7 +6,6 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import { fr } from '@payloadcms/translations/languages/fr'
 import { buildConfig } from 'payload'
-import type { SharpDependency } from 'payload'
 
 import sharp from 'sharp'
 
@@ -46,11 +45,11 @@ export default buildConfig({
   graphQL: {
     disable: true,
   },
-  // `sharp` (0.35.x) publie deux signatures d'appel ; la vérification
-  // structurelle de TS contre le type mono-signature `SharpDependency` de
-  // Payload échoue sur la première alors que la seconde correspond
-  // exactement — sans conséquence à l'exécution. Cast explicite et localisé.
-  sharp: sharp as unknown as SharpDependency,
+  // sharp épinglé en 0.34.x : Turbopack stable (≤ 16.2.x) ne trace pas le
+  // libvips de sharp 0.35 dans les fonctions Vercel (next.js#94845, corrigé
+  // en 16.3) → ERR_DLOPEN_FAILED sur /admin en prod. Repasser en 0.35+ lors
+  // de la prochaine montée en tandem Next/Payload (Next ≥ 16.3 stable).
+  sharp,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
