@@ -5,6 +5,10 @@
 framing — this is the engineering-facing version). Intentionally high-level: figure out
 the concrete implementation details phase by phase, don't try to design it all upfront.*
 
+> **Detailed plan established 2026-07-09** — see `plan/README.md`: seven phase plans
+> (file-level for July, milestone-level for September+), decided stack, consolidated
+> calendar, cross-phase interface contracts, and the devis commitment checklist.
+
 ## Where we start
 
 A working read-only prototype is live (`CLAUDE.md`, `COHABITATION.md`): it reads the two

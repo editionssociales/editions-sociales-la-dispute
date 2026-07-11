@@ -63,7 +63,9 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
   refaire la reconnaissance.
 - **Chantier accepté (base de données propre, back-office, commerce natif,
   extinction WordPress)** : partir de `IMPLEMENTATION-PROMPT.md` — enchaînement des
-  phases restantes, à ne pas re-planifier de zéro à chaque session.
+  phases restantes, à ne pas re-planifier de zéro à chaque session. Le plan détaillé
+  (7 phases, stack décidée, calendrier, contrats d'interface) est dans `plan/` —
+  entrée : `plan/README.md`.
 
 ## Verification
 
@@ -79,3 +81,5 @@ domaine propre (`Book`). La **fusion** des deux catalogues est le cœur du produ
 - **`src/app`** — App Router : routes, métadonnées, politique de fraîcheur (statique /
   ISR / dynamique).
 - **`wp-headless`** — mu-plugin + contrat de données WordPress à préserver.
+- **`plan`** — plan directeur de la refonte (option B) : 7 plans de phase, stack,
+  calendrier consolidé, engagements du devis.
