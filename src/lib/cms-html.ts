@@ -1,4 +1,5 @@
 import sanitizeHtml from "sanitize-html";
+import { frenchTypo } from "./typo-fr";
 
 /**
  * Couture « HTML WordPress non fiable → HTML sûr ».
@@ -33,6 +34,26 @@ const ALLOWED_TAGS = [
  */
 const SHORTCODE = /\[\/?[a-zA-Z][^\]]*\]/g;
 
+/**
+ * `sanitize-html` appelle `textFilter` avec le nœud texte **déjà échappé**
+ * (`&`→`&amp;`, `<`→`&lt;`, `>`→`&gt;` — `escapeHtml(text, false)`,
+ * `node_modules/sanitize-html/index.js:585-587`) et réinjecte tel quel ce que
+ * `textFilter` retourne, sans le ré-échapper. `frenchTypo` (`typo-fr.ts`)
+ * suppose au contraire un texte déjà décodé (son unique autre appelant,
+ * `toBook`, l'est réellement) : ses règles matchent « lettre suivie de `;` »,
+ * exactement la forme de `&amp;`/`&lt;`/`&gt;`, et y insérerait une espace qui
+ * casse l'entité. On déséchappe donc avant `frenchTypo`, et on ré-échappe le
+ * résultat avant de le rendre à `sanitize-html` — seuls `&`/`<`/`>` sont en jeu
+ * ici (l'appel texte se fait sans guillemets, `escapeHtml(text, false)`).
+ */
+function unescapeHtmlEntities(text: string): string {
+  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+}
+
+function escapeHtmlEntities(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 const OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: ALLOWED_TAGS,
   allowedAttributes: {
@@ -64,6 +85,11 @@ const OPTIONS: sanitizeHtml.IOptions = {
       },
     }),
   },
+  // Orthotypographie française (E6 du plan) : c'est le point unique où le
+  // HTML éditorial passe à l'insécable, avant toute réinjection dans le DOM.
+  // Déséchappement/rééchappement autour de `frenchTypo` : cf. commentaire de
+  // `unescapeHtmlEntities` ci-dessus.
+  textFilter: (text) => escapeHtmlEntities(frenchTypo(unescapeHtmlEntities(text))),
 };
 
 /** Nettoie du HTML WordPress brut en `SafeHtml` — unique fabricant de la marque. */

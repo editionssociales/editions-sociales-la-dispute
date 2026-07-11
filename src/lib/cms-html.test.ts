@@ -50,6 +50,18 @@ describe("sanitizeCms", () => {
     const out = sanitizeCms('<table><tr><td colspan="2">A</td></tr></table>');
     expect(out).toContain('colspan="2"');
   });
+
+  it("ne casse pas une esperluette littérale (orthotypo E6 vs entités échappées)", () => {
+    const out = sanitizeCms("<p>Marx & Engels</p>");
+    expect(out).toContain("Marx &amp; Engels");
+    expect(out).not.toContain("&amp ;");
+  });
+
+  it("ne casse pas une URL citée en texte visible (orthotypo E6)", () => {
+    const out = sanitizeCms("<p>Source : http://example.org/ref</p>");
+    expect(out).toContain("http://example.org/ref");
+    expect(out).not.toContain("http ://");
+  });
 });
 
 describe("cmsExcerpt", () => {

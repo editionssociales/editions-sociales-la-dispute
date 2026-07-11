@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url'
 import type { CollectionConfig } from 'payload'
 
 import { isAdminOrEditor } from '../access.ts'
+import {
+  revalidateCatalogueAfterChange,
+  revalidateCatalogueAfterDelete,
+} from '../hooks/revalidate.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -32,6 +36,12 @@ export const Media: CollectionConfig = {
     create: isAdminOrEditor,
     update: isAdminOrEditor,
     delete: isAdminOrEditor,
+  },
+  hooks: {
+    // Remplacer une couverture (ré-upload) doit rafraîchir les fiches qui
+    // l'affichent — même levier qu'E6.
+    afterChange: [revalidateCatalogueAfterChange],
+    afterDelete: [revalidateCatalogueAfterDelete],
   },
   fields: [
     {

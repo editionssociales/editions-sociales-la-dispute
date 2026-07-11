@@ -12,6 +12,7 @@ import sharp from 'sharp'
 import { Authors } from './payload/collections/Authors.ts'
 import { BookCollections } from './payload/collections/BookCollections.ts'
 import { Books } from './payload/collections/Books.ts'
+import { Highlight } from './payload/collections/Highlight.ts'
 import { Media } from './payload/collections/Media.ts'
 import { Users } from './payload/collections/Users.ts'
 
@@ -25,7 +26,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Authors, BookCollections, Books],
+  collections: [Users, Media, Authors, BookCollections, Books, Highlight],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({
