@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "Accueil",
   description:
     "Les Éditions sociales x La Dispute : dernières parutions, catalogue unifié des deux maisons et souscription de lancement.",
+  alternates: { canonical: "/" },
 };
 
 export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)

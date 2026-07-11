@@ -18,6 +18,7 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"),
   title: {
     default: "Les Éditions sociales x La Dispute",
     template: "%s — Les Éditions sociales x La Dispute",

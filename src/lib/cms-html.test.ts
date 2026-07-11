@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cmsExcerpt, sanitizeCms } from "./cms-html";
+import { cmsExcerpt, rebaseWpMediaUrl, sanitizeCms } from "./cms-html";
 
 describe("sanitizeCms", () => {
   it("supprime les balises script et leur contenu", () => {
@@ -61,6 +61,66 @@ describe("sanitizeCms", () => {
     const out = sanitizeCms("<p>Source : http://example.org/ref</p>");
     expect(out).toContain("http://example.org/ref");
     expect(out).not.toContain("http ://");
+  });
+
+  it("rebase les images vers le host cms-es (découplage CMS, E3)", () => {
+    const out = sanitizeCms('<img src="https://editionssociales.fr/wp-content/uploads/couv.jpg" alt="c">');
+    expect(out).toContain('src="https://cms-es.editionssociales.fr/wp-content/uploads/couv.jpg"');
+  });
+
+  it("rebase les images www.editionssociales.fr vers cms-es", () => {
+    const out = sanitizeCms('<img src="https://www.editionssociales.fr/wp-content/uploads/couv.jpg" alt="c">');
+    expect(out).toContain('src="https://cms-es.editionssociales.fr/wp-content/uploads/couv.jpg"');
+  });
+
+  it("rebase les images ladispute.fr vers cms-ld", () => {
+    const out = sanitizeCms('<img src="http://ladispute.fr/wp-content/uploads/couv.jpg" alt="c">');
+    expect(out).toContain('src="https://cms-ld.editionssociales.fr/wp-content/uploads/couv.jpg"');
+  });
+
+  it("rebase les liens (PDF de plus_loin) vers les hosts cms-*", () => {
+    const out = sanitizeCms('<a href="https://editionssociales.fr/wp-content/uploads/extrait.pdf">Extrait</a>');
+    expect(out).toContain('href="https://cms-es.editionssociales.fr/wp-content/uploads/extrait.pdf"');
+  });
+
+  it("ne touche pas les liens sortants qui ne pointent pas vers wp-content historique", () => {
+    const out = sanitizeCms('<a href="https://ex.org">ext</a>');
+    expect(out).toContain('href="https://ex.org"');
+  });
+});
+
+describe("rebaseWpMediaUrl", () => {
+  it("réécrit editionssociales.fr/wp-content vers cms-es", () => {
+    expect(rebaseWpMediaUrl("https://editionssociales.fr/wp-content/uploads/x.jpg")).toBe(
+      "https://cms-es.editionssociales.fr/wp-content/uploads/x.jpg",
+    );
+  });
+
+  it("réécrit www.editionssociales.fr/wp-content vers cms-es", () => {
+    expect(rebaseWpMediaUrl("https://www.editionssociales.fr/wp-content/uploads/x.jpg")).toBe(
+      "https://cms-es.editionssociales.fr/wp-content/uploads/x.jpg",
+    );
+  });
+
+  it("réécrit ladispute.fr/wp-content vers cms-ld", () => {
+    expect(rebaseWpMediaUrl("https://ladispute.fr/wp-content/uploads/x.pdf")).toBe(
+      "https://cms-ld.editionssociales.fr/wp-content/uploads/x.pdf",
+    );
+  });
+
+  it("réécrit www.ladispute.fr/wp-content vers cms-ld", () => {
+    expect(rebaseWpMediaUrl("http://www.ladispute.fr/wp-content/uploads/x.pdf")).toBe(
+      "https://cms-ld.editionssociales.fr/wp-content/uploads/x.pdf",
+    );
+  });
+
+  it("laisse inchangée une URL qui ne matche aucun des deux domaines historiques", () => {
+    expect(rebaseWpMediaUrl("https://boutique.editionssociales.fr/wp-content/uploads/x.jpg")).toBe(
+      "https://boutique.editionssociales.fr/wp-content/uploads/x.jpg",
+    );
+    expect(rebaseWpMediaUrl("https://cms-es.editionssociales.fr/wp-content/uploads/x.jpg")).toBe(
+      "https://cms-es.editionssociales.fr/wp-content/uploads/x.jpg",
+    );
   });
 });
 

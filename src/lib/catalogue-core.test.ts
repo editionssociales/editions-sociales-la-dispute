@@ -5,6 +5,7 @@ import {
   computeFacets,
   countByEdition,
   queryBooks,
+  toBook,
 } from "./catalogue-core";
 import {
   inMemoryCatalogueSource,
@@ -197,5 +198,61 @@ describe("à travers le port en mémoire (bout en bout, sans réseau)", () => {
 
   it("renvoie null pour un slug absent", async () => {
     expect(await source.getBook("la-dispute", "inconnu")).toBeNull();
+  });
+});
+
+describe("toBook — rebase des couvertures (découplage CMS, E3)", () => {
+  it("rebase une couverture {url,width,height} sur editionssociales.fr vers cms-es", () => {
+    const book = toBook("editions-sociales", {
+      id: 99,
+      slug: "test",
+      title: { rendered: "Test" },
+      book: {
+        cover: { url: "https://editionssociales.fr/wp-content/uploads/couv.jpg", width: 400, height: 600 },
+      },
+    });
+    expect(book.cover).toEqual({
+      url: "https://cms-es.editionssociales.fr/wp-content/uploads/couv.jpg",
+      width: 400,
+      height: 600,
+    });
+  });
+
+  it("rebase une couverture sur ladispute.fr vers cms-ld", () => {
+    const book = toBook("la-dispute", {
+      id: 100,
+      slug: "test-ld",
+      title: { rendered: "Test LD" },
+      book: {
+        cover: { url: "http://ladispute.fr/wp-content/uploads/couv.jpg", width: 400, height: 600 },
+      },
+    });
+    expect(book.cover?.url).toBe("https://cms-ld.editionssociales.fr/wp-content/uploads/couv.jpg");
+  });
+
+  it("rebase l'ancienne forme string de couverture (avant redéploiement du mu-plugin)", () => {
+    const book = toBook("editions-sociales", {
+      id: 101,
+      slug: "test-string",
+      title: { rendered: "Test string" },
+      book: { cover: "https://www.editionssociales.fr/wp-content/uploads/couv.jpg" },
+    });
+    expect(book.cover).toEqual({
+      url: "https://cms-es.editionssociales.fr/wp-content/uploads/couv.jpg",
+      width: 2,
+      height: 3,
+    });
+  });
+
+  it("laisse inchangée une couverture qui ne matche aucun des deux domaines historiques", () => {
+    const book = toBook("editions-sociales", {
+      id: 102,
+      slug: "test-boutique",
+      title: { rendered: "Test boutique" },
+      book: {
+        cover: { url: "https://boutique.editionssociales.fr/wp-content/uploads/couv.jpg", width: 400, height: 600 },
+      },
+    });
+    expect(book.cover?.url).toBe("https://boutique.editionssociales.fr/wp-content/uploads/couv.jpg");
   });
 });

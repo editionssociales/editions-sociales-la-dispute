@@ -21,7 +21,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   if (!isEditionSlug(slug)) return {};
-  return { title: EDITIONS[slug].name, description: EDITIONS[slug].description };
+  return {
+    title: EDITIONS[slug].name,
+    description: EDITIONS[slug].description,
+    alternates: { canonical: `/editions/${slug}` },
+  };
 }
 
 export default async function EditionPage({

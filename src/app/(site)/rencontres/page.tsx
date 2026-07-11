@@ -8,6 +8,7 @@ import { Reveal } from "@/components/reveal";
 export const metadata: Metadata = {
   title: "Rencontres",
   description: "Rencontres, débats et présentations autour de nos livres.",
+  alternates: { canonical: "/rencontres" },
 };
 
 const FOCUS_CLASS =

@@ -38,6 +38,7 @@ export const metadata: Metadata = {
   title: "Souscription",
   description:
     "Face à la concentration capitaliste de l'édition, Les Éditions sociales et La Dispute tiennent deux catalogues marxistes et critiques — Marx et Engels, savoirs populaires, féminismes matérialistes —, sans mécène ni actionnaire. Une souscription pour continuer. Contreparties de 15 à 1 000 €.",
+  alternates: { canonical: "/souscription" },
 };
 
 export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)

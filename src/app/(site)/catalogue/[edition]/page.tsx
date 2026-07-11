@@ -22,7 +22,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { edition } = await params;
   if (!isEditionSlug(edition)) return {};
-  return { title: EDITIONS[edition].name };
+  return {
+    title: EDITIONS[edition].name,
+    // Sans query string : les vues filtrées/paginées canonicalisent vers la
+    // vue de base (E2 du plan).
+    alternates: { canonical: `/catalogue/${edition}` },
+  };
 }
 
 export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)

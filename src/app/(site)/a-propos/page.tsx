@@ -11,6 +11,7 @@ import { Button } from "@/components/button";
 export const metadata: Metadata = {
   title: "À propos",
   description: "La maison de la pensée critique et des sciences sociales.",
+  alternates: { canonical: "/a-propos" },
 };
 
 const FOCUS_CLASS =

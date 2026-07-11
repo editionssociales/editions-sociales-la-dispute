@@ -58,9 +58,17 @@ function MentionsCell({ className = "", year }: { className?: string; year: numb
   return (
     <div className={`${CELL_CLASS} ${className}`}>
       <p className={HEADING_CLASS}>Mentions légales</p>
-      <Link href="/mentions-legales" className={`${LINK_CLASS} text-sm`}>
-        Consulter les mentions légales
-      </Link>
+      <div className="flex flex-wrap gap-x-5 gap-y-2">
+        <Link href="/mentions-legales" className={`${LINK_CLASS} text-sm`}>
+          Consulter les mentions légales
+        </Link>
+        <Link href="/confidentialite" className={`${LINK_CLASS} text-sm`}>
+          Confidentialité
+        </Link>
+        <Link href="/cgv" className={`${LINK_CLASS} text-sm`}>
+          CGV &amp; dons
+        </Link>
+      </div>
       <p className="mt-auto text-xs text-black/60">
         © {year} Les Éditions sociales × La Dispute
       </p>
