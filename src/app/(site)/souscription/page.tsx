@@ -15,6 +15,11 @@ import { CAMPAIGN_2024 } from "@/lib/campaign";
 import { coverAspectRatio } from "@/lib/cover";
 import type { Accent } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
+import { FOCUS_RING } from "@/lib/ui";
+import { donationsEnabled } from "@/lib/stripe";
+import { DONATION_TIERS, FREE_AMOUNT } from "@/lib/donation-tiers";
+import { getCampaign2026 } from "@/lib/donations";
+import { createDonationCheckout } from "./actions";
 
 /**
  * Grammaire brutaliste (voir AGENTS.md) : quadrillage noir 2px
@@ -80,6 +85,21 @@ const CHANTIERS: { titre: string; desc: string; accent: Accent }[] = [
   },
 ];
 
+/**
+ * Résout l'id de palier (`DONATION_TIERS`, `src/lib/donation-tiers.ts`)
+ * associé à un montant de contenu de la page — garde-fou de cohérence entre
+ * les contenus (susceptibles de changer, E10) et la table qui pilote
+ * réellement les paiements. Le montant encaissé, lui, vient toujours de
+ * `DONATION_TIERS` via `parseDonation` (jamais de cette page).
+ */
+function tierIdFor(amount: number): string {
+  const tier = DONATION_TIERS.find((t) => t.amount === amount);
+  if (!tier) {
+    throw new Error(`souscription/page.tsx : aucun palier DONATION_TIERS pour ${amount} €`);
+  }
+  return tier.id;
+}
+
 // Contreparties reprises de la campagne 2024, avec leur succès d'alors.
 const CONTREPARTIES: {
   montant: number;
@@ -87,12 +107,14 @@ const CONTREPARTIES: {
   items: string[];
   soutiens2024: number;
   populaire?: boolean;
+  tierId: string;
 }[] = [
   {
     montant: 15,
     titre: "Le coup de pouce",
     items: ["Une planche de stickers ou un lot de marque-pages au choix"],
     soutiens2024: 108,
+    tierId: tierIdFor(15),
   },
   {
     montant: 35,
@@ -102,6 +124,7 @@ const CONTREPARTIES: {
       "Stickers ou marque-pages",
     ],
     soutiens2024: 69,
+    tierId: tierIdFor(35),
   },
   {
     montant: 50,
@@ -113,6 +136,7 @@ const CONTREPARTIES: {
     ],
     soutiens2024: 257,
     populaire: true,
+    tierId: tierIdFor(50),
   },
   {
     montant: 75,
@@ -123,6 +147,7 @@ const CONTREPARTIES: {
       "Stickers ou marque-pages",
     ],
     soutiens2024: 27,
+    tierId: tierIdFor(75),
   },
   {
     montant: 100,
@@ -133,6 +158,7 @@ const CONTREPARTIES: {
       "Stickers ou marque-pages",
     ],
     soutiens2024: 63,
+    tierId: tierIdFor(100),
   },
   {
     montant: 150,
@@ -143,6 +169,7 @@ const CONTREPARTIES: {
       "Stickers ou marque-pages",
     ],
     soutiens2024: 24,
+    tierId: tierIdFor(150),
   },
   {
     montant: 200,
@@ -153,6 +180,7 @@ const CONTREPARTIES: {
       "Stickers ou marque-pages",
     ],
     soutiens2024: 15,
+    tierId: tierIdFor(200),
   },
   {
     montant: 300,
@@ -163,21 +191,30 @@ const CONTREPARTIES: {
       "Stickers ou marque-pages",
     ],
     soutiens2024: 9,
+    tierId: tierIdFor(300),
   },
 ];
 
-const MECENES: { montant: number; titre: string; desc: string; soutiens2024: number }[] = [
+const MECENES: {
+  montant: number;
+  titre: string;
+  desc: string;
+  soutiens2024: number;
+  tierId: string;
+}[] = [
   {
     montant: 500,
     titre: "La rencontre",
     desc: "Une rencontre exceptionnelle avec vos éditrices, les membres des bureaux éditoriaux et certain·es de nos auteur·ices — sac ou carnet, stickers et marque-pages compris.",
     soutiens2024: 4,
+    tierId: tierIdFor(500),
   },
   {
     montant: 1000,
     titre: "L'intégrale",
     desc: "On prend directement contact avec vous pour vous offrir les livres que vous voulez dans nos catalogues — ou l'intégrale de la GEME, la Grande édition Marx-Engels.",
     soutiens2024: 5,
+    tierId: tierIdFor(1000),
   },
 ];
 
@@ -338,9 +375,16 @@ function HeroShelf({ books }: { books: Book[] }) {
 }
 
 export default async function SouscriptionPage() {
-  const [releases, totalBooks] = await Promise.all([
+  // Interrupteur de la phase dons (E1) : tant que `STRIPE_SECRET_KEY` est
+  // absente, la page reste en iso-rendu (boutons inertes, comme aujourd'hui).
+  const enabled = donationsEnabled();
+  // `getCampaign2026()` ne fait aucun appel réseau tant que `donationsEnabled()`
+  // est faux (elle jette avant tout fetch, absorbée en `null` — `lib/donations.ts`) :
+  // gratuit à appeler inconditionnellement.
+  const [releases, totalBooks, campaign2026] = await Promise.all([
     getNewReleases(18),
     countBooks(),
+    getCampaign2026(),
   ]);
   const newReleases = releases.slice(0, 4);
   // L'étagère du héro porte de vraies parutions : couverture + fiche interne requises.
@@ -433,6 +477,47 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
+      {/* Jauge 2026 vivante — n'affiche que ce qu'une campagne en cours peut
+          honnêtement montrer (collecté net + contributeurs), jamais les 4
+          tuiles `stats` du gabarit 2024 rétrospectif ci-dessus (piège documenté
+          dans `lib/donation-tiers.ts`/`lib/donations.ts`). Fenêtre de
+          fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
+      {campaign2026 && campaign2026.collected > 0 && (
+        <section className="border-b-2 border-black bg-white">
+          <Container className="py-16 sm:py-20">
+            <Reveal>
+              <Kicker dot="bg-pop-orange">Souscription 2026</Kicker>
+              <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
+                La collecte en direct
+              </h2>
+              <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-black/70">
+                Déjà
+                <CountUp
+                  value={campaign2026.collected}
+                  suffix=" €"
+                  className="font-sans text-lg font-black italic text-black"
+                />
+                réunis auprès de
+                <CountUp
+                  value={campaign2026.contributors}
+                  className="font-sans text-lg font-black italic text-black"
+                />
+                contributeur·rices. La jauge se met à jour en quelques minutes après un don.
+              </p>
+            </Reveal>
+            <Reveal delay={120} className="mt-10">
+              <div className="border-2 border-black bg-white p-6">
+                <Gauge
+                  value={campaign2026.gauge.value}
+                  max={campaign2026.gauge.max}
+                  markers={campaign2026.gauge.markers}
+                />
+              </div>
+            </Reveal>
+          </Container>
+        </section>
+      )}
+
       {/* Contreparties */}
       <section id="paliers" className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
@@ -480,12 +565,28 @@ export default async function SouscriptionPage() {
                       <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-black/50">
                         {p.soutiens2024} soutiens en 2024
                       </p>
-                      <Button
-                        variant="solid"
-                        className="mt-3 px-4 py-2.5 text-sm tracking-[.03em]"
-                      >
-                        Contribuer
-                      </Button>
+                      {enabled ? (
+                        <form
+                          action={createDonationCheckout}
+                          className="contents"
+                        >
+                          <input type="hidden" name="tierId" value={p.tierId} />
+                          <Button
+                            type="submit"
+                            variant="solid"
+                            className="mt-3 px-4 py-2.5 text-sm tracking-[.03em]"
+                          >
+                            Contribuer
+                          </Button>
+                        </form>
+                      ) : (
+                        <Button
+                          variant="solid"
+                          className="mt-3 px-4 py-2.5 text-sm tracking-[.03em]"
+                        >
+                          Contribuer
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Reveal>
@@ -512,12 +613,26 @@ export default async function SouscriptionPage() {
                   <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-white/60">
                     {p.soutiens2024} soutiens en 2024
                   </p>
-                  <button
-                    type="button"
-                    className="mt-3 self-start border-2 border-white bg-white px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
-                  >
-                    Contribuer
-                  </button>
+                  {enabled ? (
+                    <form action={createDonationCheckout}>
+                      <input type="hidden" name="tierId" value={p.tierId} />
+                      {/* Piège R12 : ce bouton était un <button type="button"> nu — dans
+                          un <form>, il ne soumettrait jamais sans ce passage en "submit". */}
+                      <button
+                        type="submit"
+                        className="mt-3 self-start border-2 border-white bg-white px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+                      >
+                        Contribuer
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mt-3 self-start border-2 border-white bg-white px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+                    >
+                      Contribuer
+                    </button>
+                  )}
                 </div>
               </Reveal>
             ))}
@@ -665,12 +780,49 @@ export default async function SouscriptionPage() {
               intégralement à la maison.
             </p>
           </div>
-          <a
-            href="#paliers"
-            className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
-          >
-            Choisir un palier
-          </a>
+          {enabled ? (
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <form
+                action={createDonationCheckout}
+                className="flex items-center gap-3"
+              >
+                <label htmlFor="cta-amount" className="sr-only">
+                  Montant libre, en euros
+                </label>
+                <input
+                  id="cta-amount"
+                  name="amount"
+                  type="number"
+                  min={FREE_AMOUNT.min}
+                  max={FREE_AMOUNT.max}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder="Montant en €"
+                  required
+                  className={`w-36 border-2 border-white bg-black px-4 py-3.5 font-sans text-sm font-semibold text-white placeholder:text-white/50 ${FOCUS_RING}`}
+                />
+                <button
+                  type="submit"
+                  className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+                >
+                  Contribuer
+                </button>
+              </form>
+              <a
+                href="#paliers"
+                className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+              >
+                Choisir un palier
+              </a>
+            </div>
+          ) : (
+            <a
+              href="#paliers"
+              className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+            >
+              Choisir un palier
+            </a>
+          )}
         </Container>
       </section>
     </>
