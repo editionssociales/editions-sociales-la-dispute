@@ -23,6 +23,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    // `scripts/**` : cœur pur des scripts de migration (matching WooCommerce,
+    // `migrate-products-core.ts`) — même exigence de test que `src/lib`, sans
+    // faire de ce dossier une dépendance du build front.
+    include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
   },
 });
