@@ -64,6 +64,29 @@ const MIGRATION_CONTEXT = { migration: true, disableRevalidate: true };
  * d'investigation (grep + comparaison de noms) : jamais appliquée seule —
  * seul un `resolution` explicite (posé par un humain, ici ou en aval) écrit
  * quoi que ce soit. Défaut conservateur : tout TODO reste un TODO.
+ *
+ * Arbitrages du client (12/07) appliqués ci-dessous, vérifiés contre la base
+ * locale (ISBN/dates `payload.books`) et la Store API live (`WC_STORE_URL`,
+ * 223 produits) :
+ *   - lien `-prevente` périmé ou coquille de lien avec un candidat réel et
+ *     univoque (titre/auteur vérifiés) → `resolution` = le candidat.
+ *   - doublon (même produit visé par deux éditions d'un même titre) → *drop
+ *     oldest* : la fiche à la parution la plus récente reçoit le produit, la
+ *     plus ancienne reste sans commerce natif. Trois cas relèvent de ce
+ *     motif ; deux sont déjà tranchés silencieusement par un lien direct
+ *     *valide* sur la fiche récente (pas besoin d'entrée ici, cf. note sous
+ *     le tableau) et n'apparaissent donc plus dans `ARBITRAGES` :
+ *     `larrangement-des-sexes` (2002) perd face à `larrangement-des-sexes-
+ *     nouvelle-edition` (2026, lien direct → `erving-goffman-larrangement-
+ *     des-sexe`) ; `le-capital-livre-1` (2016) perd face à `le-capital-
+ *     livre-1-2` (2022, lien direct → `karl-marx-le-capital-livre-1-2`).
+ *     Le troisième (`pensee-et-langage` 2019 vs `pensee-et-langage-2` 2025)
+ *     était réellement disputé (les deux liens étaient cassés) : résolu par
+ *     la date ci-dessous.
+ *   - fiche sans aucun produit correspondant (recherche exacte + par
+ *     similarité sur titre/auteur, infructueuse sur les 223 produits) →
+ *     rien n'est écrit, rien n'est inventé ; ces fiches n'ont plus besoin
+ *     d'entrée ici non plus (cf. note sous le tableau).
  */
 const ARBITRAGES: ArbitrageEntry[] = [
   {
@@ -72,7 +95,9 @@ const ARBITRAGES: ArbitrageEntry[] = [
     brokenSlug: "celine-marty-decouvrir-gorz-prevente",
     note: "Dérive « -prevente » : le produit a quitté la précommande, son slug final n'a jamais été reporté sur la fiche.",
     candidate: "celine-marty-decouvrir-gorz",
-    resolution: null, // TODO client
+    // Décision client (12/07) : candidat vérifié (Store API live, id 5200,
+    // « Céline Marty, Découvrir Gorz ») — titre/auteur correspondent exactement.
+    resolution: "celine-marty-decouvrir-gorz",
   },
   {
     category: "lien-casse",
@@ -80,7 +105,11 @@ const ARBITRAGES: ArbitrageEntry[] = [
     brokenSlug: "jean-marc-schiappa-decouvrir-la-revolution-francaise-prevente",
     note: "Même dérive « -prevente ». Produit actuellement `outofstock` côté boutique.",
     candidate: "jean-marc-schiappa-decouvrir-la-revolution-francaise",
-    resolution: null,
+    // Décision client (12/07) : candidat vérifié (Store API live, id 5202,
+    // « Jean-Marc Schiappa, Découvrir la Révolution française »), `is_in_stock:
+    // false` confirmé — sans importance, le stock est désormais piloté par le
+    // routeur (`commerce.stock` n'est jamais écrit par ce script).
+    resolution: "jean-marc-schiappa-decouvrir-la-revolution-francaise",
   },
   {
     category: "lien-casse",
@@ -88,54 +117,10 @@ const ARBITRAGES: ArbitrageEntry[] = [
     brokenSlug: "romulad-bodin-linstitution-du-handicap",
     note: "Coquille sur le lien (« romulad » pour « romuald ») — transposition de deux lettres, nom du produit sans ambiguïté.",
     candidate: "romuald-bodin-linstitution-du-handicap",
-    resolution: null,
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "larrangement-des-sexes",
-    brokenSlug: "ervin-goffman-larrangement-des-sexes",
-    note:
-      "Édition 2002 (ISBN 9782843030536). Le produit qui ressemble le plus au lien cassé — « erving-goffman-" +
-      "larrangement-des-sexe » — est déjà légitimement réclamé par la fiche sœur « larrangement-des-sexes-" +
-      "nouvelle-edition » (2026, ISBN 9782843033582, id 114) : PAS un candidat disponible, même motif que " +
-      "« le-capital-livre-1 » et « pensee-et-langage » (édition ancienne, lien boutique jamais mis à jour, le " +
-      "produit courant suit la nouvelle édition). Cette fiche n'a probablement aucun produit boutique propre " +
-      "actuellement.",
-    candidate: null,
-    resolution: null,
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "le-capital-livre-1",
-    brokenSlug: "karl-marx-le-capital-livre-1",
-    note:
-      "Édition 2016 (ISBN 9782353670123). Le slug exact n'existe plus côté boutique, et le produit qui s'en " +
-      "rapproche le plus — « karl-marx-le-capital-livre-1-2 » — est déjà légitimement réclamé par la fiche " +
-      "sœur « le-capital-livre-1-2 » (édition 2022, ISBN 9782353670826, id 46) : PAS un candidat disponible, " +
-      "même motif que « pensee-et-langage » ci-dessous (édition ancienne dont le lien boutique n'a jamais été " +
-      "mis à jour, le produit courant appartenant à l'édition la plus récente). Constat, pas de piste : cette " +
-      "fiche n'a probablement aucun produit boutique propre actuellement. Attention à deux voisins sans rapport : " +
-      "« ludovic-hetzel-commenter-le-capital-livre-1 » (le commentaire, pas Le Capital lui-même) et « lecapital » " +
-      "(un fac-similé de l'édition de 1875, produit à part).",
-    candidate: null,
-    resolution: null,
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "pensee-et-langage",
-    brokenSlug: "lev-s-vygotski-pensee-et-langage",
-    note:
-      "Édition 2019 (ISBN 9782843033018). Le SEUL produit boutique existant pour « Pensée et langage » est " +
-      "aussi visé par la fiche « pensee-et-langage-2 » (édition 2025, ISBN 9782843033490, entrée suivante) — " +
-      "un produit, deux éditions, et contrairement à « le-capital-livre-1 »/« larrangement-des-sexes » " +
-      "ci-dessus (mêmes motif, mais déjà résolus : le produit y est réclamé par la fiche de l'édition la plus " +
-      "récente), CELUI-CI reste disputé — aucune des deux fiches ne l'a capté correctement. Le même schéma " +
-      "(édition ancienne au lien mort, produit suivant l'édition la plus récente) suggère que « pensee-et-" +
-      "langage-2 » (2025) est la bonne cible, mais arbitrage client requis avant d'écrire. Une seule des deux " +
-      "entrées doit recevoir ce `resolution`, l'autre reste sans commerce natif tant que la boutique ne vend " +
-      "qu'une édition à la fois.",
-    candidate: "lev-vygotski-pensee-et-langage",
-    resolution: null,
+    // Décision client (12/07) : candidat vérifié (Store API live, id 1293,
+    // « Romuald Bodin, L'Institution du handicap ») — correspond exactement
+    // au titre de la fiche.
+    resolution: "romuald-bodin-linstitution-du-handicap",
   },
   {
     category: "lien-casse",
@@ -143,29 +128,15 @@ const ARBITRAGES: ArbitrageEntry[] = [
     brokenSlug: "lev-vygotski-pensee-et-langage-prevente",
     note:
       "Édition 2025 (ISBN 9782843033490), dérive « -prevente ». Même produit candidat que « pensee-et-langage » " +
-      "ci-dessus — voir cette entrée avant de trancher laquelle des deux fiches reçoit la vente.",
+      "(édition 2019, ISBN 9782843033018, lien cassé lui aussi — « lev-s-vygotski-pensee-et-langage ») : un seul " +
+      "produit boutique existant pour « Pensée et langage » (Store API live, id 5204, « Lev Vygotski, Pensée et " +
+      "langage »), aucun des deux liens ne le nommait exactement.",
     candidate: "lev-vygotski-pensee-et-langage",
-    resolution: null,
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "des-%e2%80%89heritiers%e2%80%89-en-echec-scolaire",
-    brokenSlug: "gaele-henri-panabiere-des-%e2%80%89heritiers%e2%80%89-en-echec-scolaire",
-    note:
-      "Aucun produit correspondant en boutique (recherche exacte et par similarité infructueuses) — l'ouvrage " +
-      "ne semble plus au catalogue boutique. À trancher : abandon (pas de vente native pour l'instant) ou ajout " +
-      "du produit côté boutique avant bascule.",
-    candidate: null,
-    resolution: null,
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "lecole-des-incapables",
-    brokenSlug:
-      "mathias-millet-et-jean-claude-croizet-lecole-des-incapables-la-maternelle-un-apprentissage-de-la-domination",
-    note: "Aucun produit correspondant en boutique (recherche exacte et par similarité infructueuses) — même situation que « des-…heritiers…-en-echec-scolaire » ci-dessus.",
-    candidate: null,
-    resolution: null,
+    // Décision client (12/07) — règle « doublon → drop oldest » : le produit
+    // disputé revient à l'édition la plus récente (2025 > 2019). La fiche
+    // 2019 (`pensee-et-langage`) reste donc sans commerce natif — aucune
+    // entrée nécessaire pour elle (cf. note au-dessus du tableau).
+    resolution: "lev-vygotski-pensee-et-langage",
   },
   // --- Double réclamation : un même produit, deux fiches (plan §Migration produits) ---
   {
@@ -176,10 +147,12 @@ const ARBITRAGES: ArbitrageEntry[] = [
       "Produit réclamé par CETTE fiche ET par « decouvrir-le-programme-du-cnr » (entrée suivante). Le nom du " +
       "produit (« Stéphane Haber, Découvrir Victor Hugo ») correspond exactement à cette fiche-ci ; la seconde " +
       "réclamation ressemble à une erreur de saisie ACF (copier-coller) côté WordPress — son propre produit, " +
-      "non réclamé par personne, existe séparément (« laurent-douzou-decouvrir-le-programme-du-cnr »). Preuve, " +
-      "pas décision : arbitrage client requis avant d'écrire quoi que ce soit.",
+      "non réclamé par personne, existe séparément (« laurent-douzou-decouvrir-le-programme-du-cnr »).",
     candidate: "stephane-haber-decouvrir-victor-hugo",
-    resolution: null,
+    // Décision client (12/07) — règle « coquille de lien » : le nom du produit
+    // (Store API live, id 2165) correspond exactement à CETTE fiche ; chacun
+    // son produit (voir l'entrée suivante pour l'autre fiche).
+    resolution: "stephane-haber-decouvrir-victor-hugo",
   },
   {
     category: "double-reclamation",
@@ -190,9 +163,48 @@ const ARBITRAGES: ArbitrageEntry[] = [
       "le produit de Victor Hugo. Son propre produit boutique existe et n'est réclamé par personne : " +
       "« laurent-douzou-decouvrir-le-programme-du-cnr ».",
     candidate: "laurent-douzou-decouvrir-le-programme-du-cnr",
-    resolution: null,
+    // Décision client (12/07) : produit propre vérifié (Store API live, id
+    // 2168, « Laurent Douzou, Découvrir le programme du CNR »), non réclamé
+    // par ailleurs. ⚠️ À signaler côté client : le champ ACF `buy.boutiqueUrl`
+    // de CETTE fiche WordPress pointe à tort vers le produit de Victor Hugo
+    // (erreur de saisie probable, copier-coller) — correction à faire à la
+    // source (WP), ce script ne peut pas la corriger (contrat lecture seule).
+    resolution: "laurent-douzou-decouvrir-le-programme-du-cnr",
   },
 ];
+
+/* ─── Fiches tranchées « restent sans produit » (décisions client 12/07) ───────
+ *
+ * Ces cinq fiches n'ont plus d'entrée dans `ARBITRAGES` ci-dessus : une fois
+ * la décision « pas de produit » actée, les laisser dans la table les ferait
+ * apparaître indéfiniment comme « en attente d'arbitrage » dans le rapport
+ * (TODO), alors que la décision est prise et définitive. Sans entrée, le
+ * lien cassé de `buy.boutiqueUrl` ne correspond spontanément à aucun produit
+ * (comportement normal de `matchProducts`) : la fiche reste simplement sans
+ * commerce natif — documenté ici pour mémoire, avec la donnée qui tranche :
+ *
+ *   - `larrangement-des-sexes` (édition 2002, ISBN 9782843030536) — doublon,
+ *     drop oldest : le produit unique de la famille (Store API live, id
+ *     6825, « Erving Goffman, L'Arrangement des sexe ») est déjà réclamé par
+ *     un lien DIRECT et valide sur `larrangement-des-sexes-nouvelle-edition`
+ *     (2026, ISBN 9782843033582).
+ *   - `le-capital-livre-1` (édition 2016, ISBN 9782353670123) — doublon, drop
+ *     oldest : le produit unique (id 2294, « Karl Marx, Le Capital, Livre 1 »)
+ *     est déjà réclamé par un lien direct et valide sur `le-capital-livre-1-2`
+ *     (2022, ISBN 9782353670826). Sans rapport : `ludovic-hetzel-commenter-
+ *     le-capital-livre-1` (le commentaire) et `lecapital` (fac-similé 1875)
+ *     sont des produits distincts, non disputés.
+ *   - `pensee-et-langage` (édition 2019, ISBN 9782843033018) — doublon, drop
+ *     oldest : voir l'entrée `pensee-et-langage-2` ci-dessus, qui reçoit le
+ *     produit disputé (édition 2025 plus récente).
+ *   - `des-%e2%80%89heritiers%e2%80%89-en-echec-scolaire` (ISBN 9782843032073) —
+ *     aucun produit correspondant sur les 223 de la Store API live (recherche
+ *     exacte + par similarité titre/auteur, y compris « panabiere »,
+ *     « heritier », « echec ») : rien à inventer.
+ *   - `lecole-des-incapables` (ISBN 9782843032776) — même constat, aucun
+ *     produit correspondant (recherche « incapable », « millet », « croizet »
+ *     infructueuse).
+ */
 
 /* ─────────────────────────── CLI ─────────────────────────── */
 
