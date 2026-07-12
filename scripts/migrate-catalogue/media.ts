@@ -10,7 +10,7 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Payload } from "payload";
-import { fetchWithRetry, HttpError, type Logger, type Site } from "./utils.ts";
+import { fetchWithRetry, HttpError, siteKey, type Logger, type Site } from "./utils.ts";
 
 const TMP_DIR = path.join(process.cwd(), "scripts/migrate-catalogue/out/tmp");
 
@@ -214,7 +214,7 @@ export async function resolveMediaForBooks(
   const failures: MediaFailure[] = [];
 
   for (const book of books) {
-    const key = `${book.site}:${book.wpId}`;
+    const key = siteKey(book.site, book.wpId);
     const resolution: BookMediaResolution = {
       coverMediaId: null,
       coverFallbackUrl: null,

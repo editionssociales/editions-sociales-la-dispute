@@ -17,7 +17,7 @@ import type { Accent } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
 import { FOCUS_RING } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
-import { DONATION_TIERS, FREE_AMOUNT } from "@/lib/donation-tiers";
+import { DONATION_TIERS, FREE_AMOUNT, type DonationTier } from "@/lib/donation-tiers";
 import { getCampaign2026 } from "@/lib/donations";
 import { createDonationCheckout } from "./actions";
 
@@ -86,49 +86,44 @@ const CHANTIERS: { titre: string; desc: string; accent: Accent }[] = [
 ];
 
 /**
- * Résout l'id de palier (`DONATION_TIERS`, `src/lib/donation-tiers.ts`)
- * associé à un montant de contenu de la page — garde-fou de cohérence entre
- * les contenus (susceptibles de changer, E10) et la table qui pilote
- * réellement les paiements. Le montant encaissé, lui, vient toujours de
- * `DONATION_TIERS` via `parseDonation` (jamais de cette page).
+ * Résout un palier de `DONATION_TIERS` (`src/lib/donation-tiers.ts`) par son
+ * id. Montant **et** intitulé affichés sur les cartes en sont dérivés — c'est
+ * la table qui pilote réellement les paiements (`parseDonation`) : une
+ * retouche de contenu ne peut plus montrer un palier différent de celui
+ * encaissé sur Stripe et la page merci.
  */
-function tierIdFor(amount: number): string {
-  const tier = DONATION_TIERS.find((t) => t.amount === amount);
+function tierFor(id: string): DonationTier {
+  const tier = DONATION_TIERS.find((t) => t.id === id);
   if (!tier) {
-    throw new Error(`souscription/page.tsx : aucun palier DONATION_TIERS pour ${amount} €`);
+    throw new Error(`souscription/page.tsx : palier DONATION_TIERS inconnu : ${id}`);
   }
-  return tier.id;
+  return tier;
 }
 
 // Contreparties reprises de la campagne 2024, avec leur succès d'alors.
+// Montant + intitulé viennent du palier (`tier`) ; seuls le détail des lots et
+// les compteurs 2024 restent des contenus propres à la page.
 const CONTREPARTIES: {
-  montant: number;
-  titre: string;
+  tier: DonationTier;
   items: string[];
   soutiens2024: number;
   populaire?: boolean;
-  tierId: string;
 }[] = [
   {
-    montant: 15,
-    titre: "Le coup de pouce",
+    tier: tierFor("palier-15"),
     items: ["Une planche de stickers ou un lot de marque-pages au choix"],
     soutiens2024: 108,
-    tierId: tierIdFor(15),
   },
   {
-    montant: 35,
-    titre: "Petit mais irremplaçable",
+    tier: tierFor("palier-35"),
     items: [
       "Un livre « petit mais irremplaçable » au choix",
       "Stickers ou marque-pages",
     ],
     soutiens2024: 69,
-    tierId: tierIdFor(35),
   },
   {
-    montant: 50,
-    titre: "L'essentiel",
+    tier: tierFor("palier-50"),
     items: [
       "Un livre « essentiel » au choix",
       "Un sac « Make marxism great again » ou un carnet « Pour des savoirs populaires »",
@@ -136,85 +131,68 @@ const CONTREPARTIES: {
     ],
     soutiens2024: 257,
     populaire: true,
-    tierId: tierIdFor(50),
   },
   {
-    montant: 75,
-    titre: "L'indispensable",
+    tier: tierFor("palier-75"),
     items: [
       "Un livre « indispensable » au choix",
       "Sac ou carnet au choix",
       "Stickers ou marque-pages",
     ],
     soutiens2024: 27,
-    tierId: tierIdFor(75),
   },
   {
-    montant: 100,
-    titre: "L'incontournable",
+    tier: tierFor("palier-100"),
     items: [
       "Un « incontournable » au choix",
       "Sac ou carnet au choix",
       "Stickers ou marque-pages",
     ],
     soutiens2024: 63,
-    tierId: tierIdFor(100),
   },
   {
-    montant: 150,
-    titre: "Le très grand format",
+    tier: tierFor("palier-150"),
     items: [
       "Un très grand format au choix — ou une affiche de Dugudus",
       "Sac ou carnet au choix",
       "Stickers ou marque-pages",
     ],
     soutiens2024: 24,
-    tierId: tierIdFor(150),
   },
   {
-    montant: 200,
-    titre: "Les nouveautés",
+    tier: tierFor("palier-200"),
     items: [
       "Deux nouveautés de notre programmation au choix",
       "Sac ou carnet au choix",
       "Stickers ou marque-pages",
     ],
     soutiens2024: 15,
-    tierId: tierIdFor(200),
   },
   {
-    montant: 300,
-    titre: "Le grand lot",
+    tier: tierFor("palier-300"),
     items: [
       "Un lot de grands livres au choix",
       "Sac ou carnet au choix",
       "Stickers ou marque-pages",
     ],
     soutiens2024: 9,
-    tierId: tierIdFor(300),
   },
 ];
 
 const MECENES: {
-  montant: number;
-  titre: string;
+  tier: DonationTier;
   desc: string;
   soutiens2024: number;
-  tierId: string;
 }[] = [
   {
-    montant: 500,
-    titre: "La rencontre",
+    tier: tierFor("mecene-500"),
     desc: "Une rencontre exceptionnelle avec vos éditrices, les membres des bureaux éditoriaux et certain·es de nos auteur·ices — sac ou carnet, stickers et marque-pages compris.",
     soutiens2024: 4,
-    tierId: tierIdFor(500),
   },
   {
-    montant: 1000,
-    titre: "L'intégrale",
+    tier: tierFor("mecene-1000"),
     desc: "On prend directement contact avec vous pour vous offrir les livres que vous voulez dans nos catalogues — ou l'intégrale de la GEME, la Grande édition Marx-Engels.",
     soutiens2024: 5,
-    tierId: tierIdFor(1000),
   },
 ];
 
@@ -537,7 +515,7 @@ export default async function SouscriptionPage() {
             {CONTREPARTIES.map((p, i) => {
               const pop = POP_BG[i % 4];
               return (
-                <Reveal key={p.montant} delay={(i % 4) * 90} className="h-full">
+                <Reveal key={p.tier.id} delay={(i % 4) * 90} className="h-full">
                   <div className="relative flex h-full flex-col bg-white">
                     <div aria-hidden="true" className={`h-2 ${pop}`} />
                     {p.populaire && (
@@ -547,10 +525,10 @@ export default async function SouscriptionPage() {
                     )}
                     <div className="flex flex-1 flex-col p-6">
                       <span className="font-sans text-4xl font-black italic text-black">
-                        {p.montant}&nbsp;€
+                        {p.tier.amount}&nbsp;€
                       </span>
                       <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-black">
-                        {p.titre}
+                        {p.tier.title}
                       </span>
                       <ul className="mt-4 flex-1 space-y-2 text-sm text-black/70">
                         {p.items.map((item) => (
@@ -570,7 +548,7 @@ export default async function SouscriptionPage() {
                           action={createDonationCheckout}
                           className="contents"
                         >
-                          <input type="hidden" name="tierId" value={p.tierId} />
+                          <input type="hidden" name="tierId" value={p.tier.id} />
                           <Button
                             type="submit"
                             variant="solid"
@@ -596,7 +574,7 @@ export default async function SouscriptionPage() {
           {/* Grands paliers : cartes inversées */}
           <FramedGrid className="mt-[2px] md:grid-cols-2">
             {MECENES.map((p, i) => (
-              <Reveal key={p.montant} delay={i * 120} className="h-full">
+              <Reveal key={p.tier.id} delay={i * 120} className="h-full">
                 <div className="relative flex h-full flex-col overflow-hidden bg-black p-8 text-white">
                   <div className="absolute inset-x-0 top-0 grid h-1.5 grid-cols-4" aria-hidden="true">
                     {POP_BG.map((c) => (
@@ -604,10 +582,10 @@ export default async function SouscriptionPage() {
                     ))}
                   </div>
                   <span className="font-sans text-5xl font-black italic text-white">
-                    {p.montant.toLocaleString("fr-FR")}&nbsp;€
+                    {p.tier.amount.toLocaleString("fr-FR")}&nbsp;€
                   </span>
                   <span className="mt-1 font-sans text-lg font-extrabold uppercase tracking-[.02em] text-white/90">
-                    {p.titre}
+                    {p.tier.title}
                   </span>
                   <p className="mt-3 flex-1 text-sm leading-relaxed text-white/80">{p.desc}</p>
                   <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-white/60">
@@ -615,7 +593,7 @@ export default async function SouscriptionPage() {
                   </p>
                   {enabled ? (
                     <form action={createDonationCheckout}>
-                      <input type="hidden" name="tierId" value={p.tierId} />
+                      <input type="hidden" name="tierId" value={p.tier.id} />
                       {/* Piège R12 : ce bouton était un <button type="button"> nu — dans
                           un <form>, il ne soumettrait jamais sans ce passage en "submit". */}
                       <button

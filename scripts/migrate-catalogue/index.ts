@@ -26,7 +26,7 @@ import { type BookMediaInput, resolveMediaForBooks } from "./media.ts";
 import { rewriteHtmlUrls } from "./rewrite-html.ts";
 import { writeReport } from "./report.ts";
 import { runOracle } from "./sql-oracle.ts";
-import { createLogger, decodeEntities, parseCliArgs, sitesFor, type Site } from "./utils.ts";
+import { createLogger, decodeEntities, parseCliArgs, siteKey, sitesFor, type Site } from "./utils.ts";
 
 const OUT_DIR = "scripts/migrate-catalogue/out";
 
@@ -80,13 +80,13 @@ async function main(): Promise<void> {
   try {
     /* 4) Oracle SQL (piège plus_loin ES, comptages, liens boutique, descriptions de termes). */
     const oracle = await runOracle(sites, itemsBySite, logger);
-    const plusLoinPatchMap = new Map(oracle.plusLoinPatches.map((p) => [`${p.site}:${p.wpId}`, p.value]));
+    const plusLoinPatchMap = new Map(oracle.plusLoinPatches.map((p) => [siteKey(p.site, p.wpId), p.value]));
 
     /* Items enrichis (patch plus_loin appliqué) — base commune médias + import. */
     const enriched: EnrichedItem[] = [];
     for (const site of sites) {
       for (const item of itemsBySite[site]) {
-        const patched = plusLoinPatchMap.get(`${site}:${item.id}`);
+        const patched = plusLoinPatchMap.get(siteKey(site, item.id));
         enriched.push({
           site,
           item,
@@ -121,7 +121,7 @@ async function main(): Promise<void> {
 
     /* 6) Réécriture HTML (sourceUrl → url Payload) — AVANT conversion Lexical. */
     const contexts: BookImportContext[] = enriched.map((e) => {
-      const media = resolutions.get(`${e.site}:${e.item.id}`)!;
+      const media = resolutions.get(siteKey(e.site, e.item.id))!;
       const rewrittenContentHtml = rewriteHtmlUrls(e.contentHtml, media.embeddedUrlMap) ?? "";
       const rewrittenPlusLoinHtml = e.plusLoinRaw
         ? rewriteHtmlUrls(e.plusLoinRaw, media.embeddedUrlMap)

@@ -25,6 +25,7 @@ import type { WpCatalogueRaw } from "./fetch-wp.ts";
 import type { BookMediaResolution } from "./media.ts";
 import { prepareHtmlForLexical } from "./rewrite-html.ts";
 import {
+  collectionKey,
   deepEqual,
   decodeEntities,
   EDITION_BY_SITE,
@@ -32,6 +33,7 @@ import {
   parsePrice,
   parseWpDate,
   trimIsbn,
+  wpSourceKey,
   type EditionSlug,
   type Logger,
   type Site,
@@ -267,7 +269,7 @@ export async function upsertCollections(
       const col = item.book?.collection;
       if (!col?.slug || seen.has(col.slug)) continue;
       seen.add(col.slug);
-      const key = `${edition}:${col.slug}`;
+      const key = collectionKey(edition, col.slug);
 
       const existing = await findOne(payload, "collections", {
         and: [{ edition: { equals: edition } }, { slug: { equals: col.slug } }],
@@ -382,7 +384,7 @@ async function buildBookData(
   }
 
   const collectionId = book?.collection?.slug
-    ? (collectionsByKey.get(`${edition}:${book.collection.slug}`) ?? null)
+    ? (collectionsByKey.get(collectionKey(edition, book.collection.slug)) ?? null)
     : null;
 
   // Préparation Lexical (annotation des uploads, déballage des liens invalides) :
@@ -503,7 +505,7 @@ export async function upsertBooks(
 
   for (const ctx of contexts) {
     const edition = EDITION_BY_SITE[ctx.site];
-    const key = `${edition}:${ctx.item.id}`;
+    const key = wpSourceKey(edition, ctx.item.id);
     report.capturedKeys.add(key);
 
     const { data, missingAuthors } = await buildBookData(
@@ -680,7 +682,7 @@ export async function sweepMissing(
   for (const doc of res.docs) {
     const wpSource = doc.wpSource as { site?: EditionSlug; wpId?: number } | undefined;
     if (!wpSource?.site || wpSource.wpId == null) continue;
-    const key = `${wpSource.site}:${wpSource.wpId}`;
+    const key = wpSourceKey(wpSource.site, wpSource.wpId);
     if (capturedKeys.has(key)) continue;
     if (doc._status === "draft") continue; // déjà à l'écart, rien à faire
 

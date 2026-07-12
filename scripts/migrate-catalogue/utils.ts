@@ -24,6 +24,31 @@ export const SITE_LABEL: Record<Site, string> = {
   ld: "La Dispute",
 };
 
+/* ─────────────────────────── Clés de maps ─────────────────────────── */
+
+/**
+ * Deux espaces de clés se ressemblent à s'y méprendre dans la migration :
+ * côté source on indexe par code site (`es:123` — patches SQL, médias) ; côté
+ * Payload par slug d'édition (`editions-sociales:123` — dédup import,
+ * balayage). Les confondre échouerait en silence (lookup toujours vide) — ces
+ * constructeurs typés font échouer la confusion au typecheck.
+ */
+
+/** Clé côté source WP : code site + id WP (patches `plus_loin`, résolutions médias). */
+export function siteKey(site: Site, wpId: number): string {
+  return `${site}:${wpId}`;
+}
+
+/** Clé côté Payload : slug d'édition + id WP (`wpSource`, capture/balayage). */
+export function wpSourceKey(edition: EditionSlug, wpId: number): string {
+  return `${edition}:${wpId}`;
+}
+
+/** Clé d'une collection Payload : slug d'édition + slug de collection. */
+export function collectionKey(edition: EditionSlug, slug: string): string {
+  return `${edition}:${slug}`;
+}
+
 /* ─────────────────────────── Dates ─────────────────────────── */
 
 /**

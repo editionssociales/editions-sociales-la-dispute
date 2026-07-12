@@ -7,15 +7,13 @@ import { ACCENT_BORDER_T } from "@/lib/accents";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
+import { FOCUS_RING_OUTER } from "@/lib/ui";
 
 export const metadata: Metadata = {
   title: "À propos",
   description: "La maison de la pensée critique et des sciences sociales.",
   alternates: { canonical: "/a-propos" },
 };
-
-const FOCUS_CLASS =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow";
 
 // Repères du héro, repris de l'intro — décoratifs, sans code couleur (réservé
 // aux 4 sections de la navbar).
@@ -88,7 +86,7 @@ export default function AProposPage() {
                   </p>
                   <Link
                     href={`/editions/${e.slug}`}
-                    className={`mt-6 inline-flex w-fit items-center gap-1.5 border-b-2 border-black font-sans text-xs font-bold uppercase tracking-[.05em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_CLASS}`}
+                    className={`mt-6 inline-flex w-fit items-center gap-1.5 border-b-2 border-black font-sans text-xs font-bold uppercase tracking-[.05em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_RING_OUTER}`}
                   >
                     Découvrir {e.shortName}
                     <span aria-hidden="true">→</span>

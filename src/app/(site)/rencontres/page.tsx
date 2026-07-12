@@ -4,15 +4,13 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
 import { Reveal } from "@/components/reveal";
+import { FOCUS_RING_OUTER } from "@/lib/ui";
 
 export const metadata: Metadata = {
   title: "Rencontres",
   description: "Rencontres, débats et présentations autour de nos livres.",
   alternates: { canonical: "/rencontres" },
 };
-
-const FOCUS_CLASS =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow";
 
 /**
  * Silhouettes d'événements à venir : purement décoratives (aucune date
@@ -112,13 +110,13 @@ export default function RencontresPage() {
           <div className="flex shrink-0 flex-wrap gap-3">
             <Link
               href="/catalogue"
-              className={`border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_CLASS}`}
+              className={`border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_RING_OUTER}`}
             >
               Découvrir le catalogue
             </Link>
             <Link
               href="/souscription"
-              className={`border-2 border-white px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black ${FOCUS_CLASS}`}
+              className={`border-2 border-white px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black ${FOCUS_RING_OUTER}`}
             >
               Soutenir la souscription
             </Link>

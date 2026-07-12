@@ -7,6 +7,10 @@
 export const FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
 
+/** Variante extérieure de l'anneau : décollée de 2px — boutons pleins, liens sur aplat. */
+export const FOCUS_RING_OUTER =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow";
+
 /**
  * Cellule inversante : fond blanc au repos, inversion en noir à l'état actif —
  * et au survol quand elle est inactive. Recette partagée par les étiquettes de

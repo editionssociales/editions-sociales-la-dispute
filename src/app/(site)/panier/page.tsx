@@ -4,12 +4,9 @@ import { Container } from "@/components/container";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
 import { ACCENTS, ACCENT_BG } from "@/lib/accents";
+import { FOCUS_RING } from "@/lib/ui";
 
 export const metadata: Metadata = { title: "Panier" };
-
-/** Focus visible partagé : anneau jaune pop, lisible sur fond noir comme blanc. */
-const FOCUS_CLASS =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
 
 // Mini étagère décorative : dos de livres aux couleurs de la palette,
 // version réduite du motif du héro de la souscription.
@@ -66,13 +63,13 @@ export default function PanierPage() {
 
         <Link
           href="/catalogue"
-          className={`flex items-center justify-center bg-black px-6 py-6 text-center font-sans text-sm font-extrabold uppercase tracking-[.05em] text-white transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black ${FOCUS_CLASS}`}
+          className={`flex items-center justify-center bg-black px-6 py-6 text-center font-sans text-sm font-extrabold uppercase tracking-[.05em] text-white transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black ${FOCUS_RING}`}
         >
           Parcourir le catalogue
         </Link>
         <Link
           href="/souscription"
-          className={`flex items-center justify-center bg-white px-6 py-6 text-center font-sans text-sm font-extrabold uppercase tracking-[.05em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_CLASS}`}
+          className={`flex items-center justify-center bg-white px-6 py-6 text-center font-sans text-sm font-extrabold uppercase tracking-[.05em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_RING}`}
         >
           Soutenir la maison
         </Link>

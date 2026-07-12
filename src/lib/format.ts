@@ -70,12 +70,6 @@ export function formatDateFr(iso?: string | null): string | null {
   return Number.isNaN(d.getTime()) ? null : DATE_FR.format(d);
 }
 
-export function yearOf(iso?: string | null): number | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d.getFullYear();
-}
-
 const PRICE_FR = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "EUR",
