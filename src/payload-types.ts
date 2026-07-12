@@ -73,6 +73,8 @@ export interface Config {
     collections: Collection;
     books: Book;
     highlight: Highlight;
+    orders: Order;
+    'promo-codes': PromoCode;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +88,8 @@ export interface Config {
     collections: CollectionsSelect<false> | CollectionsSelect<true>;
     books: BooksSelect<false> | BooksSelect<true>;
     highlight: HighlightSelect<false> | HighlightSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
+    'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -95,8 +99,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'reglages-boutique': ReglagesBoutique;
+  };
+  globalsSelect: {
+    'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -263,6 +271,9 @@ export interface Book {
   plusLoinLegacyHtml?: string | null;
   contentTouched?: boolean | null;
   isbn?: string | null;
+  /**
+   * Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au checkout (pratique actuelle conservée, plan phase 4 étape 8).
+   */
   prix?: number | null;
   pages?: number | null;
   dateParution: string;
@@ -284,6 +295,23 @@ export interface Book {
     boutiqueUrl?: string | null;
     parislibrairies?: string | null;
     lalibrairie?: string | null;
+  };
+  /**
+   * Modèle de données du commerce natif (phase 4, lot 1) — sans effet sur le front tant que le panier/checkout n'est pas branché (étapes ultérieures du plan).
+   */
+  commerce?: {
+    /**
+     * Coché = éligible au panier natif à venir. Un livre non vendable reste au catalogue (jamais retiré, cf. §Local Contracts) — il est simplement absent du commerce natif.
+     */
+    sellable?: boolean | null;
+    /**
+     * Champ unique pour tout ce qui se vend — livres ET produits boutique-seuls/goodies (même mécanique de décrément ensuite). Vide = non suivi. Pour les livres : alimenté par l'import routeur mensuel. Pour les goodies : saisi ici à la main. Le stock EST la disponibilité — pas de bascule « en stock/épuisé » séparée (décision client du 12/07) ; 0 signifie épuisé sans retirer la fiche du catalogue.
+     */
+    stock?: number | null;
+    /**
+     * Remplace l'ancienne règle « manifeste » au poids : un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit plutôt que la grille standard (décision client du 12/07, question ouverte n°2 du plan).
+     */
+    reducedShippingFlag?: boolean | null;
   };
   /**
    * Clé d'upsert de la migration — vide pour les fiches nées dans Payload.
@@ -321,6 +349,99 @@ export interface Highlight {
    * Doit être coché ET la date courante comprise dans la période pour être visible.
    */
   actif?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Commandes du commerce natif — créées par le webhook Stripe, suivies ici (statut de préparation/expédition uniquement).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  /**
+   * Généré automatiquement à la création (préfixe CMD- + id) — ne se modifie pas.
+   */
+  number?: string | null;
+  /**
+   * Seul champ modifiable au back-office — suivi de préparation (paid → prepared → shipped) ; annulation/remboursement au besoin.
+   */
+  status: 'paid' | 'prepared' | 'shipped' | 'cancelled' | 'refunded';
+  email: string;
+  shippingAddress: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string | null;
+    postalCode: string;
+    city: string;
+    /**
+     * Ventes restreintes FR/BE/CH (plan phase 4, étape 8).
+     */
+    country: 'FR' | 'BE' | 'CH';
+  };
+  /**
+   * Dupliquée depuis la livraison par le webhook si le checkout ne collecte pas d’adresse de facturation distincte (étape 8).
+   */
+  billingAddress: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string | null;
+    postalCode: string;
+    city: string;
+    /**
+     * Ventes restreintes FR/BE/CH (plan phase 4, étape 8).
+     */
+    country: 'FR' | 'BE' | 'CH';
+  };
+  /**
+   * Snapshot au moment de la vente (titre/ISBN/prix) — indépendant d'une modification ultérieure de la fiche livre.
+   */
+  lines?:
+    | {
+        book: number | Book;
+        titleSnapshot: string;
+        isbnSnapshot?: string | null;
+        quantity: number;
+        unitPriceTTC: number;
+        id?: string | null;
+      }[]
+    | null;
+  shippingMethod: 'standard' | 'reduit' | 'offert';
+  shippingCostTTC: number;
+  promoCode?: (number | null) | PromoCode;
+  discountTTC?: number | null;
+  totalTTC: number;
+  /**
+   * Clé d'idempotence du webhook (étape 9) — une session ne crée jamais deux commandes.
+   */
+  stripeSessionId: string;
+  stripePaymentIntentId?: string | null;
+  paidAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-codes".
+ */
+export interface PromoCode {
+  id: number;
+  /**
+   * Normalisé en majuscules à la sauvegarde (insensible à la casse au checkout).
+   */
+  code: string;
+  type: 'fixed_cart' | 'free_shipping';
+  /**
+   * Utilisé uniquement pour le type « montant fixe » — ignoré pour « livraison offerte ».
+   */
+  amount?: number | null;
+  /**
+   * Montant TTC minimum du panier pour que le code s’applique (ex. 50 € pour la livraison offerte — plan §étape 5).
+   */
+  minCart?: number | null;
+  expiresAt?: string | null;
+  active?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -371,6 +492,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'highlight';
         value: number | Highlight;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'promo-codes';
+        value: number | PromoCode;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -512,6 +641,13 @@ export interface BooksSelect<T extends boolean = true> {
         parislibrairies?: T;
         lalibrairie?: T;
       };
+  commerce?:
+    | T
+    | {
+        sellable?: T;
+        stock?: T;
+        reducedShippingFlag?: T;
+      };
   wpSource?:
     | T
     | {
@@ -535,6 +671,69 @@ export interface HighlightSelect<T extends boolean = true> {
   dateDebut?: T;
   dateFin?: T;
   actif?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  number?: T;
+  status?: T;
+  email?: T;
+  shippingAddress?:
+    | T
+    | {
+        fullName?: T;
+        addressLine1?: T;
+        addressLine2?: T;
+        postalCode?: T;
+        city?: T;
+        country?: T;
+      };
+  billingAddress?:
+    | T
+    | {
+        fullName?: T;
+        addressLine1?: T;
+        addressLine2?: T;
+        postalCode?: T;
+        city?: T;
+        country?: T;
+      };
+  lines?:
+    | T
+    | {
+        book?: T;
+        titleSnapshot?: T;
+        isbnSnapshot?: T;
+        quantity?: T;
+        unitPriceTTC?: T;
+        id?: T;
+      };
+  shippingMethod?: T;
+  shippingCostTTC?: T;
+  promoCode?: T;
+  discountTTC?: T;
+  totalTTC?: T;
+  stripeSessionId?: T;
+  stripePaymentIntentId?: T;
+  paidAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-codes_select".
+ */
+export interface PromoCodesSelect<T extends boolean = true> {
+  code?: T;
+  type?: T;
+  amount?: T;
+  minCart?: T;
+  expiresAt?: T;
+  active?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -577,6 +776,29 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-boutique".
+ */
+export interface ReglagesBoutique {
+  id: number;
+  /**
+   * En dessous de ce nombre d'exemplaires (`commerce.stock` des fiches Livres), un article est signalé comme stock bas — usage réservé aux étapes ultérieures du plan (back-office, étape 10) ; ce lot ne pose que le réglage.
+   */
+  seuilAlerteStockBas: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-boutique_select".
+ */
+export interface ReglagesBoutiqueSelect<T extends boolean = true> {
+  seuilAlerteStockBas?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

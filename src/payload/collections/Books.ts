@@ -232,6 +232,11 @@ export const Books: CollectionConfig = {
       type: 'number',
       min: 0,
       label: 'Prix (€)',
+      admin: {
+        description:
+          'Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au ' +
+          'checkout (pratique actuelle conservée, plan phase 4 étape 8).',
+      },
     },
     {
       name: 'pages',
@@ -327,6 +332,60 @@ export const Books: CollectionConfig = {
           name: 'lalibrairie',
           type: 'text',
           label: 'La Librairie',
+        },
+      ],
+    },
+    {
+      name: 'commerce',
+      type: 'group',
+      label: 'Commerce natif',
+      admin: {
+        description:
+          'Modèle de données du commerce natif (phase 4, lot 1) — sans effet ' +
+          "sur le front tant que le panier/checkout n'est pas branché (étapes " +
+          'ultérieures du plan).',
+      },
+      fields: [
+        {
+          name: 'sellable',
+          type: 'checkbox',
+          defaultValue: false,
+          label: 'Vendable nativement',
+          admin: {
+            description:
+              'Coché = éligible au panier natif à venir. Un livre non vendable ' +
+              'reste au catalogue (jamais retiré, cf. §Local Contracts) — il ' +
+              'est simplement absent du commerce natif.',
+          },
+        },
+        {
+          name: 'stock',
+          type: 'number',
+          min: 0,
+          label: 'Stock',
+          admin: {
+            description:
+              'Champ unique pour tout ce qui se vend — livres ET produits ' +
+              'boutique-seuls/goodies (même mécanique de décrément ensuite). ' +
+              "Vide = non suivi. Pour les livres : alimenté par l'import " +
+              'routeur mensuel. Pour les goodies : saisi ici à la main. Le ' +
+              'stock EST la disponibilité — pas de bascule « en stock/épuisé » ' +
+              'séparée (décision client du 12/07) ; 0 signifie épuisé sans ' +
+              'retirer la fiche du catalogue.',
+          },
+        },
+        {
+          name: 'reducedShippingFlag',
+          type: 'checkbox',
+          defaultValue: false,
+          label: 'Port réduit (« manifeste »)',
+          admin: {
+            description:
+              "Remplace l'ancienne règle « manifeste » au poids : un panier " +
+              "composé uniquement d'articles cochés bénéficie du tarif de " +
+              'port réduit plutôt que la grille standard (décision client du ' +
+              '12/07, question ouverte n°2 du plan).',
+          },
         },
       ],
     },
