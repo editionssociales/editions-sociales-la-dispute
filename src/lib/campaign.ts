@@ -1,11 +1,11 @@
 /**
  * Domaine « campagne / paliers » — pur, sans I/O ni rendu.
  *
- * Concentre les faits d'une souscription (collecte, objectif, paliers) et en
- * dérive tout ce que la page et la jauge affichaient jusqu'ici à la main :
- * pourcentage de l'objectif, paliers atteints, plafond de la jauge, tuiles de
- * statistiques. Les dérivations deviennent testables sans rendu ; la page
- * redevient une coquille de présentation.
+ * Deux dérivations aux besoins distincts : `deriveGauge` (jauge + compteurs —
+ * tout ce qu'une campagne **en cours** peut honnêtement afficher) et
+ * `deriveStats` (tuiles rétrospectives — messages, durée — qui n'ont de sens
+ * que pour une campagne **terminée**). Les séparer évite d'inventer des faits
+ * neutres pour remplir une interface trop large.
  */
 
 /** Un palier de collecte (montant + intitulé). */
@@ -14,17 +14,21 @@ export interface Palier {
   label: string;
 }
 
-/** Faits bruts d'une campagne — seule source à maintenir. */
-export interface CampaignFacts {
+/** Faits d'une jauge de collecte — communs aux campagnes passées et en cours. */
+export interface GaugeFacts {
   /** Montant collecté (€). */
   collected: number;
   /** Objectif initial (€). */
   goal: number;
   contributors: number;
-  messages: number;
-  durationDays: number;
   /** Paliers ordonnés du plus bas au plus haut. */
   paliers: Palier[];
+}
+
+/** Faits complets d'une campagne TERMINÉE — seuls eux autorisent les tuiles de stats. */
+export interface CampaignFacts extends GaugeFacts {
+  messages: number;
+  durationDays: number;
 }
 
 /** Palier projeté avec son état atteint/non atteint. */
@@ -39,12 +43,11 @@ export interface CampaignStat {
   label: string;
 }
 
-/** Vue-modèle dérivée d'une campagne, consommée par la page et la jauge. */
-export interface Campaign {
+/** Vue-modèle de jauge, consommée par `<Gauge>` et les compteurs. */
+export interface CampaignGauge {
   collected: number;
   goal: number;
   contributors: number;
-  messages: number;
   /**
    * Pourcentage de l'objectif *initial* atteint, planché : on n'annonce
    * jamais un palier de pourcentage qu'on n'a pas franchi (170 % à 85 305 €
@@ -57,31 +60,33 @@ export interface Campaign {
     max: number;
     markers: GaugeMarker[];
   };
-  stats: CampaignStat[];
 }
 
-/** Dérive la vue-modèle complète d'une campagne à partir de ses faits bruts. */
-export function deriveCampaign(facts: CampaignFacts): Campaign {
+/** Dérive la jauge et ses compteurs — la partie valable pour toute campagne. */
+export function deriveGauge(facts: GaugeFacts): CampaignGauge {
   const max = facts.paliers.reduce((m, p) => Math.max(m, p.value), 0);
-  const percentOfGoal = Math.floor((facts.collected / facts.goal) * 100);
   return {
     collected: facts.collected,
     goal: facts.goal,
     contributors: facts.contributors,
-    messages: facts.messages,
-    percentOfGoal,
+    percentOfGoal: Math.floor((facts.collected / facts.goal) * 100),
     gauge: {
       value: facts.collected,
       max,
       markers: facts.paliers.map((p) => ({ ...p, reached: facts.collected >= p.value })),
     },
-    stats: [
-      { value: facts.collected, suffix: " €", label: `collectés en ${facts.durationDays} jours` },
-      { value: facts.contributors, suffix: "", label: "contributeur·rices" },
-      { value: percentOfGoal, suffix: " %", label: "de l'objectif initial" },
-      { value: facts.messages, suffix: "", label: "messages de soutien" },
-    ],
   };
+}
+
+/** Tuiles rétrospectives (gabarit 2024) — exige les faits d'une campagne terminée. */
+export function deriveStats(facts: CampaignFacts): CampaignStat[] {
+  const { percentOfGoal } = deriveGauge(facts);
+  return [
+    { value: facts.collected, suffix: " €", label: `collectés en ${facts.durationDays} jours` },
+    { value: facts.contributors, suffix: "", label: "contributeur·rices" },
+    { value: percentOfGoal, suffix: " %", label: "de l'objectif initial" },
+    { value: facts.messages, suffix: "", label: "messages de soutien" },
+  ];
 }
 
 /**
@@ -101,4 +106,7 @@ const FACTS_2024: CampaignFacts = {
   ],
 };
 
-export const CAMPAIGN_2024 = deriveCampaign(FACTS_2024);
+export const CAMPAIGN_2024 = {
+  ...deriveGauge(FACTS_2024),
+  stats: deriveStats(FACTS_2024),
+};

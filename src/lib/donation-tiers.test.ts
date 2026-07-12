@@ -99,13 +99,6 @@ describe("parseDonation — montant libre", () => {
 });
 
 describe("deriveCampaign2026", () => {
-  it("n'expose pas `stats` (piège du gabarit 2024)", () => {
-    const c = deriveCampaign2026({ collected: 10000, contributors: 42 });
-    expect(c).not.toHaveProperty("stats");
-    // @ts-expect-error — le type de retour interdit statiquement l'accès à `stats`.
-    expect(c.stats).toBeUndefined();
-  });
-
   it("expose gauge/collected/contributors/percentOfGoal, dérivés de l'objectif 2026", () => {
     const c = deriveCampaign2026({ collected: 25000, contributors: 10 });
     expect(c.collected).toBe(25000);

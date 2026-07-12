@@ -7,7 +7,7 @@
  * montant libre est borné et converti en centimes ici, une fois pour toutes.
  */
 
-import { deriveCampaign, type Palier } from "./campaign";
+import { deriveGauge, type CampaignGauge, type Palier } from "./campaign";
 
 /**
  * Valeur de `metadata.campaign` posée sur chaque session/paiement Stripe — le
@@ -102,32 +102,21 @@ export const CAMPAIGN_2026_PALIERS: Palier[] = [
 
 /**
  * Vue-modèle de la campagne 2026 « en cours » — **uniquement** ce qu'une jauge
- * vivante peut afficher honnêtement. Contrairement à `CAMPAIGN_2024` (rétrospective
- * figée), la campagne 2026 n'a ni `messages` ni `durationDays` : `CampaignFacts`
- * (`campaign.ts`) les exige pourtant et `deriveCampaign` en tire des tuiles
- * `stats` (« messages de soutien », « collectés en N jours ») qui seraient
- * fausses ici. On appelle donc `deriveCampaign` en interne avec des valeurs
- * neutres, et le type de retour **exclut statiquement `stats`** : aucun appelant
- * ne peut afficher les 4 tuiles du gabarit 2024 pour la campagne en cours.
+ * vivante peut afficher honnêtement : `deriveGauge` (`campaign.ts`) ne connaît
+ * ni `messages` ni `durationDays`, les tuiles rétrospectives du gabarit 2024
+ * (`deriveStats`) n'existent donc tout simplement pas pour la campagne en
+ * cours — plus de faits neutres à inventer ni de champ à écarter.
  */
-export interface Campaign2026 {
-  collected: number;
-  contributors: number;
-  percentOfGoal: number;
-  gauge: ReturnType<typeof deriveCampaign>["gauge"];
-}
+export type Campaign2026 = CampaignGauge;
 
 export function deriveCampaign2026(totals: {
   collected: number;
   contributors: number;
 }): Campaign2026 {
-  const { collected, contributors, percentOfGoal, gauge } = deriveCampaign({
+  return deriveGauge({
     collected: totals.collected,
     goal: CAMPAIGN_2026_GOAL,
     contributors: totals.contributors,
-    messages: 0,
-    durationDays: 0,
     paliers: CAMPAIGN_2026_PALIERS,
   });
-  return { collected, contributors, percentOfGoal, gauge };
 }
