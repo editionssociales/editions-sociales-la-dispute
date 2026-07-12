@@ -129,7 +129,7 @@ FROM mod973_newsletter WHERE status IN ('C','U');
 ## Calage calendrier (dates concretes vu le calendrier des FAITS ; effort estime vs jours vendus)
 
 - **Mer 15/07 (démo back-office)** : poser les 3 décisions client (compte Brevo, destinataire, framing consentement) + croiser le mécanisme de reçus avec la phase Dons — étape 1. Le compte Brevo étant potentiellement nécessaire aux reçus de dons, cette décision **ne peut pas glisser** au-delà.
-- **Lun 20 – mar 21/07** : étapes 2, 3, 5, 6, 7 (structure Brevo, extraction, formulaires).
+- **Semaine du 20/07, avant la fenêtre de bascule unique (24–28/07 proposée, cf. `plan/README.md`)** : étapes 2, 3, 5, 6, 7 (structure Brevo, extraction, formulaires) — le calage Brevo doit précéder la bascule.
 - **Mer 22/07** : étapes 4 et 8 (inventaire + import en 3 appels + prod + e2e).
 - **Jeu 23 → fin juillet** : étape 9, intégrée à la recette globale « B phasé » (dons + catalogue + back-office fin juillet), **avant la fermeture d'août** du client.
 
