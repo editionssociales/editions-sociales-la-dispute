@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Container } from "@/components/container";
+import { Button } from "@/components/button";
 import { ACCENT_BG } from "@/lib/accents";
 import type { Accent } from "@/lib/format";
 
@@ -13,7 +13,7 @@ const SPINES: { h: number; w: string; accent: Accent; fallen?: boolean }[] = [
 
 export default function NotFound() {
   return (
-    <Container className="py-24 text-center sm:py-32">
+    <Container className="bg-white py-24 text-center sm:py-32">
       {/* L'étagère où un livre est tombé */}
       <div className="mx-auto w-fit" aria-hidden="true">
         <div className="flex items-end gap-1.5">
@@ -27,12 +27,12 @@ export default function NotFound() {
             />
           ))}
         </div>
-        <div className="-mx-3 h-1.5 rounded bg-ink/20" />
+        <div className="-mx-3 h-1.5 rounded bg-black/25" />
       </div>
 
       {/* 404 géant, le zéro devenu losange */}
       <p
-        className="mt-10 flex items-center justify-center gap-3 font-serif text-8xl font-semibold leading-none text-ink"
+        className="mt-10 flex items-center justify-center gap-3 font-sans text-8xl font-black italic leading-none text-black"
         aria-hidden="true"
       >
         <span>4</span>
@@ -40,29 +40,27 @@ export default function NotFound() {
         <span>4</span>
       </p>
 
-      <h1 className="mt-6 font-serif text-2xl font-semibold sm:text-3xl">
+      <h1 className="mt-6 font-sans text-2xl font-black italic text-black sm:text-3xl">
         <span className="sr-only">Erreur 404 — </span>Page introuvable
       </h1>
-      <p className="mx-auto mt-3 max-w-md text-ink-soft">
+      <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-black/70">
         Cette page n&apos;existe pas ou a été déplacée.
       </p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+      <p className="mx-auto mt-1 max-w-md text-sm text-black/50">
         Elle a peut-être glissé derrière l&apos;étagère.
       </p>
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link
-          href="/catalogue"
-          className="inline-flex rounded-full bg-ink px-6 py-3 text-sm font-semibold text-paper transition-all hover:-translate-y-0.5 hover:opacity-90 motion-reduce:transition-none"
-        >
+        <Button href="/catalogue" className="px-7 py-3.5 text-sm tracking-[.04em]">
           Retour au catalogue
-        </Link>
-        <Link
+        </Button>
+        <Button
           href="/souscription"
-          className="inline-flex rounded-full px-6 py-3 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition-colors hover:bg-paper-2 motion-reduce:transition-none"
+          variant="outline"
+          className="px-7 py-3.5 text-sm tracking-[.04em]"
         >
           Découvrir la souscription
-        </Link>
+        </Button>
       </div>
     </Container>
   );
