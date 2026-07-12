@@ -1,6 +1,7 @@
 import "server-only";
 import { getAllStoreProducts } from "./boutique";
 import type { CatalogueSource, WpBook } from "./catalogue-source";
+import { fetchAllPages } from "./fetch-all-pages";
 import type { EditionSlug } from "./types";
 
 /**
@@ -27,29 +28,23 @@ async function wpGet<T>(base: string, path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** Toutes les fiches brutes d'un fonds (pagination interne, résilient). */
+/** Toutes les fiches brutes d'un fonds (pagination `fetch-all-pages`, résilient). */
 async function listBooks(edition: EditionSlug): Promise<WpBook[]> {
   const base = SITES[edition];
   const perPage = 100;
-  const out: WpBook[] = [];
-  for (let page = 1; page <= 20; page++) {
-    let items: WpBook[];
-    try {
-      items = await wpGet<WpBook[]>(
+  return fetchAllPages<WpBook>({
+    perPage,
+    maxPages: 20,
+    fetchPage: (page) =>
+      wpGet<WpBook[]>(
         base,
         `catalogue?per_page=${perPage}&page=${page}&orderby=date&order=desc&_fields=id,slug,title,book`,
-      );
-      // Corps 200 non-liste (erreur WP sérialisée) : on renvoie ce qu'on a plutôt que planter.
-      if (!Array.isArray(items)) break;
-    } catch (err) {
-      // 400 attendu au-delà de la dernière page ; on ne loggue qu'un vrai échec.
+      ),
+    // 400 attendu au-delà de la dernière page ; on ne loggue qu'un vrai échec.
+    onPageError: (err, page) => {
       if (page === 1) console.error(`[catalogue] ${edition} indisponible:`, err);
-      break;
-    }
-    out.push(...items);
-    if (items.length < perPage) break;
-  }
-  return out;
+    },
+  });
 }
 
 async function getBook(edition: EditionSlug, slug: string): Promise<WpBook | null> {

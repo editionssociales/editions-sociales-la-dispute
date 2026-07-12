@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import type { WcProduct } from "./catalogue-source";
+import { fetchAllPages } from "./fetch-all-pages";
 
 /**
  * Transport de la **WooCommerce Store API** (`/wp-json/wc/store/v1/…`), publique
@@ -13,28 +14,22 @@ import type { WcProduct } from "./catalogue-source";
 const WC = process.env.WC_STORE_URL || "https://boutique.editionssociales.fr";
 const REVALIDATE = Number(process.env.WP_REVALIDATE ?? "3600");
 
-/** Récupère l'intégralité des produits de la boutique (pagination interne, résilient). */
+/** Récupère l'intégralité des produits de la boutique (pagination `fetch-all-pages`, résilient). */
 export const getAllStoreProducts = cache(async (): Promise<WcProduct[]> => {
   const perPage = 100;
-  const out: WcProduct[] = [];
-  for (let page = 1; page <= 10; page++) {
-    let items: WcProduct[];
-    try {
+  return fetchAllPages<WcProduct>({
+    perPage,
+    maxPages: 10,
+    fetchPage: async (page) => {
       const res = await fetch(
         `${WC}/wp-json/wc/store/v1/products?per_page=${perPage}&page=${page}&orderby=date&order=desc`,
         { next: { revalidate: REVALIDATE }, headers: { Accept: "application/json" } },
       );
-      if (!res.ok) break;
-      items = (await res.json()) as WcProduct[];
-      // Réponse 200 mais corps non-liste (erreur WP sérialisée, cache/proxy) :
-      // on dégrade en catalogue sans produits plutôt que de planter la page.
-      if (!Array.isArray(items)) break;
-    } catch (err) {
+      if (!res.ok) throw new Error(`Store API products page ${page} → ${res.status}`);
+      return res.json();
+    },
+    onPageError: (err, page) => {
       if (page === 1) console.error("[boutique] Store API indisponible:", err);
-      break;
-    }
-    out.push(...items);
-    if (items.length < perPage) break;
-  }
-  return out;
+    },
+  });
 });

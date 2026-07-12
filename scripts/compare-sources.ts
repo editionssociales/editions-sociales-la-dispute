@@ -44,6 +44,7 @@ import {
 } from "../src/lib/catalogue-core.ts";
 import { payloadBookToWpBook } from "../src/lib/catalogue-pg-map.ts";
 import { slugFromBoutiqueLink, type WcProduct, type WpBook } from "../src/lib/catalogue-source.ts";
+import { fetchAllPages } from "../src/lib/fetch-all-pages.ts";
 import type { Book, BookDetail, EditionSlug, Facet } from "../src/lib/types.ts";
 import type { Book as PayloadBook } from "../src/payload-types.ts";
 
@@ -109,39 +110,42 @@ function parseArgs(argv: string[]): CliOptions {
   return { sites, help };
 }
 
-/* ─────────────────────────── Boutique (dupliqué de `src/lib/boutique.ts`) ───────────────────────────
+/* ─────────────────────────── Boutique (transport local, politique partagée) ───────────────────────────
  *
- * Même raison que ci-dessus (`import "server-only"`). `listProducts()` est
- * *identique* pour les deux adaptateurs (`catalogue-pg.ts:58` délègue,
- * inchangé, à `getAllStoreProducts`) : un seul fetch, réutilisé des deux
- * côtés — comparer une liste à elle-même n'aurait rien appris.
+ * `src/lib/boutique.ts` reste inimportable ici (`import "server-only"`), mais
+ * la politique de pagination résiliente est désormais LA même module pur
+ * (`src/lib/fetch-all-pages.ts`) — seul le transport (fetchWithRetry, sans
+ * cache Next) reste propre à ce script. `listProducts()` est *identique* pour
+ * les deux adaptateurs (`catalogue-pg.ts:58` délègue, inchangé, à
+ * `getAllStoreProducts`) : un seul fetch, réutilisé des deux côtés — comparer
+ * une liste à elle-même n'aurait rien appris.
  */
 
 async function fetchStoreProducts(logger: Logger): Promise<WcProduct[]> {
   const base = process.env.WC_STORE_URL || "https://boutique.editionssociales.fr";
   const perPage = 100;
-  const out: WcProduct[] = [];
-  for (let page = 1; page <= 10; page++) {
-    let items: WcProduct[];
-    try {
+  return fetchAllPages<WcProduct>({
+    perPage,
+    maxPages: 10,
+    fetchPage: async (page) => {
       const res = await fetchWithRetry(
         `${base}/wp-json/wc/store/v1/products?per_page=${perPage}&page=${page}&orderby=date&order=desc`,
         { headers: { Accept: "application/json" } },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      items = (await res.json()) as WcProduct[];
+      const items: unknown = await res.json();
+      // Ici un corps non-liste doit se VOIR (outil de recette) : on jette pour
+      // qu'il soit signalé, là où les adaptateurs de l'app s'arrêtent en silence.
       if (!Array.isArray(items)) throw new Error("réponse non-liste");
-    } catch (err) {
+      return items;
+    },
+    onPageError: (err, page) => {
       logger.warn(
         `[boutique] Store API indisponible (page ${page}) : ${err instanceof Error ? err.message : err} — ` +
           `catalogue comparé sans produits boutique (symétrique des deux côtés, ne crée pas de faux écart).`,
       );
-      break;
-    }
-    out.push(...items);
-    if (items.length < perPage) break;
-  }
-  return out;
+    },
+  });
 }
 
 /* ─────────────────────────── Payload (lecture seule) ─────────────────────────── */
