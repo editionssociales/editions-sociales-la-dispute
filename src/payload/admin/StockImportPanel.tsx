@@ -6,16 +6,19 @@ import { useState, type FormEvent } from 'react'
 interface StockImportReport {
   matched: { bookId: number; slug: string; title: string; stock: number }[]
   routerRowsWithoutBook: number
-  missingOnlineBooks: { id: number; slug: string; title: string; isbn: string | null }[]
+  manualBooksNotInFile: { id: number; slug: string; title: string; isbn: string | null }[]
+  routerBooksMissingFromFile: { id: number; slug: string; title: string; isbn: string | null }[]
   updatedCount: number
 }
 
 /**
  * Vue/composant admin « Import stock » (mission point 1) : dépose le
  * classeur .xls du routeur, poste en multipart vers l'endpoint custom de la
- * collection `books`, affiche le rapport (X mis à jour · Y lignes routeur
- * sans fiche · Z fiches en ligne absentes du fichier — listées, c'est
- * l'alerte qui compte).
+ * collection `books`, affiche le rapport en quatre sections (décision client
+ * du 12/07) : mises à jour (suivi routeur) · lignes routeur sans fiche en
+ * ligne (backlist, normal) · fiches en suivi manuel absentes du fichier
+ * (normal, informatif) · fiches anciennement suivies routeur absentes du
+ * nouveau fichier (LA vraie alerte — titre disparu du routeur).
  */
 export function StockImportPanel() {
   const [file, setFile] = useState<File | null>(null)
@@ -78,24 +81,46 @@ export function StockImportPanel() {
       {report && (
         <div style={{ marginTop: '1rem' }}>
           <p>
-            <strong>{report.updatedCount}</strong> mis à jour ·{' '}
+            <strong>{report.updatedCount}</strong> mise(s) à jour (suivi routeur) ·{' '}
             <strong>{report.routerRowsWithoutBook}</strong> ligne(s) routeur sans fiche en ligne
-            (normal, backlist) · <strong>{report.missingOnlineBooks.length}</strong> fiche(s) vendue(s)
-            en ligne absente(s) du fichier
+            (backlist, normal) · <strong>{report.manualBooksNotInFile.length}</strong> fiche(s) en
+            suivi manuel absente(s) du fichier (normal) ·{' '}
+            <strong>{report.routerBooksMissingFromFile.length}</strong> fiche(s) suivie(s) routeur
+            disparue(s) du fichier
           </p>
-          {report.missingOnlineBooks.length > 0 && (
+
+          {report.routerBooksMissingFromFile.length > 0 && (
             <>
-              <p>
-                <strong>Fiches en ligne absentes du fichier routeur (à vérifier) :</strong>
+              <p style={{ color: '#b00020' }}>
+                <strong>
+                  ⚠️ Fiches suivies routeur absentes du nouveau fichier (titre disparu du routeur —
+                  stock conservé tel quel, alerte reconduite à chaque import tant que non résolue) :
+                </strong>
               </p>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
-                {report.missingOnlineBooks.map((book) => (
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#b00020' }}>
+                {report.routerBooksMissingFromFile.map((book) => (
                   <li key={book.id}>
                     {book.title} {book.isbn ? `(ISBN ${book.isbn})` : '(sans ISBN)'}
                   </li>
                 ))}
               </ul>
             </>
+          )}
+
+          {report.manualBooksNotInFile.length > 0 && (
+            <details style={{ marginTop: '0.75rem' }}>
+              <summary>
+                Fiches en suivi manuel absentes du fichier — normal, à titre informatif (
+                {report.manualBooksNotInFile.length})
+              </summary>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
+                {report.manualBooksNotInFile.map((book) => (
+                  <li key={book.id}>
+                    {book.title} {book.isbn ? `(ISBN ${book.isbn})` : '(sans ISBN)'}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </div>
       )}

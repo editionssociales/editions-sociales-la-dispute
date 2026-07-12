@@ -776,6 +776,14 @@
           "notNull": false,
           "default": false
         },
+        "commerce_stock_suivi": {
+          "name": "commerce_stock_suivi",
+          "type": "enum_books_commerce_stock_suivi",
+          "typeSchema": "payload",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'manuel'"
+        },
         "wp_source_site": {
           "name": "wp_source_site",
           "type": "enum_books_wp_source_site",
@@ -1378,6 +1386,14 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
+        },
+        "version_commerce_stock_suivi": {
+          "name": "version_commerce_stock_suivi",
+          "type": "enum__books_v_version_commerce_stock_suivi",
+          "typeSchema": "payload",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'manuel'"
         },
         "version_wp_source_site": {
           "name": "version_wp_source_site",
@@ -3495,6 +3511,22 @@
       "values": [
         "fixed_cart",
         "free_shipping"
+      ]
+    },
+    "payload.enum_books_commerce_stock_suivi": {
+      "name": "enum_books_commerce_stock_suivi",
+      "schema": "payload",
+      "values": [
+        "routeur",
+        "manuel"
+      ]
+    },
+    "payload.enum__books_v_version_commerce_stock_suivi": {
+      "name": "enum__books_v_version_commerce_stock_suivi",
+      "schema": "payload",
+      "values": [
+        "routeur",
+        "manuel"
       ]
     }
   },

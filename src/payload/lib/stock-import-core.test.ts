@@ -16,7 +16,7 @@ function routerWorkbook(rows: (string | number)[][]): Buffer {
 }
 
 function book(overrides: Partial<BookRef> & { id: number; slug: string; isbn: string | null }): BookRef {
-  return { title: overrides.slug, ...overrides }
+  return { title: overrides.slug, stockSuivi: 'manuel', ...overrides }
 }
 
 describe('normalizeIsbn', () => {
@@ -81,7 +81,8 @@ describe('matchStock', () => {
 
     expect(report.matched).toEqual([{ bookId: 1, slug: 'gaza-genocide-annonce', title: 'gaza-genocide-annonce', stock: 56 }])
     expect(report.routerRowsWithoutBook).toBe(0)
-    expect(report.missingOnlineBooks).toEqual([])
+    expect(report.manualBooksNotInFile).toEqual([])
+    expect(report.routerBooksMissingFromFile).toEqual([])
   })
 
   it('apparie un code non-ISBN (13 chiffres, préfixe "12…") comme un ISBN normal', () => {
@@ -100,7 +101,7 @@ describe('matchStock', () => {
     const report = matchStock(routerRows, books)
 
     expect(report.matched).toEqual([{ bookId: 3, slug: 'correspondance', title: 'correspondance', stock: 0 }])
-    expect(report.missingOnlineBooks).toEqual([])
+    expect(report.manualBooksNotInFile).toEqual([])
   })
 
   it('compte une ligne routeur inconnue sans la lister (backlist papier, normal)', () => {
@@ -113,26 +114,64 @@ describe('matchStock', () => {
 
     expect(report.routerRowsWithoutBook).toBe(1)
     expect(report.matched).toEqual([])
-    expect(report.missingOnlineBooks).toEqual([])
+    expect(report.manualBooksNotInFile).toEqual([])
+    expect(report.routerBooksMissingFromFile).toEqual([])
   })
 
-  it("signale une fiche en ligne absente du fichier — l'alerte qui compte", () => {
+  it("classe une fiche en suivi manuel absente du fichier en information — NORMAL, plus une alerte (décision client du 12/07)", () => {
     const routerRows = parseRouterWorkbook(routerWorkbook([[9782843033452, 'Autre titre', 'Autre, Auteur', 'x', 1, 5]]))
-    const books = [book({ id: 4, slug: 'oublie-du-routeur', isbn: '9781111111111' })]
+    const books = [book({ id: 4, slug: 'hors-routeur-assume', isbn: '9781111111111', stockSuivi: 'manuel' })]
 
     const report = matchStock(routerRows, books)
 
     expect(report.matched).toEqual([])
     expect(report.routerRowsWithoutBook).toBe(1)
-    expect(report.missingOnlineBooks).toEqual([{ id: 4, slug: 'oublie-du-routeur', title: 'oublie-du-routeur', isbn: '9781111111111' }])
+    expect(report.manualBooksNotInFile).toEqual([{ id: 4, slug: 'hors-routeur-assume', title: 'hors-routeur-assume', isbn: '9781111111111' }])
+    expect(report.routerBooksMissingFromFile).toEqual([])
   })
 
-  it('signale aussi une fiche en ligne sans ISBN du tout (jamais matchable par construction)', () => {
+  it("signale une fiche ANCIENNEMENT suivie routeur absente du nouveau fichier — LA vraie alerte (titre disparu du routeur)", () => {
     const routerRows = parseRouterWorkbook(routerWorkbook([[9782843033452, 'Autre titre', 'Autre, Auteur', 'x', 1, 5]]))
-    const books = [book({ id: 5, slug: 'sans-isbn', isbn: null })]
+    const books = [book({ id: 5, slug: 'disparu-du-routeur', isbn: '9782222222222', stockSuivi: 'routeur' })]
 
     const report = matchStock(routerRows, books)
 
-    expect(report.missingOnlineBooks).toEqual([{ id: 5, slug: 'sans-isbn', title: 'sans-isbn', isbn: null }])
+    expect(report.matched).toEqual([])
+    expect(report.routerBooksMissingFromFile).toEqual([{ id: 5, slug: 'disparu-du-routeur', title: 'disparu-du-routeur', isbn: '9782222222222' }])
+    expect(report.manualBooksNotInFile).toEqual([])
+  })
+
+  it("traite un stockSuivi legacy null comme « manuel » (fiche d'avant le champ — même défaut que le schéma)", () => {
+    const routerRows = parseRouterWorkbook(routerWorkbook([[9782843033452, 'Autre titre', 'Autre, Auteur', 'x', 1, 5]]))
+    const books = [book({ id: 6, slug: 'fiche-legacy', isbn: '9783333333333', stockSuivi: null })]
+
+    const report = matchStock(routerRows, books)
+
+    expect(report.manualBooksNotInFile).toEqual([{ id: 6, slug: 'fiche-legacy', title: 'fiche-legacy', isbn: '9783333333333' }])
+    expect(report.routerBooksMissingFromFile).toEqual([])
+  })
+
+  it('classe aussi une fiche en ligne sans ISBN du tout (jamais matchable par construction) selon son mode de suivi', () => {
+    const routerRows = parseRouterWorkbook(routerWorkbook([[9782843033452, 'Autre titre', 'Autre, Auteur', 'x', 1, 5]]))
+    const books = [
+      book({ id: 7, slug: 'sans-isbn-manuel', isbn: null, stockSuivi: 'manuel' }),
+      book({ id: 8, slug: 'sans-isbn-routeur', isbn: null, stockSuivi: 'routeur' }),
+    ]
+
+    const report = matchStock(routerRows, books)
+
+    expect(report.manualBooksNotInFile).toEqual([{ id: 7, slug: 'sans-isbn-manuel', title: 'sans-isbn-manuel', isbn: null }])
+    expect(report.routerBooksMissingFromFile).toEqual([{ id: 8, slug: 'sans-isbn-routeur', title: 'sans-isbn-routeur', isbn: null }])
+  })
+
+  it("une fiche routeur PRÉSENTE dans le fichier reste un simple appariement — aucune alerte", () => {
+    const routerRows = parseRouterWorkbook(routerWorkbook([[9784444444444, 'Titre suivi', 'Auteur, Un', 'x', 1, 9]]))
+    const books = [book({ id: 9, slug: 'titre-suivi', isbn: '9784444444444', stockSuivi: 'routeur' })]
+
+    const report = matchStock(routerRows, books)
+
+    expect(report.matched).toEqual([{ bookId: 9, slug: 'titre-suivi', title: 'titre-suivi', stock: 9 }])
+    expect(report.routerBooksMissingFromFile).toEqual([])
+    expect(report.manualBooksNotInFile).toEqual([])
   })
 })

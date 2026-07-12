@@ -7,6 +7,8 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE TYPE "payload"."enum_orders_billing_address_country" AS ENUM('FR', 'BE', 'CH');
   CREATE TYPE "payload"."enum_orders_shipping_method" AS ENUM('standard', 'reduit', 'offert');
   CREATE TYPE "payload"."enum_promo_codes_type" AS ENUM('fixed_cart', 'free_shipping');
+  CREATE TYPE "payload"."enum_books_commerce_stock_suivi" AS ENUM('routeur', 'manuel');
+  CREATE TYPE "payload"."enum__books_v_version_commerce_stock_suivi" AS ENUM('routeur', 'manuel');
   CREATE TABLE "payload"."orders_lines" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
@@ -69,9 +71,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "payload"."books" ADD COLUMN "commerce_sellable" boolean DEFAULT false;
   ALTER TABLE "payload"."books" ADD COLUMN "commerce_stock" numeric;
   ALTER TABLE "payload"."books" ADD COLUMN "commerce_reduced_shipping_flag" boolean DEFAULT false;
+  ALTER TABLE "payload"."books" ADD COLUMN "commerce_stock_suivi" "payload"."enum_books_commerce_stock_suivi" DEFAULT 'manuel';
   ALTER TABLE "payload"."_books_v" ADD COLUMN "version_commerce_sellable" boolean DEFAULT false;
   ALTER TABLE "payload"."_books_v" ADD COLUMN "version_commerce_stock" numeric;
   ALTER TABLE "payload"."_books_v" ADD COLUMN "version_commerce_reduced_shipping_flag" boolean DEFAULT false;
+  ALTER TABLE "payload"."_books_v" ADD COLUMN "version_commerce_stock_suivi" "payload"."enum__books_v_version_commerce_stock_suivi" DEFAULT 'manuel';
   ALTER TABLE "payload"."payload_locked_documents_rels" ADD COLUMN "orders_id" integer;
   ALTER TABLE "payload"."payload_locked_documents_rels" ADD COLUMN "promo_codes_id" integer;
   ALTER TABLE "payload"."orders_lines" ADD CONSTRAINT "orders_lines_book_id_books_id_fk" FOREIGN KEY ("book_id") REFERENCES "payload"."books"("id") ON DELETE set null ON UPDATE no action;
@@ -109,9 +113,11 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   ALTER TABLE "payload"."books" DROP COLUMN "commerce_sellable";
   ALTER TABLE "payload"."books" DROP COLUMN "commerce_stock";
   ALTER TABLE "payload"."books" DROP COLUMN "commerce_reduced_shipping_flag";
+  ALTER TABLE "payload"."books" DROP COLUMN "commerce_stock_suivi";
   ALTER TABLE "payload"."_books_v" DROP COLUMN "version_commerce_sellable";
   ALTER TABLE "payload"."_books_v" DROP COLUMN "version_commerce_stock";
   ALTER TABLE "payload"."_books_v" DROP COLUMN "version_commerce_reduced_shipping_flag";
+  ALTER TABLE "payload"."_books_v" DROP COLUMN "version_commerce_stock_suivi";
   ALTER TABLE "payload"."orders_lines" DISABLE ROW LEVEL SECURITY;
   ALTER TABLE "payload"."orders" DISABLE ROW LEVEL SECURITY;
   ALTER TABLE "payload"."promo_codes" DISABLE ROW LEVEL SECURITY;
@@ -124,5 +130,7 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   DROP TYPE "payload"."enum_orders_shipping_address_country";
   DROP TYPE "payload"."enum_orders_billing_address_country";
   DROP TYPE "payload"."enum_orders_shipping_method";
-  DROP TYPE "payload"."enum_promo_codes_type";`)
+  DROP TYPE "payload"."enum_promo_codes_type";
+  DROP TYPE "payload"."enum_books_commerce_stock_suivi";
+  DROP TYPE "payload"."enum__books_v_version_commerce_stock_suivi";`)
 }

@@ -19,10 +19,18 @@ import {
  * statut éditorial d'une fiche (une fiche « à paraître » peut déjà avoir du
  * stock chez l'imprimeur/le routeur).
  *
+ * Chaque fiche appariée passe (ou reste) en `stockSuivi: 'routeur'` — c'est
+ * l'import qui recrute dans ce mode, jamais une saisie humaine (décision
+ * client du 12/07 : hors routeur = suivi manuel, comme les goodies). Les
+ * fiches « routeur » absentes du fichier ne sont PAS touchées : stock
+ * conservé tel quel, mode conservé — l'alerte `routerBooksMissingFromFile`
+ * persiste au prochain import tant que l'anomalie n'est pas résolue.
+ *
  * Écriture en `data.commerce` complet (valeurs existantes + `stock`/
- * `stockUpdatedAt` écrasés) plutôt qu'un patch partiel du sous-groupe : évite
- * de s'appuyer sur la sémantique de fusion de Payload pour un champ groupe,
- * la fiche étant de toute façon déjà chargée pour l'appariement.
+ * `stockSuivi`/`stockUpdatedAt` écrasés) plutôt qu'un patch partiel du
+ * sous-groupe : évite de s'appuyer sur la sémantique de fusion de Payload
+ * pour un champ groupe, la fiche étant de toute façon déjà chargée pour
+ * l'appariement.
  */
 
 export interface StockImportResult extends StockImportReport {
@@ -51,6 +59,7 @@ export async function importRouterStock(
     slug: doc.slug,
     title: doc.title,
     isbn: doc.isbn ?? null,
+    stockSuivi: doc.commerce?.stockSuivi ?? null,
   }))
 
   const report = matchStock(routerRows, books)
@@ -65,6 +74,7 @@ export async function importRouterStock(
         commerce: {
           ...(existing?.commerce ?? {}),
           stock: entry.stock,
+          stockSuivi: 'routeur',
           stockUpdatedAt,
         },
       },

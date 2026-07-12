@@ -378,11 +378,34 @@ export const Books: CollectionConfig = {
             description:
               'Champ unique pour tout ce qui se vend — livres ET produits ' +
               'boutique-seuls/goodies (même mécanique de décrément ensuite). ' +
-              "Vide = non suivi. Pour les livres : alimenté par l'import " +
-              'routeur mensuel. Pour les goodies : saisi ici à la main. Le ' +
-              'stock EST la disponibilité — pas de bascule « en stock/épuisé » ' +
-              'séparée (décision client du 12/07) ; 0 signifie épuisé sans ' +
-              'retirer la fiche du catalogue.',
+              'Vide = pas de décompte saisi (disponible si vendable — même ' +
+              "fallback que les goodies). Alimenté par l'import routeur " +
+              'mensuel (suivi « routeur ») ou saisi ici à la main (suivi ' +
+              '« manuel », et possible aussi en suivi routeur — écrasé au ' +
+              'prochain fichier si la fiche y figure). Le stock EST la ' +
+              'disponibilité — pas de bascule « en stock/épuisé » séparée ' +
+              '(décision client du 12/07) ; 0 signifie épuisé sans retirer ' +
+              'la fiche du catalogue.',
+          },
+        },
+        {
+          name: 'stockSuivi',
+          type: 'select',
+          defaultValue: 'manuel',
+          label: 'Suivi du stock',
+          options: [
+            { value: 'routeur', label: 'Routeur (import mensuel)' },
+            { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
+          ],
+          admin: {
+            description:
+              "Posé à « routeur » automatiquement par l'import mensuel dès " +
+              "qu'une fiche est appariée au fichier ; « manuel » (défaut) " +
+              'pour tout le reste — goodies ET livres non suivis par le ' +
+              'routeur, traités pareil (décision client du 12/07). Une fiche ' +
+              '« routeur » absente du fichier suivant est signalée par ' +
+              "l'import (titre disparu du routeur) et garde ce mode tant " +
+              "que l'anomalie n'est pas résolue.",
           },
         },
         {

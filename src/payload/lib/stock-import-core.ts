@@ -73,15 +73,35 @@ export interface BookRef {
   title: string
   /** Valeur brute du champ Payload — peut contenir espaces/tirets (héritage WordPress) ; normalisée ici avant comparaison. */
   isbn: string | null
+  /**
+   * Mode de suivi courant de la fiche (`commerce.stockSuivi`) — `null`
+   * (fiche d'avant le champ) traité comme `'manuel'`, même défaut que le
+   * schéma. C'est lui qui classe une fiche absente du fichier : « manuel »
+   * = normal (fallback goodies, décision client du 12/07), « routeur » =
+   * l'alerte qui compte (titre disparu du routeur).
+   */
+  stockSuivi: 'routeur' | 'manuel' | null
 }
 
 export interface StockImportReport {
-  /** Fiches appariées — l'appelant y lit `bookId`/`stock` pour écrire `commerce.stock`. */
+  /** Fiches appariées — l'appelant y lit `bookId`/`stock` pour écrire `commerce.stock` et poser `stockSuivi: 'routeur'`. */
   matched: { bookId: number; slug: string; title: string; stock: number }[]
   /** Compte seulement (Y) : lignes du routeur qui ne correspondent à aucune fiche en ligne — normal, le fichier couvre aussi le fonds papier pur (cf. mission). */
   routerRowsWithoutBook: number
-  /** L'alerte qui compte (Z) : fiches en ligne (hors boutique) absentes du fichier routeur — ISBN manquant ou non reconnu par le routeur ce mois-ci. */
-  missingOnlineBooks: { id: number; slug: string; title: string; isbn: string | null }[]
+  /**
+   * Fiches en suivi manuel absentes du fichier — NORMAL (plus une alerte,
+   * décision client du 12/07 : hors routeur = fallback manuel, comme les
+   * goodies). Listées à titre informatif seulement.
+   */
+  manualBooksNotInFile: { id: number; slug: string; title: string; isbn: string | null }[]
+  /**
+   * LA vraie alerte : fiches ANCIENNEMENT suivies routeur (`stockSuivi:
+   * 'routeur'`) absentes du nouveau fichier — titre disparu du routeur.
+   * L'appelant n'y touche pas (stock conservé tel quel, `stockSuivi` reste
+   * `'routeur'`) : l'alerte persiste au prochain import tant que l'anomalie
+   * n'est pas résolue (correction du fichier ou passage manuel assumé).
+   */
+  routerBooksMissingFromFile: { id: number; slug: string; title: string; isbn: string | null }[]
 }
 
 /**
@@ -91,11 +111,13 @@ export interface StockImportReport {
  * notion d'origine, juste la liste qu'on lui donne.
  *
  * Une fiche sans ISBN (ou dont l'ISBN ne matche aucune ligne) tombe
- * naturellement dans `missingOnlineBooks` : la clé normalisée d'un ISBN vide
- * ne collisionne jamais avec un EAN routeur (toujours un nombre), aucun cas
- * particulier n'est nécessaire. Un ISBN partagé par plusieurs fiches (données
- * existantes, non attendu) met à jour toutes les fiches candidates plutôt que
- * d'en arbitrer une — défaut conservateur.
+ * naturellement hors appariement : la clé normalisée d'un ISBN vide ne
+ * collisionne jamais avec un EAN routeur (toujours un nombre), aucun cas
+ * particulier n'est nécessaire. Elle est ensuite classée selon son mode de
+ * suivi : « manuel » (ou legacy `null`) → information, « routeur » → alerte.
+ * Un ISBN partagé par plusieurs fiches (données existantes, non attendu) met
+ * à jour toutes les fiches candidates plutôt que d'en arbitrer une — défaut
+ * conservateur.
  */
 export function matchStock(routerRows: RouterStockRow[], books: BookRef[]): StockImportReport {
   const byIsbn = new Map<string, BookRef[]>()
@@ -125,9 +147,17 @@ export function matchStock(routerRows: RouterStockRow[], books: BookRef[]): Stoc
     }
   }
 
-  const missingOnlineBooks = books
-    .filter((book) => !matchedIds.has(book.id))
-    .map((book) => ({ id: book.id, slug: book.slug, title: book.title, isbn: book.isbn }))
+  const manualBooksNotInFile: StockImportReport['manualBooksNotInFile'] = []
+  const routerBooksMissingFromFile: StockImportReport['routerBooksMissingFromFile'] = []
+  for (const book of books) {
+    if (matchedIds.has(book.id)) continue
+    const entry = { id: book.id, slug: book.slug, title: book.title, isbn: book.isbn }
+    if (book.stockSuivi === 'routeur') {
+      routerBooksMissingFromFile.push(entry)
+    } else {
+      manualBooksNotInFile.push(entry)
+    }
+  }
 
-  return { matched, routerRowsWithoutBook, missingOnlineBooks }
+  return { matched, routerRowsWithoutBook, manualBooksNotInFile, routerBooksMissingFromFile }
 }

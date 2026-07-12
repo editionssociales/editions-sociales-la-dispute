@@ -305,9 +305,13 @@ export interface Book {
      */
     sellable?: boolean | null;
     /**
-     * Champ unique pour tout ce qui se vend — livres ET produits boutique-seuls/goodies (même mécanique de décrément ensuite). Vide = non suivi. Pour les livres : alimenté par l'import routeur mensuel. Pour les goodies : saisi ici à la main. Le stock EST la disponibilité — pas de bascule « en stock/épuisé » séparée (décision client du 12/07) ; 0 signifie épuisé sans retirer la fiche du catalogue.
+     * Champ unique pour tout ce qui se vend — livres ET produits boutique-seuls/goodies (même mécanique de décrément ensuite). Vide = pas de décompte saisi (disponible si vendable — même fallback que les goodies). Alimenté par l'import routeur mensuel (suivi « routeur ») ou saisi ici à la main (suivi « manuel », et possible aussi en suivi routeur — écrasé au prochain fichier si la fiche y figure). Le stock EST la disponibilité — pas de bascule « en stock/épuisé » séparée (décision client du 12/07) ; 0 signifie épuisé sans retirer la fiche du catalogue.
      */
     stock?: number | null;
+    /**
+     * Posé à « routeur » automatiquement par l'import mensuel dès qu'une fiche est appariée au fichier ; « manuel » (défaut) pour tout le reste — goodies ET livres non suivis par le routeur, traités pareil (décision client du 12/07). Une fiche « routeur » absente du fichier suivant est signalée par l'import (titre disparu du routeur) et garde ce mode tant que l'anomalie n'est pas résolue.
+     */
+    stockSuivi?: ('routeur' | 'manuel') | null;
     /**
      * Remplace l'ancienne règle « manifeste » au poids : un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit plutôt que la grille standard (décision client du 12/07, question ouverte n°2 du plan).
      */
@@ -650,6 +654,7 @@ export interface BooksSelect<T extends boolean = true> {
     | {
         sellable?: T;
         stock?: T;
+        stockSuivi?: T;
         reducedShippingFlag?: T;
         stockUpdatedAt?: T;
       };

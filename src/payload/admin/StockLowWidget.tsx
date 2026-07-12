@@ -3,9 +3,11 @@ import type { ServerProps } from 'payload'
 /**
  * Widget dashboard (slot `beforeDashboard`, mission « stock bas ») : titres
  * dont `commerce.stock` est sous le seuil de `reglages-boutique`
- * (`seuilAlerteStockBas`, défaut 3), stock à 0 inclus. Un stock `null`
- * (« non suivi ») n'apparaît jamais ici — c'est précisément ce que veut dire
- * « non suivi » (cf. `Books.ts`, description du champ).
+ * (`seuilAlerteStockBas`, défaut 3), stock à 0 inclus — les deux modes de
+ * suivi confondus (routeur ET manuel : un goodie saisi à la main s'alerte
+ * comme un livre routeur ; le mode est affiché par titre). Un stock `null`
+ * (pas de décompte saisi — fallback manuel, décision client du 12/07)
+ * n'apparaît jamais ici : sans décompte, pas de seuil.
  *
  * Aucun e-mail (mission point 5) : lecture seule, rafraîchie à chaque
  * chargement du tableau de bord.
@@ -41,7 +43,8 @@ export async function StockLowWidget({ payload }: ServerProps) {
         <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
           {docs.map((book) => (
             <li key={book.id}>
-              {book.title} — {book.commerce?.stock ?? 0} exemplaire{(book.commerce?.stock ?? 0) > 1 ? 's' : ''}
+              {book.title} — {book.commerce?.stock ?? 0} exemplaire{(book.commerce?.stock ?? 0) > 1 ? 's' : ''}{' '}
+              <em>({book.commerce?.stockSuivi === 'routeur' ? 'suivi routeur' : 'suivi manuel'})</em>
             </li>
           ))}
         </ul>
