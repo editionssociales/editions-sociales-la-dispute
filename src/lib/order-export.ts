@@ -1,0 +1,203 @@
+/**
+ * Formatage pur des deux profils d'export CSV commandes (plan/04-commerce.md
+ * §étape 10 ; décision client n°5 encore OUVERTE — colonnes à valider avec la
+ * personne compta, cf. corps de la PR). Zéro I/O, zéro Payload : les shapes
+ * ci-dessous sont des interfaces locales décorrélées de `payload-types.ts`
+ * (même découplage que `order-mail.ts`) — l'orchestration (`src/payload/lib/
+ * order-export-handler.ts`) fait le mapping depuis les docs Payload.
+ *
+ * Séparateur `;` et décimale `,` : convention CSV française — Excel/
+ * LibreOffice en locale fr_FR ouvrent ce fichier directement (double-clic,
+ * sans assistant d'import) sans ambiguïté avec le séparateur décimal.
+ */
+
+/** Même six statuts que `Orders.ts:status` — dupliqué ici en type large (string) pour ne pas coupler ce module pur aux types générés Payload. */
+export type OrderExportStatus = "paid" | "prepared" | "shipped" | "cancelled" | "refunded" | "failed";
+
+/** Libellés FR affichés au back-office (`Orders.ts`, options du champ `status`) — tenus manuellement en phase, comme `order-mail.ts` le fait pour son propre gabarit. */
+const STATUS_LABELS: Record<OrderExportStatus, string> = {
+  paid: "Payée",
+  prepared: "Préparée",
+  shipped: "Expédiée",
+  cancelled: "Annulée",
+  refunded: "Remboursée",
+  failed: "Échec du paiement",
+};
+
+function statusLabel(status: string): string {
+  return STATUS_LABELS[status as OrderExportStatus] ?? status;
+}
+
+/**
+ * Statuts couverts par l'export « préparation » — décalque de `processing/
+ * on-hold` côté Woo (commandes encaissées, pas encore expédiées : à préparer
+ * ou en cours de préparation). `shipped/cancelled/refunded/failed` n'ont plus
+ * rien à préparer. Exporté pour que l'orchestration filtre sa requête Payload
+ * sur exactement cet ensemble (une seule source de vérité).
+ */
+export const PREPARATION_ORDER_STATUSES: readonly OrderExportStatus[] = ["paid", "prepared"];
+
+export interface OrderExportAddress {
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string | null;
+  postalCode: string;
+  city: string;
+  country: string;
+}
+
+export interface OrderExportLine {
+  /** Identifiant du livre/produit — analogue du `_product_id` Woo (colonne « Article # »). */
+  bookId: number;
+  isbn: string | null;
+  title: string;
+  quantity: number;
+  /** Euros TTC. */
+  unitPriceTTC: number;
+}
+
+export interface OrderExportRow {
+  number: string;
+  /** ISO 8601 — date de création (= date de paiement, la commande n'existe qu'une fois payée). */
+  createdAt: string;
+  status: string;
+  email: string;
+  lines: OrderExportLine[];
+  shippingAddress: OrderExportAddress;
+  billingAddress: OrderExportAddress;
+  /** Euros TTC. */
+  totalTTC: number;
+  /** Euros TTC. */
+  shippingCostTTC: number;
+  /** Euros TTC. */
+  discountTTC: number;
+  couponCode: string | null;
+  stripePaymentIntentId: string | null;
+}
+
+const VAT_RATE = 0.055;
+
+/** Arrondi au centime — même garde-fou flottant que `shipping-core.ts`/`order-webhook-core.ts` (jamais de somme d'argent non arrondie). */
+function roundCents(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Part de TVA à 5,5 % incluse dans un montant TTC — prix TTC non recalculé au
+ * checkout (pratique Woo actuelle, recon R2 §2.8), la ventilation ne vit
+ * QUE dans cet export. `HT = TTC / 1,055` ; la part TVA est la différence,
+ * arrondie au centime (jamais le HT arrondi puis soustrait — l'arrondi se
+ * fait une seule fois, sur le résultat final).
+ */
+export function computeVatPart(totalTTC: number): number {
+  const ht = totalTTC / (1 + VAT_RATE);
+  return roundCents(totalTTC - ht);
+}
+
+/** Nombre → texte décimale française à 2 décimales (`12,50`), sans symbole monétaire ni séparateur de milliers — cellule numérique propre pour un tableur compta. */
+function formatAmount(value: number): string {
+  return roundCents(value).toFixed(2).replace(".", ",");
+}
+
+const DELIMITER = ";";
+const LINE_BREAK = "\r\n";
+
+/** Échappe une cellule CSV (RFC 4180) — guillemets doublés, cellule entourée de guillemets si elle contient le séparateur, un guillemet ou un saut de ligne. */
+function escapeCsvCell(value: string): string {
+  if (/[;"\r\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function toCsv(header: readonly string[], rows: readonly (readonly string[])[]): string {
+  const lines = [header, ...rows].map((row) => row.map(escapeCsvCell).join(DELIMITER));
+  return lines.join(LINE_BREAK) + LINE_BREAK;
+}
+
+const PREPARATION_HEADER = [
+  "E-mail du client",
+  "Article #",
+  "UGS(ISBN)",
+  "Nom",
+  "Quantité",
+  "Prix du produit",
+  "Code de coupon",
+  "Réduction",
+] as const;
+
+/**
+ * Profil « préparation » — décalque exact des colonnes du profil Advanced
+ * Order Export réellement utilisé (plan §étape 10). Une ligne par ligne de
+ * commande (le coupon et la remise, faits au niveau de la commande, sont
+ * répétés sur chaque ligne — même aplatissement qu'AOE). L'appelant filtre en
+ * amont sur `PREPARATION_ORDER_STATUSES` : ce module ne re-filtre pas.
+ */
+export function formatPreparationCsv(orders: readonly OrderExportRow[]): string {
+  const rows = orders.flatMap((order) =>
+    order.lines.map((line) => [
+      order.email,
+      String(line.bookId),
+      line.isbn ?? "",
+      line.title,
+      String(line.quantity),
+      formatAmount(line.unitPriceTTC),
+      order.couponCode ?? "",
+      formatAmount(order.discountTTC),
+    ]),
+  );
+  return toCsv(PREPARATION_HEADER, rows);
+}
+
+const COMPTA_HEADER = [
+  "N° commande",
+  "Date",
+  "Statut",
+  "Email",
+  "Nom (livraison)",
+  "Adresse (livraison)",
+  "Complément (livraison)",
+  "Code postal (livraison)",
+  "Ville (livraison)",
+  "Pays (livraison)",
+  "Nom (facturation)",
+  "Adresse (facturation)",
+  "Complément (facturation)",
+  "Code postal (facturation)",
+  "Ville (facturation)",
+  "Pays (facturation)",
+  "Total TTC",
+  "Port TTC",
+  "Remise TTC",
+  "Part TVA 5,5 % (calculée)",
+  "Moyen de paiement",
+  "Référence Stripe (PaymentIntent)",
+] as const;
+
+function addressCells(address: OrderExportAddress): string[] {
+  return [address.fullName, address.addressLine1, address.addressLine2 ?? "", address.postalCode, address.city, address.country];
+}
+
+/**
+ * Profil « compta » — une ligne par commande (pas par ligne d'article),
+ * bornes de dates appliquées en amont par l'appelant (`from`/`to`). Le moyen
+ * de paiement est toujours « Stripe » : le checkout unifié (lot 2, étape 8)
+ * n'a pas d'autre passerelle — pas un champ stocké, une constante du module.
+ */
+export function formatComptaCsv(orders: readonly OrderExportRow[]): string {
+  const rows = orders.map((order) => [
+    order.number,
+    order.createdAt.slice(0, 10),
+    statusLabel(order.status),
+    order.email,
+    ...addressCells(order.shippingAddress),
+    ...addressCells(order.billingAddress),
+    formatAmount(order.totalTTC),
+    formatAmount(order.shippingCostTTC),
+    formatAmount(order.discountTTC),
+    formatAmount(computeVatPart(order.totalTTC)),
+    "Stripe",
+    order.stripePaymentIntentId ?? "",
+  ]);
+  return toCsv(COMPTA_HEADER, rows);
+}

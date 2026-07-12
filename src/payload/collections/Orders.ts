@@ -1,6 +1,10 @@
 import type { CollectionAfterChangeHook, CollectionConfig, Field } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
+import {
+  exportComptaHandler,
+  exportPreparationHandler,
+} from '../lib/order-export-handler.ts'
 import { formatOrderNumber } from '../lib/order-number.ts'
 
 /**
@@ -102,6 +106,11 @@ export const Orders: CollectionConfig = {
     description:
       'Commandes du commerce natif — créées par le webhook Stripe, suivies ' +
       'ici (statut de préparation/expédition uniquement).',
+    // Export CSV (mission « exports compta + livraison de la PR », plan §4
+    // étape 10) — panneau au-dessus du tableau, cf. `OrderExportPanel.tsx`.
+    components: {
+      beforeListTable: ['/payload/admin/OrderExportPanel.tsx#OrderExportPanel'],
+    },
   },
   access: {
     read: isAdminOrEditor,
@@ -114,6 +123,22 @@ export const Orders: CollectionConfig = {
   hooks: {
     afterChange: [assignOrderNumber],
   },
+  // `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`
+  // — deux profils d'export CSV (authentifié admin/éditeur, cf.
+  // `order-export-handler.ts` pour le détail : filtrage, formatage,
+  // en-têtes de réponse).
+  endpoints: [
+    {
+      path: '/export/preparation',
+      method: 'get',
+      handler: exportPreparationHandler,
+    },
+    {
+      path: '/export/compta',
+      method: 'get',
+      handler: exportComptaHandler,
+    },
+  ],
   fields: [
     {
       name: 'number',
