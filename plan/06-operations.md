@@ -72,7 +72,7 @@ Alertes : email Youri + push app mobile (SMS/appel = payant, non requis). Après
 - **Aucune bannière de consentement nécessaire — vérifié** : Vercel WA est réellement sans cookie (hash de requête jeté après 24 h, données agrégées), ce qui rentre dans l'exemption « mesure d'audience » CNIL (finalité stricte, pas de cross-site). Condition à tenir : **ne rien ajouter d'autre** (pas de GA, pas de pixel) sans revoir la question.
 - **Vérification** : DevTools → onglet Application : **zéro cookie déposé** ; réseau : requêtes `/_vercel/insights/*` en prod ; visites visibles dans le dashboard après quelques minutes.
 
-### Jalon S2 — Sauvegardes Postgres + médias exportées (21–24/07 ferme — la prod dépend de Neon dès la bascule `CATALOGUE_SOURCE=pg` du 20/07 ; ~0,25–0,5 j)
+### Jalon S2 — Sauvegardes Postgres + médias exportées (à boucler avant l'extinction douce des WP catalogue — la prod dépend de Neon dès le swap `CATALOGUE_SOURCE=pg`, qui rejoint désormais la fenêtre de bascule unique, 24–28/07 proposée, cf. `plan/02-mise-en-production.md` ; ~0,25–0,5 j)
 
 **Étape 5 — Étage 1, natif fournisseur : restore window Neon.**
 - À l'activation du plan Launch (phase catalogue) : configurer la **restore window à 7 jours** (PITR/instant restore — vérifié : Free = 6 h plafonné 1 Go ; Launch = jusqu'à 7 j, ~0,20 $/Go-mois sur un volume ici minuscule).
@@ -161,7 +161,7 @@ Pas de migration de données dans cette phase. Deux flux de données créés :
 |---|---|---|
 | **ven 11/07** | **S1a** : org Sentry UE + comptes (P2–P5) + SDK + alertes (ét. 1–2) | 0,25 j |
 | **lun 13–mar 14/07** (avant la démo du 15/07 et avant toute mise en réel des dons) | **S1b** : 9 moniteurs calibrés + test de faux positif (ét. 3), analytics + vérif zéro cookie (ét. 4). Bonus démo 15/07 : « le site est déjà sous surveillance » — la démo n'exige que ça, pas la recette complète | 0,25 j |
-| **21–24/07 (ferme)** — la prod dépend de Neon dès la bascule `CATALOGUE_SOURCE=pg` du **20/07** ; S2 opérationnel **avant l'extinction douce des WP catalogue (~28/07)**, idéalement dès le swap | **S2** : restore window Launch (ét. 5), store privé + paire age + workflow backup (ét. 6), test de restauration (ét. 7) — condition d'extinction des WP catalogue. Absorbe les 0,25 j de l'ex-étape E12 de la phase 3, supprimée (cf. Dépendances) | 0,25–0,5 j |
+| **dans la fenêtre de bascule unique (24–28/07 proposée) ou juste après** — la prod dépend de Neon dès le swap `CATALOGUE_SOURCE=pg` (cf. `plan/02-mise-en-production.md`) ; S2 opérationnel **avant l'extinction douce des WP catalogue** | **S2** : restore window Launch (ét. 5), store privé + paire age + workflow backup (ét. 6), test de restauration (ét. 7) — condition d'extinction des WP catalogue. Absorbe les 0,25 j de l'ex-étape E12 de la phase 3, supprimée (cf. Dépendances) | 0,25–0,5 j |
 | **semaine du 27–31/07** (recette avant fermeture d'août) | **S3** : runbook (ét. 8), voie de transfert consignée (Q7 — tranchée avant le 28/07, protocole phase 7 ét. 9) + destinataires (ét. 10), **1re passe de garde boutique** (ét. 9bis), recette critères 1–8 | 0,25 j |
 | **au fil des cutovers** (fin juillet, puis septembre pour la boutique) | Re-pointages/suppressions de moniteurs (ét. 9) | inclus |
 | **15/08** | Checklist campagne (moniteurs, quota Sentry, dump < 24 h, **webhooks Stripe : état + destinataires d'alerte**, app mobile ; Youri disponible) | ~0,1 j |
