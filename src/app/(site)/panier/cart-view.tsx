@@ -19,6 +19,11 @@ import { computeShipping, FREE_SHIPPING_MIN_CART_CENTS, type ShippingZone } from
 import type { PromoEvalResult } from "@/payload/lib/promo-eval-core";
 import { getCartSnapshot, validatePromoCode, type CartSnapshot } from "./actions";
 
+interface CheckoutErrorBody {
+  error?: string;
+  refusals?: { message: string }[];
+}
+
 /**
  * Le vrai panier (plan §4 étape 6, `COMMERCE_NATIVE=1` uniquement — rendu
  * exclusivement par `page.tsx` sous ce flag). Le panier lui-même (ids +
@@ -221,6 +226,47 @@ export function CartView() {
   const discountCents = promoResult?.ok === true && promoResult.type === "fixed_cart" ? promoResult.discountCents : 0;
   const totals = computeCartTotals(summary.subtotalCents, discountCents, shipping.ok ? shipping.costCents : null);
 
+  const [checkoutPending, startCheckoutTransition] = useTransition();
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const hasPurchasableLine = summary.lines.some((line) => line.purchasable);
+
+  /**
+   * Appelle `POST /api/checkout` (plan §4 étape 8) — RE-VALIDÉ en entier côté
+   * serveur (prix, stock, promo, zone) : ce composant n'envoie que des
+   * `{id, qty}` + zone + code promo saisi, jamais un total calculé ici. Sur
+   * succès, redirection pleine page vers Stripe (pas un `router.push`, l'URL
+   * est hors du domaine de l'app) ; sur refus, message serveur affiché tel
+   * quel (déjà rédigé pour un lecteur, cf. `checkout-core.ts`).
+   */
+  function handleCheckout() {
+    setCheckoutError(null);
+    startCheckoutTransition(async () => {
+      try {
+        const res = await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            lines: state.lines.map((line) => ({ id: line.id, qty: line.qty })),
+            zone,
+            ...(promoInput.trim() && { promoCode: promoInput.trim() }),
+          }),
+        });
+        const data = (await res.json()) as { url?: string } & CheckoutErrorBody;
+        if (res.ok && typeof data.url === "string") {
+          window.location.href = data.url;
+          return;
+        }
+        setCheckoutError(
+          data.refusals && data.refusals.length > 0
+            ? data.refusals.map((r) => r.message).join(" ")
+            : (data.error ?? "Le paiement est momentanément indisponible, réessayez."),
+        );
+      } catch {
+        setCheckoutError("Le paiement est momentanément indisponible, réessayez.");
+      }
+    });
+  }
+
   if (!ready) {
     return <p className="py-16 text-center font-sans text-sm text-black/50">Chargement du panier…</p>;
   }
@@ -359,15 +405,18 @@ export function CartView() {
       <div className="mt-8 flex flex-col items-start gap-2">
         <button
           type="button"
-          disabled
-          aria-disabled="true"
-          className="inline-flex items-center justify-center border-2 border-black bg-black px-8 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.05em] text-white opacity-40"
+          onClick={handleCheckout}
+          disabled={checkoutPending || !shipping.ok || !hasPurchasableLine}
+          aria-disabled={checkoutPending || !shipping.ok || !hasPurchasableLine}
+          className={`inline-flex items-center justify-center border-2 border-black bg-black px-8 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.05em] text-white transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white ${FOCUS_RING}`}
         >
-          Commander
+          {checkoutPending ? "Redirection…" : "Commander"}
         </button>
-        <p className="font-sans text-xs text-black/50">
-          Le paiement en ligne sera branché à l’étape suivante du chantier.
-        </p>
+        {checkoutError && (
+          <p className="font-sans text-xs font-bold text-brick" role="alert">
+            {checkoutError}
+          </p>
+        )}
       </div>
     </div>
   );

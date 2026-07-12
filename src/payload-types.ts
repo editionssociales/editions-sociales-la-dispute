@@ -373,9 +373,9 @@ export interface Order {
    */
   number?: string | null;
   /**
-   * Seul champ modifiable au back-office — suivi de préparation (paid → prepared → shipped) ; annulation/remboursement au besoin.
+   * Seul champ modifiable au back-office — suivi de préparation (paid → prepared → shipped) ; annulation/remboursement au besoin. « Échec du paiement » : posé par le webhook (checkout.session.async_payment_failed) pour un moyen de paiement différé (ex. virement/prélèvement) dont la confirmation échoue APRÈS que checkout.session.completed s'est déjà présenté en attente — trace l'essai sans jamais décrémenter le stock (webhook route, lot 2 étape 9).
    */
-  status: 'paid' | 'prepared' | 'shipped' | 'cancelled' | 'refunded';
+  status: 'paid' | 'prepared' | 'shipped' | 'cancelled' | 'refunded' | 'failed';
   email: string;
   shippingAddress: {
     fullName: string;
