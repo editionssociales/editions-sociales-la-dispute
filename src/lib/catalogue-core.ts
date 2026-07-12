@@ -1,12 +1,11 @@
-import { decodeEntities, displayAuthor, httpsify, parseWpDate } from "./format";
-import { rebaseWpMediaUrl, sanitizeCms } from "./cms-html";
+import { decodeEntities, httpsify } from "./format";
+import { sanitizeCms } from "./cms-html";
 import { frenchTypo } from "./typo-fr";
 import {
   priceOf,
   slugFromBoutiqueLink,
+  type RawBook,
   type WcProduct,
-  type WpBook,
-  type WpCoverField,
 } from "./catalogue-source";
 import type {
   Book,
@@ -20,66 +19,37 @@ import type {
 } from "./types";
 
 /**
- * Cœur du catalogue unifié — **pur**, sans I/O ni rendu.
+ * Cœur du catalogue unifié — **pur**, sans I/O ni rendu, et sans dialecte de
+ * source (le fil WordPress vit dans `catalogue-wp-map.ts`, l'enveloppe Payload
+ * dans `catalogue-pg-map.ts`).
  *
- * Fusionne les fiches livre des deux fonds (WordPress) avec les produits
- * boutique (WooCommerce), résout prix / disponibilité / lien d'achat, puis
- * expose filtre, tri et facettes. Un livre n'est jamais retiré faute d'être en
+ * Fusionne les fiches livre des deux fonds avec les produits boutique
+ * (WooCommerce), résout prix / disponibilité / lien d'achat, puis expose
+ * filtre, tri et facettes. Un livre n'est jamais retiré faute d'être en
  * vente : il est « à paraître » ou « indisponible en ligne ». Toute cette
  * logique se teste avec des fixtures, à travers le port `CatalogueSource`.
  */
 
 /* -------------------------- transformation brut → domaine -------------------------- */
 
-function toNumber(value: unknown): number | null {
-  if (value == null || value === "") return null;
-  const n = Number(String(value).replace(",", ".").replace(/[^\d.]/g, ""));
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Ratio par défaut quand les dimensions réelles sont inconnues (rendu en `object-contain`, jamais recadré). */
-const DEFAULT_COVER_RATIO = { width: 2, height: 3 };
-
-function toCover(value?: WpCoverField | string | null): Cover | null {
-  if (!value) return null;
-  if (typeof value === "string") {
-    // Ancienne forme du mu-plugin (avant redéploiement) : URL brute sans dimensions.
-    const url = httpsify(value);
-    // Découplage CMS (E3) : rebase vers cms-es/cms-ld avant le flip DNS.
-    return url ? { url: rebaseWpMediaUrl(url), ...DEFAULT_COVER_RATIO } : null;
-  }
-  const url = httpsify(value.url);
-  if (!url || !value.width || !value.height) return null;
-  return { url: rebaseWpMediaUrl(url), width: value.width, height: value.height };
-}
-
-/** Fiche livre brute (WordPress) → `Book` de base, statut non encore résolu. */
-export function toBook(edition: EditionSlug, item: WpBook): Book {
-  const b = item.book ?? {};
+/** Fiche brute du port → `Book` de base, statut non encore résolu. */
+export function toBook(edition: EditionSlug, raw: RawBook): Book {
   return {
-    id: item.id,
+    id: raw.id,
     edition,
     origin: "catalogue",
-    slug: item.slug,
-    // Orthotypo française (E6 du plan) : les titres ne passent pas par
-    // `sanitizeCms`/`textFilter` (pas de HTML ici) — on l'applique donc
-    // directement, après décodage des entités.
-    title: frenchTypo(decodeEntities(item.title?.rendered ?? "")),
-    authors: (b.authors ?? []).map((a) => ({
-      name: displayAuthor(a.name),
-      slug: a.slug,
-    })),
-    collection: b.collection ? { name: b.collection.name, slug: b.collection.slug } : null,
-    isbn: b.isbn || null,
-    price: toNumber(b.prix),
-    pages: toNumber(b.pages),
-    publishedAt: parseWpDate(b.date_parution ?? null),
-    cover: toCover(b.cover),
-    buy: {
-      boutique: b.boutique || null,
-      parislibrairies: b.parislibrairies || null,
-      lalibrairie: b.lalibrairie || null,
-    },
+    slug: raw.slug,
+    // Orthotypo française (E6 du plan) : indépendante de la source — un titre
+    // saisi dans Payload mérite ses insécables autant qu'un titre WordPress.
+    title: frenchTypo(raw.title),
+    authors: raw.authors,
+    collection: raw.collection,
+    isbn: raw.isbn,
+    price: raw.price,
+    pages: raw.pages,
+    publishedAt: raw.publishedAt,
+    cover: raw.cover,
+    buy: raw.buy,
     status: "unavailable",
     permalink: null,
   };
@@ -88,7 +58,7 @@ export function toBook(edition: EditionSlug, item: WpBook): Book {
 function productCover(p: WcProduct): Cover | null {
   const url = httpsify(p.images?.[0]?.src ?? null);
   // Dimensions inconnues côté Store API : ratio par défaut, rendu en `object-contain`.
-  return url ? { url, ...DEFAULT_COVER_RATIO } : null;
+  return url ? { url, width: 2, height: 3 } : null;
 }
 
 /** Résout le statut d'achat d'un livre à partir du produit boutique associé. */
@@ -147,7 +117,7 @@ function bookFromProduct(p: WcProduct): Book {
  * fonds sont parcourus dans l'ordre d'insertion de `rawByEdition`.
  */
 export function buildCatalogue(
-  rawByEdition: Partial<Record<EditionSlug, WpBook[]>>,
+  rawByEdition: Partial<Record<EditionSlug, RawBook[]>>,
   products: WcProduct[],
 ): Book[] {
   const siteBooks: Book[] = [];
@@ -261,11 +231,10 @@ export function computeFacets(
 /** Fiche complète d'un livre : base + statut résolu + contenus riches nettoyés (`SafeHtml`). */
 export function buildBookDetail(
   edition: EditionSlug,
-  item: WpBook,
+  raw: RawBook,
   products: WcProduct[],
 ): BookDetail {
-  const b = item.book ?? {};
-  const book = toBook(edition, item);
+  const book = toBook(edition, raw);
   const productSlug = slugFromBoutiqueLink(book.buy.boutique);
   const product = productSlug ? products.find((p) => p.slug === productSlug) : undefined;
   const resolved = resolvePurchase(book, product);
@@ -273,9 +242,9 @@ export function buildBookDetail(
   return {
     ...book,
     ...resolved,
-    presentation: sanitizeCms(item.content?.rendered ?? ""),
-    furtherReading: b.plus_loin ? sanitizeCms(b.plus_loin) : null,
-    tocUrl: httpsify(b.table ?? null),
-    excerptUrl: httpsify(b.extrait ?? null),
+    presentation: sanitizeCms(raw.presentationHtml ?? ""),
+    furtherReading: raw.furtherReadingHtml ? sanitizeCms(raw.furtherReadingHtml) : null,
+    tocUrl: raw.tocUrl,
+    excerptUrl: raw.excerptUrl,
   };
 }

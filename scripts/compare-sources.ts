@@ -42,8 +42,9 @@ import {
   newReleases,
   queryBooks,
 } from "../src/lib/catalogue-core.ts";
-import { payloadBookToWpBook } from "../src/lib/catalogue-pg-map.ts";
-import { slugFromBoutiqueLink, type WcProduct, type WpBook } from "../src/lib/catalogue-source.ts";
+import { payloadBookToRawBook } from "../src/lib/catalogue-pg-map.ts";
+import { slugFromBoutiqueLink, type RawBook, type WcProduct } from "../src/lib/catalogue-source.ts";
+import { wpBookToRawBook } from "../src/lib/catalogue-wp-map.ts";
 import { fetchAllPages } from "../src/lib/fetch-all-pages.ts";
 import type { Book, BookDetail, EditionSlug, Facet } from "../src/lib/types.ts";
 import type { Book as PayloadBook } from "../src/payload-types.ts";
@@ -426,17 +427,18 @@ async function compareSite(
   const edition = EDITION_BY_SITE[site];
   await healthCheck(site);
 
-  // `WpCatalogueRaw` (fetch-wp.ts) est structurellement un sur-ensemble de
-  // `WpBook` (catalogue-source.ts) — même `book: WpBookField`, plus `date` —
-  // et inclut déjà `content` (contrairement à `catalogue-http.ts:listBooks`,
+  // `fetchCatalogue` (fetch-wp.ts) renvoie le fil REST (`WpCatalogueRaw ⊃
+  // WpBook`), `content` inclus (contrairement à `catalogue-http.ts:listBooks`,
   // qui l'omet pour l'usage prod) : un seul passage REST donne ici à la fois
-  // la liste **et** le détail de chaque fiche, pas besoin d'un fetch par livre.
-  const httpRaw = (await fetchCatalogue(site, logger)) as WpBook[];
-  const pgRaw = await pgBooksForEdition(payload, edition);
-  const pgAsWpBook = pgRaw.map(payloadBookToWpBook);
+  // la liste **et** le détail de chaque fiche, pas besoin d'un fetch par
+  // livre. Chaque côté passe ensuite par SON mapper de prod — exactement les
+  // chemins que le swap `CATALOGUE_SOURCE=pg` mettra face à face.
+  const httpRaw = (await fetchCatalogue(site, logger)).map(wpBookToRawBook);
+  const pgDocs = await pgBooksForEdition(payload, edition);
+  const pgRaw = pgDocs.map(payloadBookToRawBook);
 
   const httpBySlug = new Map(httpRaw.map((b) => [b.slug, b]));
-  const pgBySlug = new Map(pgRaw.map((doc, i) => [doc.slug, { doc, wpBook: pgAsWpBook[i] }]));
+  const pgBySlug = new Map(pgDocs.map((doc, i) => [doc.slug, { doc, raw: pgRaw[i] }]));
 
   const diffs: Diff[] = [];
   const ovh: OvhResidual[] = [];
@@ -467,7 +469,7 @@ async function compareSite(
     matched++;
 
     const httpBook = toBookLike(edition, httpItem, products);
-    const pgBook = toBookLike(edition, pgEntry.wpBook, products);
+    const pgBook = toBookLike(edition, pgEntry.raw, products);
     diffs.push(...diffBook(key, httpBook, pgBook));
 
     if (pgEntry.doc.contentTouched) {
@@ -478,7 +480,7 @@ async function compareSite(
     } else {
       detailCompared++;
       const httpDetail = buildBookDetail(edition, httpItem, products);
-      const pgDetail = buildBookDetail(edition, pgEntry.wpBook, products);
+      const pgDetail = buildBookDetail(edition, pgEntry.raw, products);
       diffs.push(...diffBookDetail(key, httpDetail, pgDetail));
       ovh.push(...scanOvhResiduals(key, pgDetail, pgEntry.doc));
     }
@@ -515,7 +517,7 @@ async function compareSite(
   };
 
   const httpBooks = httpRaw.map((b) => toBookLike(edition, b, products));
-  const pgBooks = pgAsWpBook.map((b) => toBookLike(edition, b, products));
+  const pgBooks = pgRaw.map((b) => toBookLike(edition, b, products));
   return { report, diffs: [...diffs, ...httpOnly, ...pgOnly], ovh, httpBooks, pgBooks };
 }
 
@@ -526,7 +528,7 @@ async function compareSite(
  * seraient toujours résolus à vide et une vraie divergence de mapping du lien
  * boutique (`buy.boutique`) passerait inaperçue.
  */
-function toBookLike(edition: EditionSlug, item: WpBook, products: WcProduct[]): Book {
+function toBookLike(edition: EditionSlug, item: RawBook, products: WcProduct[]): Book {
   return buildCatalogue({ [edition]: [item] }, products)[0];
 }
 

@@ -1,7 +1,7 @@
 import { convertLexicalToHTML } from "@payloadcms/richtext-lexical/html";
 import type { Author, Book as PayloadBook, Collection, Media } from "../payload-types";
-import type { WpBook, WpBookField, WpCoverField } from "./catalogue-source";
-import type { Term } from "./types";
+import type { RawBook } from "./catalogue-source";
+import type { Cover, Term } from "./types";
 
 /**
  * `lexical` (le paquet) n'est pas une dépendance directe du site — seulement
@@ -12,9 +12,11 @@ import type { Term } from "./types";
 type LexicalData = Parameters<typeof convertLexicalToHTML>[0]["data"];
 
 /**
- * Mapper **pur** Payload → forme brute du port (`WpBook`), symétrique de
- * l'adaptateur http : `catalogue-pg.ts` (E4 du plan) l'applique aux documents
- * lus par la Local API, `catalogue-core.ts` ne voit jamais la différence.
+ * Mapper **pur** Payload → forme brute neutre du port (`RawBook`), symétrique
+ * de `catalogue-wp-map.ts` : `catalogue-pg.ts` (E4 du plan) l'applique aux
+ * documents lus par la Local API, `catalogue-core.ts` ne voit jamais la
+ * différence. Les données Payload étant déjà propres (nombres, ISO, texte nu),
+ * le mapping va droit — plus de fausse enveloppe WordPress à fabriquer.
  *
  * Le parachute de parité (contrat `site/CLAUDE.md`) vit ici : tant qu'une
  * fiche n'a jamais été retouchée par un humain dans Payload
@@ -72,8 +74,8 @@ function toAuthors(value: PayloadBook["authors"]): Term[] {
   });
 }
 
-/** `Media` peuplé → `{url,width,height}` (dims sharp, contrat `cover` du port). */
-function toWpCover(value: PayloadBook["cover"]): WpCoverField | null {
+/** `Media` peuplé → `Cover` (dims sharp) — `null` si absent ou incomplet. */
+function toCover(value: PayloadBook["cover"]): Cover | null {
   if (!isPopulated<Media>(value) || !value.url || !value.width || !value.height) return null;
   return { url: value.url, width: value.width, height: value.height };
 }
@@ -83,33 +85,33 @@ function mediaUrl(value: number | Media | null | undefined): string | null {
   return isPopulated<Media>(value) ? (value.url ?? null) : null;
 }
 
-/** Document `books` Payload (Local API, `depth:2`) → forme brute `WpBook` du port. */
-export function payloadBookToWpBook(doc: PayloadBook): WpBook {
+/** Document `books` Payload (Local API, `depth:2`) → forme brute neutre du port. */
+export function payloadBookToRawBook(doc: PayloadBook): RawBook {
   const presentation = renderHtml(doc.presentationLegacyHtml, doc.presentation, doc.contentTouched);
   const plusLoin =
     renderHtml(doc.plusLoinLegacyHtml, doc.plusLoin, doc.contentTouched) || null;
 
-  const book: WpBookField = {
-    isbn: doc.isbn ?? null,
-    prix: doc.prix ?? null,
-    pages: doc.pages ?? null,
-    date_parution: doc.dateParution ?? null,
-    plus_loin: plusLoin,
-    table: mediaUrl(doc.tablePdf),
-    extrait: mediaUrl(doc.extraitPdf),
-    boutique: doc.buy?.boutiqueUrl ?? null,
-    parislibrairies: doc.buy?.parislibrairies ?? null,
-    lalibrairie: doc.buy?.lalibrairie ?? null,
-    authors: toAuthors(doc.authors),
-    collection: toTerm(doc.collection),
-    cover: toWpCover(doc.cover),
-  };
-
   return {
     id: doc.id,
     slug: doc.slug,
-    title: { rendered: doc.title },
-    content: { rendered: presentation },
-    book,
+    title: doc.title,
+    // Auteurs déjà en forme d'affichage (la migration convertit `Nom/Prénom` à l'import).
+    authors: toAuthors(doc.authors),
+    collection: toTerm(doc.collection),
+    isbn: doc.isbn ?? null,
+    price: doc.prix ?? null,
+    pages: doc.pages ?? null,
+    // Champ date Payload, toujours ISO — seule la partie jour intéresse le domaine.
+    publishedAt: doc.dateParution ? doc.dateParution.slice(0, 10) : null,
+    cover: toCover(doc.cover),
+    buy: {
+      boutique: doc.buy?.boutiqueUrl ?? null,
+      parislibrairies: doc.buy?.parislibrairies ?? null,
+      lalibrairie: doc.buy?.lalibrairie ?? null,
+    },
+    presentationHtml: presentation || null,
+    furtherReadingHtml: plusLoin,
+    tocUrl: mediaUrl(doc.tablePdf),
+    excerptUrl: mediaUrl(doc.extraitPdf),
   };
 }

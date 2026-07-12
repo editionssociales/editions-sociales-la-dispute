@@ -6,37 +6,23 @@
  * cutover DNS intervenu entre-temps (un flip DNS sans découplage `cms-*` ferait
  * lire le **nouveau** site par ces mêmes URLs, en silence — cf. plan §E9).
  */
+import type { WpBook } from "../../src/lib/catalogue-wp-map.ts";
 import { fetchWithRetry, HttpError, type Logger, type Site } from "./utils.ts";
 
-/** Forme brute `book` consolidée par le mu-plugin (`es_headless_book_payload`). */
-export interface WpBookField {
-  isbn?: string | null;
-  prix?: string | number | null;
-  pages?: string | number | null;
-  date_parution?: string | null;
-  plus_loin?: string | null;
-  table?: string | null;
-  extrait?: string | null;
-  boutique?: string | null;
-  parislibrairies?: string | null;
-  lalibrairie?: string | null;
-  authors?: { name: string; slug: string }[];
-  collection?: { name: string; slug: string } | null;
-  /**
-   * Contexte vérifié en prod le 09/07 (échantillonnage 295/295) : le mu-plugin
-   * déployé est l'ancienne révision → `cover` est une **string** (URL servie),
-   * jamais l'objet `{url,width,height}` visé par P4. On tolère les 3 formes :
-   * la fraîcheur de P4 (redéploiement) n'est vérifiable qu'au moment du run.
-   */
-  cover?: string | { url: string; width: number; height: number } | null;
-}
+/**
+ * Les formes du fil REST (`WpBook`, champ `book` consolidé par le mu-plugin
+ * `es_headless_book_payload`) sont importées — types seuls — de
+ * `catalogue-wp-map.ts` : une seule déclaration du contrat, la dérive entre
+ * migration et front échoue au typecheck au lieu d'être absorbée par un cast.
+ * Contexte vérifié en prod le 09/07 (échantillonnage 295/295) : le mu-plugin
+ * déployé est l'ancienne révision → `cover` y est une **string** (URL servie),
+ * jamais l'objet `{url,width,height}` visé par P4 — les 3 formes sont tolérées
+ * par le type partagé.
+ */
+export type { WpBookField } from "../../src/lib/catalogue-wp-map.ts";
 
-export interface WpCatalogueRaw {
-  id: number;
-  slug: string;
-  title: { rendered: string };
-  content?: { rendered: string };
-  book?: WpBookField;
+/** Fiche REST consommée par la migration : la forme du fil + `post_date`. */
+export interface WpCatalogueRaw extends WpBook {
   /** `post_date` WP, ISO local — devient `sortDate` tel quel. */
   date: string;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lexicalToHtml, payloadBookToWpBook } from "./catalogue-pg-map";
+import { lexicalToHtml, payloadBookToRawBook } from "./catalogue-pg-map";
 import type { Author, Book as PayloadBook, Collection, Media } from "../payload-types";
 
 /* -------- fixtures -------- */
@@ -101,106 +101,106 @@ function book(overrides: Partial<PayloadBook> = {}): PayloadBook {
   };
 }
 
-describe("payloadBookToWpBook", () => {
+describe("payloadBookToRawBook — mapping droit, sans enveloppe WordPress", () => {
   it("mappe une fiche complète (auteurs, collection, cover, PDF, liens d'achat)", () => {
-    const wp = payloadBookToWpBook(book());
+    const raw = payloadBookToRawBook(book());
 
-    expect(wp.id).toBe(42);
-    expect(wp.slug).toBe("capital");
-    expect(wp.title).toEqual({ rendered: "Le Capital" });
-    expect(wp.book?.isbn).toBe("978-2-35367-000-0");
-    expect(wp.book?.authors).toEqual([{ name: "Karl Marx", slug: "marx" }]);
-    expect(wp.book?.collection).toEqual({ name: "GEME", slug: "geme" });
-    expect(wp.book?.cover).toEqual({
+    expect(raw.id).toBe(42);
+    expect(raw.slug).toBe("capital");
+    expect(raw.title).toBe("Le Capital");
+    expect(raw.isbn).toBe("978-2-35367-000-0");
+    expect(raw.authors).toEqual([{ name: "Karl Marx", slug: "marx" }]);
+    expect(raw.collection).toEqual({ name: "GEME", slug: "geme" });
+    expect(raw.cover).toEqual({
       url: "https://blob.example/cover.jpg",
       width: 400,
       height: 600,
     });
-    expect(wp.book?.table).toBe("https://blob.example/table.pdf");
-    expect(wp.book?.extrait).toBeNull();
-    expect(wp.book?.boutique).toBe("https://boutique.editionssociales.fr/produit/capital/");
-    expect(wp.book?.parislibrairies).toBe("https://parislibrairies.fr/capital");
-    expect(wp.book?.lalibrairie).toBeNull();
+    expect(raw.tocUrl).toBe("https://blob.example/table.pdf");
+    expect(raw.excerptUrl).toBeNull();
+    expect(raw.buy.boutique).toBe("https://boutique.editionssociales.fr/produit/capital/");
+    expect(raw.buy.parislibrairies).toBe("https://parislibrairies.fr/capital");
+    expect(raw.buy.lalibrairie).toBeNull();
   });
 
-  it("renvoie le prix décimal en number (le port accepte string|number)", () => {
-    const wp = payloadBookToWpBook(book({ prix: 9.99 }));
-    expect(wp.book?.prix).toBe(9.99);
+  it("renvoie le prix tel quel — nombre déjà propre, plus de boxing string|number", () => {
+    const raw = payloadBookToRawBook(book({ prix: 9.99 }));
+    expect(raw.price).toBe(9.99);
   });
 
-  it("renvoie la date de parution telle que stockée (ISO, acceptée par parseWpDate)", () => {
-    const wp = payloadBookToWpBook(book({ dateParution: "2024-05-01T00:00:00.000Z" }));
-    expect(wp.book?.date_parution).toBe("2024-05-01T00:00:00.000Z");
+  it("normalise la date de parution Payload (ISO horodatée) en jour `YYYY-MM-DD`", () => {
+    const raw = payloadBookToRawBook(book({ dateParution: "2024-05-01T00:00:00.000Z" }));
+    expect(raw.publishedAt).toBe("2024-05-01");
   });
 
   it("sert le HTML legacy tant que contentTouched=false, même si un Lexical existe déjà", () => {
-    const wp = payloadBookToWpBook(
+    const raw = payloadBookToRawBook(
       book({
         contentTouched: false,
         presentationLegacyHtml: "<p>Présentation WordPress</p>",
         presentation: lexicalDoc("Présentation Lexical"),
       }),
     );
-    expect(wp.content?.rendered).toBe("<p>Présentation WordPress</p>");
+    expect(raw.presentationHtml).toBe("<p>Présentation WordPress</p>");
   });
 
   it("sert le Lexical converti dès que contentTouched=true (fiche rééditée)", () => {
-    const wp = payloadBookToWpBook(
+    const raw = payloadBookToRawBook(
       book({
         contentTouched: true,
         presentationLegacyHtml: "<p>Présentation WordPress</p>",
         presentation: lexicalDoc("Présentation Lexical"),
       }),
     );
-    expect(wp.content?.rendered).toBe("<p>Présentation Lexical</p>");
+    expect(raw.presentationHtml).toBe("<p>Présentation Lexical</p>");
   });
 
   it("replie sur l'autre source si celle attendue est vide (jamais de contenu perdu)", () => {
     // Fiche créée dans Payload (contentTouched=true) mais sans legacy — le Lexical
     // est bien la source ; symétriquement une fiche migrée dont le Lexical serait
     // vide retomberait sur le legacy.
-    const wp = payloadBookToWpBook(
+    const raw = payloadBookToRawBook(
       book({
         contentTouched: true,
         presentationLegacyHtml: null,
         presentation: lexicalDoc("Contenu neuf"),
       }),
     );
-    expect(wp.content?.rendered).toBe("<p>Contenu neuf</p>");
+    expect(raw.presentationHtml).toBe("<p>Contenu neuf</p>");
   });
 
   it("plus_loin : null quand ni legacy ni Lexical n'ont de contenu", () => {
-    const wp = payloadBookToWpBook(book({ plusLoin: null, plusLoinLegacyHtml: null }));
-    expect(wp.book?.plus_loin).toBeNull();
+    const raw = payloadBookToRawBook(book({ plusLoin: null, plusLoinLegacyHtml: null }));
+    expect(raw.furtherReadingHtml).toBeNull();
   });
 
   it("plus_loin : legacy servi tant que contentTouched=false", () => {
-    const wp = payloadBookToWpBook(
+    const raw = payloadBookToRawBook(
       book({
         contentTouched: false,
         plusLoinLegacyHtml: "<p>Voir aussi</p>",
         plusLoin: lexicalDoc("Voir aussi (Lexical)"),
       }),
     );
-    expect(wp.book?.plus_loin).toBe("<p>Voir aussi</p>");
+    expect(raw.furtherReadingHtml).toBe("<p>Voir aussi</p>");
   });
 
   it("gère une fiche sans wpSource (née dans Payload) sans dévier du mapping", () => {
-    const wp = payloadBookToWpBook(book({ wpSource: undefined }));
-    expect(wp.id).toBe(42);
-    expect(wp.slug).toBe("capital");
-    expect(wp.book?.authors).toEqual([{ name: "Karl Marx", slug: "marx" }]);
+    const raw = payloadBookToRawBook(book({ wpSource: undefined }));
+    expect(raw.id).toBe(42);
+    expect(raw.slug).toBe("capital");
+    expect(raw.authors).toEqual([{ name: "Karl Marx", slug: "marx" }]);
   });
 
   it("tolère authors/collection/cover absents", () => {
-    const wp = payloadBookToWpBook(
+    const raw = payloadBookToRawBook(
       book({ authors: null, collection: null, cover: null, tablePdf: null, extraitPdf: null }),
     );
-    expect(wp.book?.authors).toEqual([]);
-    expect(wp.book?.collection).toBeNull();
-    expect(wp.book?.cover).toBeNull();
-    expect(wp.book?.table).toBeNull();
-    expect(wp.book?.extrait).toBeNull();
+    expect(raw.authors).toEqual([]);
+    expect(raw.collection).toBeNull();
+    expect(raw.cover).toBeNull();
+    expect(raw.tocUrl).toBeNull();
+    expect(raw.excerptUrl).toBeNull();
   });
 });
 

@@ -2,8 +2,8 @@ import "server-only";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import { getAllStoreProducts } from "./boutique";
-import { payloadBookToWpBook } from "./catalogue-pg-map";
-import type { CatalogueSource, WpBook } from "./catalogue-source";
+import { payloadBookToRawBook } from "./catalogue-pg-map";
+import type { CatalogueSource, RawBook } from "./catalogue-source";
 import type { EditionSlug } from "./types";
 
 /**
@@ -20,7 +20,7 @@ import type { EditionSlug } from "./types";
  * sur `getAllStoreProducts`.
  */
 
-async function listBooks(edition: EditionSlug): Promise<WpBook[]> {
+async function listBooks(edition: EditionSlug): Promise<RawBook[]> {
   const payload = await getPayload({ config });
   const { docs } = await payload.find({
     collection: "books",
@@ -41,10 +41,10 @@ async function listBooks(edition: EditionSlug): Promise<WpBook[]> {
     // l'adaptateur http, qui parcourt ses propres pages en interne).
     limit: 0,
   });
-  return docs.map(payloadBookToWpBook);
+  return docs.map(payloadBookToRawBook);
 }
 
-async function getBook(edition: EditionSlug, slug: string): Promise<WpBook | null> {
+async function getBook(edition: EditionSlug, slug: string): Promise<RawBook | null> {
   const payload = await getPayload({ config });
   const { docs } = await payload.find({
     collection: "books",
@@ -57,7 +57,7 @@ async function getBook(edition: EditionSlug, slug: string): Promise<WpBook | nul
     limit: 1,
   });
   const doc = docs[0];
-  return doc ? payloadBookToWpBook(doc) : null;
+  return doc ? payloadBookToRawBook(doc) : null;
 }
 
 export function pgCatalogueSource(): CatalogueSource {

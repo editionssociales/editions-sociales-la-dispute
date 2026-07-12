@@ -1,6 +1,7 @@
 import "server-only";
 import { getAllStoreProducts } from "./boutique";
-import type { CatalogueSource, WpBook } from "./catalogue-source";
+import type { CatalogueSource, RawBook } from "./catalogue-source";
+import { wpBookToRawBook, type WpBook } from "./catalogue-wp-map";
 import { fetchAllPages } from "./fetch-all-pages";
 import type { EditionSlug } from "./types";
 
@@ -9,8 +10,9 @@ import type { EditionSlug } from "./types";
  *
  * Seul point qui touche le réseau : REST WP (CPT `catalogue`, taxonomies + ACF
  * réexposés par le mu-plugin `wp-headless/es-headless-rest.php`) et, via
- * `boutique.ts`, la WooCommerce Store API. Renvoie du **brut** ; la
- * transformation et les requêtes vivent dans `catalogue-core.ts`.
+ * `boutique.ts`, la WooCommerce Store API. Le dialecte du fil WP est absorbé
+ * par `catalogue-wp-map.ts` ; fusion et requêtes vivent dans
+ * `catalogue-core.ts`.
  */
 
 const SITES: Record<EditionSlug, string> = {
@@ -29,10 +31,10 @@ async function wpGet<T>(base: string, path: string): Promise<T> {
 }
 
 /** Toutes les fiches brutes d'un fonds (pagination `fetch-all-pages`, résilient). */
-async function listBooks(edition: EditionSlug): Promise<WpBook[]> {
+async function listBooks(edition: EditionSlug): Promise<RawBook[]> {
   const base = SITES[edition];
   const perPage = 100;
-  return fetchAllPages<WpBook>({
+  const items = await fetchAllPages<WpBook>({
     perPage,
     maxPages: 20,
     fetchPage: (page) =>
@@ -45,9 +47,10 @@ async function listBooks(edition: EditionSlug): Promise<WpBook[]> {
       if (page === 1) console.error(`[catalogue] ${edition} indisponible:`, err);
     },
   });
+  return items.map(wpBookToRawBook);
 }
 
-async function getBook(edition: EditionSlug, slug: string): Promise<WpBook | null> {
+async function getBook(edition: EditionSlug, slug: string): Promise<RawBook | null> {
   const base = SITES[edition];
   let items: WpBook[];
   try {
@@ -58,7 +61,8 @@ async function getBook(edition: EditionSlug, slug: string): Promise<WpBook | nul
   } catch {
     return null;
   }
-  return Array.isArray(items) ? (items[0] ?? null) : null;
+  const item = Array.isArray(items) ? (items[0] ?? null) : null;
+  return item ? wpBookToRawBook(item) : null;
 }
 
 export function httpCatalogueSource(): CatalogueSource {

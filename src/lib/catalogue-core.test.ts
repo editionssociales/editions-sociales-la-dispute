@@ -9,57 +9,78 @@ import {
 } from "./catalogue-core";
 import {
   inMemoryCatalogueSource,
+  type RawBook,
   type WcProduct,
-  type WpBook,
 } from "./catalogue-source";
 import type { EditionSlug } from "./types";
 
-/* -------- fixtures brutes (ce que le port renverrait) -------- */
+/* -------- fixtures brutes neutres (ce que le port transporte) --------
+ *
+ * Les dialectes de source (entités WP, `Nom/Prénom`, chaînes ACF sales…) sont
+ * absorbés par les adaptateurs — testés dans `catalogue-wp-map.test.ts` /
+ * `catalogue-pg-map.test.ts`. Ici, le cœur : fusion, résolution d'achat,
+ * requêtes, facettes.
+ */
 
-const ES_BOOKS: WpBook[] = [
-  {
+const rawBook = (
+  over: Partial<RawBook> & Pick<RawBook, "id" | "slug" | "title">,
+): RawBook => ({
+  authors: [],
+  collection: null,
+  isbn: null,
+  price: null,
+  pages: null,
+  publishedAt: null,
+  cover: null,
+  buy: { boutique: null, parislibrairies: null, lalibrairie: null },
+  presentationHtml: null,
+  furtherReadingHtml: null,
+  tocUrl: null,
+  excerptUrl: null,
+  ...over,
+});
+
+const ES_BOOKS: RawBook[] = [
+  rawBook({
     id: 1,
     slug: "capital",
-    title: { rendered: "Le Capital" },
-    content: { rendered: "<p>Présentation <script>alert(1)</script></p>" },
-    book: {
-      authors: [{ name: "Marx/Karl", slug: "marx" }],
-      collection: { name: "GEME", slug: "geme" },
-      prix: "20",
-      date_parution: "01/03/2020",
+    title: "Le Capital",
+    authors: [{ name: "Karl Marx", slug: "marx" }],
+    collection: { name: "GEME", slug: "geme" },
+    price: 20,
+    publishedAt: "2020-03-01",
+    buy: {
       boutique: "https://boutique.editionssociales.fr/produit/capital/",
-      plus_loin: "<p>Voir aussi</p>",
-      table: "http://medias.ovh/toc.pdf",
+      parislibrairies: null,
+      lalibrairie: null,
     },
-  },
-  {
+    presentationHtml: "<p>Présentation <script>alert(1)</script></p>",
+    furtherReadingHtml: "<p>Voir aussi</p>",
+    tocUrl: "https://medias.ovh/toc.pdf",
+  }),
+  rawBook({
     id: 2,
     slug: "ideologie",
-    title: { rendered: "L&#8217;Idéologie" },
-    book: {
-      authors: [{ name: "Marx/Karl", slug: "marx" }],
-      collection: { name: "GEME", slug: "geme" },
+    title: "L’Idéologie",
+    authors: [{ name: "Karl Marx", slug: "marx" }],
+    collection: { name: "GEME", slug: "geme" },
+    buy: {
+      boutique: null,
       parislibrairies: "https://parislibrairies.fr/ideologie",
+      lalibrairie: null,
     },
-  },
-  {
-    id: 3,
-    slug: "avenir",
-    title: { rendered: "Avenir" },
-    book: { date_parution: "01/01/2999" }, // futur → à paraître
-  },
+  }),
+  rawBook({ id: 3, slug: "avenir", title: "Avenir", publishedAt: "2999-01-01" }), // futur → à paraître
 ];
 
-const LD_BOOKS: WpBook[] = [
-  {
+const LD_BOOKS: RawBook[] = [
+  rawBook({
     id: 4,
     slug: "genre",
-    title: { rendered: "Le Genre" },
-    book: {
-      authors: [{ name: "Dorlin/Elsa", slug: "dorlin" }],
-      collection: { name: "Le genre du monde", slug: "genre-monde" },
-    },
-  },
+    title: "Le Genre",
+    authors: [{ name: "Elsa Dorlin", slug: "dorlin" }],
+    collection: { name: "Le genre du monde", slug: "genre-monde" },
+  }),
 ];
 
 const PRODUCTS: WcProduct[] = [
@@ -84,7 +105,7 @@ const PRODUCTS: WcProduct[] = [
   },
 ];
 
-const rawByEdition: Partial<Record<EditionSlug, WpBook[]>> = {
+const rawByEdition: Partial<Record<EditionSlug, RawBook[]>> = {
   "editions-sociales": ES_BOOKS,
   "la-dispute": LD_BOOKS,
 };
@@ -108,7 +129,6 @@ describe("buildCatalogue (fusion fonds + boutique)", () => {
     expect(capital.status).toBe("available");
     expect(capital.price).toBe(15); // 1500 / 10^2
     expect(capital.permalink).toBe("https://boutique.editionssociales.fr/capital");
-    expect(capital.authors[0].name).toBe("Karl Marx"); // displayAuthor "Marx/Karl"
   });
 
   it("marque « en librairie » un livre à liens externes sans produit", () => {
@@ -120,6 +140,16 @@ describe("buildCatalogue (fusion fonds + boutique)", () => {
   it("marque « à paraître » un livre à date future, « indisponible » sinon", () => {
     expect(bySlug(catalogue, "avenir").status).toBe("upcoming");
     expect(bySlug(catalogue, "genre").status).toBe("unavailable");
+  });
+});
+
+describe("toBook — travail indépendant de la source", () => {
+  it("applique l'orthotypo française au titre, quelle que soit la source", () => {
+    const book = toBook(
+      "editions-sociales",
+      rawBook({ id: 9, slug: "commune", title: "Vive la Commune !" }),
+    );
+    expect(book.title).toBe("Vive la Commune !");
   });
 });
 
@@ -193,66 +223,10 @@ describe("à travers le port en mémoire (bout en bout, sans réseau)", () => {
     expect(detail.presentation).toContain("<p>Présentation");
     expect(detail.presentation).not.toContain("script");
     expect(detail.furtherReading).toBe("<p>Voir aussi</p>");
-    expect(detail.tocUrl).toBe("https://medias.ovh/toc.pdf"); // http → https
+    expect(detail.tocUrl).toBe("https://medias.ovh/toc.pdf");
   });
 
   it("renvoie null pour un slug absent", async () => {
     expect(await source.getBook("la-dispute", "inconnu")).toBeNull();
-  });
-});
-
-describe("toBook — rebase des couvertures (découplage CMS, E3)", () => {
-  it("rebase une couverture {url,width,height} sur editionssociales.fr vers cms-es", () => {
-    const book = toBook("editions-sociales", {
-      id: 99,
-      slug: "test",
-      title: { rendered: "Test" },
-      book: {
-        cover: { url: "https://editionssociales.fr/wp-content/uploads/couv.jpg", width: 400, height: 600 },
-      },
-    });
-    expect(book.cover).toEqual({
-      url: "https://cms-es.editionssociales.fr/wp-content/uploads/couv.jpg",
-      width: 400,
-      height: 600,
-    });
-  });
-
-  it("rebase une couverture sur ladispute.fr vers cms-ld", () => {
-    const book = toBook("la-dispute", {
-      id: 100,
-      slug: "test-ld",
-      title: { rendered: "Test LD" },
-      book: {
-        cover: { url: "http://ladispute.fr/wp-content/uploads/couv.jpg", width: 400, height: 600 },
-      },
-    });
-    expect(book.cover?.url).toBe("https://cms-ld.editionssociales.fr/wp-content/uploads/couv.jpg");
-  });
-
-  it("rebase l'ancienne forme string de couverture (avant redéploiement du mu-plugin)", () => {
-    const book = toBook("editions-sociales", {
-      id: 101,
-      slug: "test-string",
-      title: { rendered: "Test string" },
-      book: { cover: "https://www.editionssociales.fr/wp-content/uploads/couv.jpg" },
-    });
-    expect(book.cover).toEqual({
-      url: "https://cms-es.editionssociales.fr/wp-content/uploads/couv.jpg",
-      width: 2,
-      height: 3,
-    });
-  });
-
-  it("laisse inchangée une couverture qui ne matche aucun des deux domaines historiques", () => {
-    const book = toBook("editions-sociales", {
-      id: 102,
-      slug: "test-boutique",
-      title: { rendered: "Test boutique" },
-      book: {
-        cover: { url: "https://boutique.editionssociales.fr/wp-content/uploads/couv.jpg", width: 400, height: 600 },
-      },
-    });
-    expect(book.cover?.url).toBe("https://boutique.editionssociales.fr/wp-content/uploads/couv.jpg");
   });
 });
