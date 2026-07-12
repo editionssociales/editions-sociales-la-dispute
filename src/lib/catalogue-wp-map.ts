@@ -56,8 +56,25 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Ratio par défaut quand les dimensions réelles sont inconnues (rendu jamais recadré). */
-const DEFAULT_COVER_RATIO = { width: 2, height: 3 };
+/**
+ * Nombre de pages : un compte de pages est toujours un entier, mais l'ACF
+ * WordPress porte parfois un artefact de saisie décimal — cas réel constaté
+ * en production sur un fac-similé (`"354.104"`, `wp-json/wp/v2/catalogue`
+ * `book.pages`, confirmé en base). `toNumber` seul ne le garantit pas (partagé
+ * avec `price`, qui DOIT rester décimal — le centime compte).
+ */
+function toPages(value: unknown): number | null {
+  const n = toNumber(value);
+  return n == null ? null : Math.trunc(n);
+}
+
+/**
+ * Ratio par défaut quand les dimensions réelles sont inconnues (rendu jamais
+ * recadré) — exporté : seul point de vérité partagé avec le classifieur de
+ * `scripts/compare-classify.ts` (E5/E11 — un WP resté sur ce ratio face à de
+ * vraies dimensions pg n'est pas une perte, c'est la donnée qui arrive enfin).
+ */
+export const DEFAULT_COVER_RATIO = { width: 2, height: 3 };
 
 function toCover(value?: WpCoverField | string | null): RawBook["cover"] {
   if (!value) return null;
@@ -84,7 +101,7 @@ export function wpBookToRawBook(item: WpBook): RawBook {
     collection: b.collection ? { name: b.collection.name, slug: b.collection.slug } : null,
     isbn: b.isbn || null,
     price: toNumber(b.prix),
-    pages: toNumber(b.pages),
+    pages: toPages(b.pages),
     publishedAt: parseWpDate(b.date_parution ?? null),
     cover: toCover(b.cover),
     buy: {

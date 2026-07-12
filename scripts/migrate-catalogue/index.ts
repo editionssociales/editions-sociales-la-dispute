@@ -23,7 +23,7 @@ import config from "../../src/payload.config.ts";
 import { fetchAParaitreIds, fetchCatalogue, healthCheck, SITE_BASES, type WpBookField, type WpCatalogueRaw } from "./fetch-wp.ts";
 import { type BookImportContext, sweepMissing, upsertAuthors, upsertBooks, upsertCollections } from "./import.ts";
 import { type BookMediaInput, resolveMediaForBooks } from "./media.ts";
-import { rewriteHtmlUrls } from "./rewrite-html.ts";
+import { rewriteHtmlUrls, rewriteInternalLinks } from "./rewrite-html.ts";
 import { writeReport } from "./report.ts";
 import { runOracle } from "./sql-oracle.ts";
 import { createLogger, decodeEntities, parseCliArgs, siteKey, sitesFor, type Site } from "./utils.ts";
@@ -119,13 +119,23 @@ async function main(): Promise<void> {
       cli.dryRun,
     );
 
-    /* 6) Réécriture HTML (sourceUrl → url Payload) — AVANT conversion Lexical. */
+    /* 6) Réécriture HTML (sourceUrl → url Payload, puis liens internes E11) — AVANT conversion Lexical. */
+    let internalLinksUnwrapped = 0;
     const contexts: BookImportContext[] = enriched.map((e) => {
       const media = resolutions.get(siteKey(e.site, e.item.id))!;
-      const rewrittenContentHtml = rewriteHtmlUrls(e.contentHtml, media.embeddedUrlMap) ?? "";
-      const rewrittenPlusLoinHtml = e.plusLoinRaw
-        ? rewriteHtmlUrls(e.plusLoinRaw, media.embeddedUrlMap)
-        : null;
+      const contentRewritten = rewriteInternalLinks(rewriteHtmlUrls(e.contentHtml, media.embeddedUrlMap) ?? "");
+      const rewrittenContentHtml = contentRewritten.html;
+      const plusLoinMediaRewritten = e.plusLoinRaw ? rewriteHtmlUrls(e.plusLoinRaw, media.embeddedUrlMap) : null;
+      const plusLoinRewritten = plusLoinMediaRewritten != null ? rewriteInternalLinks(plusLoinMediaRewritten) : null;
+      const rewrittenPlusLoinHtml = plusLoinRewritten?.html ?? null;
+
+      for (const href of [...contentRewritten.unwrappedLinks, ...(plusLoinRewritten?.unwrappedLinks ?? [])]) {
+        internalLinksUnwrapped++;
+        logger.warn(
+          `[import] ${e.site}#${e.item.id} (${e.item.slug}) : lien interne WP non résoluble (ni /catalogue/<slug>, ni racine) déballé en texte : ${href}`,
+        );
+      }
+
       return {
         site: e.site,
         item: e.item,
@@ -135,6 +145,9 @@ async function main(): Promise<void> {
         rewrittenPlusLoinHtml,
       };
     });
+    if (internalLinksUnwrapped > 0) {
+      logger.warn(`[import] ${internalLinksUnwrapped} lien(s) interne(s) WP non résoluble(s), déballé(s) (E11).`);
+    }
 
     /* 7) Import : authors → collections → books (upsert, idempotent). */
     const authors = await upsertAuthors(payload, sites, itemsBySite, logger, cli.dryRun);
