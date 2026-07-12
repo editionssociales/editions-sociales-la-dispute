@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { Book } from "@/lib/types";
 import { BookCover } from "@/lib/cover";
+import { canAddToCart } from "@/lib/cart-core";
 import { isCommerceNative } from "@/lib/env";
+import { AddToCartButton } from "./cart/add-to-cart-button";
 
 export function BookCard({ book }: { book: Book }) {
   // Catalogue : toujours la fiche interne, quel que soit le statut d'achat
@@ -49,6 +51,11 @@ export function BookCard({ book }: { book: Book }) {
     </span>
   );
 
+  // Panier natif (plan §4 étape 6) : petit chip superposé, en plus du lien
+  // vers la fiche — jamais à `COMMERCE_NATIVE=0` (`canAddToCart` y est
+  // toujours faux, `purchaseMode` n'y vaut jamais `"cart"`).
+  const cartChip = canAddToCart(book) && <AddToCartButton id={book.id} variant="chip" />;
+
   return (
     <article className="group flex flex-col bg-white p-4">
       {href ? (
@@ -59,11 +66,13 @@ export function BookCard({ book }: { book: Book }) {
         >
           {upcomingBadge}
           {cover}
+          {cartChip}
         </Link>
       ) : (
         <div className="relative w-full overflow-hidden border-2 border-black bg-paper-2">
           {upcomingBadge}
           {cover}
+          {cartChip}
         </div>
       )}
     </article>

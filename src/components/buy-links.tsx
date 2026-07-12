@@ -1,5 +1,7 @@
 import type { Book } from "@/lib/types";
+import { canAddToCart } from "@/lib/cart-core";
 import { formatDateFr, formatPrice } from "@/lib/format";
+import { AddToCartButton } from "./cart/add-to-cart-button";
 import { Button } from "./button";
 
 export function BuyLinksList({ book }: { book: Book }) {
@@ -15,6 +17,21 @@ export function BuyLinksList({ book }: { book: Book }) {
       <p className="text-sm text-black/60">
         Indisponible à la vente en ligne pour le moment.
       </p>
+    );
+  }
+
+  // Panier natif (plan §4 étape 6, `COMMERCE_NATIVE=1` uniquement — reflet
+  // exact de `resolveNativePurchase`) : le lien externe Woo devient un
+  // bouton panier. `book.permalink` vaut alors la fiche interne elle-même
+  // (pas un lien d'achat externe) — inutile ici, remplacé par le bouton.
+  if (canAddToCart(book)) {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <AddToCartButton id={book.id} />
+        {book.price != null && (
+          <span className="font-sans text-sm font-bold text-black">{formatPrice(book.price)}</span>
+        )}
+      </div>
     );
   }
 
