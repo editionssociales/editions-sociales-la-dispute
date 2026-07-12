@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.ladispute.fr", pathname: "/wp-content/**" },
       { protocol: "http", hostname: "editionssociales.fr", pathname: "/wp-content/**" },
       { protocol: "http", hostname: "ladispute.fr", pathname: "/wp-content/**" },
+      // Couvertures/médias rapatriés par Payload (E6/E3) : chaque store Vercel
+      // Blob a un sous-domaine `<id>.public.blob.vercel-storage.com` distinct,
+      // aucun hostname fixe connu à l'avance. `*` (un seul niveau de
+      // sous-domaine) suffit et reste plus restrictif que `**` (cf.
+      // node_modules/next/dist/docs/.../02-components/image.md, "Wildcard
+      // Patterns") : le store ID est toujours un unique segment.
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
     ],
   },
 };

@@ -6,6 +6,10 @@ import type {
 import { ValidationError } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
+import {
+  revalidateCatalogueAfterChange,
+  revalidateCatalogueAfterDelete,
+} from '../hooks/revalidate.ts'
 
 /**
  * Pose `contentTouched=true` dès qu'un humain crée/modifie une fiche hors
@@ -125,6 +129,8 @@ export const Books: CollectionConfig = {
   },
   hooks: {
     beforeChange: [setContentTouched, ensureCollectionEditionMatches],
+    afterChange: [revalidateCatalogueAfterChange],
+    afterDelete: [revalidateCatalogueAfterDelete],
   },
   // Unicité couvrant l'espace `edition` ∪ null (contrat phase 4, ~20 produits
   // boutique-seuls sans maison) : ce composite `(edition, slug)` couvre le cas

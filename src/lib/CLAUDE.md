@@ -20,8 +20,14 @@ pures (filtre/tri/facette, pagination, campagne, HTML sûr, formatage).
 ## Local Contracts
 
 - Seuls `catalogue-http.ts` et `boutique.ts` touchent le réseau (`server-only`,
-  mémoïsés par requête via `cache()`) ; tout le reste du dossier est pur, sans
-  I/O — c'est la surface couverte par les `*.test.ts`.
+  mémoïsés par requête via `cache()`) ; le reste du dossier vise à être pur,
+  sans I/O, sauf deux exceptions **back-office** (E4/E6bis) : `catalogue-pg.ts`
+  et `highlight.ts` sont `server-only` et lisent Postgres via la Local API
+  Payload (pas de `fetch`), sans mémoïsation `cache()` — `getPayload({config})`
+  est déjà mémoïsé côté Payload (singleton par process). Le reste du dossier
+  (`catalogue-core`, `catalogue-pg-map`, `browse`, `cms-html`, `typo-fr`,
+  `format`…) reste pur, sans I/O — c'est la surface couverte par les
+  `*.test.ts`.
 - `catalogue-core.ts` ne fait ni fetch ni rendu : sa logique se teste
   uniquement à travers le port `CatalogueSource` (adaptateur en mémoire).
 - `sanitizeCms` (`cms-html.ts`) est l'unique fabricant de la marque `SafeHtml` ;

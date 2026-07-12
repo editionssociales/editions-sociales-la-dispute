@@ -1,6 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
 import { isAdminOrEditor } from '../access.ts'
+import {
+  revalidateCatalogueAfterChange,
+  revalidateCatalogueAfterDelete,
+} from '../hooks/revalidate.ts'
 
 /**
  * Collections éditoriales (slug Payload `collections`, distinct de la notion
@@ -22,6 +26,12 @@ export const BookCollections: CollectionConfig = {
     create: isAdminOrEditor,
     update: isAdminOrEditor,
     delete: isAdminOrEditor,
+  },
+  hooks: {
+    // Le nom d'une collection éditoriale apparaît sur toute fiche livre
+    // rattachée (facette catalogue comprise) — même levier qu'E6.
+    afterChange: [revalidateCatalogueAfterChange],
+    afterDelete: [revalidateCatalogueAfterDelete],
   },
   fields: [
     {

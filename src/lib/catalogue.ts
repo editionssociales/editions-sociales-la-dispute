@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { buildCatalogueView, type CatalogueView } from "./browse";
 import { httpCatalogueSource } from "./catalogue-http";
+import { pgCatalogueSource } from "./catalogue-pg";
 import {
   buildBookDetail,
   buildCatalogue,
@@ -26,7 +27,10 @@ export type { CatalogueView } from "./browse";
  * simplement marqué « à paraître » ou « indisponible en ligne ».
  */
 
-const source = httpCatalogueSource();
+// Point de bascule unique (E4 du plan) : WordPress reste la source de vérité
+// tant que `CATALOGUE_SOURCE` n'est pas posée à `pg` — rollback = flip d'env.
+const source =
+  process.env.CATALOGUE_SOURCE === "pg" ? pgCatalogueSource() : httpCatalogueSource();
 
 /** Catalogue unifié complet (deux fonds + boutique), mémoïsé par requête. */
 export const getAllBooks = cache(async (): Promise<Book[]> => {

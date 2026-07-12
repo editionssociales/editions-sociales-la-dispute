@@ -72,6 +72,7 @@ export interface Config {
     authors: Author;
     collections: Collection;
     books: Book;
+    highlight: Highlight;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +85,7 @@ export interface Config {
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     collections: CollectionsSelect<false> | CollectionsSelect<true>;
     books: BooksSelect<false> | BooksSelect<true>;
+    highlight: HighlightSelect<false> | HighlightSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -297,6 +299,32 @@ export interface Book {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "highlight".
+ */
+export interface Highlight {
+  id: number;
+  titre: string;
+  /**
+   * Une ou deux phrases — pas de mise en forme (bandeau, pas une fiche).
+   */
+  texte?: string | null;
+  /**
+   * URL absolue ou chemin du site (ex. /souscription) — facultatif.
+   */
+  lien?: string | null;
+  dateDebut: string;
+  dateFin: string;
+  /**
+   * Doit être coché ET la date courante comprise dans la période pour être visible.
+   */
+  actif?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -339,6 +367,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'books';
         value: number | Book;
+      } | null)
+    | ({
+        relationTo: 'highlight';
+        value: number | Highlight;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -491,6 +523,20 @@ export interface BooksSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "highlight_select".
+ */
+export interface HighlightSelect<T extends boolean = true> {
+  titre?: T;
+  texte?: T;
+  lien?: T;
+  dateDebut?: T;
+  dateFin?: T;
+  actif?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

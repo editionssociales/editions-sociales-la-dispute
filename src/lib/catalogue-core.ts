@@ -1,5 +1,6 @@
 import { decodeEntities, displayAuthor, httpsify, parseWpDate } from "./format";
 import { sanitizeCms } from "./cms-html";
+import { frenchTypo } from "./typo-fr";
 import {
   priceOf,
   slugFromBoutiqueLink,
@@ -59,7 +60,10 @@ export function toBook(edition: EditionSlug, item: WpBook): Book {
     edition,
     origin: "catalogue",
     slug: item.slug,
-    title: decodeEntities(item.title?.rendered ?? ""),
+    // Orthotypo française (E6 du plan) : les titres ne passent pas par
+    // `sanitizeCms`/`textFilter` (pas de HTML ici) — on l'applique donc
+    // directement, après décodage des entités.
+    title: frenchTypo(decodeEntities(item.title?.rendered ?? "")),
     authors: (b.authors ?? []).map((a) => ({
       name: displayAuthor(a.name),
       slug: a.slug,
