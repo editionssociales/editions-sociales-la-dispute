@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertEnv, checkEnv } from "./env";
+import { assertEnv, checkEnv, isCommerceNative } from "./env";
 
 describe("checkEnv — forme des variables posées, jamais leur présence", () => {
   it("environnement vide → aucun problème (provisioning progressif)", () => {
@@ -21,6 +21,7 @@ describe("checkEnv — forme des variables posées, jamais leur présence", () =
         NEXT_PUBLIC_SITE_URL: "https://editionssociales.fr",
         SITE_INDEXABLE: "1",
         REDIRECTS_PERMANENT: "0",
+        COMMERCE_NATIVE: "1",
       }),
     ).toEqual([]);
   });
@@ -45,6 +46,12 @@ describe("checkEnv — forme des variables posées, jamais leur présence", () =
   it("CATALOGUE_SOURCE inconnu → signalé (retomberait en http sans le dire)", () => {
     expect(checkEnv({ CATALOGUE_SOURCE: "postgres" }).map((i) => i.variable)).toEqual([
       "CATALOGUE_SOURCE",
+    ]);
+  });
+
+  it("COMMERCE_NATIVE en `true` au lieu de `1` → signalé (désactiverait en silence)", () => {
+    expect(checkEnv({ COMMERCE_NATIVE: "true" }).map((i) => i.variable)).toEqual([
+      "COMMERCE_NATIVE",
     ]);
   });
 
@@ -79,5 +86,35 @@ describe("assertEnv", () => {
 
   it("ne jette pas sur un environnement sain", () => {
     expect(() => assertEnv({})).not.toThrow();
+  });
+});
+
+describe("isCommerceNative — interrupteur du lot 2, false par défaut", () => {
+  it("absente → false (règle d'or : iso-rendu tant que non posée)", () => {
+    expect(isCommerceNative({})).toBe(false);
+  });
+
+  it('"0" → false', () => {
+    expect(isCommerceNative({ COMMERCE_NATIVE: "0" })).toBe(false);
+  });
+
+  it('"1" → true', () => {
+    expect(isCommerceNative({ COMMERCE_NATIVE: "1" })).toBe(true);
+  });
+
+  it("valeur malformée (`true`, vide…) → false (jamais activé par accident)", () => {
+    expect(isCommerceNative({ COMMERCE_NATIVE: "true" })).toBe(false);
+    expect(isCommerceNative({ COMMERCE_NATIVE: "" })).toBe(false);
+  });
+
+  it("sans argument → lit process.env", () => {
+    const previous = process.env.COMMERCE_NATIVE;
+    process.env.COMMERCE_NATIVE = "1";
+    try {
+      expect(isCommerceNative()).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.COMMERCE_NATIVE;
+      else process.env.COMMERCE_NATIVE = previous;
+    }
   });
 });
