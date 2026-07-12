@@ -10,6 +10,7 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import { importStockHandler } from '../lib/stock-import.ts'
 
 /**
  * Pose `contentTouched=true` dès qu'un humain crée/modifie une fiche hors
@@ -132,6 +133,16 @@ export const Books: CollectionConfig = {
     afterChange: [revalidateCatalogueAfterChange],
     afterDelete: [revalidateCatalogueAfterDelete],
   },
+  // `POST /api/books/import-stock` — import stock routeur mensuel (multipart,
+  // admin/éditeur authentifié) ; cf. `src/payload/lib/stock-import.ts` pour
+  // le détail (auth, parsing, appariement, rapport, écritures).
+  endpoints: [
+    {
+      path: '/import-stock',
+      method: 'post',
+      handler: importStockHandler,
+    },
+  ],
   // Unicité couvrant l'espace `edition` ∪ null (contrat phase 4, ~20 produits
   // boutique-seuls sans maison) : ce composite `(edition, slug)` couvre le cas
   // général. Le complément — un index unique PARTIEL sur `slug` quand
@@ -232,6 +243,11 @@ export const Books: CollectionConfig = {
       type: 'number',
       min: 0,
       label: 'Prix (€)',
+      admin: {
+        description:
+          'Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au ' +
+          'checkout (pratique actuelle conservée, plan phase 4 étape 8).',
+      },
     },
     {
       name: 'pages',
@@ -327,6 +343,94 @@ export const Books: CollectionConfig = {
           name: 'lalibrairie',
           type: 'text',
           label: 'La Librairie',
+        },
+      ],
+    },
+    {
+      name: 'commerce',
+      type: 'group',
+      label: 'Commerce natif',
+      admin: {
+        description:
+          'Modèle de données du commerce natif (phase 4, lot 1) — sans effet ' +
+          "sur le front tant que le panier/checkout n'est pas branché (étapes " +
+          'ultérieures du plan).',
+      },
+      fields: [
+        {
+          name: 'sellable',
+          type: 'checkbox',
+          defaultValue: false,
+          label: 'Vendable nativement',
+          admin: {
+            description:
+              'Coché = éligible au panier natif à venir. Un livre non vendable ' +
+              'reste au catalogue (jamais retiré, cf. §Local Contracts) — il ' +
+              'est simplement absent du commerce natif.',
+          },
+        },
+        {
+          name: 'stock',
+          type: 'number',
+          min: 0,
+          label: 'Stock',
+          admin: {
+            description:
+              'Champ unique pour tout ce qui se vend — livres ET produits ' +
+              'boutique-seuls/goodies (même mécanique de décrément ensuite). ' +
+              'Vide = pas de décompte saisi (disponible si vendable — même ' +
+              "fallback que les goodies). Alimenté par l'import routeur " +
+              'mensuel (suivi « routeur ») ou saisi ici à la main (suivi ' +
+              '« manuel », et possible aussi en suivi routeur — écrasé au ' +
+              'prochain fichier si la fiche y figure). Le stock EST la ' +
+              'disponibilité — pas de bascule « en stock/épuisé » séparée ' +
+              '(décision client du 12/07) ; 0 signifie épuisé sans retirer ' +
+              'la fiche du catalogue.',
+          },
+        },
+        {
+          name: 'stockSuivi',
+          type: 'select',
+          defaultValue: 'manuel',
+          label: 'Suivi du stock',
+          options: [
+            { value: 'routeur', label: 'Routeur (import mensuel)' },
+            { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
+          ],
+          admin: {
+            description:
+              "Posé à « routeur » automatiquement par l'import mensuel dès " +
+              "qu'une fiche est appariée au fichier ; « manuel » (défaut) " +
+              'pour tout le reste — goodies ET livres non suivis par le ' +
+              'routeur, traités pareil (décision client du 12/07). Une fiche ' +
+              '« routeur » absente du fichier suivant est signalée par ' +
+              "l'import (titre disparu du routeur) et garde ce mode tant " +
+              "que l'anomalie n'est pas résolue.",
+          },
+        },
+        {
+          name: 'reducedShippingFlag',
+          type: 'checkbox',
+          defaultValue: false,
+          label: 'Port réduit (« manifeste »)',
+          admin: {
+            description:
+              "Remplace l'ancienne règle « manifeste » au poids : un panier " +
+              "composé uniquement d'articles cochés bénéficie du tarif de " +
+              'port réduit plutôt que la grille standard (décision client du ' +
+              '12/07, question ouverte n°2 du plan).',
+          },
+        },
+        {
+          name: 'stockUpdatedAt',
+          type: 'date',
+          label: 'Stock mis à jour le',
+          admin: {
+            readOnly: true,
+            description:
+              "Posé automatiquement par l'import stock routeur mensuel " +
+              '(`POST /api/books/import-stock`) — jamais saisi à la main.',
+          },
         },
       ],
     },

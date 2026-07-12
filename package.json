@@ -21,6 +21,7 @@
     "migrate:prod": "DATABASE_URL=\"${DATABASE_URL_UNPOOLED:-$DATABASE_URL}\" payload migrate",
     "vercel-build": "if [ \"$VERCEL_ENV\" = \"production\" ] && [ -n \"${DATABASE_URL_UNPOOLED:-$DATABASE_URL}\" ]; then pnpm migrate:prod && if [ -n \"$PAYLOAD_SEED_ADMIN_PASSWORD\" ]; then pnpm seed:users; fi; else echo \"[vercel-build] migrations/seed sautés : base non configurée ou environnement non-production\"; fi && next build",
     "migrate:catalogue": "payload run scripts/migrate-catalogue/index.ts",
+    "migrate:products": "payload run scripts/migrate-products.ts",
     "seed:users": "payload run scripts/seed-users.ts"
   },
   "dependencies": {
@@ -39,6 +40,7 @@
     "server-only": "^0.0.1",
     "sharp": "0.34.5",
     "stripe": "^22.3.1",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
