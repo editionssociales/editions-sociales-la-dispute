@@ -30,8 +30,13 @@ fichiers générés.
   `searchParams`) mais bornent leurs données via `revalidate` ; la fiche livre
   (`generateStaticParams`) et `editions/[slug]` sont pré-rendues puis revalidées
   (ISR) ; accueil, `editions`, `souscription` statiques + ISR ; `a-propos`,
-  `rencontres`, `panier` statiques sans donnée externe ; `boutique` redirige vers
-  `/catalogue`.
+  `rencontres` statiques sans donnée externe ; `panier` statique (l'îlot client
+  du panier — `localStorage` + server actions de re-validation — n'existe qu'à
+  `COMMERCE_NATIVE=1`, placeholder inchangé à `0`) ; `boutique` et
+  `boutique/[slug]` (articles boutique-seuls) suivent la même `revalidate =
+  3600` mais restent gardées par `COMMERCE_NATIVE` : redirection vers
+  `/catalogue`/`notFound()` tant qu'il est à `0` (règle d'or du commerce
+  natif, cf. racine `CLAUDE.md`).
 - **Jauge de dons 2026** (`souscription`, `lib/donations.ts`) : le fetch taggé
   `donations` porte `revalidate: 60` — le plus petit `revalidate` d'une page
   gagne, donc la fenêtre ISR *effective* de `/souscription` passe de 3600 s à

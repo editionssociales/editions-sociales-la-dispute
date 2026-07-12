@@ -3,6 +3,25 @@
 
 *Architecte de phase — 2026-07-09, révision post-relecture adversariale. S'appuie sur : recon R1 (carte du code), R2 (dumps SQL), R3 (contrat wp-headless + médias), R4 (infra live), décision de stack (Payload ≥ 3.73 + Neon + Vercel Blob), devis §5 (périmètre vendu 4,5 j / 900 €), COHABITATION.md, LEGACY-STACK.md. Vérifié dans le code ce jour : point de bascule unique `src/lib/catalogue.ts:29` (`const source = httpCatalogueSource()`) ; **`src/app/layout.tsx` est un root layout qui rend `<html>` + Typekit + SiteHeader/SiteFooter autour de toutes les routes (l.32-51)** → l'installation de Payload impose une réorganisation en route groups (E1) ; **`package.json` n'a ni script `migrate` ni `vercel-build`** → jamais toucher au build command global Vercel (E2) ; les défauts de l'adaptateur http sont les domaines publics (`catalogue-http.ts:16-17`) → le rollback dépend de leur joignabilité (E9) ; les docs Next 16 embarquées (`01-getting-started/02-project-structure.md §"Creating multiple root layouts"`, `03-file-conventions/route-groups.md`) confirment le pattern multi-root-layouts sans layout de tête ; `displayAuthor` tolérant aux noms sans `/` (`format.ts:36-42`), `parseWpDate` accepte l'ISO (`format.ts:48-59`), `sanitizeCms` unique fabricant de `SafeHtml` (`cms-html.ts:70-72`), repo en Next 16.2.9 / React 19.2.4.*
 
+> **Statut au 12/07 (source de vérité de cette mise à jour).** Migration
+> idempotente **prouvée sur Neon réel** : 295 livres / 256 auteurs / 611 médias
+> importés (E3), re-run = 0 création. `compare-sources.ts` (E5) : **0 diff
+> bloquant** (était 761) — PR #9 a étendu le classifieur de réhébergement
+> OVH→Payload aux URL nues (`cover.url`, `tocUrl`, `excerptUrl`, hôtes `cms-*`
+> compris) puis ajouté `rewriteInternalLinks` à `rewrite-html.ts` (~50 liens
+> `<a href>` de corps de texte vers d'autres fiches ou la racine, réécrits en
+> `/catalogue/<edition>/<slug>` ou `/` — labellisé « E11 » dans les commits et
+> logs de livraison, **à ne pas confondre avec l'E11 de cette page** ci-dessous,
+> qui garde son sens d'origine) et corrigé un artefact de saisie ACF (pages
+> décimales tronquées, `catalogue-wp-map.ts`, fonction `toPages`). Résultat :
+> `CATALOGUE_SOURCE=pg pnpm build` est **vert, 316/316 pages,
+> zéro appel WordPress**. Conséquence sur E9 : le **SWAP ne se déclenche plus
+> isolément le lun 20/07** — il **rejoint la fenêtre de bascule unique** (site +
+> pg + commerce) proposée 24–28/07 par le client le 12/07 ; calendrier qui fait
+> foi : [`../README.md`](../README.md) et [`../02-mise-en-production.md`](../02-mise-en-production.md)
+> (runbook fusionné 02+04). La procédure d'E9 ci-dessous (gel, health-check,
+> delta final, rollback) reste la référence d'exécution — seule sa date change.
+
 ---
 
 ## Objectif et livrable
@@ -97,7 +116,24 @@ Versions **épinglées exactes** (`-E`), montées Next+Payload toujours en tande
 **Fichiers.** `scripts/migrate-catalogue/{index,fetch-wp,sql-oracle,media,rewrite-html,import,report}.ts`, sortie `scripts/migrate-catalogue/out/report-<ts>.{md,json}` (gitignorée).
 **Vérifier.** Rapport : 117+178 books créés, 0 échec média bloquant, taux de remplissage conformes aux attendus R2 §1.3, liste des 9 liens boutique cassés produite, liste `plus_loin` ES réconciliée, descriptions de termes auteurs/collections **vides** confirmées (preuve de non-perte des « biographies », cf. C5). **Re-run immédiat → 0 création, uniquement des updates no-op, et 0 fiche avec `contentTouched=true`** (double preuve : idempotence + neutralisation des hooks).
 
+**Statut au 12/07 : prouvé sur Neon réel.** 295 livres / 256 auteurs / 611
+médias importés, idempotence vérifiée par re-run (0 création, 0
+`contentTouched=true`). `rewrite-html.ts` étendu (PR #9) d'une fonction
+`rewriteInternalLinks` : ~50 liens `<a href>` de `presentation`/`plusLoin`
+pointant vers `editionssociales.fr`/`ladispute.fr` (une autre fiche ou la
+racine) sont réécrits en `/catalogue/<edition>/<slug>` ou `/` — le nouveau
+site n'a qu'un seul niveau de chemin par fiche, aucune page fille ;
+`prepareHtmlForLexical` reconnaît ces formes comme `href` valides (sans quoi
+elles seraient déballées dès la première réédition Payload d'une fiche).
+`catalogue-wp-map.ts` corrige au passage un artefact de saisie ACF (nombre de
+pages décimal, `"354.104"` sur un fac-similé — donnée source réelle, pas un
+bug de migration ; un compte de pages est désormais toujours tronqué en
+entier, côté WP comme côté pg).
+
 ### E4 — Adaptateur Postgres + mapper pur (0,5 j — lun 13/07)
+**Statut au 12/07 : livré.** `CATALOGUE_SOURCE=pg pnpm build` est vert —
+**316/316 pages, zéro appel WordPress** (le point de bascule unique de
+`catalogue.ts:29` fonctionne réellement, pas seulement sur le papier).
 **Quoi.**
 - `src/lib/catalogue-pg-map.ts` — **pur, testé** : `payloadBookToWpBook(doc): WpBook` (mapping table en section migration) + `lexicalToHtml` (via `convertLexicalToHTML` de `@payloadcms/richtext-lexical/html`, avec repli `legacyHtml`).
 - `src/lib/catalogue-pg.ts` — `server-only` ; `pgCatalogueSource(): CatalogueSource` : `listBooks(edition)` = `payload.find({ collection:'books', where:{ edition }, draft:false, limit:0/pagination, depth:2, sort:'-sortDate' })` → map ; `getBook(edition, slug)` = find `(edition, slug)` limit 1 avec contenu ; `listProducts()` = **délègue à `getAllStoreProducts()` de `boutique.ts`, inchangé** (angle mort n°2 de R1 : les `permalink` d'achat restent WooCommerce jusqu'à la phase commerce). Instance Payload via `getPayload({ config })` (mise en cache par Payload), connexion **poolée** (`DATABASE_URL` `-pooler`) — indispensable au build SSG qui pré-rend ~295 fiches en parallèle sans épuiser les connexions Neon.
@@ -112,11 +148,18 @@ Versions **épinglées exactes** (`-E`), montées Next+Payload toujours en tande
 **Vérifier.** 55 + nouveaux tests verts ; `CATALOGUE_SOURCE=pg pnpm build` : les ~295 fiches se pré-rendent depuis Neon via l'URL poolée (SSG `generateStaticParams` frappe la base au build — c'est attendu).
 
 ### E5 — Script de parité http ⟷ pg (0,25 j — lun 13/07)
+**Statut au 12/07 : livré, 0 diff bloquant** (était 761) — PR #9 a étendu le
+classifieur de réhébergement OVH→Payload (`scripts/compare-classify.ts`,
+extrait pour rester pur et testable) aux URL nues et aux hôtes `cms-*`, puis
+la réécriture des liens internes de corps de texte (voir encart en tête de
+document) a résorbé le reste.
 **Quoi.** `scripts/compare-sources.ts` : instancie les **deux** adaptateurs, exécute `buildCatalogue` deux fois, diff champ à champ des `Book` appariés par `(edition, slug)` + `buildBookDetail` sur toutes les fiches (HTML comparé **après** `sanitizeCms`, normalisation espaces/entités) + facettes + `newReleases`. Sortie : diffs classés `BLOQUANT` (donnée manquante/altérée) vs `COSMÉTIQUE` (URL média OVH→Blob attendue, espaces, NBSP orthotypo) ; **cas whitelistés explicitement** : fiches supprimées/dépubliées côté WP et traitées par le balayage de suppressions du script d'import (listées, pas bloquantes) ; exit code ≠ 0 si bloquant. Contrôle additionnel : **0 URL OVH résiduelle** dans les champs médias de la base (condition d'extinction E11).
 **Fichiers.** `scripts/compare-sources.ts`.
 **Vérifier.** Run complet < 2 min ; premier rapport de parité archivé ; c'est l'outil des étapes E8/E9.
 
 ### E6 — Fraîcheur : invalidation à la sauvegarde + images Blob (0,5 j — mar 14/07)
+**Statut au 12/07 : non couvert par le run** (hooks de revalidation, orthotypo) —
+aucune preuve à date, section inchangée.
 **Quoi.**
 - Hooks Payload `afterChange`/`afterDelete` sur `books`, `authors`, `collections`, `media` (`src/payload/hooks/revalidate.ts`) → invalidation ciblée du cache Next : tag `catalogue` posé sur les lectures de la façade + revalidation du chemin de la fiche modifiée. **Chaque hook commence par `if (req.context?.disableRevalidate) return;`** (neutralisation pendant l'import — E3). ⚠️ **API exacte (`revalidateTag`, `unstable_cache`/`cacheTag`…) à confirmer dans `node_modules/next/dist/docs/01-app/02-guides` (ISR/caching) au moment de coder** — Next 16 diffère des acquis ; l'exigence fonctionnelle est : *une sauvegarde en back-office est visible sur le site en < 1 min, sans attendre la fenêtre 3600 s* (R1 §5).
 - `next.config.ts` : ajout du `remotePattern` Blob (`*.public.blob.vercel-storage.com` `/…`) **en plus** des patterns OVH (cohabitation : le HTML historique peut encore référencer OVH jusqu'à extinction).
@@ -125,6 +168,7 @@ Versions **épinglées exactes** (`-E`), montées Next+Payload toujours en tande
 **Vérifier.** Éditer un prix dans `/admin` → visible sur la fiche en < 1 min sur un déploiement `pg` ; images cover servies depuis Blob par `next/image` ; tests verts ; re-run du script d'import → toujours 0 revalidation déclenchée (log).
 
 ### E6bis — Bloc mise en avant (0,25 j — mar 14/07)
+**Statut au 12/07 : non couvert par le run** — section inchangée.
 **Quoi.** L'engagement **C32 du devis** (« mises en avant ponctuelles », remplaçant les 2 Popup Builder) n'avait pas de propriétaire — il en a un ici. Collection (ou global) Payload `highlight` : titre, texte court, lien, dates début/fin, actif. Rendu en bandeau/encart sur la page d'accueil — server component, conditionné aux dates (affiché seulement si actif et date courante dans [début, fin]), **iso-rendu quand inactif**. Réutilise le hook de revalidation de E6 (une sauvegarde du bloc est visible en < 1 min). Démonstration à l'équipe lors de la prise en main (E7) ; ajouté à la recette globale.
 **Fichiers.** `src/payload/collections/Highlight.ts` (ou global dans `payload.config.ts`), `src/app/(site)/page.tsx` (encart), `src/payload/hooks/revalidate.ts` (branchement — hook E6 réutilisé).
 **Vérifier.** Publier un bandeau daté → visible sur l'accueil en < 1 min ; désactivé ou hors dates → page d'accueil strictement iso (diff DOM) ; tests verts.
@@ -142,6 +186,13 @@ Versions **épinglées exactes** (`-E`), montées Next+Payload toujours en tande
 **Vérifier.** Validation écrite (mail) du client sur l'échantillon ; rapport de parité : 0 bloquant.
 
 ### E9 — Gel de saisie, delta final, SWAP production (0,25 j — lun 20 → mar 21/07)
+**Mise à jour 12/07 : la date lun 20/07 ci-dessous est supersédée.** Ce SWAP ne
+se déclenche plus isolément : il **rejoint la fenêtre de bascule unique**
+(site + `CATALOGUE_SOURCE=pg` + `COMMERCE_NATIVE=1`), proposée 24–28/07 par le
+client — voir [`../README.md`](../README.md) (calendrier consolidé) et
+[`../02-mise-en-production.md`](../02-mise-en-production.md) (runbook fusionné
+02+04). La procédure ci-dessous (gel, health-check, delta final, rollback)
+reste la référence d'exécution ; seule sa date bascule dans le runbook fusionné.
 **Quoi.**
 1. **Annoncé le 16/07** : gel de saisie catalogue à partir de **lun 20/07 09:00** (protocole complet en section migration ; durée cible < 24 h).
 2. **Health-check préalable obligatoire** (en tête de `fetch-wp.ts`, échec bruyant) : `GET $WP_ES_URL/wp-json/wp/v2/catalogue?per_page=1&_fields=id,book` → 200 **et** champ `book` présent ; idem LD. Si le cutover DNS (phase 2) a déjà eu lieu, ces URLs doivent être les `cms-*` (P10) — sinon le delta capturerait le **nouveau site** au lieu de WordPress et l'adaptateur http dégraderait en silence (catalogue vide/partiel, par design `catalogue-http.ts:44-48`).
@@ -292,6 +343,12 @@ Le mapping part du **payload `book` du mu-plugin** (contrat déjà consommé par
 ---
 
 ## Calage calendrier (aujourd'hui = jeudi 09/07/2026)
+
+> **Dates supersédées le 12/07** — le tableau ci-dessous garde son ordre
+> relatif (E9 avant E10 avant E11) mais plus ses dates absolues : E9 (swap) ne
+> se déclenche plus seul, il rejoint la fenêtre de bascule unique (24–28/07
+> proposée) qui embarque aussi le commerce ; E10 (recouvrement) et E11
+> (extinction) glissent d'autant. Dates qui font foi : [`../README.md`](../README.md).
 
 | Date | Étapes | Jalon |
 |---|---|---|
