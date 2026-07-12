@@ -42,6 +42,15 @@ export interface BuyLinks {
 /** Statut d'achat résolu d'un livre. */
 export type PurchaseStatus = "available" | "external" | "upcoming" | "unavailable";
 
+/**
+ * Comment le bouton d'achat principal doit se comporter : `cart` (panier
+ * natif — `COMMERCE_NATIVE=1` et `status === "available"` ; l'UI du panier
+ * arrive au lot suivant, ce champ n'expose que la donnée) ou `legacy-link`
+ * (lien externe historique — Woo ou librairie tierce, comportement par
+ * défaut et STRICTEMENT inchangé à `COMMERCE_NATIVE=0`).
+ */
+export type PurchaseMode = "cart" | "legacy-link";
+
 /** Un livre du catalogue unifié (vue liste). */
 export interface Book {
   id: number;
@@ -63,6 +72,13 @@ export interface Book {
   status: PurchaseStatus;
   /** Destination du bouton d'achat principal (produit boutique ou lien externe). */
   permalink: string | null;
+  /**
+   * Mode d'achat — toujours posé par les builders (`toBook`, `bookFromProduct`,
+   * `resolveNativePurchase`) ; optionnel seulement pour ne pas casser les
+   * fixtures minimales existantes qui construisent un `Book` à la main
+   * (`browse.test.ts`) sans passer par ces builders.
+   */
+  purchaseMode?: PurchaseMode;
 }
 
 /** Un livre avec ses champs de détail (fiche). */

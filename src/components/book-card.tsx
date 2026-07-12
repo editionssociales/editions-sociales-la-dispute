@@ -1,10 +1,22 @@
 import Link from "next/link";
 import type { Book } from "@/lib/types";
 import { BookCover } from "@/lib/cover";
+import { isCommerceNative } from "@/lib/env";
 
 export function BookCard({ book }: { book: Book }) {
-  const href = book.edition ? `/catalogue/${book.edition}/${book.slug}` : book.permalink;
-  const external = !book.edition;
+  // Catalogue : toujours la fiche interne, quel que soit le statut d'achat
+  // (comportement historique, inchangé). Boutique-seul (`edition` absent) :
+  // en commerce natif, sa propre fiche interne `/boutique/<slug>` existe pour
+  // CHAQUE article — achetable ou non, elle informe toujours (plan §4 étape
+  // 7) ; à `COMMERCE_NATIVE=0` (règle d'or du lot, iso-rendu strict), le lien
+  // Woo externe historique, inchangé.
+  const native = isCommerceNative();
+  const href = book.edition
+    ? `/catalogue/${book.edition}/${book.slug}`
+    : native
+      ? `/boutique/${book.slug}`
+      : book.permalink;
+  const external = !book.edition && !native;
   const linkProps = external ? { target: "_blank" as const, rel: "noreferrer" } : {};
 
   // Couverture seule : plus de légende texte sous l'image (titre/auteurs déjà

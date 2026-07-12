@@ -12,8 +12,17 @@ import type { EditionSlug } from "./types";
  * implicite : `payload.config.ts` ne configure que celle-ci) indispensable au
  * build SSG qui pré-rend ~295 fiches en parallèle sans épuiser les connexions
  * Neon. Sélectionné par `CATALOGUE_SOURCE=pg` (`catalogue.ts`) ; `listProducts`
- * délègue, inchangé, à `boutique.ts` (angle mort n°2 du plan : les
- * `permalink` d'achat restent WooCommerce jusqu'à la phase commerce).
+ * délègue, inchangé, à `boutique.ts` (Woo reste la source de vérité des
+ * ventes tant que `COMMERCE_NATIVE=0`, quel que soit `CATALOGUE_SOURCE` — le
+ * flag qui gouverne les VENTES est distinct de celui qui gouverne le
+ * contenu du catalogue, plan §4 étape 2c). L'ANGLE MORT n°2 du plan (des
+ * `permalink` d'achat qui resteraient WooCommerce après le passage au
+ * commerce natif) est refermé par `listBoutiqueOnlyBooks`/
+ * `getBoutiqueOnlyBook` ci-dessous : à `COMMERCE_NATIVE=1`, `catalogue.ts`
+ * n'appelle plus `listProducts()` du tout — il compose directement
+ * `listBooks`/`getBook` (contenu, quelle que soit sa source) avec ces deux
+ * fonctions (ventes, Payload uniquement) via `buildNativeCatalogue`/
+ * `buildNativeBookDetail` (`catalogue-core.ts`).
  *
  * `getPayload({ config })` est mémoïsé par Payload lui-même (singleton par
  * process) — pas besoin d'un `cache()` React ici en plus de celui déjà posé
@@ -66,4 +75,42 @@ export function pgCatalogueSource(): CatalogueSource {
     getBook,
     listProducts: () => getAllStoreProducts(),
   };
+}
+
+/**
+ * Tous les articles boutique-seuls (`origin: "boutique"`, `edition: null` —
+ * goodies, manuels, produits WooCommerce jamais réclamés par une fiche,
+ * `scripts/migrate-products.ts`). Fournit la grille `/boutique` (plan §4
+ * étape 7) et les extras de `buildNativeCatalogue` — appelée uniquement à
+ * `COMMERCE_NATIVE=1`, quel que soit `CATALOGUE_SOURCE` (ces articles n'ont
+ * jamais existé côté WordPress).
+ */
+export async function listBoutiqueOnlyBooks(): Promise<RawBook[]> {
+  const payload = await getPayload({ config });
+  const { docs } = await payload.find({
+    collection: "books",
+    where: { origin: { equals: "boutique" } },
+    draft: false,
+    // cf. `listBooks` : ne sert jamais un brouillon au public.
+    overrideAccess: false,
+    depth: 2,
+    sort: "-sortDate",
+    limit: 0,
+  });
+  return docs.map(payloadBookToRawBook);
+}
+
+/** Fiche d'un article boutique-seul par slug (`/boutique/[slug]`, plan §4 étape 7) — `null` si absent. */
+export async function getBoutiqueOnlyBook(slug: string): Promise<RawBook | null> {
+  const payload = await getPayload({ config });
+  const { docs } = await payload.find({
+    collection: "books",
+    where: { origin: { equals: "boutique" }, slug: { equals: slug } },
+    draft: false,
+    overrideAccess: false,
+    depth: 2,
+    limit: 1,
+  });
+  const doc = docs[0];
+  return doc ? payloadBookToRawBook(doc) : null;
 }

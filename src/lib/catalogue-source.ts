@@ -50,6 +50,22 @@ export interface RawBook {
   tocUrl: string | null;
   /** Extrait choisi (PDF), URL prête à l'emploi. */
   excerptUrl: string | null;
+  /**
+   * Données de vente natives (Payload, groupe `commerce` des `books`) —
+   * `null`/absent pour l'adaptateur http (WordPress ne connaît ni `sellable`
+   * ni `stock`) ; lues uniquement à `COMMERCE_NATIVE=1`
+   * (`catalogue-core.ts:resolveNativePurchase`). Optionnel pour ne pas
+   * casser les fixtures `RawBook` existantes qui n'en ont pas besoin.
+   */
+  commerce?: CommerceInfo | null;
+}
+
+/** Ce que le commerce natif connaît de la vente d'un livre (Payload uniquement). */
+export interface CommerceInfo {
+  /** Coché = éligible au panier natif — cf. `Books.ts:commerce.sellable`. */
+  sellable: boolean;
+  /** `null` = non suivi = disponible (jamais un plancher qui bloque la vente) ; sinon 0 = épuisé. */
+  stock: number | null;
 }
 
 /* -------- Forme brute WooCommerce Store API -------- */
