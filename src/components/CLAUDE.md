@@ -21,8 +21,13 @@ données ni le routage.
   `filter-chips` qu'il rend, `nouveautes-carousel` (drag pointeur, coverflow
   « spring »), `count-up` / `gauge` / `reveal` (révélation au scroll via
   `useInView`, `src/hooks/use-in-view`), `shelf-lock` / `shelf-cover` (étagère 3D
-  du héro : exclusion d'ouverture entre livres, ratio réel de couverture). Tout
-  le reste est composant serveur.
+  du héro : exclusion d'ouverture entre livres, ratio réel de couverture),
+  `cart/cart-context` (état global du panier — Context + `localStorage`, monté
+  uniquement à `COMMERCE_NATIVE=1`), `cart/cart-badge` (compteur dans
+  `site-header`) et `cart/add-to-cart-button` (handler d'ajout, rendu par
+  `buy-links`/`book-card`). Tout le reste est composant serveur — dont
+  `cart/shelf-spines` (décor de l'étagère vide, partagé entre le placeholder
+  `COMMERCE_NATIVE=0` et le panier natif à `1`, sans état propre).
 - Les couvertures passent toujours par `Cover` / `BookCover` (`src/lib/cover.tsx`) :
   jamais recadrées, au ratio réel de l'image.
 

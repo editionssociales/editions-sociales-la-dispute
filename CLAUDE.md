@@ -7,21 +7,28 @@
 Site unique réunissant **Les Éditions sociales**, **La Dispute** et leur **boutique
 commune**, en remplacement des trois WordPress OVH. Le front **lit** les WordPress
 (REST + WooCommerce Store API) et les réexpose sous un modèle de domaine propre
-(`Book`) ; la **fusion** des deux catalogues est le cœur du produit. Depuis la
-phase 3, l'app embarque aussi le **back-office Payload** (`/admin`) et sa base
-Postgres — WordPress reste la **source de vérité** du catalogue jusqu'au swap
-(`CATALOGUE_SOURCE=pg`).
+(`Book`) ; la **fusion** des deux catalogues est le cœur du produit. L'app
+embarque aussi le **back-office Payload** (`/admin`) et sa base Postgres, ainsi
+qu'un moteur de **commerce natif** (panier, checkout Stripe, port, promo,
+export commandes) codé derrière l'interrupteur `COMMERCE_NATIVE` — WordPress
+reste la **source de vérité** du catalogue et WooCommerce/Paybox l'appareil de
+vente jusqu'à la **bascule unique** (contenu, commerce et DNS basculent le
+même jour).
 
 ## Ownership
 
 - **Owns** : le front unifié (App Router), le modèle de domaine (`Book` / statut
   d'achat), la couche data *headless* (port + adaptateurs), le back-office Payload
   (schéma SQL `payload`, rôles `admin`/`editor`) et la migration
-  WordPress→Postgres, la présentation brutaliste, la sécurisation du HTML éditorial.
-- **Does NOT own** : le contenu courant (saisi dans WordPress jusqu'au swap —
-  Payload = bac à essai, écrasé par chaque delta d'import), le paiement
-  (WooCommerce/Paybox ; Stripe à venir), les médias publics (servis par OVH pendant
-  la cohabitation), le schéma SQL `public` (réservé — p. ex. dons).
+  WordPress→Postgres, le moteur de commerce natif (port en centimes, panier,
+  checkout Stripe, export commandes) derrière `COMMERCE_NATIVE`, la présentation
+  brutaliste, la sécurisation du HTML éditorial.
+- **Does NOT own** : le contenu courant (saisi dans WordPress jusqu'à la
+  bascule unique — Payload = bac à essai, écrasé par chaque delta d'import),
+  la vente courante (WooCommerce/Paybox reste l'appareil de vente jusqu'à la
+  bascule ; le commerce natif est codé mais inerte tant que
+  `COMMERCE_NATIVE=0`), les médias publics (servis par OVH jusqu'à la bascule),
+  le schéma SQL `public` (réservé — p. ex. dons).
 
 ## Local Contracts
 
@@ -41,6 +48,19 @@ Postgres — WordPress reste la **source de vérité** du catalogue jusqu'au swa
   et `pg_dump` ; imports relatifs en **`.ts` explicite** dans tout code chargé par le
   CLI payload (config, collections, scripts) ; scripts `payload run` en
   **top-level await** (le CLI fait `process.exit(0)` dès l'import résolu).
+- **Commerce natif** (`COMMERCE_NATIVE`) : à `0` (défaut), le site reste
+  **strictement iso-rendu** — liens Woo intacts, `/boutique` redirige vers
+  `/catalogue`, panier en placeholder, checkout en `503` ; à `1`, panier,
+  checkout et port natifs prennent la main, sans plus aucun appel à la Store
+  API. Montants **en centimes entiers** partout dans le moteur de commerce
+  (jamais de flottant).
+- **Stock** : champ unique `stock` (nullable) pour les livres ET les produits
+  boutique-seuls, avec `stockSuivi` `routeur` (alimenté par l'import mensuel du
+  distributeur, écrasé à chaque fichier) | `manuel` (saisi dans la fiche — même
+  mécanique que les goodies) ; le stock EST la disponibilité (pas de bascule
+  séparée). Le décrément au paiement (webhook Stripe) est **idempotent** (le
+  rejeu d'un même événement ne décompte pas deux fois). Un statut « à
+  paraître » (`upcoming`) **prime toujours sur le stock**.
 
 ## Ubiquitous Language
 
@@ -52,14 +72,26 @@ Postgres — WordPress reste la **source de vérité** du catalogue jusqu'au swa
 - **fusion** : assemblage des deux fonds + boutique en une liste de `Book`.
 - **parachute `*LegacyHtml` / `contentTouched`** : le HTML WordPress importé reste
   la source de rendu tant qu'un humain n'a pas réédité la fiche dans Payload.
+- **COMMERCE_NATIVE** : interrupteur (`0`|`1`) qui bascule les ventes de
+  WooCommerce vers Payload ; `0` = iso-rendu strict (règle d'or du chantier).
+- **stockSuivi** : `routeur` (alimenté par l'import mensuel du distributeur,
+  écrasé à chaque fichier) | `manuel` (saisi dans la fiche — goodies et livres
+  hors routeur traités pareil).
+- **routeur** : le distributeur, qui envoie un inventaire mensuel (xls,
+  colonnes EAN/TIT/AUT/ABR/PUB/FIN) couvrant les deux maisons.
 
 ## Decisions
 
+- **Bascule unique big-bang** (remplace la cohabitation longue durée envisagée
+  initialement) : contenu, commerce et DNS basculent le même jour ; 24 h de
+  marge de réparation autorisées par le client, déroulé visé de quelques
+  minutes de coupure réelle.
 - **Headless via REST + Store API** (pas de lecture MySQL directe) : cohabitation
   sans risque avec les WordPress jusqu'au cutover — plan et état dans
   `COHABITATION.md`.
-- **Ports & adaptateurs** pour le catalogue : cœur pur testable ; adaptateurs http
-  (prod) et mémoire (tests), pg à venir derrière le même port.
+- **Ports & adaptateurs** pour le catalogue : cœur pur testable ; adaptateurs
+  http (WordPress), pg (Payload, `CATALOGUE_SOURCE=pg`) et mémoire (tests)
+  derrière le même port.
 - **Fraîcheur par ISR** : `revalidate` partagé avec la fenêtre de cache REST.
 - **Back-office dans l'app** : Payload 3.x épinglé, schéma Postgres dédié
   `payload`, migrations versionnées (`src/migrations/`), jamais de `push` en prod.
@@ -82,8 +114,9 @@ Postgres — WordPress reste la **source de vérité** du catalogue jusqu'au swa
   chaque PR (`.github/workflows/ci.yml`) ; `pnpm generate:types` après tout
   changement de schéma Payload.
 - `pnpm build` : **hors CI à dessein** (~300 requêtes REST vers l'OVH mutualisé —
-  le déploiement preview Vercel l'exerce une fois par PR) ; redeviendra hermétique
-  au swap pg.
+  le déploiement preview Vercel l'exerce une fois par PR) ; redeviendra
+  hermétique à la bascule (plus aucun appel WordPress une fois
+  `CATALOGUE_SOURCE=pg` posé en production).
 - Migration catalogue : `pnpm migrate:catalogue -- --site=all` doit rester
   **idempotente** (re-run = 0 créé / 0 maj, `contentTouched` = 0).
 
@@ -94,8 +127,11 @@ Postgres — WordPress reste la **source de vérité** du catalogue jusqu'au swa
 - **`src/components`** — présentation brutaliste (primitives, cartes, en-tête,
   carrousel).
 - **`src/app`** — App Router : `(site)` front + `(payload)` back-office.
-- **`src/payload`** — collections + accès du back-office (schéma catalogue, rôles).
+- **`src/payload`** — collections + accès du back-office (schéma catalogue,
+  commerce, rôles).
 - **`src/migrations`** — schéma Postgres versionné (schéma SQL `payload`).
 - **`scripts/migrate-catalogue`** — migration WordPress→Postgres, idempotente.
+- **`scripts/migrate-products.ts`** — migration WooCommerce→Postgres des
+  produits (prix/stock/sellable), idempotente.
 - **`wp-headless`** — mu-plugin + contrat de données WordPress à préserver.
 - **`plan`** — plan directeur de la refonte (7 phases, stack, calendrier, devis).

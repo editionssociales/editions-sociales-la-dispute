@@ -1,232 +1,409 @@
-# Plan d'implémentation — Phase 4 : Commerce natif (variante « B phasé », septembre 2026) — VERSION FINALE
+# Commerce natif — livré (lots 1–2, mergés le 12/07), reste : décisions client + jour J
 
-*Architecte de phase — 2026-07-09 (rév. 2, après relecture adversariale). S'appuie sur : IMPLEMENTATION-PROMPT.md (jalon 4), COHABITATION.md, LEGACY-STACK.md §7–8, devis §3.2/§5/§8/§9/§11, recon R1–R4, décisions de stack (Neon + Payload + Vercel Blob + Brevo + Stripe). Vérifications complémentaires faites ce jour : profil d'export Advanced Order Export extrait de la base locale (port 3307) ; docs Next 16 présentes sous `node_modules/next/dist/docs/01-app/` ; `package.json` sans `stripe` ni state de panier ; **dig sur `boutique` + `www.boutique` : chacun porte un A ET un AAAA (213.186.33.17 + 2001:41d0:1:1b00:213:186:33:17) — 4 enregistrements à basculer, pas 2** ; **`siteurl`/`home` de l'install Boutique = `boutique.editionssociales.fr` en base (`mod973_options`), pas en constantes wp-config** ; **double réclamation confirmée en base : 204 liens `boutique_es` valides pour 203 produits distincts, `stephane-haber-decouvrir-victor-hugo` réclamé par 2 fiches** ; **trou de grille 49–50 € confirmé (règle « moins de 49 » = value 25–49, « plus de 50e » = value 50–500)** ; **107 commandes `wc-processing`** ; comptage REST prod du jour : 117 (ES) + 178 (LD) = 295 fiches vs 293 au dump du 01/07. Profondeur : jalons — les points marqués **[à affiner au démarrage de la phase]** sont volontairement ouverts.*
-
----
-
-## Objectif et livrable
-
-Remplacer WooCommerce par un commerce natif dans l'app Next/Payload, puis éteindre la boutique WordPress après archive remise et fenêtre de rollback. Périmètre vendu (devis §5 : lignes 3.2 = 2 + 0,5 + 0,25 j, **plus la ligne « surveillance complète + extinction de la boutique » 0,25 j** = **3 j / 600 €**) :
-
-1. **Panier** réel (state client + validation serveur) remplaçant le placeholder `/panier`.
-2. **Checkout Stripe unifié** livres + dons : même compte, même endpoint webhook que la phase Dons (les emails, eux, divergent : reçus natifs Stripe pour les dons, Brevo pour les commandes) — prix TTC, TVA 5,5 % **incluse et non calculée au checkout** (conforme à la pratique actuelle : `woocommerce_calc_taxes = no`, recon R2 §2.8 — le « 5,5 % configuré » des acquis était faux ; la ventilation TVA vit dans l'export compta).
-3. **Grille de port recopiée fidèlement** — correction majeure R2 §2.7 : la grille réelle est **à la valeur du panier** (2 €/4,50 €/5,50 €/6,50 €), pas au poids ; une seule règle au poids (« manifeste », 2,50 €) ; livraison offerte = coupon `free_shipping` ET panier ≥ 50 € ; ventes restreintes **FR/BE/CH** (reste du monde désactivé en prod, ne pas l'inventer). **Quatre trous de grille** à arbitrer : 10–11 €, 24–25 €, 49–50 € (vérifié ce jour), > 500 €.
-4. **Emails de commande** via Brevo (compte partagé avec la newsletter — provisioning livré par la phase 5 ; les dons restent sur les reçus natifs Stripe), DNS additif uniquement, **MX jamais touchés**.
-5. **Export CSV compta** + vue commandes dans le back-office Payload.
-6. **Codes promo simples** (le mécanisme réel actuel = coupons Woo natifs, 821 usages ; Woo Discount Rules est inutilisé — R2 §2.8).
-7. **Achat en invité uniquement** (pas d'espace client — changement assumé : le guest checkout est *interdit* aujourd'hui, R2 §2.5).
-8. **Migration des 223 produits fusionnés** avec les fiches (une fiche par livre, fin de la double saisie) **+ une destination publique pour les produits boutique-seuls** (route `/boutique/[slug]` — sans elle, les ~20 orphelins n'ont ni page ni bouton d'achat après extinction : la seule route fiche actuelle est `/catalogue/[edition]/[slug]`, `getAllBookParams` exclut `edition == null` (`catalogue.ts:80`) et `book-card.tsx:6` pointe leur carte vers le permalink Woo, qui meurt au cutover).
-9. **Archive complète** : 5 753 commandes + 1 329 clients + newsletter (CSV + copie de base) remise au client et confirmée saine **avant** toute extinction.
-
-**Contrainte de mise en production structurante** : le repo auto-déploie `main` → prod (intégration git Vercel vérifiée, R4). Tout le commerce se développe donc **derrière une bascule d'exposition** (`COMMERCE_NATIVE`, étape 2) : la prod conserve les liens d'achat externes Woo et le `/panier` placeholder jusqu'au jour J ; le développement et la recette se font sur les previews Vercel ; le flip du flag est simultané au passage de Woo en lecture seule. **À aucun moment le parcours d'achat public n'est cassé ni dédoublé** (~117 commandes/mois en jeu).
-
-**Livrable de recette** : une commande réelle passée de bout en bout sur le nouveau site (panier → Stripe → email de confirmation → commande visible au back-office → ligne correcte dans l'export compta), la grille de port validée sur les cas de la grille réelle, l'archive remise, `boutique.editionssociales.fr` redirigé (temporaire pendant le recouvrement, définitif après validation écrite — devis §11), la boutique Woo éteinte en fin de fenêtre. Hors périmètre (discipline) : gestion de stock automatique, factures PDF, comptes clients, remboursements en UI custom (SAV = dashboard Stripe), multilingue.
+*Mise à jour du 2026-07-12, après décisions client actées le jour même et merge de
+`feat/commerce-modele-stock` (PR #10) + `feat/commerce-lot2-vente` (PR #12) dans `main`.
+Remplace la version « B phasé / kickoff 07/09 » : le commerce n'est plus une phase de
+septembre déclenchée par un kickoff à venir — le modèle de données, la migration
+produits, la gestion de stock, le moteur de port, le panier, le checkout Stripe, le
+webhook et les exports sont **écrits, testés, mergés**. Ce qui reste est : des décisions
+client encore ouvertes (15/07), une poignée d'intégrations résiduelles (Brevo, recette
+Stripe en clés test, formation équipe), et la bascule elle-même — qui n'est plus un
+cutover de sous-domaine isolé en septembre mais **le jour J commun** à tout le chantier
+(catalogue + commerce + DNS + indexation, en une seule fenêtre, cf. `plan/02`).*
 
 ---
 
-## Préconditions et provisioning (qui fait quoi)
+## Ce qui a changé le 12/07 (à ne pas relire comme la version de juillet précédente)
 
-| Précondition | Détail | Qui | Échéance |
-|---|---|---|---|
-| **Phase 1 (Dons) livrée** | Compte Stripe **live** actif, `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` réels dans l'env Vercel (production ; le placeholder 7 caractères de `site/.env` remplacé), route webhook existante (`src/app/api/stripe/webhook/route.ts`), pages retour succès/annulation. **La phase 1 ne touche pas à Brevo** : les dons utilisent les reçus natifs Stripe — les emails de commande dépendent de la phase 5, pas d'elle | Youri (clé fournie par le client) | fin juillet (phase 1) |
-| ⚠️ **Correction d'acquis Stripe** | Le client n'a **jamais** encaissé via Stripe : Paybox = passerelle vivante (5 606 commandes), la gateway Stripe Woo est `enabled=no` sur un compte **TEST** (R2 §2.4). Le « payouts unifiés, migration invisible » du mandat est faux : la phase 4 est un **changement de PSP**. Le compte Stripe live des dons devient LE compte (`acct_1TqsjgL6ffEZ7VRj` « Éditions sociales », opérationnel — vérifié API 11/07) ; les payouts changent de canal bancaire à la bascule, et le contrat Paybox se résilie après drainage | Youri (re-vérifier `charges_enabled` au kickoff) | acquis (11/07) |
-| **Phase 3 (Catalogue) livrée** | Payload ≥ 3.73 + Neon Postgres (Frankfurt) + Vercel Blob en prod ; collection `books` alimentée (**293 fiches au dump du 01/07 ; 295 relevées en prod REST ce jour — 2 parutions ajoutées depuis ; le compte de référence est celui constaté au run de migration de la phase 3**) ; adaptateur `pgCatalogueSource()` branché pour `listBooks`/`getBook` ; **`listProducts()` encore sur la Store API Woo** (séparation prévue par le port, R1 §7 angle mort n°2) ; interfaces de la section Dépendances posées (dont **URL publique + unicité de slug pour les entrées `edition: null`**) | Youri | fin juillet |
-| **Phase 5 (Newsletter/Brevo) livrée** | Provisioning Brevo complet : compte, clé API, sous-domaine d'envoi (SPF/DKIM additifs — Brevo est déjà pré-câblé en DNS, R4 §3.1), `src/lib/brevo.ts` — prérequis des emails de commande (étape 9) | Youri | livrée le 22/07 |
-| **Surveillance boutique pendant la transition (engagement devis « B phasé »)** | « Mises à jour de sécurité comprises » sur la boutique Woo, juillet → extinction (~2 mois) : passe de mises à jour WP/Woo/extensions avec sauvegarde préalable, en continu — engagement vendu (devis §5, variante B phasé), à ne pas laisser tomber entre les phases ; moniteur Better Stack sur les 3 WP déjà prévu (phase 6) | **Youri**, en continu | juillet → extinction |
-| **Accès client aux previews Vercel** | Protection SSO active (`all_except_custom_domains`, R4) : previews en 302 → login. Liens partageables (ou ajustement de protection) nécessaires pour la recette de septembre — normalement réglé dès la démo du 15/07 ; vérifier que c'est toujours en place | Youri | acquis phase 1–3, re-vérifié au kickoff |
-| Sort du contrat Paybox (VAD banque) | Décider la date de résiliation du contrat de vente à distance — après drainage des commandes en cours, jamais avant cutover | **Client** (avec sa banque) | avant extinction |
-| Dump frais `editionsk884` | Les dumps du 2026-07-01 servent au dev ; la migration finale et l'archive partent d'un **export OVH frais** (phpMyAdmin/dump auto, R4), tiré **la veille du jour J** (pas seulement au kickoff) | Youri | au kickoff puis à J−1 |
-| Arbitrages humains de matching | Liste des ~9 liens `boutique_es` cassés + 20 produits orphelins + **1 double réclamation** (R2 §2.2 + vérification du jour) soumise au client pour rattachement/abandon | Youri prépare, **client tranche** | semaine 1 de la phase |
-| Décisions métier (grille, stock, promos, compta) | Cf. section Questions ouvertes — à figer au kickoff de septembre | Client | 2026-09-07 |
-| Better Stack / Sentry | Moniteur ajouté sur le endpoint checkout + alerte quota Sentry (comptes créés en phase 6/opérationnel, déjà décidés) | Youri | pendant la phase |
-
-Aucun compte nouveau à créer pour cette phase : Stripe, Brevo, Neon, Blob, Sentry, Better Stack existent tous déjà (décisions de stack §2). Attention outillage : les tokens de `site/.env` ne pilotent **pas** l'infra live (R4 surprise n°1) — les scripts de phase utilisent les tokens du shell.
-
----
-
-## Étapes (ordonnées)
-
-**Règle transverse** : lire `node_modules/next/dist/docs/01-app/` (file convention `route`, guides `backend-for-frontend`, `how-revalidation-works`, `forms`, redirects) avant tout code Next — Next 16 diffère des acquis (preuves : `searchParams` en Promise, prop `preload` sur `next/image`). Vérification standard à chaque étape : `pnpm typecheck · lint · test · build`.
-
-### 1. Kickoff : gel des décisions métier et du mapping
-- **Quoi** : passer en revue avec le client la grille de port réelle (dont les **quatre** trous 10–11 € / 24–25 € / 49–50 € / > 500 €), le mode de gestion de la disponibilité, les codes promo à reconduire, les colonnes compta, la liste d'arbitrage produits (~9 cassés + 20 orphelins + 1 double réclamation), et la **date cible du jour J**. Produire un mini-doc de décision versionné.
-- **Fichiers** : `site/docs/phase4-decisions.md` (nouveau).
-- **Vérif** : chaque question de la dernière section a une réponse datée ou son défaut appliqué.
-
-### 2. Bascule d'exposition `COMMERCE_NATIVE` (avant tout code visible)
-- **Quoi** : variable d'env serveur `COMMERCE_NATIVE` (`0` par défaut) qui gouverne **trois choses** : (a) l'UI d'achat — flag off = `buy-links` externes Woo + `/panier` placeholder + pas de badge panier, inchangés au pixel (iso-rendu) ; flag on = bouton « Ajouter au panier », `/panier` réel, badge ; (b) le **refus serveur** — `POST /api/checkout` répond 503 si le flag est off (défense en profondeur : personne ne peut commander en prod avant le jour J, même en forgeant la requête) ; (c) la **sélection de l'adaptateur produits** (étape 11) — off = Store API Woo (la prod continue de refléter prix/stock Woo **vivants**), on = Postgres. Env Vercel : production `0` jusqu'au jour J ; preview `1` + clés Stripe **test** (cible `preview` posée **dès juillet par la phase 1** — politique unifiée : clés test en production jusqu'au passage en réel **et** en preview ; re-vérifier son existence au kickoff). Le flip = changement d'env + redeploy (~2 min) ; le rollback = re-flip, symétrique.
-- **Fichiers** : `src/lib/commerce-flag.ts` (lecture unique du flag, server-only), branchements dans `buy-links.tsx`, `site-header`, `/panier`, `catalogue.ts`, route checkout.
-- **Vérif** : `pnpm build` avec flag off = zéro diff de rendu vs aujourd'hui (contrat iso-rendu) ; preview avec flag on = commerce visible ; requête POST checkout en prod → 503.
-
-### 3. Modèle de données commerce (Postgres via Payload)
-- **Quoi** : étendre le schéma de la phase 3.
-  - Collection `books` (existante) : groupe `commerce` — `sellable` (bool), `stockStatus` (`in_stock`/`out_of_stock`, **manuel**), `priceTTC` (déjà présent via `prix`), `reducedShippingFlag` (remplaçant de la règle « manifeste », si retenue). Les entrées boutique-seules (tote bags, manuels scolaires) vivent dans la même collection avec `edition: null, origin: "boutique"` — le **type** `Book` le supporte (`types.ts:46-66`) et leur **routage public** est traité à l'étape 7 ; contrainte d'unicité de slug par espace (`edition` ∪ `null`) garantie dans la collection (interface posée en phase 3).
-  - Collection `orders` : `number` (séquence lisible, préfixée pour ne pas collisionner avec les n° Woo), `status` (`paid`/`prepared`/`shipped`/`cancelled`/`refunded` — machine minimale), `email`, `billing`/`shipping` (adresses), `lines[]` (ref book snapshotée : titre, isbn, qty, unitPriceTTC), `shippingMethod` + `shippingCostTTC`, `promoCode` + `discountTTC`, `totalTTC`, `stripeSessionId` (unique — clé d'idempotence), `stripePaymentIntentId`, `paidAt`. Écrite **uniquement** par le webhook ; le back-office ne modifie que `status`.
-  - Collection `promoCodes` : `code`, `type` (`fixed_cart`/`free_shipping`), `amount`, `minCart`, `expiresAt`, `active` — décalque du coupon Woo natif (R2 §2.8), gérée par l'équipe dans Payload.
-- **Fichiers** : `src/payload/collections/{Books,Orders,PromoCodes}.ts` (chemins réels hérités de la phase 3), migration Drizzle disciplinée (pas de `push` en prod — décision de stack §2).
-- **Vérif** : migration appliquée sur Neon branch de dev ; admin Payload affiche les 3 collections en français ; `pnpm build` passe (gate `withPayload`).
-
-### 4. Migration produits : fusion 223 produits ↔ fiches (détail en section Données)
-- **Quoi** : script one-shot **idempotent et rejouable** + rapport de matching à **trois catégories** (matché / lien cassé / **double réclamation**) + arbitrage humain + import. Rejoué sur dump frais à J−1 (pas seulement au kickoff).
-- **Fichiers** : `site/scripts/migrate-products.ts` (réutilise la dépendance `mysql2` aujourd'hui morte — R1 surprises n°2 ; lit la MariaDB locale 3307 pour le dev, le dump frais au run final).
-- **Vérif** : cf. section Données.
-
-### 5. Moteur de frais de port — module pur + tests
-- **Quoi** : `computeShipping(cartTotalTTC, flags)` recopiant la grille R2 §2.7 : 0–10 → 2,00 € ; 11–24 → 4,50 € ; 25–49 → 5,50 € ; 50–500 → 6,50 € ; règle réduite 2,50 € si panier = uniquement produits `reducedShippingFlag` (si retenue) ; gratuit si `promoCode.type=free_shipping` ET total ≥ 50 € ; zones = FR/BE/CH uniquement. Traitement des **quatre** trous selon la décision client (défaut : bornes contiguës).
-- **Fichiers** : `src/lib/shipping.ts` + `src/lib/shipping.test.ts` (pur, zéro I/O — même style que `campaign.ts`/`browse.ts` ; les tests vitest listent **chaque** ligne de la grille + les cas limites **10,50 € / 24,50 € / 49,50 € / 600 €**).
-- **Vérif** : tests verts ; revue de la table avec le client (copie d'écran de la grille Woo vs table du module).
-
-### 6. Panier client (derrière le flag)
-- **Quoi** : provider client + persistance `localStorage` (shape `{version, lines: [{slug, qty}]}` — jamais de prix côté client), îlot badge dans `site-header`, page `/panier` réelle (lignes, quantités, sous-total, estimation port via `shipping.ts`, champ code promo), bouton « Ajouter au panier » sur la fiche livre quand `status === "available"` (évolution de `buy-links.tsx` : le lien externe Woo devient un bouton panier ; `external`/`upcoming`/`unavailable` inchangés). **Tout est conditionné par `COMMERCE_NATIVE`** : en prod (flag off) rien ne change. Respect des conventions dures : Tailwind littéral, server par défaut (le panier est l'un des rares îlots client), iso-rendu partout ailleurs.
-- **Fichiers** : `src/components/cart/*` (nouveau), `src/components/site-header.tsx`, `src/components/buy-links.tsx`, `src/app/panier/page.tsx`, `src/lib/cart.ts` (logique pure testée : totaux, quantités).
-- **Vérif** : parcours manuel sur preview (flag on) : ajouter/modifier/supprimer, persistance après rechargement, badge correct ; `pnpm test` sur `cart.ts` ; `pnpm build` flag off = prod inchangée (le panier vit en client, n'affecte pas l'ISR — R1 §5).
-
-### 7. Destination publique des produits boutique-seuls — route `/boutique` (~0,25 j)
-- **Quoi** : les ~20 produits `edition: null` doivent avoir une page et un bouton d'achat après extinction de Woo. Réactiver `/boutique` en **section** (aujourd'hui simple `redirect("/catalogue")`, `app/boutique/page.tsx:5`) : liste des articles boutique-seuls + route fiche `/boutique/[slug]` (fiche minimale : couverture/image produit, titre dé-HTML-isé, prix, statut, bouton d'achat — même composant `BuyLinksList`/panier que les fiches catalogue) avec `generateStaticParams` sur les entrées `edition: null`. `book-card.tsx` : le lien d'un orphelin devient `/boutique/<slug>` interne (plus de `target="_blank"` vers Woo). La table de redirections (étape 12) route `/produit/<slug-orphelin>` vers cette URL, pas vers le catch-all. **Mettre à jour `src/app/sitemap.ts` dans la même PR** : le sitemap de la phase 2 ne connaît ni `/boutique` ni `/boutique/[slug]`.
-- **Fichiers** : `src/app/boutique/page.tsx` (remplace le redirect), `src/app/boutique/[slug]/page.tsx` (nouveau), `src/components/book-card.tsx`, `src/app/sitemap.ts`.
-- **Vérif** : chaque orphelin **conservé** à l'arbitrage a une URL publique qui répond 200 et un bouton d'achat fonctionnel (flag on) ; les abandonnés n'apparaissent nulle part ; `pnpm build` pré-rend les fiches boutique.
-- **[à affiner au démarrage : rattacher ou non la section `/boutique` à la nav ; présentation minimale suffisante — pas de sur-design]**
-
-### 8. Checkout serveur (première écriture commerce de la phase)
-- **Quoi** : endpoint `POST /api/checkout` (route handler — pattern défini en phase 1 pour les dons, réutilisé ; **garde `COMMERCE_NATIVE`**) : re-lecture **serveur** des prix/disponibilité depuis Postgres (le client n'envoie que slugs+quantités), validation `sellable && in_stock`, application du code promo (table `promoCodes`), calcul du port via `shipping.ts`, création d'une Stripe Checkout Session `mode: payment` — `line_items` en `price_data` EUR TTC, ligne ou `shipping_options` pour le port, `shipping_address_collection.allowed_countries: [FR, BE, CH]`, remise transmise en discount créé à la volée, `metadata: {kind: "order", ...}` pour discriminer des dons dans le webhook commun. Pages retour : réutiliser/décliner celles des dons. **[à affiner au démarrage : `shipping_options` vs ligne d'article port ; création du discount Stripe ; vérifier l'API Stripe courante à ce moment-là]**.
-- **Fichiers** : `src/app/api/checkout/route.ts`, `src/lib/checkout.ts` (validation pure testable), `src/app/commande/{merci,annulee}/page.tsx` (ou routes phase 1 étendues).
-- **Vérif** : en mode test Stripe sur preview — panier multi-lignes, chaque tranche de port, promo valide/expirée/sous-minimum, livre passé `out_of_stock` entre panier et checkout (refus propre), pays hors FR/BE/CH refusé ; en prod (flag off) → 503.
-
-### 9. Webhook + email de commande
-- **Quoi** : étendre le handler webhook de la phase 1 : `checkout.session.completed` avec `kind=order` → création `orders` **idempotente** (unicité `stripeSessionId`), envoi Brevo via `src/lib/brevo.ts` (provisionné en phase 5) : email de confirmation à l'acheteur + notification à l'équipe (aujourd'hui `administrer@editionssociales.fr`, R2 §2.8 — la boîte reste en réception, seul l'envoi passe par Brevo, MX intouchés). Gabarit d'email : lignes, port, total, mention « TVA 5,5 % incluse », adresse de livraison.
-- **Fichiers** : `src/app/api/stripe/webhook/route.ts` (existant phase 1), `src/lib/emails/order-confirmation.ts`.
-- **Vérif** : Stripe CLI en local (événements rejoués deux fois → une seule commande) ; email reçu en boîte réelle, pas en spam (mail-tester ≥ 9/10) ; erreur webhook visible dans Sentry.
-
-### 10. Back-office commandes + export compta
-- **Quoi** : la collection `orders` donne la vue admin Payload gratuite (liste, filtre par statut, détail) — l'équipe y fait le suivi de préparation (`paid → prepared → shipped`, à la main ; pas d'UI custom au-delà de Payload). Export CSV : endpoint authentifié (ou custom view Payload) avec **deux profils** : (a) « préparation » — décalque exact du profil AOE réellement utilisé, extrait de la base : statuts `processing/on-hold`, colonnes `E-mail du client, Article #, UGS(ISBN), Nom, Quantité, Prix du produit, Code de coupon, Réduction` (l'UGS Woo était vide — 0/223 SKU — le nouvel export met l'ISBN, amélioration gratuite) ; (b) « compta » — n° commande, date, statut, email, adresses billing/shipping, total TTC, port TTC, remise, **part TVA 5,5 % calculée** (TTC/1,055), moyen de paiement, `stripePaymentIntentId`. Bornes de dates en paramètres.
-- **Fichiers** : `src/payload/…` (endpoint/vue), `src/lib/order-export.ts` (formatage pur testé).
-- **Vérif** : export d'un jeu de commandes test ouvert dans LibreOffice/Excel ; colonnes validées par la personne compta du client **[colonnes exactes à affiner au démarrage — décision client n°5]**.
-
-### 11. Swap de l'adaptateur produits (gated) + recette marchande sur preview
-- **Quoi** : implémenter `listProducts()` sur Postgres en **mimant le shape brut `WcProduct`** (option (a) de R1 §1 : `{id, name, slug, permalink, is_purchasable, is_in_stock, prices}` — `permalink` devient l'URL interne : `/catalogue/<edition>/<slug>` pour les fiches, **`/boutique/<slug>` pour les boutique-seuls**) ; la sélection de l'adaptateur dans `catalogue.ts` est **pilotée par `COMMERCE_NATIVE`** : la prod (flag off) continue de lire la Store API Woo — prix et stocks publics restent **vivants** tant que Woo vend ; `catalogue-core` et les 55 tests ne bougent pas (principe absolu n°2). Recette complète **sur preview, en mode test Stripe** avec l'équipe : parcours d'achat, back-office, exports, emails. **Aucune commande réelle avant le jour J** — les 1–2 commandes réelles à faible montant (remboursées via dashboard Stripe, démonstration du geste SAV au passage) servent de smoke test en prod **juste après le flip** (étape 12).
-- **Fichiers** : `src/lib/catalogue-pg.ts` (phase 3, étendu), `src/lib/catalogue.ts` (sélection par flag), `boutique.ts` conservé jusqu'à l'extinction (rollback à une ligne).
-- **Vérif** : `pnpm test` intégral ; diff des ~295 fiches entre prod (Woo) et preview (Postgres) : statuts d'achat identiques hors arbitrages assumés ; recette client signée sur preview.
-
-### 12. Jour J : bascule coordonnée (fenêtre swap → cutover ≤ 24–48 h) et recouvrement
-- **Quoi** : séquence COHABITATION phase 3 appliquée au sous-domaine boutique, runbook versionné. Le point clé : **la fraîcheur des données et l'unicité de la caisse sont garanties par l'ordre des opérations**, pas par une fenêtre de recette étalée.
-  1. **J−7** : abaisser le TTL des **4 enregistrements** DNS : **A + AAAA** de `boutique` **et** `www.boutique` (vérifié par dig : chacun porte 213.186.33.17 **et** 2001:41d0:1:1b00:213:186:33:17 — ne basculer que les A laisserait les clients IPv6 sur l'ancien WooCommerce, split-brain invisible). Créer `cms-boutique.editionssociales.fr` attaché au slot OVH (path Boutique, SSL), définir `WP_HOME`/`WP_SITEURL` en **constantes wp-config** (elles priment sur les options en base — vérifié : `siteurl`/`home` = `boutique.editionssociales.fr` en base, un hostname technique brut sans cela boucle en redirection canonique vers Vercel), tester wp-admin dessus. C'est la réintroduction du découplage COHABITATION phase 2, que l'exonération « tant que la boutique reste sur son domaine » ne couvre plus.
-  2. **J−1 au soir** : **couper le checkout Woo** (mode « lecture seule » : page d'info + désactivation du paiement, réversible) — cela **purge les IPN Paybox en vol avant le flip DNS** (un IPN émis après la bascule n'atteindrait jamais Woo : le domaine répondra depuis Vercel — la formulation « l'IPN continue de fonctionner tant que le domaine répond » de la v1 était fausse). Tirer le dump OVH frais, **rejouer le script de migration produits** (prix/stocks/produits à jour à l'exposition, pas au kickoff), générer l'archive (section Données).
-  3. **Jour J matin** : flip `COMMERCE_NATIVE=1` en production + redeploy — le checkout natif devient l'unique caisse, sur des données de la veille. Attacher `boutique.editionssociales.fr` + `www.boutique` au projet Vercel et **remplacer les 4 enregistrements A/AAAA par des CNAME vers `cname.vercel-dns.com`** (pratique standard Vercel pour un sous-domaine ; `www.boutique` en redirection vers `boutique` côté Vercel). Servir la table de redirections **temporaires (`statusCode: 302` explicite — jamais `permanent: false`, qui émet des 307 et ferait échouer les curls de recette contractuels « 302 puis 301 »)** — conformément au devis §11 (« redirections d'abord temporaires (302) puis définitives (301) après votre validation ») et parce qu'une 301 mise en cache navigateur rendrait un rollback DNS inopérant pour les visiteurs récurrents : `/produit/<slug>/` → `/catalogue/<edition>/<slug>` (fiches matchées) ou `/boutique/<slug>` (orphelins conservés) — table générée par le script de migration, slugs URL-decodés (piège `%e2%80%89`) ; `/panier|/commander` → `/panier` ; catch-all → `/catalogue`. Smoke test : **1–2 commandes réelles à faible montant, remboursées** (démonstration SAV).
-  4. **Recouvrement (défaut 2 semaines)** : wp-admin accessible via `cms-boutique` pour **drainer les 107 commandes `wc-processing`** (vérifié en base) ; pour les callbacks Paybox résiduels de ces commandes-là, **proxifier `/wc-api/*` et `/?wc-api=*` depuis Vercel vers `cms-boutique`** (rewrites) pendant la fenêtre. **[à affiner au démarrage : URL de callback exacte configurée côté contrat Paybox — la maintenir joignable ; vérifier le comportement du plugin avec `WP_SITEURL` changé]**.
-- **Fichiers** : `next.config.ts` / config redirects+rewrites + domaines Vercel ; zone DNS OVH (4 enregistrements + `cms-boutique`) ; `wp-config.php` Boutique (2 constantes, réversibles) ; runbook `site/docs/phase4-cutover.md`.
-- **Vérif** (checklist post-bascule du runbook) : `dig A` **et** `dig AAAA` sur `boutique` + `www.boutique` = Vercel uniquement ; `dig MX editionssociales.fr` avant/après **identique** (aucun MX ne vit sur le sous-domaine, ceux du domaine ne bougent pas) ; `curl -I` sur 20 anciennes URLs produit (302 vers la bonne cible, y compris 2 orphelins) ; wp-admin OK sur `cms-boutique` ; Better Stack vert sur le checkout ; zéro commande Woo nouvelle après J−1 au soir.
-
-### 13. Fin de phase : drainage, traçage Legacy REST, livrables fournis à la phase 7
-- **Quoi** : cette phase **s'arrête à la fin du drainage** — la semaine de clôture (~12–16/10 : 301 définitifs, extinction boutique phase A, nettoyage des webhooks Stripe legacy, retrait du proxy `wc-api` et des constantes wp-config, PV, drop à J+7) appartient **en entier à la phase 7**, qui exécute ; cette phase **fournit**. Le 0,25 j « extinction » de la ligne du devis finance l'exécution en phase 7 — pas deux fois. Livrables remis à la phase 7 :
-  1. **Logs de la gate G7** : relevé des accès OVH sur `/wc-api/*` et `/wp-json/wc/v1|v2|v3` pendant tout le recouvrement — la dette Legacy REST est déjà tracée à 95 % (R2 §3 : 0 clé API, 0 webhook, l'export compta innocenté, le seul utilisateur de `wc-api` est Paybox via le mécanisme cœur, pas le plugin Legacy) ; critère : zéro hit hors IPN Paybox des commandes drainées.
-  2. **Archive J−1 + export delta** des commandes soldées pendant le recouvrement (section Données) — la phase 7 re-vérifie et prend le dump final qui fait foi.
-  3. **Table de matching** produits→URLs (`src/lib/redirects-produits.json`, générée par le script de migration) pour le flip 301 de la phase 7.
-  La purge de la dette (Paybox, Legacy REST API, Jetpack, tables Wordfence) disparaît avec l'install au moment de l'extinction — geste phase 7 (devis §3, « dette purgée en éteignant »).
-- **Vérif** : les trois livrables sont archivés au dossier de clôture et référencés par les gates G3/G5/G7 de la phase 7 ; **zéro geste DNS ou redirection définitive exécuté par cette phase**.
-
-### 14. Fin de recouvrement : surveillance et documentation SAV
-- **Quoi** : moniteur Better Stack sur `POST /api/checkout` (check de santé dédié), retrait du moniteur boutique Woo, alertes Stripe (paiements échoués), page d'aide interne pour l'équipe : « rembourser une commande = dashboard Stripe » (périmètre discipliné, cadrage (j)), « gérer un code promo / une rupture = back-office ». Retirer le flag `COMMERCE_NATIVE` du code (une fois la fenêtre passée — le flag est un échafaudage, pas une feature). Mise à jour de `COHABITATION.md` et `LEGACY-STACK.md` **en coordination avec la phase 7** (qui clôt les mêmes documents à la clôture — une seule rédaction finale).
-- **Vérif** : l'équipe exécute un remboursement test guidé ; docs à jour dans le repo ; grep `COMMERCE_NATIVE` = zéro hit.
+- **Abandon de la cohabitation longue durée.** Le client a acté une **bascule unique
+  big-bang** : plus de fenêtre de recouvrement de plusieurs semaines avec deux caisses
+  qui coexistent à des dates différentes. 24 h de site indisponible sont **autorisées**
+  par le client (marge de réparation) mais le déroulé visé réduit le down réel à
+  quelques minutes : gel de l'édition WordPress → migration finale → `compare-sources`
+  → déploiement Postgres → flips DNS. Le runbook détaillé de cette fenêtre vit dans
+  `plan/02-mise-en-production.md` (pointeur, section « Jour J ») — ce document ne le
+  duplique pas.
+- **Le commerce bascule le même jour.** Il n'y a plus de « phase commerce de
+  septembre » séparée : WooCommerce/Paybox cesse de vendre au flip, dans la même
+  fenêtre que le passage `CATALOGUE_SOURCE=pg` et les flips DNS ES/LD/boutique.
+- **La gestion de stock est dans le périmètre** (routeur + suivi manuel) — ce n'était
+  jusqu'ici qu'un toggle `in_stock/out_of_stock` hors périmètre vendu ; le client a
+  demandé et obtenu un import mensuel du fichier du routeur avec décrément automatique
+  à la commande, cf. ci-dessous.
+- Les 11 cas d'arbitrage produits (liens cassés, doublons, double réclamation) sont
+  **résolus** — plus une ligne TODO dans le script de migration.
 
 ---
 
-## Données et migration
+## ① Ce qui est fait (livré et mergé le 12/07)
 
-### Migration produits (étape 4)
+### Modèle de données (Payload/Postgres, PR #10)
 
-- **Source exacte** (R2 §5) : `mod973_posts` (`post_type='product'`, `post_status='publish'`, 223) + `mod973_postmeta` (`_price`, `_regular_price`, `_stock_status`, `_thumbnail_id`, `_weight` pour mémoire) + `product_cat` ; côté catalogue, le lien vient des fiches **déjà migrées en phase 3** (champ `boutique` du payload `book`, alias ACF `boutique_es`).
-- **Clé de matching** : slug extrait de l'URL `boutique_es` (`/produit/<slug>/`, **URL-decodée** — piège `%e2%80%89`), joint sur `post_name` produit — exactement la clé que le front utilise déjà (`slugFromBoutiqueLink`). Pas de matching par titre (HTML dans les `post_title`, R2 §2.1) ni par ISBN (0 SKU rempli).
-- **Script** : `site/scripts/migrate-products.ts` (Node + `mysql2` + API locale Payload). Sorties : (1) mise à jour des fiches matchées — `sellable=true`, `priceTTC` = `_price`, `stockStatus` = `_stock_status` ; (2) création des produits orphelins **conservés** en entrées `origin:"boutique"` (avec slug unique, titre dé-HTML-isé — servies par `/boutique/[slug]`, étape 7) ; (3) **rapport de matching à trois catégories** (CSV : matché / lien cassé / **double réclamation**) pour arbitrage humain.
-- **Attendus chiffrés** (vérifiés R2 §2.2 + base locale ce jour, à re-mesurer sur dump frais) : 213 liens, **204 valides pour 203 produits distincts** — **1 double réclamation connue : `stephane-haber-decouvrir-victor-hugo`, réclamé par 2 fiches** (à trancher : quelle fiche porte la vente ; l'autre pointe vers elle ou perd le lien) ; ~9 cassés (dérive de slug post-prévente : `…-prevente` → slug final — rattrapage manuel assisté par similarité) ; 20 orphelins (manuels « Je lis, j'écris », Correspondance Marx-Engels t.3/5/7, Jaurès, tote bags…) ; 33 `outofstock`.
-- **Vérification** : comptages (Σ fiches sellable + orphelins conservés = 223 ± abandons arbitrés) ; **un produit vendu par exactement une fiche après arbitrage** (la double réclamation est détectée par le rapport, pas découverte par l'échec du contrôle) ; échantillon de 15 livres comparés prix/dispo Woo prod vs back-office avec le client.
-- **Rollback** : total et trivial — la boutique Woo n'est **jamais modifiée** (lecture seule) ; tant que le flag est off en prod, le front lit toujours la Store API ; après le flip, revenir = re-flip du flag (redeploy) tant que Woo n'est pas éteinte.
-- **Re-runs** : le script est idempotent (upsert par slug). Run de dev au kickoff (dump du 01/07 ou frais), **run final à J−1 sur dump frais** — jamais plus de ~24 h entre les données Postgres exposées et la réalité Woo au moment du flip.
+- **`Books.commerce`** (groupe ajouté à la collection existante) : `sellable`
+  (checkbox), `stock` (nombre, `min: 0`, nullable — `null` = non suivi, **pas** de
+  bascule séparée `in_stock`/`out_of_stock` : le stock **est** la disponibilité,
+  décision client du 12/07 ; `0` = épuisé sans retirer la fiche du catalogue),
+  `stockSuivi` (`routeur` | `manuel`, défaut `manuel`), `reducedShippingFlag`
+  (checkbox, port réduit « manifeste »), `stockUpdatedAt` (posé automatiquement par
+  l'import routeur, jamais saisi à la main).
+- **Collection `orders`** : adresses (facturation/livraison, pays limité à
+  FR/BE/CH), `number`, `status` (`paid`/`prepared`/`shipped`/`cancelled`/`refunded`/
+  `failed`), `email`, `lines[]` (référence livre + **snapshot** titre/ISBN/quantité/
+  prix unitaire TTC au moment de la vente), `shippingMethod`
+  (`standard`/`reduit`/`offert`), `shippingCostTTC`, `promoCode` + `discountTTC`,
+  `totalTTC`, `stripeSessionId` (unique — clé d'idempotence), `stripePaymentIntentId`.
+  Écrite uniquement par le webhook ; le back-office ne modifie que `status`.
+- **Collection `promoCodes`** : décalque des coupons Woo natifs (`fixed_cart`,
+  `free_shipping`), gérée par l'équipe dans Payload.
+- **Global `reglages-boutique`** : `seuilAlerteStockBas` (défaut **3** exemplaires) —
+  seul réglage transverse posé à ce stade, consommé par le widget stock bas du
+  back-office.
+- Migration Drizzle versionnée (`src/migrations/20260712_175030_stock_updated_at.*`),
+  pas de `push` en prod — conforme à la discipline du dépôt.
 
-### Archive commandes / clients / newsletter (étapes 12–13)
+### Migration produits (PR #10, arbitrages tranchés en PR #35f2e87)
 
-- **Source** : export OVH **frais** de `editionsk884` tiré à J−1 (HPOS désactivé → source de vérité = `mod973_posts` type `shop_order` + `mod973_postmeta` + `mod973_woocommerce_order_items`/`order_itemmeta` + `mod973_users`/`usermeta` + `mod973_wc_customer_lookup` + `mod973_newsletter` — R2 §2.3/2.5/2.6 ; **ne pas se fier aux tables `wc_orders*`, vides**). Complété en fin de drainage par un **export delta** (les 107 `processing` soldées pendant le recouvrement).
-- **Livrables client** : (a) dump SQL complet compressé de la base ; (b) CSV « commandes » aplati (une ligne par ligne de commande : n°, date, statut, billing/shipping, articles, quantités, totaux, port, moyen de paiement, `_transaction_id`) ; (c) CSV « clients » (1 329) ; (d) CSV « abonnés newsletter » (2 848 confirmés — sert aussi la phase 5) ; (e) copie du dossier `wp-content` de l'install Boutique. Remise par canal privé + copie chiffrée dans le Blob de backup.
-- **Critère « confirmé sain »** (bloquant pour l'extinction) : le dump se **restaure** dans une MariaDB locale et les comptages collent à la prod au jour de l'export (`shop_order` ≥ 5 753, users 1 220, customer_lookup 1 329, newsletter ≥ 2 848) ; les CSV s'ouvrent et leurs totaux annuels recoupent les stats R2 §2.3 ; le client vérifie **5 commandes connues** de lui et confirme **par écrit** la réception et la lisibilité.
+- Script `scripts/migrate-products.ts` (+ cœur pur `migrate-products-core.ts`,
+  `pnpm payload run scripts/migrate-products.ts -- [--dry-run]`), idempotent
+  (upsert par slug, un re-run sans changement de source = 0 création/0 màj — vérifié).
+  Lit la Store API live, apparie par slug extrait de `boutique_es` (URL-décodé,
+  piège `%e2%80%89`) — même clé que la fusion du front.
+- **Chiffres du dernier run (base locale, 12/07)** : **208 fiches appariées** (+6
+  depuis le run précédent), **15 orphelins** conservés (produits sans fiche
+  catalogue → deviennent des fiches `origin: "boutique"`, `edition: null`, servies
+  par `/boutique/[slug]`), **0 en attente d'arbitrage** (contre 11 avant décision
+  client), **0 conflit**. Second run de contrôle : 0 màj/208 inchangées — idempotence
+  confirmée. 223 produits Store API = 208 + 15, la somme boucle.
+- **Règle d'arbitrage appliquée aux 11 cas (décision client du 12/07)** : l'**ISBN
+  tranche** l'identité d'édition ; en cas de doublon (deux fiches disputant un même
+  produit), **drop oldest** — la fiche à la parution la plus récente reçoit le
+  produit natif, la plus ancienne reste sans commerce natif (mais visible au
+  catalogue, jamais retirée). Trois cas relevaient de ce motif
+  (`larrangement-des-sexes` 2002 perd contre `larrangement-des-sexes-
+  nouvelle-edition` 2026 ; `le-capital-livre-1` 2016 perd contre `le-capital-livre-
+  1-2` 2022 ; `pensee-et-langage` 2019 perd contre `pensee-et-langage-2` 2025).
+  Deux cas de coquille/dérive `-prevente` résolus par candidat univoque
+  (`decouvrir-gorz`, `linstitution-du-handicap`/`romuald-bodin-…`,
+  `jean-marc-schiappa-decouvrir-la-revolution-francaise`). Deux fiches sans aucun
+  produit correspondant (recherche exacte + similarité infructueuse sur les 223
+  produits) : rien n'est écrit, rien n'est inventé.
+- **Double réclamation résolue** : `stephane-haber-decouvrir-victor-hugo`
+  (produit Store API id 2165) revient à la fiche du même nom ; la fiche
+  `decouvrir-le-programme-du-cnr` reçoit son propre produit, jusque-là non
+  réclamé (`laurent-douzou-decouvrir-le-programme-du-cnr`, id 2168).
+  **⚠️ À signaler au client** : le champ ACF `buy.boutiqueUrl` de la fiche CNR
+  pointe à tort vers le produit Victor Hugo dans WordPress (erreur de saisie/
+  copier-coller) — la source n'est pas corrigée par ce script (contrat lecture
+  seule) ; correction à faire côté WP par l'équipe.
+
+### Gestion de stock : routeur + suivi manuel (PR #10, décision client du 12/07)
+
+- Le routeur (distributeur commun aux deux maisons) envoie **un fichier `.xls`
+  mensuel** couvrant les deux fonds (colonnes `EAN`/`TIT`/`AUT`/`ABR`/`PUB`/`FIN` —
+  `FIN` = stock déclaré, EAN numérique, feuille unique `Feuille1`).
+- Import : `POST /api/books/import-stock` (endpoint Payload authentifié
+  admin/éditeur) + panneau admin `StockImportPanel.tsx` ; cœur pur
+  `stock-import-core.ts` (XLSX/SheetJS, `normalizeIsbn` fait tomber EAN routeur et
+  ISBN WordPress saisi avec espaces/tirets sur la même clé). **Le fichier écrase**
+  `commerce.stock` des fiches appariées (le fichier fait foi, pas d'accumulation) ;
+  `FIN` négatif ramené à 0 (artefact de compta routeur observé sur le fichier réel
+  du 06/07, jamais un stock physique négatif).
+- **Chiffres constatés sur le fichier réel** : **228 fiches en ligne appariées**
+  au routeur (`stockSuivi: "routeur"`), **67 fiches en ligne absentes du fichier**.
+  Ces 67 sont la **backlist pré-2020** : le clivage est **temporel** (elles datent
+  d'avant la fusion opérationnelle du distributeur au 2020-06-03), pas une question
+  de maison. Elles vivent en **suivi manuel**, comme les goodies — ce n'est **pas**
+  une alerte (décision client du 12/07 : « hors routeur = suivi manuel »).
+- **Rapport d'import à quatre sections** : (1) fiches appariées et mises à jour ;
+  (2) lignes du fichier routeur sans fiche correspondante (compte seul — normal,
+  le fichier couvre aussi le fonds papier pur) ; (3) fiches en suivi manuel absentes
+  du fichier (informatif, normal) ; (4) **la vraie alerte** — fiches
+  **anciennement** en `stockSuivi: "routeur"` qui disparaissent du nouveau fichier
+  (titre disparu du routeur) : le stock n'est **pas** touché, `stockSuivi` reste
+  `routeur`, et l'alerte **persiste** à chaque import suivant tant que l'anomalie
+  n'est pas corrigée (fichier ou passage manuel assumé) — elle ne s'auto-résout
+  jamais silencieusement.
+- **« À paraître » prime sur le stock** : une fiche à date de parution future ne se
+  vend pas même si elle est cochée vendable avec du stock en préparation (ordre de
+  règles posé dans `resolveNativePurchase`, cf. moteur de disponibilité ci-dessous).
+- **Alerte stock bas** : dashboard `/admin` uniquement (widget `StockLowWidget.tsx`,
+  seuil `reglages-boutique.seuilAlerteStockBas`, défaut 3) — **pas d'email**.
+- **Décrément automatique** à chaque commande payée (webhook, idempotent — voir
+  checkout/webhook ci-dessous).
+
+### Moteur de frais de port (PR #12, module pur `src/lib/shipping-core.ts`)
+
+Recopie fidèle de la grille réelle (valeur du panier, pas poids), en **centimes
+entiers** (jamais de flottant sur de l'argent) :
+
+| Tranche panier TTC | Coût | Statut |
+|---|---|---:|
+| 0 – 10,00 € | 2,00 € | palier standard |
+| 11,00 – 24,00 € | 4,50 € | palier standard |
+| 25,00 – 49,00 € | 5,50 € | palier standard |
+| 50,00 – 500,00 € | 6,50 € | palier standard |
+| Panier « manifeste » (uniquement articles `reducedShippingFlag`) | 2,50 € | forfaitaire, prioritaire sur la grille standard |
+| Coupon `free_shipping` **ET** panier ≥ 50 € | 0 € | prioritaire sur tout le reste |
+
+Zones vendues : **FR/BE/CH uniquement**, refus explicite hors zone.
+
+**Quatre trous non couverts par la grille publiée** — chacun tranché par une table
+de décision dédiée (`GRID_HOLE_DECISIONS`, un seul point à modifier le jour de la
+décision, aucun autre fichier à toucher) :
+
+| Trou | Intervalle exact | Défaut posé (en attendant l'arbitrage) |
+|---|---|---|
+| 1 | **10,01 € – 10,99 €** | rattaché au palier 11–24 € (4,50 €) |
+| 2 | **24,01 € – 24,99 €** | rattaché au palier 25–49 € (5,50 €) |
+| 3 | **49,01 € – 49,99 €** | rattaché au palier 50–500 € (6,50 €) |
+| 4 | **> 500,00 €** | **refus** avec message — hors grille automatisée, commande à traiter par email (ce n'est pas un choix de tarif) |
+
+Le défaut conservateur retenu pour les trois premiers trous : le client ne paie
+jamais moins cher que ce que la grille publiée lui donnerait droit sur le palier
+voisin. **Décision client attendue le 15/07** pour chacun des trois premiers (le
+quatrième n'est pas négociable : au-delà de 500 €, hors parcours automatisé).
+Tests unitaires sur chaque ligne de la grille + les quatre cas limites.
+
+*Repère historique (usage réel constaté sur les commandes Woo, pour dimensionner
+l'impact des trous) : « entre 11 et 24 » 2 055 commandes · « moins de 49 » 1 269 ·
+« plus de 50e » 811 · livraison gratuite 785 · « moins de 10 » 542 · « manifeste »
+46. Coupons Woo natifs : **821 usages** au total (mécanisme réel — Woo Discount
+Rules, 4 règles toutes désactivées, est inutilisé).*
+
+### Adaptateur produits Postgres + flag `COMMERCE_NATIVE`
+
+- **`COMMERCE_NATIVE`** (`'0'` par défaut) gouverne, **indépendamment** de
+  `CATALOGUE_SOURCE` : à `0`, le catalogue lit la Store API WooCommerce pour les
+  prix/stock/vendabilité, quel que soit le contenu des fiches (site strictement
+  iso-rendu) ; à `1`, tout vient de Payload — **plus aucun appel Store API**,
+  `listProducts()` n'est même plus invoqué.
+- **`resolveNativePurchase`** (`src/lib/catalogue-core.ts`), ordre de règles :
+  1. parution future → « à paraître », prime sur tout le reste ;
+  2. `sellable` ET (`stock == null` [non suivi] OU `stock > 0`) → disponible,
+     panier natif (permalien interne, mode `cart`) ;
+  3. sinon lien(s) externe(s) (Paris Librairies / La Librairie) → « en librairie » ;
+  4. sinon indisponible — **jamais retiré du catalogue**.
+- Routes `/boutique` (liste, redirige vers `/catalogue` tant que le flag est à `0`)
+  et `/boutique/[slug]` (fiche minimale, même composants panier/achat que
+  `/catalogue`) pour les 15 orphelins conservés. **Absente du sitemap tant que le
+  flag n'est pas passé à `1`** — à faire dans la même PR que le flip (reste à
+  faire, cf. §②).
+
+### Panier, checkout, webhook, exports (PR #12)
+
+- **Panier client** : état `localStorage` (ids + quantités seulement, jamais de
+  prix côté client), badge dans l'en-tête, `/panier` réel avec re-validation
+  serveur.
+- **Checkout** `POST /api/checkout` : garde `COMMERCE_NATIVE` vérifiée **en tout
+  premier**, avant même de lire le corps de la requête (503 sinon, défense en
+  profondeur). Re-validation serveur **intégrale** depuis Payload : prix,
+  vendabilité/stock, code promo, zone — le client n'envoie que `{id, qty}` + zone +
+  code promo optionnel. Session Stripe Checkout `mode: payment`, invité uniquement,
+  locale `fr`, `metadata.kind: "order"` (dupliquée sur `payment_intent_data` — c'est
+  ce qui permet à `charge.refunded` de la porter aussi).
+- **Webhook** (`src/app/api/stripe/webhook/route.ts` + `order-handler.ts`) étendu
+  par discrimination `metadata.kind` : chemin dons intact (aucune écriture, best
+  effort) ; chemin `order` délégué en entier au handler commande — **création de
+  la commande idempotente par `stripeSessionId`** (un event rejoué ne recrée pas la
+  commande) et **décrément de stock idempotent au rejeu** (le décrément ne
+  s'applique qu'à la première écriture de la commande, jamais deux fois) ;
+  `charge.refunded` retrouve la commande par `stripePaymentIntentId` et passe son
+  statut à `refunded` **sans re-créditer le stock** (décision assumée — le
+  réassort reste un geste humain, pas un automatisme).
+- **Emails de commande** : interface `OrderMailer`/`OrderMailPayload` posée
+  (`src/lib/order-mail.ts`), implémentation **LOG uniquement** pour l'instant — ne
+  jette jamais (un échec d'envoi ne doit pas faire échouer le webhook, la commande
+  est déjà en base). Le reçu Stripe natif couvre déjà la confirmation immédiate ;
+  Brevo (compte provisionné par la phase communication) vient combler l'interface
+  sans rien débloquer entre-temps.
+- **Exports CSV** (`src/lib/order-export.ts` + `order-export-handler.ts`,
+  `GET /api/orders/export/{preparation,compta}`, bornes `from`/`to`) :
+  - **« préparation »** — décalque exact du profil Advanced Order Export
+    réellement utilisé : `E-mail du client, Article #, UGS(ISBN), Nom, Quantité,
+    Prix du produit, Code de coupon, Réduction` (statuts `paid`/`prepared`).
+    L'UGS Woo était vide (0/223 SKU) — le nouvel export y met l'ISBN, amélioration
+    gratuite.
+  - **« compta »** — n° commande, dates, statut, email, adresses complètes
+    facturation/livraison, total TTC, port TTC, remise TTC, **part TVA 5,5 %
+    calculée** (`TTC / 1,055`, jamais recalculée au checkout — conforme à
+    `woocommerce_calc_taxes = no`), moyen de paiement, référence Stripe
+    (PaymentIntent).
+  - **Les colonnes exactes restent une décision client** (cf. §②) — celles
+    ci-dessus sont livrées et fonctionnelles, mais pas encore formellement
+    validées par la personne compta.
+
+### État du build
+
+Sans lien direct avec `main..HEAD` de cette phase mais support de la fenêtre de
+bascule commune : le build `CATALOGUE_SOURCE=pg` est **vert, 316/316 pages, zéro
+appel WordPress** (PR #9, catalogue) — l'adaptateur produits Postgres du commerce
+s'appuie sur les mêmes fiches `books`, donc sur la même preuve de fraîcheur.
 
 ---
 
-## Recette et critères d'acceptation (point de vue client)
+## ② Ce qui reste avant le jour J
 
-1. **Acheter** : je mets 2 livres au panier depuis leurs fiches, je vois le badge, je modifie une quantité, le port affiché correspond à la grille (testé sur un panier de chaque tranche : ≤ 10 €, 11–24 €, 25–49 €, ≥ 50 € — et les cas limites des trous arbitrés), je paie par carte (3-D Secure inclus), j'atterris sur une page de remerciement.
-2. **Être informé** : je reçois l'email de confirmation (boîte normale, pas spam) avec lignes, port, total, « TVA 5,5 % incluse » ; l'équipe reçoit sa notification.
-3. **Préparer** : la commande apparaît au back-office avec l'adresse de livraison ; je la passe « expédiée » ; l'export « préparation » la liste avec ISBN et quantités.
-4. **Compter** : l'export compta d'une période contient mes commandes de test avec la part TVA 5,5 % calculée et la référence Stripe ; la personne compta valide les colonnes.
-5. **Promo** : un code créé au back-office (montant fixe et livraison offerte ≥ 50 €) fonctionne au checkout ; expiré ou sous le minimum, il est refusé avec message clair.
-6. **Rupture** : un livre passé « épuisé » au back-office n'est plus achetable dans la minute (bouton retiré côté fiche à la revalidation ciblée ; refus serveur immédiat au checkout dans tous les cas), mais reste visible au catalogue (« Indisponible en ligne » — un livre n'est jamais retiré).
-7. **Invité et frontières** : aucun compte requis ; une adresse hors FR/BE/CH est refusée comme aujourd'hui.
-8. **Fusion** : plus de double saisie — modifier le prix d'un livre au back-office change le prix payé ; les ~20 anciens produits sans fiche **ont chacun une page `/boutique/<slug>` achetable**, ou sont explicitement abandonnés (liste arbitrée, double réclamation tranchée).
-9. **Continuité de la vente** : à aucun moment le parcours d'achat n'a été indisponible ou dédoublé — jusqu'au jour J les boutons renvoyaient vers la boutique Woo vivante (prix/stocks à jour), depuis le jour J le nouveau checkout est l'unique caisse ; les anciennes URLs `boutique.editionssociales.fr/produit/…` redirigent vers la bonne page (**en IPv4 comme en IPv6**), temporairement pendant le recouvrement puis définitivement après mon accord écrit ; mes emails @editionssociales.fr fonctionnent à l'identique pendant et après.
-10. **Réversibilité** : j'ai reçu l'archive complète (commandes, clients, newsletter, base) et je l'ai vérifiée **avant** que la boutique ne s'éteigne ; un remboursement test a été exécuté devant moi dans le dashboard Stripe.
+### Décisions client — feuille à figer le 15/07
+
+| # | Question | Défaut déjà en place (à confirmer ou à corriger) |
+|---|---|---|
+| 1 | **Trou 10,01–10,99 €** | Rattaché au palier 11–24 € (4,50 €) |
+| 2 | **Trou 24,01–24,99 €** | Rattaché au palier 25–49 € (5,50 €) |
+| 3 | **Trou 49,01–49,99 €** | Rattaché au palier 50–500 € (6,50 €) |
+| 4 | **Colonnes exactes des deux exports** (préparation + compta) | Celles listées en §① — à faire valider par la personne compta |
+| 5 | **Backlist pré-2020 (67 fiches) : encore expédiable par le routeur ?** | Sans réponse à ce jour — conditionne si elles restent en suivi purement manuel ou si le distributeur peut les réintégrer |
+| 6 | Contenus légaux bloquants pour un site public sur domaine réel : **SIRET, directeur de publication** (placeholders aujourd'hui) | Cf. `plan/02`, pages légales — bloquant pour le flip, pas spécifique au commerce mais partage la même fenêtre |
+| 7 | **Q1–Q8 du plan `02-mise-en-production.md`** (destinations des pages orphelines, sort des domaines défensifs, reçus fiscaux, date/modalités du transfert de propriété…) | Voir `plan/02` — hors commerce mais sur le chemin critique de la même fenêtre de bascule |
+| 8 | **Date de la fenêtre de bascule** | 21/07 devenu **agressif** maintenant que le commerce y entre (plus de marge de préparation qu'un simple flip catalogue) ; **24–28/07 réaliste** ; butée = campagne dons du 15/08, qui ne doit pas glisser |
+
+### E9 résiduel — intégrations à finir avant le jour J
+
+- **E2E Stripe en clés TEST sur preview** : parcours d'achat complet rejoué sur
+  preview Vercel (clés test) — panier multi-lignes, chaque tranche de port + les
+  quatre trous, promo valide/expirée/sous-minimum, livre passé `stock=0` entre
+  panier et checkout (refus propre), pays hors FR/BE/CH refusé. Pas encore fait.
+- **Brevo** : compte + branchement des emails de commande (l'interface
+  `OrderMailer` est prête et n'attend que l'implémentation réelle — cf. §①) ;
+  dépend du provisioning Brevo (phase communication).
+- **Formation équipe Payload `/admin`** : prise en main du back-office commandes
+  (suivi `paid → prepared → shipped`), de l'import stock routeur (panneau + lecture
+  du rapport à 4 sections), des codes promo, des exports CSV. Pas encore faite.
 
 ---
 
-## Risques et parades
+## ③ Jour J et drainage
+
+Le commerce ne bascule plus seul : il fait partie de la **fenêtre de bascule
+unique** (catalogue + commerce + DNS + indexation), déroulée en **un seul
+runbook**, désormais documenté dans `plan/02-mise-en-production.md` (section
+Jour J) — **ce document ne le duplique pas**, seul le résumé commerce-pertinent
+suit.
+
+**Résumé côté commerce, dans l'ordre** :
+
+1. **Gel d'édition WordPress** (catalogue **et** boutique) — dernière écriture
+   possible avant migration finale.
+2. **Migration finale** : `migrate-products.ts` rejoué sur un export frais (prix/
+   stocks/produits à jour à l'exposition, pas au moment où ce document a été
+   écrit) ; `migrate-catalogue` idem côté fiches. Idempotence déjà prouvée sur les
+   deux scripts — le re-run ne fait que refléter le delta.
+3. **`compare-sources`** : zéro divergence bloquante entre WordPress et Postgres
+   avant de couper la source WordPress (déjà 0 sur la dernière passe, PR #9).
+4. **Déploiement** : `CATALOGUE_SOURCE=pg` **et** `COMMERCE_NATIVE=1` **et**
+   `SITE_INDEXABLE=1` **et** `NEXT_PUBLIC_SITE_URL` posés **dans la même fenêtre**
+   de redéploiement — plus deux bascules de flag séparées à des dates différentes.
+5. **Flips DNS** (ES, LD, boutique en CNAME Vercel) + redirections 302 + proxy
+   `/wc-api/*` vers `cms-boutique` (callbacks Paybox résiduels des commandes en
+   cours de traitement).
+6. **Smoke tests** : 1–2 commandes réelles à faible montant, remboursées via le
+   dashboard Stripe (démonstration du geste SAV au passage).
+7. **`/boutique` et `/boutique/[slug]`** entrent dans `sitemap.ts` au moment du
+   flip (pas avant — ces routes redirigent vers `/catalogue` tant que
+   `COMMERCE_NATIVE=0`).
+
+**Recouvrement (drainage), défaut ~2 semaines** :
+
+- **wp-admin accessible via `cms-boutique`** pour drainer les **107 commandes
+  `wc-processing`** (chiffre vérifié en base au 01/07 — le chiffre réel au gel sera
+  celui constaté ce jour-là) : expédier ou annuler manuellement, callbacks Paybox
+  routés via le proxy `/wc-api/*` pendant la fenêtre.
+- Passage **302 → 301** des redirections `/produit/<slug>/` une fois le
+  recouvrement validé et l'accord client écrit obtenu (jamais avant).
+- `cms-boutique` est désormais **obligatoire** pour ce drainage (ce n'est plus un
+  filet optionnel) ; `cms-es`/`cms-ld` restent une assurance pas chère mais ne
+  conditionnent aucun geste commerce.
+
+Détail complet (séquence horaire, IDs de records DNS, garde-fous Host/undici,
+proxy exact, checklist post-bascule) : **`plan/02-mise-en-production.md`**.
+
+---
+
+## ④ Post-bascule
+
+- **Résiliation du contrat Paybox** (VAD, banque du client) : **décision client**,
+  **après drainage complet** des commandes en cours — jamais avant le cutover, et
+  jamais à la place du client (démarche commerciale côté Paybox, hors périmètre
+  technique). Le compte Stripe live (`acct_1TqsjgL6ffEZ7VRj`, opérationnel depuis
+  le 11/07) est désormais **le** compte d'encaissement, dons et commandes
+  confondus ; les payouts changent de canal bancaire à la bascule — nommé
+  explicitement au client, ce n'est pas une migration invisible.
+- **Archive avant extinction** (bloquant, condition sine qua non) : dump SQL
+  complet de `editionsk884`, CSV commandes aplati (**5 753** commandes du
+  2018-03-14 au dernier jour Woo — `wc-completed` 4 472, `wc-cancelled` 1 061,
+  `wc-processing` 107, `wc-failed` 103, `wc-refunded` 10), CSV clients (**1 329**,
+  `mod973_wc_customer_lookup`), CSV abonnés newsletter (**2 848** confirmés —
+  ⚠️ liste figée depuis un import unique d'octobre 2020, à signaler avant tout
+  envoi Brevo), copie de `wp-content` de l'install Boutique. **Confirmée saine**
+  seulement quand : le dump se restaure et les comptages collent à la prod au jour
+  de l'export, les CSV s'ouvrent et leurs totaux recoupent les chiffres ci-dessus,
+  et le client a vérifié 5 commandes connues de lui et confirmé **par écrit**.
+  Aucune extinction du WordPress Boutique avant cette confirmation écrite.
+- L'extinction elle-même (301 définitifs, mise hors ligne réversible, nettoyage du
+  code, PV) est portée par la clôture du chantier (`plan/07-cloture.md`) — cette
+  page fournit les livrables (archive, table de matching produit→URL, logs
+  d'accès `/wc-api/*` pendant le recouvrement), elle n'exécute pas la semaine de
+  clôture.
+
+---
+
+## Repères de données conservés (toujours vrais, base WooCommerce `editionsk884`)
+
+- **HPOS désactivé** (`woocommerce_custom_orders_table_enabled=no`) : les tables
+  `wc_orders*` sont **vides** — source de vérité = `mod973_posts`
+  (`shop_order`) + `mod973_postmeta` + `mod973_woocommerce_order_items`/
+  `order_itemmeta`. Ne pas s'y fier pour un export ou un comptage.
+- **Paiement** : `paybox_std` 5 566 + `paybox_3x` 40 + `cheque` 97, **zéro
+  commande Stripe historique** — Paybox est la passerelle vivante, pas un vestige
+  (`woocommerce_stripe_settings.enabled = "no"`, compte Stripe Woo caché = compte
+  test abandonné). Le changement de PSP (Paybox → Stripe) est un **vrai**
+  changement, pas une continuité invisible.
+- **`woocommerce_enable_guest_checkout = no`** aujourd'hui — le nouveau site en
+  guest-only (décision produit assumée) est un changement de pratique pour les
+  1 329 clients qui avaient un compte ; leur historique est préservé dans
+  l'archive, pas dans le nouveau site.
+- **TVA** : `woocommerce_calc_taxes = no` — aucune taxe calculée en base
+  aujourd'hui ; prix TTC partout, la part 5,5 % n'existe que dans l'export compta
+  (calculée, jamais recalculée au checkout).
+- **Legacy REST API** : 0 clé API, 0 webhook — aucun consommateur externe
+  authentifié ; le seul utilisateur de `wc-api` est Paybox (mécanisme cœur
+  WooCommerce, pas le plugin Legacy REST) — dette déjà tracée à 95 %, la preuve
+  définitive (logs prod pendant le recouvrement) reste un livrable de fin de
+  drainage.
+
+---
+
+## Risques et parades (ceux qui restent pertinents post-merge)
 
 | # | Risque | Parade |
 |---|---|---|
-| 1 | **Changement de PSP réel** (Paybox → Stripe) : payouts sur un autre canal, réconciliation compta différente, contrat VAD à résilier | Nommé explicitement au client dès la recette de juillet (pas en septembre) ; le compte Stripe live aura déjà 6 semaines de vie via les dons ; export compta avec `stripePaymentIntentId` pour la réconciliation ; résiliation Paybox = action client, après drainage |
-| 2 | **Exposition prématurée du commerce en prod** (`main` auto-déploie → un merge intermédiaire casse le parcours d'achat public, ou fait vendre deux caisses en parallèle) | Bascule `COMMERCE_NATIVE` (étape 2) : prod inchangée (liens Woo vivants) jusqu'au flip ; checkout natif refusé serveur (503) tant que le flag est off ; adaptateur produits aussi gated (la prod affiche les prix/stocks Woo réels jusqu'au bout) ; recette sur previews en mode test Stripe ; flip simultané à la coupure du checkout Woo — **il n'existe aucune fenêtre à deux caisses** |
-| 3 | **Split-brain DNS IPv6** (AAAA oubliés → les clients IPv6 restent silencieusement sur l'ancien Woo pendant tout le recouvrement) | Runbook : les **4** enregistrements (A + AAAA × `boutique`/`www.boutique`) remplacés par des CNAME `cname.vercel-dns.com`, TTL abaissé à J−7 sur les 4 ; checklist post-bascule : `dig A` **et** `dig AAAA` = Vercel uniquement, à côté du contrôle MX |
-| 4 | **IPN Paybox en vol / drainage impossible** (après le flip, le domaine répond depuis Vercel : un callback de paiement n'atteint plus Woo ; wp-admin sur hostname brut boucle en redirection canonique — `siteurl` en base) | Checkout Woo coupé à J−1 au soir (purge des IPN avant le flip) ; `cms-boutique` + constantes `WP_HOME`/`WP_SITEURL` testées à J−7 ; proxy `/wc-api/*` et `/?wc-api=*` Vercel → `cms-boutique` pendant le recouvrement ; **[à affiner : URL de callback du contrat Paybox]** |
-| 5 | **Grille de port mal recopiée** (la vraie grille contredit les acquis : valeur ≠ poids, 4 trous, monde désactivé) | Module pur testé ligne à ligne contre le relevé R2 §2.7 (source = tables `mod973_options`, pas la mémoire) ; cas limites 10,50/24,50/49,50/600 € en tests ; revue de table avec le client ; décision explicite sur les 4 trous, jamais silencieuse |
-| 6 | **Emails de commande en spam** | Sous-domaine d'envoi dédié Brevo (provisionné en phase 5 ; DNS additif, MX intouchés — interdit absolu R4 §3.3) ; test mail-tester + boîtes Gmail/Outlook réelles en recette ; webhooks bounce Brevo surveillés |
-| 7 | Commandes perdues (webhook raté) | Idempotence par `stripeSessionId` ; retries Stripe ; Sentry sur le handler ; réconciliation quotidienne simple dashboard Stripe ↔ back-office pendant le premier mois **[à affiner : script ou geste manuel]** |
-| 8 | Couplage Payload ⟷ Next 16 (cadence hebdo, historique Turbopack) | Versions épinglées, montée en tandem uniquement, `pnpm build` en CI (PR #5 mergée d'ici là) — mitigation héritée des décisions de stack |
-| 9 | **Effort réel > jours vendus** (cf. Calage) | Réutilisation maximale de la phase 1 (checkout/webhook/emails) ; périmètre discipliné (pas de stock auto, pas d'UI SAV, admin = Payload nu, fiche `/boutique` minimale) ; écart signalé, pas absorbé en silence |
-| 10 | Fin du guest-checkout-interdit : 1 329 clients avaient un compte, le nouveau site n'en a pas | Changement de pratique assumé au devis (§3.2) ; historique client préservé dans l'archive ; communication lecteurs au cutover (bandeau + newsletter si phase 5 livrée) |
-| 11 | Divergence données juillet → septembre (prix, nouveaux produits, nouvelles commandes) | Script de migration idempotent **rejoué sur dump frais à J−1** (≤ 24 h entre les données exposées et la réalité Woo) ; archive générée à J−1 + export delta en fin de drainage |
-| 12 | Extinction prématurée / perte de données / rollback piégé par les caches navigateur | Principe absolu n°1 outillé : checklist d'extinction bloquante (archive « confirmée saine » + OK client écrit + fenêtre écoulée) ; redirections **`statusCode: 302` explicites pendant tout le recouvrement, 301 seulement à la clôture (phase 7) après OK écrit** (devis §11) — un rollback DNS pendant la fenêtre reste effectif pour tous les visiteurs ; rien n'est détruit, l'install est désactivée puis archivée |
+| 1 | **Changement de PSP réel** (Paybox → Stripe) : payouts sur un autre canal, réconciliation compta différente, contrat VAD à résilier | Nommé explicitement au client ; export compta avec `stripePaymentIntentId` pour la réconciliation ; résiliation Paybox = action client, après drainage (cf. §④) |
+| 2 | **Grille de port mal recopiée** ou trous laissés en silence | Module pur testé ligne à ligne + les quatre cas limites (10,50/24,50/49,50/600 €) ; décision explicite du client sur les trois trous restants avant le jour J, jamais un défaut qui s'impose par oubli |
+| 3 | **Décrément de stock en double** au rejeu d'un webhook Stripe | Idempotence par `stripeSessionId` posée dans `order-handler.ts` — la commande ET le décrément ne s'appliquent qu'à la première écriture, vérifié par test |
+| 4 | **Backlist pré-2020 mal traitée** (67 fiches hors routeur) : traitée à tort comme une anomalie de stock plutôt qu'un fonds papier normal | Rapport d'import à 4 sections : ces fiches apparaissent en section informative « suivi manuel », jamais en section alerte ; alerte réservée aux fiches qui **disparaissent** du routeur après y avoir été |
+| 5 | **Emails de commande jamais envoyés** faute de Brevo branché | Interface `OrderMailer` déjà posée et ne jette jamais ; reçu Stripe natif couvre la confirmation immédiate en attendant ; brancher Brevo reste sur la liste §② |
+| 6 | Divergence prix/stock entre le run de migration et la réalité au jour J | Scripts idempotents, **rejoués sur export frais** juste avant le flip (cf. `plan/02`), jamais seulement au moment où ce document a été écrit |
+| 7 | Fin du guest-checkout-interdit : 1 329 clients avaient un compte, le nouveau site n'en a pas | Changement de pratique assumé ; historique client préservé dans l'archive ; communication lecteurs au cutover |
+| 8 | Colonnes d'export non validées par la personne compta | Les deux profils sont livrés et fonctionnels (§①) ; validation formelle = décision client encore ouverte (§②), pas un blocage technique |
 
 ---
 
-## Dépendances et interfaces avec les autres phases
+## Dépendances et interfaces avec les autres phases/documents
 
-- **Phase 1 (Dons, juillet)** — fournit : compte Stripe live + secrets Vercel, la **première** surface serveur d'écriture (route handlers checkout/webhook — il n'en existe aucune aujourd'hui, R1 §4 ; webhook : `src/app/api/stripe/webhook/route.ts`), pages retour. Pas d'envoi Brevo : les dons utilisent les reçus natifs Stripe. Interface : le webhook commun discrimine par `metadata.kind` (`donation`/`order`) — à poser **dès la phase 1** pour ne pas refactorer en septembre. La cible d'env `preview` (clés Stripe test) est posée dès juillet — politique de clés unifiée avec la phase 1 : clés **test** en production (jusqu'au passage en réel des dons) **et** en preview.
-- **Phase 3 (Catalogue Postgres/Payload, juillet)** — fournit : Neon, Payload, collection `books`, adaptateur `pgCatalogueSource` (listBooks/getBook). Interfaces à anticiper en phase 3 : (1) la collection `books` doit accepter des entrées `edition: null / origin: "boutique"` **avec unicité de slug garantie par espace (edition ∪ null) — accepter le type ne suffit pas : ces entrées auront une URL publique `/boutique/[slug]` en phase 4** ; (2) ne pas supprimer le champ `boutique` (lien produit) des fiches migrées — c'est la clé de matching de la phase 4 ; (3) `listProducts()` reste branché Store API Woo jusqu'au flip (le port sépare déjà les deux, R1 §7).
-- **Phase « Mise en production » (juillet)** — fournit le pattern DNS/redirections/TTL (COHABITATION phases 2–3) réappliqué ici au sous-domaine boutique — **y compris le découplage CMS** : les hostnames `cms-*` créés alors servent de modèle à `cms-boutique`, indispensable au drainage (la boutique perd au jour J l'exonération « tant qu'elle reste sur son domaine » de COHABITATION phase 2) ; et le régime 302-puis-301 vendu au devis §11.
-- **Phase 5 (Newsletter/Brevo, livrée le 22/07)** — fournit le provisioning Brevo complet : compte, clé API, sous-domaine d'envoi (SPF/DKIM additifs), `src/lib/brevo.ts` — prérequis des emails de commande (étape 9). Le CSV abonnés de l'archive est un intrant partagé ; le canal d'annonce du cutover boutique aux lecteurs dépend d'elle.
-- **Phase 6 (Surveillance)** — Better Stack surveille les 3 WP pendant la cohabitation : retirer le moniteur boutique à l'extinction, ajouter celui du checkout. **L'engagement « mises à jour de sécurité de la boutique pendant la transition » (devis, variante B phasé) est porté par Youri en continu juillet → extinction** (ligne dédiée en préconditions) — il ne tombe entre aucune phase.
-- **Invariants globaux** : MX/DKIM/SPF/DMARC jamais touchés ; slot OVH Pro jamais résilié (GEME) ; le front ne change que là où la fonctionnalité l'exige (buy-links, header, panier, section boutique) — tout le reste passe par le port ; en prod, aucun changement visible avant le jour J (flag).
-
----
-
-## Calage calendrier
-
-Contexte : variante « B phasé » — dons + catalogue + back-office fin juillet (phases 1–3), recette avant la fermeture d'août du client, **commerce en septembre** (devis §5 : « une fois la rentrée passée »).
-
-| Date | Jalon |
-|---|---|
-| **Fin juillet 2026** | Interfaces posées depuis les phases 1/3 : `metadata.kind` dans le webhook, `books` acceptant `edition: null` **avec unicité de slug** (URL publique à venir), champ `boutique` conservé, env `preview` avec clés Stripe test, previews accessibles au client. Coût : ~0, pure discipline |
-| **Juillet → extinction** | Mises à jour de sécurité de la boutique Woo (engagement B phasé), en continu |
-| **Lun 2026-09-07** | Kickoff : décisions client figées (étape 1, dont date du jour J), dump frais de dev, rapport de matching (3 catégories) soumis |
-| **S1 : 07–11/09** | Étapes 2–6 : flag d'exposition, modèle de données, migration produits + arbitrage, moteur de port, panier — tout derrière le flag, visible sur preview uniquement |
-| **S2 : 14–18/09** | Étapes 7–10 : route `/boutique` orphelins, checkout, webhook + emails, back-office + exports |
-| **Sem. du 21/09** | Étape 11 : swap adaptateur (gated), recette complète avec l'équipe **sur preview, mode test Stripe** ; **J−7 (21/09)** : TTL des 4 enregistrements abaissé, `cms-boutique` créé et wp-admin testé ; runbook validé |
-| **Lun 28/09 (J−1) au soir** | Checkout Woo coupé (purge IPN), dump frais, re-run migration, archive générée |
-| **Mar 29/09 (Jour J)** | Flip `COMMERCE_NATIVE=1` + DNS (4 CNAME) + redirections **302** ; smoke test : 1–2 commandes réelles remboursées. Fenêtre swap → cutover ≤ 24–48 h, pas une semaine |
-| **29/09 → ~13/10** | Recouvrement 2 semaines : drainage des 107 `processing` via `cms-boutique` (+ proxy `wc-api`), relevé des logs Legacy REST |
-| **~13–16/10** | Étape 13 : remise des livrables à la phase 7 (logs G7, archive J−1 + delta, table de matching) ; étape 14 (surveillance, SAV, retrait du flag). **La semaine de clôture — 301 définitifs, extinction boutique, PV — est exécutée par la phase 7.** Solde de phase à la recette (modalités devis §9) |
-
-**Effort : vendu 3 j / 600 €** (lignes 3.2 du devis : commerce natif 2 j + migration produits 0,5 j + archives 0,25 j ; la ligne « surveillance complète + extinction de la boutique » 0,25 j finance l'exécution de la semaine de clôture **par la phase 7**). **Arbitrage retenu — leviers activés d'office pour tenir le forfait** : (a) **export compta V1** = profil « préparation » seul, profil comptable complet en itération courte si la compta le demande ; (b) **codes promo V1** = `fixed_cart` + `free_shipping` uniquement (couvre 100 % de l'usage réel constaté — une seule règle en base) — le périmètre complet devient l'**option**, pas la base. **Estimation après arbitrages : ~3,45 à 3,95 j.** Détail : modèle + migration produits ~0,75 j ; port + panier ~1 j ; route `/boutique` orphelins ~0,25 j ; checkout + webhook + emails ~0,6 j (réutilisation phase 1 + promos V1) ; back-office + exports V1 ~0,5 j ; flag + bascule + archive + livrables phase 7 ~0,35 j ; recette/imprévus ~0,5 j. **Écart résiduel : +0,45 à +0,95 j** — signalé, pas absorbé en silence ; en grande partie agent-exécutable, absorbé par l'étalement calendaire (~5 semaines à temps très partiel). Leviers additionnels si l'enveloppe doit tenir strictement : (c) recouvrement raccourci à 1 semaine ; (d) `/boutique` V1 = fiches minimales sans page de section listée dans la nav.
-
----
-
-## Questions ouvertes / décisions client
-
-| # | Question | À trancher au plus tard | Défaut recommandé |
-|---|---|---|---|
-| 1 | **Trous de la grille de port** — **quatre** cas sans règle aujourd'hui : paniers 10–11 €, 24–25 €, **49–50 €** (vérifié : « moins de 49 » = 25–49, « plus de 50e » = 50–500), > 500 € : recopier strictement (checkout bloqué sur ces cas ?) ou combler ? | Kickoff 07/09 | Combler par bornes contiguës (0–10,99 / 11–24,99 / 25–49,99 / ≥ 50) et > 500 € = 6,50 € ; consigné dans `phase4-decisions.md` |
-| 2 | **Règle « manifeste »** (2,50 €, au poids 250–260 g, 6 produits pesés seulement, 46 usages) : porter, abandonner, ou transformer ? | Kickoff 07/09 | Transformer en flag « port réduit » activable par produit au back-office (pas de gestion de poids) |
-| 3 | **Disponibilité** : toggle manuel `in_stock/out_of_stock` (le devis ne vend pas de gestion de stock) ou compteur décrémenté ? | Kickoff 07/09 | Toggle manuel, initialisé depuis `_stock_status` Woo (33 ruptures) ; compteur = hors périmètre, chiffrable à part |
-| 4 | **Codes promo à reconduire** (10 en base, quasi tous expirés ; `Agreg2027` free-shipping expire ~07/2026) | Kickoff 07/09 | Aucun repris automatiquement ; l'équipe recrée ses codes dans le back-office (démonstration incluse) |
-| 5 | **Colonnes des exports** : valider le décalque du profil AOE relevé (email + lignes, statuts processing/on-hold) + le profil comptable proposé | Démo back-office S2 (18/09) | Les deux profils de l'étape 10 ; ISBN en colonne UGS |
-| 6 | **Traitement TVA** : confirmer prix TTC sans calcul de taxe au checkout (pratique Woo actuelle) + ventilation 5,5 % dans l'export — à valider avec la personne compta | Kickoff 07/09 | TTC partout, mention « TVA 5,5 % incluse », part TVA calculée dans l'export compta uniquement |
-| 7 | **Arbitrage matching** : sort des ~9 liens cassés, des 20 produits orphelins (vendre via `/boutique/<slug>`, rattacher à une fiche, abandonner) et de la **double réclamation `stephane-haber-decouvrir-victor-hugo`** (2 fiches → 1 produit : laquelle porte la vente ?) | Fin S1 (11/09) | Rattachement manuel des cassés évidents (dérive `-prevente`) ; orphelins conservés = fiches `/boutique/<slug>`, sauf catégories mortes ; double réclamation : la fiche de la maison qui édite le livre porte la vente, l'autre y renvoie |
-| 8 | **Date de résiliation du contrat Paybox** (VAD, banque du client) | Avant extinction (~13/10) | Après drainage complet des commandes Woo en cours ; jamais avant le cutover |
-| 9 | **Date du jour J, durée du recouvrement et date d'extinction** | À la recette (25/09) | Jour J = 29/09 (J−1 le 28 au soir) ; 2 semaines de recouvrement ; extinction conditionnée à l'archive « confirmée saine » + accord écrit (qui déclenche aussi le passage 302 → 301) |
-| 10 | **Communication lecteurs** au changement de caisse (guest checkout, disparition des comptes clients Woo) | Avant cutover (25/09) | Bandeau sur l'ancienne boutique dès J−1 (checkout coupé) + envoi newsletter Brevo si phase 5 livrée ; texte fourni par le client |
+- **`plan/02-mise-en-production.md`** — possède le runbook du jour J (DNS, TTL,
+  redirections, garde-fous Host/undici, checklist post-bascule) ; ce document n'en
+  fournit qu'un résumé côté commerce (§③).
+- **`plan/03-catalogue.md`** — la collection `books` et l'adaptateur
+  `pgCatalogueSource` sont la fondation sur laquelle `commerce.*` est posé ; le
+  swap `CATALOGUE_SOURCE=pg` et le flip `COMMERCE_NATIVE=1` sont désormais
+  **dans la même fenêtre**, pas deux événements séparés dans le temps.
+- **Phase communication (Brevo)** — fournit le compte + `src/lib/brevo.ts` qui
+  vient combler l'interface `OrderMailer` déjà posée ; le CSV abonnés de
+  l'archive (2 848, import 2020) est un intrant partagé à signaler avant tout
+  envoi.
+- **`plan/07-cloture.md`** — possède la semaine de clôture (301 définitifs,
+  extinction WordPress Boutique, PV) ; cette page **fournit** les livrables
+  (archive, table de matching, logs `/wc-api/*`), elle n'exécute pas l'extinction.
+- **Invariants inchangés** : MX/emails jamais touchés ; un livre n'est jamais
+  retiré du catalogue faute d'être en vente ; le stock est décrémenté seulement à
+  la commande **payée** ; le rollback du flag `COMMERCE_NATIVE` reste un re-flip à
+  une ligne tant que Woo n'est pas éteinte.
