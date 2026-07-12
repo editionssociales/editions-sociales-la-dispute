@@ -35,6 +35,11 @@ describe("wpBookToRawBook — dialecte WordPress", () => {
     expect(wpBookToRawBook(wpBook({ book: { prix: "" } })).price).toBeNull();
   });
 
+  it("tronque un nombre de pages décimal (artefact de saisie ACF constaté en prod — \"354.104\")", () => {
+    const raw = wpBookToRawBook(wpBook({ book: { pages: "354.104" } }));
+    expect(raw.pages).toBe(354);
+  });
+
   it("normalise la parution `JJ/MM/AAAA` (ACF) en ISO", () => {
     const raw = wpBookToRawBook(wpBook({ book: { date_parution: "01/03/2020" } }));
     expect(raw.publishedAt).toBe("2020-03-01");
