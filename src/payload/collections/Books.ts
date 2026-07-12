@@ -10,6 +10,7 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import { importStockHandler } from '../lib/stock-import.ts'
 
 /**
  * Pose `contentTouched=true` dès qu'un humain crée/modifie une fiche hors
@@ -132,6 +133,16 @@ export const Books: CollectionConfig = {
     afterChange: [revalidateCatalogueAfterChange],
     afterDelete: [revalidateCatalogueAfterDelete],
   },
+  // `POST /api/books/import-stock` — import stock routeur mensuel (multipart,
+  // admin/éditeur authentifié) ; cf. `src/payload/lib/stock-import.ts` pour
+  // le détail (auth, parsing, appariement, rapport, écritures).
+  endpoints: [
+    {
+      path: '/import-stock',
+      method: 'post',
+      handler: importStockHandler,
+    },
+  ],
   // Unicité couvrant l'espace `edition` ∪ null (contrat phase 4, ~20 produits
   // boutique-seuls sans maison) : ce composite `(edition, slug)` couvre le cas
   // général. Le complément — un index unique PARTIEL sur `slug` quand
@@ -385,6 +396,17 @@ export const Books: CollectionConfig = {
               "composé uniquement d'articles cochés bénéficie du tarif de " +
               'port réduit plutôt que la grille standard (décision client du ' +
               '12/07, question ouverte n°2 du plan).',
+          },
+        },
+        {
+          name: 'stockUpdatedAt',
+          type: 'date',
+          label: 'Stock mis à jour le',
+          admin: {
+            readOnly: true,
+            description:
+              "Posé automatiquement par l'import stock routeur mensuel " +
+              '(`POST /api/books/import-stock`) — jamais saisi à la main.',
           },
         },
       ],

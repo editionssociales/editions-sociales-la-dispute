@@ -312,6 +312,10 @@ export interface Book {
      * Remplace l'ancienne règle « manifeste » au poids : un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit plutôt que la grille standard (décision client du 12/07, question ouverte n°2 du plan).
      */
     reducedShippingFlag?: boolean | null;
+    /**
+     * Posé automatiquement par l'import stock routeur mensuel (`POST /api/books/import-stock`) — jamais saisi à la main.
+     */
+    stockUpdatedAt?: string | null;
   };
   /**
    * Clé d'upsert de la migration — vide pour les fiches nées dans Payload.
@@ -647,6 +651,7 @@ export interface BooksSelect<T extends boolean = true> {
         sellable?: T;
         stock?: T;
         reducedShippingFlag?: T;
+        stockUpdatedAt?: T;
       };
   wpSource?:
     | T

@@ -28,6 +28,15 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      // Import stock routeur mensuel + alerte stock bas (mission — spec du
+      // 12/07) : deux composants distincts dans le même slot, l'ordre fixe
+      // l'ordre d'affichage sur le tableau de bord.
+      beforeDashboard: [
+        '/payload/admin/StockImportPanel.tsx#StockImportPanel',
+        '/payload/admin/StockLowWidget.tsx#StockLowWidget',
+      ],
+    },
   },
   collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes],
   globals: [ReglagesBoutique],
