@@ -77,9 +77,10 @@ Postgres — WordPress reste la **source de vérité** du catalogue jusqu'au swa
 
 ## Verification
 
-- `pnpm typecheck` · `pnpm lint` · `pnpm test` — rejoués sur chaque PR
-  (`.github/workflows/ci.yml`) ; `pnpm generate:types` après tout changement de
-  schéma Payload.
+- `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm knip` (exports morts,
+  fichiers orphelins, dépendances inutilisées — `knip.json`) — rejoués sur
+  chaque PR (`.github/workflows/ci.yml`) ; `pnpm generate:types` après tout
+  changement de schéma Payload.
 - `pnpm build` : **hors CI à dessein** (~300 requêtes REST vers l'OVH mutualisé —
   le déploiement preview Vercel l'exerce une fois par PR) ; redeviendra hermétique
   au swap pg.
