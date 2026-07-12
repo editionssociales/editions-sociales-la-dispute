@@ -19,15 +19,21 @@ pures (filtre/tri/facette, pagination, campagne, HTML sûr, formatage).
 
 ## Local Contracts
 
-- Seuls `catalogue-http.ts` et `boutique.ts` touchent le réseau (`server-only`,
-  mémoïsés par requête via `cache()`) ; le reste du dossier vise à être pur,
-  sans I/O, sauf deux exceptions **back-office** (E4/E6bis) : `catalogue-pg.ts`
-  et `highlight.ts` sont `server-only` et lisent Postgres via la Local API
-  Payload (pas de `fetch`), sans mémoïsation `cache()` — `getPayload({config})`
-  est déjà mémoïsé côté Payload (singleton par process). Le reste du dossier
-  (`catalogue-core`, `catalogue-pg-map`, `browse`, `cms-html`, `typo-fr`,
-  `format`…) reste pur, sans I/O — c'est la surface couverte par les
-  `*.test.ts`.
+- Seuls `catalogue-http.ts`, `boutique.ts` et `donations.ts` touchent le réseau
+  (`server-only`, mémoïsés par requête via `cache()`) ; le reste du dossier vise
+  à être pur, sans I/O, sauf deux exceptions **back-office** (E4/E6bis) :
+  `catalogue-pg.ts` et `highlight.ts` sont `server-only` et lisent Postgres via
+  la Local API Payload (pas de `fetch`), sans mémoïsation `cache()` —
+  `getPayload({config})` est déjà mémoïsé côté Payload (singleton par process).
+  `stripe.ts` est `server-only` sans réseau (instanciation paresseuse du
+  client). Le reste du dossier (`catalogue-core`, `catalogue-pg-map`, `browse`,
+  `cms-html`, `typo-fr`, `format`, `donation-tiers`, `donations-core`…) reste
+  pur, sans I/O — c'est la surface couverte par les `*.test.ts`. **Piège
+  vérifié** : le marqueur `server-only` jette dès son import hors d'un build
+  Next (dont sous Vitest) — un module `server-only`, ou tout module qui en
+  importe un transitivement, ne peut donc pas être testé directement ; d'où le
+  découpage `donations.ts` (I/O) / `donations-core.ts` (agrégation + parsing,
+  pur, testé), même logique que `catalogue-http.ts`/`catalogue-core.ts`.
 - `catalogue-core.ts` ne fait ni fetch ni rendu : sa logique se teste
   uniquement à travers le port `CatalogueSource` (adaptateur en mémoire).
 - `sanitizeCms` (`cms-html.ts`) est l'unique fabricant de la marque `SafeHtml` ;

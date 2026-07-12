@@ -32,6 +32,19 @@ fichiers générés.
   (ISR) ; accueil, `editions`, `souscription` statiques + ISR ; `a-propos`,
   `rencontres`, `panier` statiques sans donnée externe ; `boutique` redirige vers
   `/catalogue`.
+- **Jauge de dons 2026** (`souscription`, `lib/donations.ts`) : le fetch taggé
+  `donations` porte `revalidate: 60` — le plus petit `revalidate` d'une page
+  gagne, donc la fenêtre ISR *effective* de `/souscription` passe de 3600 s à
+  **60 s** (l'export `revalidate = 3600` de la page reste inchangé, il ne
+  contraint que le HTML hors jauge). Contrat de fraîcheur, à ne jamais
+  resserrer : la Search API Stripe indexe en **~1 min** (documentée « pas de
+  read-after-write ») et `revalidateTag("donations", "max")` (webhook,
+  `api/stripe/webhook/route.ts`) sert le périmé puis re-fetch en arrière-plan à
+  la prochaine visite (stale-while-revalidate) — le webhook est un
+  accélérateur best-effort, jamais la source de fraîcheur. Chaîne pire cas :
+  indexation (~1 min) + fenêtre de fetch (60 s) + un aller
+  stale-while-revalidate ⇒ promesse client **« le don apparaît en ≤ 3 min »**,
+  jamais « temps réel ».
 - La fiche livre est la seule route à `dangerouslySetInnerHTML` : HTML éditorial
   typé `SafeHtml` (sanitisé dans `src/lib`) + JSON-LD `Book` sérialisé et échappé
   côté serveur. Aucun autre HTML brut injecté.
