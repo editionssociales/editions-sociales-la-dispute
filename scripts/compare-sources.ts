@@ -50,6 +50,17 @@ import { fetchAllPages } from "../src/lib/fetch-all-pages.ts";
 import type { Book, BookDetail, EditionSlug, Facet } from "../src/lib/types.ts";
 import type { Book as PayloadBook } from "../src/payload-types.ts";
 
+import {
+  classifyCoverDims,
+  classifyHtml,
+  classifyIsbn,
+  classifyMediaUrl,
+  diff,
+  hostOf,
+  OVH_MEDIA_HOSTS,
+  scalar,
+  type Diff,
+} from "./compare-classify.ts";
 import { fetchCatalogue, healthCheck } from "./migrate-catalogue/fetch-wp.ts";
 import { createLogger, fetchWithRetry, type Logger, type Site } from "./migrate-catalogue/utils.ts";
 
@@ -60,17 +71,6 @@ const EDITION_BY_SITE: Record<Site, EditionSlug> = {
   ld: "la-dispute",
 };
 const SITE_LABEL: Record<Site, string> = { es: "Éditions sociales", ld: "La Dispute" };
-
-/** Hôtes WordPress connus des deux fonds (couvertures/PDF/HTML éditorial) — hors boutique. */
-const OVH_MEDIA_HOSTS = ["editionssociales.fr", "www.editionssociales.fr", "ladispute.fr", "www.ladispute.fr"];
-
-/**
- * `boutique.editionssociales.fr` reste un hôte WooCommerce légitime pour les
- * liens/images d'achat (angle mort n°2 du plan — hors périmètre de la
- * migration média) : volontairement absent de `OVH_MEDIA_HOSTS`, sans quoi le
- * contrôle « 0 URL OVH résiduelle » lèverait un faux bloquant permanent sur
- * chaque fiche vendue en boutique.
- */
 
 /* ─────────────────────────── CLI ─────────────────────────── */
 
@@ -191,93 +191,7 @@ async function pgStatusByWpId(
   return { status: doc._status === "draft" ? "draft" : "published", slug: doc.slug };
 }
 
-/* ─────────────────────────── Normalisation / classification des écarts ─────────────────────────── */
-
-type Category = "bloquant" | "cosmetique" | "ignore";
-
-interface Diff {
-  key: string;
-  field: string;
-  category: Category;
-  detail: string;
-}
-
-function diff(key: string, field: string, category: Category, detail: string): Diff {
-  return { key, field, category, detail };
-}
-
-/**
- * Espaces insécables posées par l'orthotypographie française (E6 du plan —
- * NNBSP avant `; ! ?`, NBSP avant `:` et dans `« »`) : un texte identique une
- * fois ces espaces et les espaces normales normalisées n'est pas un défaut de
- * migration, seulement la fonctionnalité vendue en cours de pose.
- */
-function normalizeSpaces(s: string): string {
-  // Espaces ins\u00E9cables (NBSP, NNBSP) pos\u00E9es par l'orthotypographie fran\u00E7aise
-  // (E6) + variantes rares (espace fine, espace de chiffre) \u2014 en \u00E9chappement
-  // unicode explicite plut\u00F4t qu'en caract\u00E8re litt\u00E9ral, pour rester lisibles
-  // dans un \u00E9diteur/diff et ne pas d\u00E9clencher `no-irregular-whitespace` en lint.
-  return s.replace(/[\u00A0\u202F\u2009\u2007]/g, " ").replace(/\s+/g, " ").trim();
-}
-
-/** Neutralise les URL de `src=`/`href=` : un média réhébergé (OVH → Blob) ne doit pas se comparer par son URL. */
-function neutralizeMediaUrls(s: string): string {
-  return s.replace(/\b(src|href)="[^"]*"/gi, '$1="§"');
-}
-
-/** Diff d'un champ HTML (déjà passé par `sanitizeCms`) : espaces/URL médias whitelistés en cosmétique. */
-function classifyHtml(key: string, field: string, a: string, b: string): Diff | null {
-  if (a === b) return null;
-  const na = normalizeSpaces(a);
-  const nb = normalizeSpaces(b);
-  if (na === nb) {
-    return diff(key, field, "cosmetique", "espaces/insécables uniquement (orthotypographie E6 ou espacement source)");
-  }
-  if (neutralizeMediaUrls(na) === neutralizeMediaUrls(nb)) {
-    return diff(key, field, "cosmetique", "URL de média différente, contenu identique (réhébergement OVH → Blob attendu)");
-  }
-  return diff(key, field, "bloquant", `contenu différent : "${a.slice(0, 120)}" ≠ "${b.slice(0, 120)}"`);
-}
-
-function hostOf(url: string): string | null {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return null;
-  }
-}
-
-/** Diff d'une URL de média simple (couverture, table, extrait) : changement d'hébergeur = cosmétique, absence = bloquant. */
-function classifyMediaUrl(key: string, field: string, a: string | null, b: string | null): Diff | null {
-  if (a === b) return null;
-  if (a == null || b == null) {
-    return diff(key, field, "bloquant", `présent d'un seul côté : http="${a ?? "∅"}" pg="${b ?? "∅"}"`);
-  }
-  const hostA = hostOf(a);
-  const hostB = hostOf(b);
-  if (hostA && OVH_MEDIA_HOSTS.includes(hostA) && hostB && !OVH_MEDIA_HOSTS.includes(hostB)) {
-    return diff(key, field, "cosmetique", `réhébergement attendu : ${a} → ${b}`);
-  }
-  return diff(key, field, "bloquant", `URL différente sans réhébergement identifiable : "${a}" ≠ "${b}"`);
-}
-
-/**
- * ISBN : `trimIsbn` (migration, `utils.ts:82`) nettoie les espaces parasites
- * connus côté LD (piège de l'échantillon E8) — un ISBN identique une fois
- * réduit aux espaces est une correction de qualité de donnée, pas une perte.
- */
-function classifyIsbn(key: string, a: string | null, b: string | null): Diff | null {
-  if (a === b) return null;
-  if ((a ?? "").trim() === (b ?? "").trim()) {
-    return diff(key, "isbn", "cosmetique", `espace parasite nettoyé : "${a}" → "${b}"`);
-  }
-  return diff(key, "isbn", "bloquant", `isbn différent : "${a}" ≠ "${b}"`);
-}
-
-function scalar(key: string, field: string, a: unknown, b: unknown): Diff | null {
-  if (a === b) return null;
-  return diff(key, field, "bloquant", `${field} : "${String(a)}" ≠ "${String(b)}"`);
-}
+/* ─────────────────────────── Normalisation / classification des écarts (compare-classify.ts) ─────────────────────────── */
 
 function termsKey(terms: { slug: string }[]): string {
   return [...terms]
@@ -307,16 +221,7 @@ function diffBook(key: string, http: Book, pg: Book): Diff[] {
   const collB = pg.collection?.slug ?? null;
   push(scalar(key, "collection", collA, collB));
   push(classifyMediaUrl(key, "cover.url", http.cover?.url ?? null, pg.cover?.url ?? null));
-  if (http.cover && pg.cover && (http.cover.width !== pg.cover.width || http.cover.height !== pg.cover.height)) {
-    out.push(
-      diff(
-        key,
-        "cover.dims",
-        "bloquant",
-        `${http.cover.width}x${http.cover.height} ≠ ${pg.cover.width}x${pg.cover.height}`,
-      ),
-    );
-  }
+  push(classifyCoverDims(key, http.cover ?? null, pg.cover ?? null));
   return out;
 }
 
