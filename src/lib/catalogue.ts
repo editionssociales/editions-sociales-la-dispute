@@ -2,15 +2,17 @@ import "server-only";
 import { cache } from "react";
 import { buildCatalogueView, type CatalogueView } from "./browse";
 import { httpCatalogueSource } from "./catalogue-http";
-import { pgCatalogueSource } from "./catalogue-pg";
+import { getBoutiqueOnlyBook, listBoutiqueOnlyBooks, pgCatalogueSource } from "./catalogue-pg";
 import {
   buildBookDetail,
-  buildCatalogue,
+  buildCatalogueForFlag,
+  buildNativeBookDetail,
   computeFacets,
   countByEdition,
   newReleases,
   queryBooks,
 } from "./catalogue-core";
+import { isCommerceNative } from "./env";
 import type { Book, BookDetail, BookFilters, EditionSlug, Facet } from "./types";
 
 export type { CatalogueView } from "./browse";
@@ -18,28 +20,47 @@ export type { CatalogueView } from "./browse";
 /**
  * Façade du catalogue unifié (server-only).
  *
- * Câble l'adaptateur http au cœur pur (`catalogue-core`) et dédoublonne les
- * chargements par requête (`cache`). L'API publique — `getBooks`, `getFacets`,
- * `getBook`, `getNewReleases`, `countBooks` — est inchangée pour les pages ;
- * elle n'expose plus ni fetch ni logique, seulement l'orchestration.
+ * Câble l'adaptateur http (ou pg, `CATALOGUE_SOURCE=pg`) au cœur pur
+ * (`catalogue-core`) et dédoublonne les chargements par requête (`cache`).
+ * L'API publique — `getBooks`, `getFacets`, `getBook`, `getNewReleases`,
+ * `countBooks` — est inchangée pour les pages catalogue.
+ *
+ * `COMMERCE_NATIVE` (plan §4 étape 11) gouverne, INDÉPENDAMMENT de
+ * `CATALOGUE_SOURCE`, d'où viennent les données de VENTE (prix TTC, stock,
+ * sellable) : à `0` (défaut), la Store API WooCommerce, quel que soit le
+ * contenu (`CATALOGUE_SOURCE`) ; à `1`, Payload — plus aucun appel Store API,
+ * `source.listProducts()` n'est même plus invoqué. C'est aussi ce flag qui
+ * fait apparaître les articles boutique-seuls (`listBoutiqueOnlyBooks`,
+ * `/boutique`, plan §4 étape 7) : à `0` ils restent des extras dérivés des
+ * produits Woo non réclamés (`buildCatalogue`, inchangé).
  *
  * Un livre n'est jamais retiré du catalogue faute d'être en vente : il est
  * simplement marqué « à paraître » ou « indisponible en ligne ».
  */
 
 // Point de bascule unique (E4 du plan) : WordPress reste la source de vérité
-// tant que `CATALOGUE_SOURCE` n'est pas posée à `pg` — rollback = flip d'env.
+// du CONTENU tant que `CATALOGUE_SOURCE` n'est pas posée à `pg` — rollback =
+// flip d'env. Indépendant de `COMMERCE_NATIVE` (ventes, cf. ci-dessus).
 const source =
   process.env.CATALOGUE_SOURCE === "pg" ? pgCatalogueSource() : httpCatalogueSource();
 
 /** Catalogue unifié complet (deux fonds + boutique), mémoïsé par requête. */
 export const getAllBooks = cache(async (): Promise<Book[]> => {
-  const [es, ld, products] = await Promise.all([
+  const nativeCommerce = isCommerceNative();
+  const [es, ld, products, boutiqueOnly] = await Promise.all([
     source.listBooks("editions-sociales"),
     source.listBooks("la-dispute"),
-    source.listProducts(),
+    // Plus aucun appel Store API à `COMMERCE_NATIVE=1` : `buildCatalogueForFlag`
+    // ignore `products` dans ce cas, mais on évite même l'aller-retour réseau.
+    nativeCommerce ? Promise.resolve([]) : source.listProducts(),
+    nativeCommerce ? listBoutiqueOnlyBooks() : Promise.resolve([]),
   ]);
-  return buildCatalogue({ "editions-sociales": es, "la-dispute": ld }, products);
+  return buildCatalogueForFlag(
+    nativeCommerce,
+    { "editions-sociales": es, "la-dispute": ld },
+    products,
+    boutiqueOnly,
+  );
 });
 
 /** Applique filtres + tri (pagination gérée par l'appelant). */
@@ -72,6 +93,9 @@ export const getBook = cache(
   async (edition: EditionSlug, slug: string): Promise<BookDetail | null> => {
     const raw = await source.getBook(edition, slug);
     if (!raw) return null;
+    if (isCommerceNative()) {
+      return buildNativeBookDetail(edition, raw, `/catalogue/${edition}/${slug}`);
+    }
     const products = await source.listProducts();
     return buildBookDetail(edition, raw, products);
   },
@@ -83,4 +107,39 @@ export async function getAllBookParams(): Promise<{ edition: EditionSlug; slug: 
   return books
     .filter((b): b is Book & { edition: EditionSlug } => b.edition != null)
     .map((b) => ({ edition: b.edition, slug: b.slug }));
+}
+
+/* --------------------- boutique-seuls (COMMERCE_NATIVE=1, plan §4 étape 7) --------------------- */
+
+/**
+ * Articles boutique-seuls (`origin: "boutique"`) — que le commerce natif
+ * soit actif ou non : à `0`, ce sont les extras dérivés des produits Woo non
+ * réclamés (`buildCatalogue`) ; à `1`, les fiches Payload `edition: null`
+ * (`buildNativeCatalogue`). Le tri suit celui de `getAllBooks` (titre, pas de
+ * pagination — la grille `/boutique` reste courte, ~15-20 articles).
+ */
+export async function getBoutiqueBooks(): Promise<Book[]> {
+  const all = await getAllBooks();
+  return all
+    .filter((b) => b.origin === "boutique")
+    .sort((a, b) => a.title.localeCompare(b.title, "fr"));
+}
+
+/**
+ * Fiche d'un article boutique-seul (`/boutique/[slug]`) — uniquement en
+ * commerce natif : à `COMMERCE_NATIVE=0` la route redirige vers `/catalogue`
+ * (règle d'or du lot), cette fonction n'est jamais appelée. Mémoïsée par
+ * requête (`generateMetadata` + la page appellent toutes deux, même slug).
+ */
+export const getBoutiqueBook = cache(async (slug: string): Promise<BookDetail | null> => {
+  const raw = await getBoutiqueOnlyBook(slug);
+  if (!raw) return null;
+  return buildNativeBookDetail(null, raw, `/boutique/${slug}`, "boutique");
+});
+
+/** Paramètres de génération statique pour les fiches boutique-seules (commerce natif uniquement). */
+export async function getAllBoutiqueParams(): Promise<{ slug: string }[]> {
+  if (!isCommerceNative()) return [];
+  const books = await getBoutiqueBooks();
+  return books.map((b) => ({ slug: b.slug }));
 }

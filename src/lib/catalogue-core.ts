@@ -4,6 +4,7 @@ import { frenchTypo } from "./typo-fr";
 import {
   priceOf,
   slugFromBoutiqueLink,
+  type CommerceInfo,
   type RawBook,
   type WcProduct,
 } from "./catalogue-source";
@@ -14,6 +15,7 @@ import type {
   Cover,
   EditionSlug,
   Facet,
+  PurchaseMode,
   PurchaseStatus,
   Term,
 } from "./types";
@@ -32,12 +34,22 @@ import type {
 
 /* -------------------------- transformation brut → domaine -------------------------- */
 
-/** Fiche brute du port → `Book` de base, statut non encore résolu. */
-export function toBook(edition: EditionSlug, raw: RawBook): Book {
+/**
+ * Fiche brute du port → `Book` de base, statut non encore résolu. `origin`
+ * par défaut à `"catalogue"` (comportement historique, inchangé pour tous
+ * les appels à deux arguments) — un troisième argument permet de fabriquer
+ * un article boutique-seul natif (`edition: null, origin: "boutique"`, cf.
+ * `buildNativeCatalogue`) sans dupliquer cette fonction.
+ */
+export function toBook(
+  edition: EditionSlug | null,
+  raw: RawBook,
+  origin: Book["origin"] = "catalogue",
+): Book {
   return {
     id: raw.id,
     edition,
-    origin: "catalogue",
+    origin,
     slug: raw.slug,
     // Orthotypo française (E6 du plan) : indépendante de la source — un titre
     // saisi dans Payload mérite ses insécables autant qu'un titre WordPress.
@@ -52,6 +64,9 @@ export function toBook(edition: EditionSlug, raw: RawBook): Book {
     buy: raw.buy,
     status: "unavailable",
     permalink: null,
+    // Par défaut « lien externe » (comportement historique) — le seul appelant
+    // qui pose `"cart"` est `resolveNativePurchase`, en aval.
+    purchaseMode: "legacy-link",
   };
 }
 
@@ -59,6 +74,11 @@ function productCover(p: WcProduct): Cover | null {
   const url = httpsify(p.images?.[0]?.src ?? null);
   // Dimensions inconnues côté Store API : ratio par défaut, rendu en `object-contain`.
   return url ? { url, width: 2, height: 3 } : null;
+}
+
+/** Un livre à date de parution future est-il « à paraître » ? Aujourd'hui en ISO `YYYY-MM-DD`, comparaison lexicographique valide sur ce format. */
+function isUpcoming(publishedAt: string | null): boolean {
+  return publishedAt != null && publishedAt > new Date().toISOString().slice(0, 10);
 }
 
 /** Résout le statut d'achat d'un livre à partir du produit boutique associé. */
@@ -82,9 +102,8 @@ function resolvePurchase(
       cover: book.cover,
     };
   }
-  const upcoming = book.publishedAt != null && book.publishedAt > new Date().toISOString().slice(0, 10);
   return {
-    status: upcoming ? "upcoming" : "unavailable",
+    status: isUpcoming(book.publishedAt) ? "upcoming" : "unavailable",
     price: book.price,
     permalink: null,
     cover: book.cover,
@@ -109,6 +128,7 @@ function bookFromProduct(p: WcProduct): Book {
     buy: { boutique: p.permalink, parislibrairies: null, lalibrairie: null },
     status: p.is_purchasable && p.is_in_stock ? "available" : "unavailable",
     permalink: p.is_purchasable && p.is_in_stock ? p.permalink : null,
+    purchaseMode: "legacy-link",
   };
 }
 
@@ -137,6 +157,105 @@ export function buildCatalogue(
 
   const extras = products.filter((p) => !claimed.has(p.slug)).map(bookFromProduct);
   return [...merged, ...extras];
+}
+
+/* --------------------------- commerce natif (COMMERCE_NATIVE=1) --------------------------- */
+
+/**
+ * Défaut conservateur quand une fiche n'a pas (encore) de groupe `commerce`
+ * Payload — jamais vendable, stock non suivi. Fait retomber
+ * `resolveNativePurchase` sur la branche « lien externe / indisponible »,
+ * jamais sur « disponible » : une fiche sans donnée de vente native ne peut
+ * pas se retrouver faussement en vente (contrat « jamais retiré, jamais
+ * inventé » du catalogue).
+ */
+const NO_COMMERCE: CommerceInfo = { sellable: false, stock: null };
+
+/**
+ * Résout le statut d'achat NATIF d'un livre (`COMMERCE_NATIVE=1` — données
+ * Payload `sellable`/`stock`, plus aucun appel Store API) — remplace
+ * `resolvePurchase` pour ce chemin, avec un ORDRE DE RÈGLES délibérément
+ * différent (décision client, plan §4 étape 11) :
+ *
+ *  1. Parution FUTURE → « à paraître ». PRIME sur tout le reste, y compris un
+ *     stock positif : un livre pas encore sorti ne se vend pas, même si sa
+ *     fiche est déjà cochée vendable avec du stock en préparation.
+ *  2. Sinon vendable ET (stock non suivi OU stock > 0) → disponible, panier
+ *     natif. `stock === null` = non suivi = disponible (jamais un plancher
+ *     qui bloquerait la vente d'un article dont le stock n'est pas géré) ;
+ *     `stock === 0` = épuisé, ne passe PAS cette porte (plancher strict).
+ *  3. Sinon lien(s) externe(s) existant(s) (Paris Librairies / La Librairie)
+ *     → « en librairie », lien externe inchangé.
+ *  4. Sinon indisponible — jamais retiré du catalogue (contrat).
+ *
+ * `internalPermalink` est fourni par l'appelant (route `/catalogue/<edition>/
+ * <slug>` ou `/boutique/<slug>`, plan §4 étape 11) : ce module reste pur, il
+ * ne connaît pas les routes de l'app.
+ */
+export function resolveNativePurchase(
+  book: Pick<Book, "publishedAt" | "buy">,
+  commerce: CommerceInfo,
+  internalPermalink: string,
+): { status: PurchaseStatus; permalink: string | null; purchaseMode: PurchaseMode } {
+  if (isUpcoming(book.publishedAt)) {
+    return { status: "upcoming", permalink: null, purchaseMode: "legacy-link" };
+  }
+  if (commerce.sellable && (commerce.stock == null || commerce.stock > 0)) {
+    return { status: "available", permalink: internalPermalink, purchaseMode: "cart" };
+  }
+  const external = book.buy.parislibrairies || book.buy.lalibrairie;
+  if (external) {
+    return { status: "external", permalink: external, purchaseMode: "legacy-link" };
+  }
+  return { status: "unavailable", permalink: null, purchaseMode: "legacy-link" };
+}
+
+/**
+ * Catalogue unifié en commerce natif : les deux fonds (statut résolu via
+ * Payload, jamais la Store API) + les articles boutique-seuls
+ * (`origin: "boutique"`, `edition: null`, fournis séparément par l'appelant —
+ * `catalogue-pg.ts:listBoutiqueOnlyBooks`, ils ne vivent pas dans
+ * `rawByEdition` puisqu'ils n'ont pas de maison). Symétrique de
+ * `buildCatalogue`, sans dépendre de `WcProduct`.
+ */
+export function buildNativeCatalogue(
+  rawByEdition: Partial<Record<EditionSlug, RawBook[]>>,
+  boutiqueOnly: RawBook[] = [],
+): Book[] {
+  const siteBooks = (Object.keys(rawByEdition) as EditionSlug[]).flatMap((edition) =>
+    (rawByEdition[edition] ?? []).map((raw) => {
+      const book = toBook(edition, raw);
+      const permalink = `/catalogue/${edition}/${raw.slug}`;
+      return { ...book, ...resolveNativePurchase(book, raw.commerce ?? NO_COMMERCE, permalink) };
+    }),
+  );
+
+  const extras = boutiqueOnly.map((raw) => {
+    const book = toBook(null, raw, "boutique");
+    const permalink = `/boutique/${raw.slug}`;
+    return { ...book, ...resolveNativePurchase(book, raw.commerce ?? NO_COMMERCE, permalink) };
+  });
+
+  return [...siteBooks, ...extras];
+}
+
+/**
+ * Point de bascule pur (E4/E11 du plan) : à `nativeCommerce=false`, délègue
+ * tel quel à `buildCatalogue` — STRICTEMENT le même tableau qu'avant ce
+ * module (iso-comportement, testé). À `true`, bascule sur
+ * `buildNativeCatalogue` et ignore `products` (plus aucun appel Store API en
+ * amont non plus : c'est l'appelant, `catalogue.ts`, qui décide de ne même
+ * pas aller chercher `products`/`boutiqueOnly` selon le flag).
+ */
+export function buildCatalogueForFlag(
+  nativeCommerce: boolean,
+  rawByEdition: Partial<Record<EditionSlug, RawBook[]>>,
+  products: WcProduct[],
+  boutiqueOnly: RawBook[] = [],
+): Book[] {
+  return nativeCommerce
+    ? buildNativeCatalogue(rawByEdition, boutiqueOnly)
+    : buildCatalogue(rawByEdition, products);
 }
 
 /* ------------------------------- requêtes ------------------------------- */
@@ -238,6 +357,26 @@ export function buildBookDetail(
   const productSlug = slugFromBoutiqueLink(book.buy.boutique);
   const product = productSlug ? products.find((p) => p.slug === productSlug) : undefined;
   const resolved = resolvePurchase(book, product);
+
+  return {
+    ...book,
+    ...resolved,
+    presentation: sanitizeCms(raw.presentationHtml ?? ""),
+    furtherReading: raw.furtherReadingHtml ? sanitizeCms(raw.furtherReadingHtml) : null,
+    tocUrl: raw.tocUrl,
+    excerptUrl: raw.excerptUrl,
+  };
+}
+
+/** Fiche complète d'un livre en commerce natif — symétrique de `buildBookDetail`, sans `WcProduct`. */
+export function buildNativeBookDetail(
+  edition: EditionSlug | null,
+  raw: RawBook,
+  permalink: string,
+  origin: Book["origin"] = "catalogue",
+): BookDetail {
+  const book = toBook(edition, raw, origin);
+  const resolved = resolveNativePurchase(book, raw.commerce ?? NO_COMMERCE, permalink);
 
   return {
     ...book,

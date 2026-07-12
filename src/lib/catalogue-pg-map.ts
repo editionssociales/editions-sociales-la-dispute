@@ -1,6 +1,6 @@
 import { convertLexicalToHTML } from "@payloadcms/richtext-lexical/html";
 import type { Author, Book as PayloadBook, Collection, Media } from "../payload-types";
-import type { RawBook } from "./catalogue-source";
+import type { CommerceInfo, RawBook } from "./catalogue-source";
 import type { Cover, Term } from "./types";
 
 /**
@@ -85,6 +85,19 @@ function mediaUrl(value: number | Media | null | undefined): string | null {
   return isPopulated<Media>(value) ? (value.url ?? null) : null;
 }
 
+/**
+ * Groupe `commerce` Payload → `CommerceInfo` du port — `null` si le groupe est
+ * absent (fiche jamais touchée par la migration commerce, cf. `Books.ts`).
+ * `sellable`/`stock` sont optionnels côté schéma Payload (`boolean | null`,
+ * `number | null`) : `sellable` manquant vaut « non vendable » (jamais
+ * vendable par défaut), `stock` manquant vaut « non suivi » — même défaut que
+ * `resolveNativePurchase` applique à une fiche sans groupe `commerce` du tout.
+ */
+function toCommerce(value: PayloadBook["commerce"]): CommerceInfo | null {
+  if (!value) return null;
+  return { sellable: Boolean(value.sellable), stock: value.stock ?? null };
+}
+
 /** Document `books` Payload (Local API, `depth:2`) → forme brute neutre du port. */
 export function payloadBookToRawBook(doc: PayloadBook): RawBook {
   const presentation = renderHtml(doc.presentationLegacyHtml, doc.presentation, doc.contentTouched);
@@ -113,5 +126,6 @@ export function payloadBookToRawBook(doc: PayloadBook): RawBook {
     furtherReadingHtml: plusLoin,
     tocUrl: mediaUrl(doc.tablePdf),
     excerptUrl: mediaUrl(doc.extraitPdf),
+    commerce: toCommerce(doc.commerce),
   };
 }

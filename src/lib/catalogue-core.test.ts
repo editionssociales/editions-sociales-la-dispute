@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   buildBookDetail,
   buildCatalogue,
+  buildCatalogueForFlag,
+  buildNativeBookDetail,
+  buildNativeCatalogue,
   computeFacets,
   countByEdition,
   queryBooks,
+  resolveNativePurchase,
   toBook,
 } from "./catalogue-core";
 import {
   inMemoryCatalogueSource,
+  type CommerceInfo,
   type RawBook,
   type WcProduct,
 } from "./catalogue-source";
@@ -228,5 +233,183 @@ describe("à travers le port en mémoire (bout en bout, sans réseau)", () => {
 
   it("renvoie null pour un slug absent", async () => {
     expect(await source.getBook("la-dispute", "inconnu")).toBeNull();
+  });
+});
+
+/* -------- commerce natif (COMMERCE_NATIVE=1) -------- */
+
+const sellable = (stock: number | null): CommerceInfo => ({ sellable: true, stock });
+const notSellable: CommerceInfo = { sellable: false, stock: null };
+
+describe("resolveNativePurchase — dérivation du statut d'achat natif (sans Store API)", () => {
+  it("« à paraître » PRIME sur le stock : parution future + vendable + stock positif → upcoming quand même", () => {
+    const book = rawBook({
+      id: 1,
+      slug: "avenir",
+      title: "Avenir",
+      publishedAt: "2999-01-01",
+    });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(10),
+      "/catalogue/editions-sociales/avenir",
+    );
+    expect(resolved.status).toBe("upcoming");
+    expect(resolved.permalink).toBeNull();
+    expect(resolved.purchaseMode).toBe("legacy-link");
+  });
+
+  it("stock `null` = non suivi = disponible (jamais un plancher qui bloque la vente)", () => {
+    const book = rawBook({ id: 2, slug: "capital", title: "Le Capital" });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(null),
+      "/catalogue/editions-sociales/capital",
+    );
+    expect(resolved).toEqual({
+      status: "available",
+      permalink: "/catalogue/editions-sociales/capital",
+      purchaseMode: "cart",
+    });
+  });
+
+  it("plancher strict : stock exactement à 0 → PAS disponible (épuisé), même vendable", () => {
+    const book = rawBook({ id: 3, slug: "epuise", title: "Épuisé" });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(0),
+      "/catalogue/editions-sociales/epuise",
+    );
+    expect(resolved.status).toBe("unavailable");
+  });
+
+  it("stock positif + vendable → disponible, panier natif", () => {
+    const book = rawBook({ id: 4, slug: "stock-ok", title: "Stock ok" });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(3),
+      "/catalogue/editions-sociales/stock-ok",
+    );
+    expect(resolved.status).toBe("available");
+    expect(resolved.purchaseMode).toBe("cart");
+  });
+
+  it("non vendable (même avec du stock) → replie sur les liens externes s'il y en a", () => {
+    const book = rawBook({
+      id: 5,
+      slug: "ideologie",
+      title: "L'Idéologie",
+      buy: { boutique: null, parislibrairies: "https://parislibrairies.fr/ideologie", lalibrairie: null },
+    });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      { sellable: false, stock: 50 },
+      "/catalogue/editions-sociales/ideologie",
+    );
+    expect(resolved).toEqual({
+      status: "external",
+      permalink: "https://parislibrairies.fr/ideologie",
+      purchaseMode: "legacy-link",
+    });
+  });
+
+  it("stock à 0, sans lien externe → indisponible, mais jamais retiré (le livre reste dans le catalogue)", () => {
+    const book = rawBook({ id: 6, slug: "epuise-sec", title: "Épuisé sec" });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(0),
+      "/catalogue/editions-sociales/epuise-sec",
+    );
+    expect(resolved).toEqual({ status: "unavailable", permalink: null, purchaseMode: "legacy-link" });
+  });
+
+  it("aucune donnée commerce (fiche jamais migrée) → jamais faussement disponible", () => {
+    const book = rawBook({ id: 7, slug: "sans-commerce", title: "Sans commerce" });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      notSellable,
+      "/catalogue/editions-sociales/sans-commerce",
+    );
+    expect(resolved.status).toBe("unavailable");
+  });
+});
+
+describe("buildNativeCatalogue — fusion sans Store API", () => {
+  it("résout chaque fiche via son groupe `commerce`, jamais via un produit Woo", () => {
+    const raw: RawBook[] = [
+      rawBook({ id: 1, slug: "capital", title: "Le Capital", commerce: sellable(5) }),
+      rawBook({ id: 2, slug: "epuise", title: "Épuisé", commerce: sellable(0) }),
+    ];
+    const catalogue = buildNativeCatalogue({ "editions-sociales": raw });
+    expect(catalogue).toHaveLength(2);
+    expect(bySlug(catalogue, "capital").status).toBe("available");
+    expect(bySlug(catalogue, "capital").permalink).toBe("/catalogue/editions-sociales/capital");
+    expect(bySlug(catalogue, "epuise").status).toBe("unavailable");
+  });
+
+  it("ajoute les articles boutique-seuls (origin: boutique, edition: null) avec leur propre permalink interne", () => {
+    const raw: RawBook[] = [rawBook({ id: 1, slug: "capital", title: "Le Capital", commerce: sellable(5) })];
+    const boutiqueOnly: RawBook[] = [
+      rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(null) }),
+    ];
+    const catalogue = buildNativeCatalogue({ "editions-sociales": raw }, boutiqueOnly);
+    expect(catalogue).toHaveLength(2);
+    const extra = bySlug(catalogue, "tote-bag");
+    expect(extra.edition).toBeNull();
+    expect(extra.origin).toBe("boutique");
+    expect(extra.status).toBe("available");
+    expect(extra.permalink).toBe("/boutique/tote-bag");
+  });
+
+  it("un livre non vendable reste dans le catalogue (jamais retiré)", () => {
+    const raw: RawBook[] = [
+      rawBook({ id: 1, slug: "pas-vendable", title: "Pas vendable", commerce: notSellable }),
+    ];
+    const catalogue = buildNativeCatalogue({ "editions-sociales": raw });
+    expect(catalogue).toHaveLength(1);
+    expect(catalogue[0].status).toBe("unavailable");
+  });
+});
+
+describe("buildNativeBookDetail", () => {
+  it("construit une fiche détail résolue en natif, HTML nettoyé (SafeHtml)", () => {
+    const raw = rawBook({
+      id: 1,
+      slug: "capital",
+      title: "Le Capital",
+      commerce: sellable(5),
+      presentationHtml: "<p>Présentation <script>alert(1)</script></p>",
+    });
+    const detail = buildNativeBookDetail("editions-sociales", raw, "/catalogue/editions-sociales/capital");
+    expect(detail.status).toBe("available");
+    expect(detail.purchaseMode).toBe("cart");
+    expect(detail.presentation).toContain("<p>Présentation");
+    expect(detail.presentation).not.toContain("script");
+  });
+
+  it("fiche boutique-seule : edition null, origin boutique", () => {
+    const raw = rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(null) });
+    const detail = buildNativeBookDetail(null, raw, "/boutique/tote-bag", "boutique");
+    expect(detail.edition).toBeNull();
+    expect(detail.origin).toBe("boutique");
+    expect(detail.status).toBe("available");
+  });
+});
+
+describe("buildCatalogueForFlag — sélection d'adaptateur par flag", () => {
+  it("iso-comportement à `false` : STRICTEMENT le même tableau que `buildCatalogue` (Store API/Woo)", () => {
+    const viaFlag = buildCatalogueForFlag(false, rawByEdition, PRODUCTS);
+    const direct = buildCatalogue(rawByEdition, PRODUCTS);
+    expect(viaFlag).toEqual(direct);
+  });
+
+  it("à `true` : bascule sur le natif, ignore `products` (plus de Store API)", () => {
+    const raw: Partial<Record<EditionSlug, RawBook[]>> = {
+      "editions-sociales": [rawBook({ id: 1, slug: "capital", title: "Le Capital", commerce: sellable(5) })],
+    };
+    // `products` volontairement peuplé pour prouver qu'il est ignoré à `true`.
+    const catalogue = buildCatalogueForFlag(true, raw, PRODUCTS);
+    expect(bySlug(catalogue, "capital").status).toBe("available");
+    expect(bySlug(catalogue, "capital").permalink).toBe("/catalogue/editions-sociales/capital");
   });
 });

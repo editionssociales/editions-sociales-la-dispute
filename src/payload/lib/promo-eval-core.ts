@@ -1,0 +1,74 @@
+/**
+ * Cœur pur de l'évaluation d'un code promo contre un panier (plan phase 4,
+ * §3/étape 6bis — validation serveur du champ code promo de `/panier`) — ne
+ * touche ni Payload ni la Local API : `PromoCodeLike` est la forme neutre que
+ * l'appelant (`panier/actions.ts`) extrait d'un document `promo-codes`
+ * (`overrideAccess: true`, la collection n'a pas de lecture publique,
+ * cf. `PromoCodes.ts`). Même découpage pur/impur que `stock-import-core.ts`.
+ *
+ * Codes promo V1 (décalque du coupon Woo réellement utilisé — décision
+ * client, `PromoCodes.ts`) : seuls `fixed_cart` et `free_shipping`.
+ */
+
+export interface PromoCodeLike {
+  code: string
+  type: 'fixed_cart' | 'free_shipping'
+  /** Euros — ignoré pour `free_shipping` (cf. `PromoCodes.ts`). */
+  amount?: number | null
+  /** Euros — panier minimum TTC pour que le code s'applique. */
+  minCart?: number | null
+  /** ISO — `null`/absent = jamais expiré. */
+  expiresAt?: string | null
+  active: boolean
+}
+
+export type PromoRefusalReason = 'not-found' | 'inactive' | 'expired' | 'min-cart'
+
+export type PromoEvalResult =
+  | { ok: true; type: 'fixed_cart'; discountCents: number }
+  | { ok: true; type: 'free_shipping' }
+  | { ok: false; reason: PromoRefusalReason; message: string }
+
+/** Euros → centimes entiers — même règle que `cart-core.ts:priceToCents` (jamais de flottant sur de l'argent). */
+function toCents(euros: number): number {
+  return Math.round(euros * 100)
+}
+
+/**
+ * Évalue un code promo contre le sous-total TTC du panier (en CENTIMES,
+ * AVANT remise — le panier minimum d'un code se lit sur la valeur brute, pas
+ * déjà réduite par lui-même). `now` est injectable pour les tests
+ * (expiration), jamais lu par défaut ailleurs qu'ici.
+ *
+ * Ordre des règles : code introuvable → inactif → expiré → panier sous le
+ * minimum → sinon valide (remise calculée, jamais au-delà du sous-total —
+ * ce dernier plafond reste la responsabilité de `computeCartTotals`,
+ * ce module ne connaît pas le sous-total une fois la remise appliquée).
+ */
+export function evaluatePromoCode(
+  promo: PromoCodeLike | null,
+  cartTotalCents: number,
+  now: Date = new Date(),
+): PromoEvalResult {
+  if (!promo) {
+    return { ok: false, reason: 'not-found', message: 'Code promo introuvable.' }
+  }
+  if (!promo.active) {
+    return { ok: false, reason: 'inactive', message: 'Ce code promo n’est plus actif.' }
+  }
+  if (promo.expiresAt && new Date(promo.expiresAt).getTime() < now.getTime()) {
+    return { ok: false, reason: 'expired', message: 'Ce code promo a expiré.' }
+  }
+  if (promo.minCart != null && cartTotalCents < toCents(promo.minCart)) {
+    return {
+      ok: false,
+      reason: 'min-cart',
+      message: `Ce code s’applique à partir de ${promo.minCart.toFixed(2)} € d’achat.`,
+    }
+  }
+
+  if (promo.type === 'free_shipping') {
+    return { ok: true, type: 'free_shipping' }
+  }
+  return { ok: true, type: 'fixed_cart', discountCents: toCents(promo.amount ?? 0) }
+}

@@ -59,6 +59,10 @@ const envSchema = z.object({
     ["0", "1"],
     "valeurs reconnues : 1 | 0 (`true` laisserait les redirections en 302 en silence)",
   ).optional(),
+  COMMERCE_NATIVE: z.enum(
+    ["0", "1"],
+    "valeurs reconnues : 1 | 0 (`true` laisserait le commerce natif désactivé en silence — règle d'or du lot 2 : iso-rendu strict tant que ce n'est pas explicitement \"1\")",
+  ).optional(),
 });
 
 export interface EnvIssue {
@@ -95,6 +99,22 @@ export function checkEnv(env: Record<string, string | undefined> = process.env):
   }
 
   return issues;
+}
+
+/**
+ * Interrupteur du commerce natif (phase 4, lot 2, plan §4 étape 5) — `false`
+ * par défaut : tant que `COMMERCE_NATIVE` n'est pas posée à `"1"`, le site
+ * reste STRICTEMENT iso-rendu avec l'existant (liens Woo intacts, `/boutique`
+ * redirige vers `/catalogue`, checkout 503, panier absent du header — règle
+ * d'or du lot). Toute autre valeur (absente, vide, malformée) désactive ;
+ * `checkEnv` signale déjà au boot les valeurs malformées (`"true"` au lieu de
+ * `"1"`, etc.) — ce helper ne fait que lire l'interrupteur au runtime, sans
+ * jeter.
+ */
+export function isCommerceNative(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return env.COMMERCE_NATIVE === "1";
 }
 
 /** Jette au boot, toutes variables fautives listées d'un coup — jamais au fond d'une requête. */

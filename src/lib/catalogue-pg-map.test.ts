@@ -215,3 +215,32 @@ describe("lexicalToHtml", () => {
     expect(lexicalToHtml("pas un objet lexical")).toBe("");
   });
 });
+
+describe("payloadBookToRawBook — commerce natif (groupe `commerce`)", () => {
+  it("mappe sellable/stock tels quels quand le groupe est présent", () => {
+    const raw = payloadBookToRawBook(
+      book({ commerce: { sellable: true, stock: 5, reducedShippingFlag: false } }),
+    );
+    expect(raw.commerce).toEqual({ sellable: true, stock: 5 });
+  });
+
+  it("stock absent (non suivi) → null, jamais 0 ni undefined", () => {
+    const raw = payloadBookToRawBook(book({ commerce: { sellable: true } }));
+    expect(raw.commerce).toEqual({ sellable: true, stock: null });
+  });
+
+  it("stock à 0 est préservé (épuisé) — pas confondu avec « non suivi »", () => {
+    const raw = payloadBookToRawBook(book({ commerce: { sellable: true, stock: 0 } }));
+    expect(raw.commerce).toEqual({ sellable: true, stock: 0 });
+  });
+
+  it("sellable absent → false (jamais vendable par défaut)", () => {
+    const raw = payloadBookToRawBook(book({ commerce: { stock: 10 } }));
+    expect(raw.commerce).toEqual({ sellable: false, stock: 10 });
+  });
+
+  it("groupe `commerce` absent (fiche jamais touchée par la migration commerce) → null", () => {
+    const raw = payloadBookToRawBook(book({ commerce: undefined }));
+    expect(raw.commerce).toBeNull();
+  });
+});

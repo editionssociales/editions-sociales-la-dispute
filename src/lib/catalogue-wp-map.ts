@@ -113,5 +113,9 @@ export function wpBookToRawBook(item: WpBook): RawBook {
     furtherReadingHtml: b.plus_loin || null,
     tocUrl: httpsify(b.table ?? null),
     excerptUrl: httpsify(b.extrait ?? null),
+    // WordPress ne connaît ni `sellable` ni `stock` (données du commerce
+    // natif, Payload uniquement) — explicite plutôt qu'absent, pour ne pas
+    // laisser croire à un oubli de mapping.
+    commerce: null,
   };
 }

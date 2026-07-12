@@ -1,6 +1,10 @@
 import type { CollectionAfterChangeHook, CollectionConfig, Field } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
+import {
+  exportComptaHandler,
+  exportPreparationHandler,
+} from '../lib/order-export-handler.ts'
 import { formatOrderNumber } from '../lib/order-number.ts'
 
 /**
@@ -102,6 +106,11 @@ export const Orders: CollectionConfig = {
     description:
       'Commandes du commerce natif — créées par le webhook Stripe, suivies ' +
       'ici (statut de préparation/expédition uniquement).',
+    // Export CSV (mission « exports compta + livraison de la PR », plan §4
+    // étape 10) — panneau au-dessus du tableau, cf. `OrderExportPanel.tsx`.
+    components: {
+      beforeListTable: ['/payload/admin/OrderExportPanel.tsx#OrderExportPanel'],
+    },
   },
   access: {
     read: isAdminOrEditor,
@@ -114,6 +123,22 @@ export const Orders: CollectionConfig = {
   hooks: {
     afterChange: [assignOrderNumber],
   },
+  // `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`
+  // — deux profils d'export CSV (authentifié admin/éditeur, cf.
+  // `order-export-handler.ts` pour le détail : filtrage, formatage,
+  // en-têtes de réponse).
+  endpoints: [
+    {
+      path: '/export/preparation',
+      method: 'get',
+      handler: exportPreparationHandler,
+    },
+    {
+      path: '/export/compta',
+      method: 'get',
+      handler: exportComptaHandler,
+    },
+  ],
   fields: [
     {
       name: 'number',
@@ -138,11 +163,18 @@ export const Orders: CollectionConfig = {
         { value: 'shipped', label: 'Expédiée' },
         { value: 'cancelled', label: 'Annulée' },
         { value: 'refunded', label: 'Remboursée' },
+        { value: 'failed', label: 'Échec du paiement' },
       ],
       admin: {
         description:
           'Seul champ modifiable au back-office — suivi de préparation ' +
-          '(paid → prepared → shipped) ; annulation/remboursement au besoin.',
+          '(paid → prepared → shipped) ; annulation/remboursement au besoin. ' +
+          '« Échec du paiement » : posé par le webhook (checkout.session.' +
+          'async_payment_failed) pour un moyen de paiement différé (ex. ' +
+          "virement/prélèvement) dont la confirmation échoue APRÈS que " +
+          "checkout.session.completed s'est déjà présenté en attente — trace " +
+          "l'essai sans jamais décrémenter le stock (webhook route, lot 2 " +
+          'étape 9).',
       },
     },
     {
