@@ -1,9 +1,13 @@
+import { z } from "zod";
+import type Stripe from "stripe";
+
 /**
  * Cœur pur de la jauge de dons 2026 — sans I/O (convention `src/lib/CLAUDE.md`,
  * même découpage que `catalogue-core.ts`/`catalogue-http.ts`) : l'agrégation
  * (`sumDonations`) et le parsing d'une page de réponse Stripe
- * (`parseChargeSearchPage`) se testent sans réseau ; `donations.ts`
- * (`server-only`) ne fait que le fetch + la pagination et délègue ici.
+ * (`parseChargeSearchPage`, schéma zod) se testent sans réseau ;
+ * `donations.ts` (`server-only`) ne fait que le fetch + la pagination et
+ * délègue ici.
  *
  * Extrait à part parce que `donations.ts` importe `./stripe`, qui importe le
  * marqueur `server-only` — celui-ci jette systématiquement hors d'un build
@@ -11,11 +15,28 @@
  * pas remonter jusqu'à cet import, comme pour `catalogue-core.ts`.
  */
 
-/** Vue étroite d'une charge Stripe — seuls les champs que la jauge exploite. */
-export interface DonationCharge {
-  amount_captured: number;
-  amount_refunded: number;
-}
+/**
+ * Vue étroite d'une charge Stripe — seuls les champs que la jauge exploite,
+ * ancrés sur les types du SDK : si Stripe renommait un champ, le typecheck
+ * casse ici plutôt qu'une jauge silencieusement à zéro.
+ */
+export type DonationCharge = Pick<Stripe.Charge, "amount_captured" | "amount_refunded">;
+
+/**
+ * Schéma du sous-ensemble exploité d'une page `GET /v1/charges/search` —
+ * champs superflus tolérés (zod n'est pas strict par défaut), mais tout champ
+ * exploité doit avoir la forme attendue : jamais de `NaN` dans l'agrégation.
+ */
+const chargeSearchPageSchema = z.object({
+  data: z.array(
+    z.object({
+      amount_captured: z.number(),
+      amount_refunded: z.number(),
+    }) satisfies z.ZodType<DonationCharge>,
+  ),
+  has_more: z.boolean().optional(),
+  next_page: z.string().nullable().optional(),
+});
 
 /** Une page de résultats `GET /v1/charges/search`, déjà validée. */
 export interface ChargeSearchPage {
@@ -25,29 +46,21 @@ export interface ChargeSearchPage {
 }
 
 /**
- * Valide et extrait une page de réponse `charges/search` — jette sur toute
- * forme inattendue (corps non-objet, `data` non-liste, charge sans montants
- * numériques) plutôt que de laisser passer des `NaN` dans l'agrégation.
+ * Valide et extrait une page de réponse `charges/search` — jette, avec le
+ * détail du champ fautif, sur toute forme inattendue plutôt que de laisser
+ * passer des montants inexploitables.
  */
 export function parseChargeSearchPage(raw: unknown): ChargeSearchPage {
-  if (!raw || typeof raw !== "object") {
-    throw new Error("Stripe charges/search : réponse inattendue (corps non-objet)");
+  const parsed = chargeSearchPageSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(
+      `Stripe charges/search : réponse inattendue — ${z.prettifyError(parsed.error)}`,
+    );
   }
-  const body = raw as { data?: unknown; has_more?: unknown; next_page?: unknown };
-  if (!Array.isArray(body.data)) {
-    throw new Error("Stripe charges/search : réponse inattendue (data non-liste)");
-  }
-  const charges: DonationCharge[] = body.data.map((item, i) => {
-    const c = item as { amount_captured?: unknown; amount_refunded?: unknown };
-    if (typeof c.amount_captured !== "number" || typeof c.amount_refunded !== "number") {
-      throw new Error(`Stripe charges/search : charge #${i} sans montants exploitables`);
-    }
-    return { amount_captured: c.amount_captured, amount_refunded: c.amount_refunded };
-  });
   return {
-    charges,
-    hasMore: body.has_more === true,
-    nextPage: typeof body.next_page === "string" ? body.next_page : null,
+    charges: parsed.data.data,
+    hasMore: parsed.data.has_more === true,
+    nextPage: parsed.data.next_page ?? null,
   };
 }
 

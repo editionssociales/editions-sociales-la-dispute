@@ -267,9 +267,3 @@ export function deepEqual(a: unknown, b: unknown): boolean {
   return aKeys.every((k, i) => k === bKeys[i] && deepEqual(aObj[k], bObj[k]));
 }
 
-/** Découpe un tableau en lots (limite la concurrence des I/O médias/HTTP). */
-export function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}

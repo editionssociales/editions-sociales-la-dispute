@@ -41,6 +41,7 @@
  * par `target` à la fois).
  */
 import http from "node:http";
+import { parseArgs } from "node:util";
 import https from "node:https";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -51,39 +52,30 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 /* ───────────────────────────── CLI ───────────────────────────── */
 
 function parseCliArgs(argv) {
-  const args = {
-    target: null,
-    selfTestOnly: false,
-    inventory: path.join(ROOT, "scripts/redirect-inventory.csv"),
-    insecure: false,
-    hostFilter: null,
-  };
-  for (const arg of argv) {
-    if (arg === "--self-test-only") args.selfTestOnly = true;
-    else if (arg === "--insecure") args.insecure = true;
-    else if (arg.startsWith("--target=")) args.target = arg.slice("--target=".length);
-    else if (arg === "--target") args._expectTarget = true;
-    else if (arg.startsWith("--inventory=")) args.inventory = arg.slice("--inventory=".length);
-    else if (arg === "--inventory") args._expectInventory = true;
-    else if (arg.startsWith("--host-filter=")) args.hostFilter = arg.slice("--host-filter=".length);
-    else if (arg === "--host-filter") args._expectHostFilter = true;
-    else if (args._expectTarget) {
-      args.target = arg;
-      args._expectTarget = false;
-    } else if (args._expectInventory) {
-      args.inventory = arg;
-      args._expectInventory = false;
-    } else if (args._expectHostFilter) {
-      args.hostFilter = arg;
-      args._expectHostFilter = false;
-    } else {
-      throw new Error(`[verify-redirects] argument inconnu : "${arg}"`);
-    }
+  let values;
+  try {
+    // `node:util` gère déjà `--flag valeur` ET `--flag=valeur`, le strict par
+    // défaut rejette tout argument inconnu — plus rien à écrire à la main.
+    ({ values } = parseArgs({
+      args: argv,
+      options: {
+        target: { type: "string" },
+        inventory: { type: "string", default: path.join(ROOT, "scripts/redirect-inventory.csv") },
+        "self-test-only": { type: "boolean", default: false },
+        insecure: { type: "boolean", default: false },
+        "host-filter": { type: "string" },
+      },
+    }));
+  } catch (err) {
+    throw new Error(`[verify-redirects] ${err.message}`);
   }
-  delete args._expectTarget;
-  delete args._expectInventory;
-  delete args._expectHostFilter;
-  return args;
+  return {
+    target: values.target ?? null,
+    selfTestOnly: values["self-test-only"],
+    inventory: values.inventory,
+    insecure: values.insecure,
+    hostFilter: values["host-filter"] ?? null,
+  };
 }
 
 /* ───────────────────────── Garde-fou 1 : self-test Host ───────────────────────── */

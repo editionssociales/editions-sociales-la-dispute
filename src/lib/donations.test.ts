@@ -106,18 +106,18 @@ describe("parseChargeSearchPage — parsing de la réponse Stripe charges/search
   });
 
   it("corps non-objet → jette", () => {
-    expect(() => parseChargeSearchPage(null)).toThrow(/corps non-objet/);
-    expect(() => parseChargeSearchPage("oops")).toThrow(/corps non-objet/);
+    expect(() => parseChargeSearchPage(null)).toThrow(/réponse inattendue/);
+    expect(() => parseChargeSearchPage("oops")).toThrow(/réponse inattendue/);
   });
 
   it("`data` absent ou non-liste → jette plutôt que de planter en aval", () => {
-    expect(() => parseChargeSearchPage({})).toThrow(/data non-liste/);
-    expect(() => parseChargeSearchPage({ data: "oops" })).toThrow(/data non-liste/);
+    expect(() => parseChargeSearchPage({})).toThrow(/réponse inattendue/);
+    expect(() => parseChargeSearchPage({ data: "oops" })).toThrow(/réponse inattendue/);
   });
 
-  it("une charge sans montants numériques exploitables → jette", () => {
+  it("une charge sans montants numériques exploitables → jette en nommant le champ", () => {
     expect(() =>
       parseChargeSearchPage({ data: [{ id: "ch_1", amount_captured: "5000" }] }),
-    ).toThrow(/montants exploitables/);
+    ).toThrow(/amount_captured/);
   });
 });

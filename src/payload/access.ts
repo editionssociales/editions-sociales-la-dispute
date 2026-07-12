@@ -8,6 +8,9 @@ import type { Access } from 'payload'
  * le fallback `UntypedUser` de Payload — les comparaisons `user?.role` ci-
  * dessous ne sont donc pas vérifiées par le compilateur contre ce type `Role`.
  * À resserrer une fois les types générés (`CollectionConfig<'users'>` etc.).
+ *
+ * @public — exporté comme point d'ancrage de ce resserrement, sans importeur
+ * pour l'instant (marqueur lu par knip).
  */
 export type Role = 'admin' | 'editor'
 

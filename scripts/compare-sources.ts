@@ -32,6 +32,7 @@
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { parseArgs } from "node:util";
 import { getPayload, type Payload } from "payload";
 import config from "../src/payload.config.ts";
 
@@ -96,19 +97,22 @@ interface CliOptions {
   help: boolean;
 }
 
-function parseArgs(argv: string[]): CliOptions {
-  let sites: Site[] = ["es", "ld"];
-  let help = false;
-  for (const arg of argv) {
-    if (arg === "--help" || arg === "-h") help = true;
-    else if (arg.startsWith("--site=")) {
-      const v = arg.slice("--site=".length);
-      if (v === "all") sites = ["es", "ld"];
-      else if (v === "es" || v === "ld") sites = [v];
-      else throw new Error(`--site invalide : "${v}" (attendu : all|es|ld)`);
-    }
+function parseCliOptions(argv: string[]): CliOptions {
+  // `strict: false` : `payload run` laisse passer ses propres jetons dans
+  // argv — on ne rejette pas l'inconnu, comme le parseur manuel d'avant.
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      site: { type: "string", default: "all" },
+      help: { type: "boolean", short: "h", default: false },
+    },
+    strict: false,
+  });
+  const site = String(values.site ?? "all");
+  if (site !== "all" && site !== "es" && site !== "ld") {
+    throw new Error(`--site invalide : "${site}" (attendu : all|es|ld)`);
   }
-  return { sites, help };
+  return { sites: site === "all" ? ["es", "ld"] : [site], help: values.help === true };
 }
 
 /* ─────────────────────────── Boutique (transport local, politique partagée) ───────────────────────────
@@ -614,7 +618,7 @@ async function writeReport(input: Report): Promise<{ mdPath: string; jsonPath: s
 /* ─────────────────────────── main ─────────────────────────── */
 
 async function main(): Promise<number> {
-  const opts = parseArgs(process.argv.slice(2));
+  const opts = parseCliOptions(process.argv.slice(2));
   if (opts.help) {
     console.log(HELP);
     return 0;

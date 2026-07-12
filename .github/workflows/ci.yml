@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   verify:
-    name: typecheck · lint · test
+    name: typecheck · lint · test · knip
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -29,9 +29,20 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # `incremental: true` (tsconfig) n'apporte rien sans son .tsbuildinfo :
+      # on le restaure du run précédent (clé par SHA, repli sur le plus récent)
+      # pour que `tsc --noEmit` ne rejoue que le delta.
+      - uses: actions/cache@v4
+        with:
+          path: tsconfig.tsbuildinfo
+          key: tsbuildinfo-${{ github.sha }}
+          restore-keys: tsbuildinfo-
+
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # Exports morts, fichiers orphelins, dépendances inutilisées (knip.json).
+      - run: pnpm knip
 
 # `pnpm build` n'est volontairement PAS lancé ici.
 #

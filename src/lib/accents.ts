@@ -28,17 +28,3 @@ export const ACCENT_BORDER_T: Record<Accent, string> = {
   ocher: "border-t-ocher",
   brick: "border-t-brick",
 };
-
-export const ACCENT_BORDER_L: Record<Accent, string> = {
-  navy: "border-l-navy",
-  bottle: "border-l-bottle",
-  ocher: "border-l-ocher",
-  brick: "border-l-brick",
-};
-
-export const ACCENT_BORDER_B: Record<Accent, string> = {
-  navy: "border-b-navy",
-  bottle: "border-b-bottle",
-  ocher: "border-b-ocher",
-  brick: "border-b-brick",
-};
