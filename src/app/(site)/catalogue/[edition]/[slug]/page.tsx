@@ -26,6 +26,7 @@ export async function generateMetadata({
     description:
       cmsExcerpt(book.presentation, 160) ||
       `${book.title} — ${EDITIONS[edition].name}`,
+    alternates: { canonical: `/catalogue/${edition}/${slug}` },
   };
 }
 

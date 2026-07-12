@@ -6,6 +6,118 @@ import type { NextConfig } from "next";
 import { withPayload } from "@payloadcms/next/withPayload";
 import { withSentryConfig } from "@sentry/nextjs";
 
+/**
+ * E4 du plan (`plan/02-mise-en-production.md`) — table de redirections 301 de
+ * reprise, exécutée avant tout flip DNS (les règles host sont inertes tant que
+ * le domaine ne pointe pas sur ce projet Vercel). Statut piloté par env :
+ * 302 par défaut pendant tout le recouvrement (ajustable sans redéploiement de
+ * code — cf. Q2/Q8 du plan), 301 seulement après validation client (E7).
+ *
+ * ⚠️ Jamais `permanent: false` (émettrait des 307, pas des 302) : toujours
+ * `statusCode` explicite. `redirects()` documente `statusCode` **remplace**
+ * `permanent`, jamais les deux (docs Next 16, redirects.md).
+ */
+const REDIRECTS_PERMANENT = process.env.REDIRECTS_PERMANENT === "1";
+
+type RedirectRule = { source: string; destination: string };
+type StatusedRule = RedirectRule & { statusCode: 301 | 302 };
+type HostRule = StatusedRule & { has: [{ type: "host"; value: string }] };
+
+/** Redirection de reprise : 302 pendant le recouvrement, 301 au définitif (`REDIRECTS_PERMANENT=1`). */
+const r = (o: RedirectRule): StatusedRule => ({ ...o, statusCode: REDIRECTS_PERMANENT ? 301 : 302 });
+/** Toujours temporaire : signets wp-admin/wp-login/wp-json de l'équipe vers un host cms-* voué à disparaître. */
+const t = (o: RedirectRule): StatusedRule => ({ ...o, statusCode: 302 });
+/** Restreint un groupe de règles à un host (cohabitation ES/LD sur le même projet Vercel). */
+const onHost = (host: string, rules: StatusedRule[]): HostRule[] =>
+  rules.map((x) => ({ ...x, has: [{ type: "host", value: host }] }));
+
+/**
+ * Formes d'URLs WordPress vérifiées dans les dumps (`permalink_structure =
+ * /%postname%/`, CPT `rewrite slug = catalogue`, taxonomies
+ * `auteur`/`collection`/`parution`) : les slugs du nouveau site sont les
+ * slugs WP passés tels quels par le REST → ces patterns couvrent 100 % des
+ * fiches, y compris celles créées après ce jour. Ordre significatif : les
+ * règles spécifiques d'abord, premier match gagnant.
+ */
+async function redirects() {
+  return [
+    ...onHost("editionssociales.fr", [
+      // 1 — pagination de l'archive catalogue WP → archive ES (pas de pagination distincte côté nouveau site)
+      r({ source: "/catalogue/page/:n(\\d+)", destination: "/catalogue/editions-sociales" }),
+      // 2 — fiche livre WP → fiche ES. Lookahead négatif : ne doit PAS capturer
+      // les slugs de maison eux-mêmes (`/catalogue/editions-sociales`,
+      // `/catalogue/la-dispute` doivent rester servis en 200 — cas négatif
+      // exigé par verify-redirects).
+      r({
+        source: "/catalogue/:slug((?!editions-sociales$)(?!la-dispute$)[^/]+)",
+        destination: "/catalogue/editions-sociales/:slug",
+      }),
+      // 3-5 — taxonomies WP → facettes de l'archive ES (mêmes clés que
+      // `parseBookFilters`, `src/lib/parse-filters.ts:14-25`).
+      r({ source: "/auteur/:slug", destination: "/catalogue/editions-sociales?author=:slug" }),
+      r({ source: "/collection/:slug", destination: "/catalogue/editions-sociales?collection=:slug" }),
+      r({ source: "/parution/:slug", destination: "/catalogue/editions-sociales?upcoming=1" }),
+      // 6 — anciennes pages d'archive par taxonomie
+      r({ source: "/catalogue-collection", destination: "/catalogue/editions-sociales" }),
+      r({ source: "/catalogue-auteur", destination: "/catalogue/editions-sociales" }),
+      // 7 — page orpheline (défaut Q2, à ajuster avant E7 selon retour client)
+      r({ source: "/les-emissions-sociales", destination: "/a-propos" }),
+      // 8 — page orpheline (défaut Q2)
+      r({ source: "/la-geme", destination: "https://gememarxengels.org" }),
+      // 9 — la phase Newsletter re-ciblera cette règle vers le vrai formulaire d'inscription
+      t({ source: "/newsletter", destination: "/" }),
+      // 10 — page orpheline (défaut Q2)
+      r({ source: "/marx-passe-lagreg", destination: "/catalogue/editions-sociales" }),
+      // 11 — flux RSS : 3 règles séparées. Jamais `/feed{/:rest*}` — les
+      // accolades ne compilent pas avec le path-to-regexp embarqué de Next 16
+      // (« Unexpected MODIFIER », vérifié dans le plan).
+      r({ source: "/feed", destination: "/" }),
+      r({ source: "/feed/:rest*", destination: "/" }),
+      r({ source: "/comments/feed", destination: "/" }),
+      // 12 — médias partagés (118 PDF + images de couverture) : gardés vivants
+      // sur le host de cohabitation (triple ceinture avec `rebaseWpMediaUrl`, E3e).
+      r({ source: "/wp-content/:path*", destination: "https://cms-es.editionssociales.fr/wp-content/:path*" }),
+      // 13 — signets wp-admin de l'équipe : 302 pour toujours (le host cms
+      // disparaîtra en phase d'extinction, jamais un 301 ici).
+      t({ source: "/wp-admin/:path*", destination: "https://cms-es.editionssociales.fr/wp-admin/:path*" }),
+      t({ source: "/wp-login.php", destination: "https://cms-es.editionssociales.fr/wp-login.php" }),
+      // 14 — REST WordPress (outillage éventuel de l'équipe)
+      t({ source: "/wp-json/:path*", destination: "https://cms-es.editionssociales.fr/wp-json/:path*" }),
+    ]),
+    ...onHost("ladispute.fr", [
+      // 1-3 — le domaine déménage en entier vers editionssociales.fr/catalogue/la-dispute
+      r({ source: "/catalogue/page/:n(\\d+)", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
+      r({ source: "/catalogue/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute/:slug" }),
+      r({ source: "/catalogue", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
+      // 4-6 — taxonomies WP → facettes de l'archive LD (le terme `a-paraitre`
+      // existe côté LD, count=1, vérifié dans le plan).
+      r({ source: "/auteur/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute?author=:slug" }),
+      r({
+        source: "/collection/:slug",
+        destination: "https://editionssociales.fr/catalogue/la-dispute?collection=:slug",
+      }),
+      r({ source: "/parution/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute?upcoming=1" }),
+      // 7 — page « à propos » LD → page « éditions » dédiée du site unifié
+      r({ source: "/a-propos", destination: "https://editionssociales.fr/editions/la-dispute" }),
+      // 8 — rencontres (Q8 : si la page est retirée faute d'événements réels,
+      // re-cibler vers `/editions/la-dispute` — cf. plan)
+      r({ source: "/rencontres", destination: "https://editionssociales.fr/rencontres" }),
+      // 9 — anciennes pages d'archive par taxonomie
+      r({ source: "/catalogue-auteurs", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
+      r({ source: "/catalogue-collection", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
+      // 10 — médias partagés
+      r({ source: "/wp-content/:path*", destination: "https://cms-ld.editionssociales.fr/wp-content/:path*" }),
+      // 11 — signets wp-admin de l'équipe : 302 pour toujours
+      t({ source: "/wp-admin/:path*", destination: "https://cms-ld.editionssociales.fr/wp-admin/:path*" }),
+      t({ source: "/wp-login.php", destination: "https://cms-ld.editionssociales.fr/wp-login.php" }),
+      t({ source: "/wp-json/:path*", destination: "https://cms-ld.editionssociales.fr/wp-json/:path*" }),
+      // 12 — catch-all FINAL (dernier de la liste : couvre `/`, `/article-0`,
+      // `/feed` et tout le reste du domaine qui déménage).
+      r({ source: "/:path*", destination: "https://editionssociales.fr/" }),
+    ]),
+  ];
+}
+
 const nextConfig: NextConfig = {
   // Racine explicite : dans un worktree imbriqué (.claude/worktrees/*), Turbopack
   // remonterait sinon au pnpm-workspace.yaml du checkout parent et servirait le
@@ -24,6 +136,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.ladispute.fr", pathname: "/wp-content/**" },
       { protocol: "http", hostname: "editionssociales.fr", pathname: "/wp-content/**" },
       { protocol: "http", hostname: "ladispute.fr", pathname: "/wp-content/**" },
+      // Découplage CMS (E3 du plan) : hosts de cohabitation, seuls hosts REST
+      // + médias une fois les domaines publics basculés sur Vercel (E5/E6).
+      // Cohabitation : gardés en plus des hosts publics ci-dessus, jamais à
+      // leur place, tant que la migration n'est pas achevée.
+      { protocol: "https", hostname: "cms-es.editionssociales.fr", pathname: "/wp-content/**" },
+      { protocol: "https", hostname: "cms-ld.editionssociales.fr", pathname: "/wp-content/**" },
       // Couvertures/médias rapatriés par Payload (E6/E3) : chaque store Vercel
       // Blob a un sous-domaine `<id>.public.blob.vercel-storage.com` distinct,
       // aucun hostname fixe connu à l'avance. `*` (un seul niveau de
@@ -33,6 +151,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
     ],
   },
+  redirects,
 };
 
 export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackages: false }), {

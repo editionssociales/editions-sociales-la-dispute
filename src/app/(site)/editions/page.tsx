@@ -12,6 +12,7 @@ import { countBooks } from "@/lib/catalogue";
 export const metadata: Metadata = {
   title: "Nos collections",
   description: "Les fonds Éditions sociales et La Dispute, au sein d'une même maison.",
+  alternates: { canonical: "/editions" },
 };
 
 export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)

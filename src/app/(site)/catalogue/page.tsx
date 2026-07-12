@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: "Catalogue",
   description:
     "Le catalogue des Éditions sociales x La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
+  // Sans query string : les vues filtrées/paginées canonicalisent vers la
+  // vue de base (E2 du plan).
+  alternates: { canonical: "/catalogue" },
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;

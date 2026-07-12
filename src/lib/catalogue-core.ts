@@ -1,5 +1,5 @@
 import { decodeEntities, displayAuthor, httpsify, parseWpDate } from "./format";
-import { sanitizeCms } from "./cms-html";
+import { rebaseWpMediaUrl, sanitizeCms } from "./cms-html";
 import { frenchTypo } from "./typo-fr";
 import {
   priceOf,
@@ -45,11 +45,12 @@ function toCover(value?: WpCoverField | string | null): Cover | null {
   if (typeof value === "string") {
     // Ancienne forme du mu-plugin (avant redéploiement) : URL brute sans dimensions.
     const url = httpsify(value);
-    return url ? { url, ...DEFAULT_COVER_RATIO } : null;
+    // Découplage CMS (E3) : rebase vers cms-es/cms-ld avant le flip DNS.
+    return url ? { url: rebaseWpMediaUrl(url), ...DEFAULT_COVER_RATIO } : null;
   }
   const url = httpsify(value.url);
   if (!url || !value.width || !value.height) return null;
-  return { url, width: value.width, height: value.height };
+  return { url: rebaseWpMediaUrl(url), width: value.width, height: value.height };
 }
 
 /** Fiche livre brute (WordPress) → `Book` de base, statut non encore résolu. */
