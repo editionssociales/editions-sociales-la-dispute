@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { Eyebrow } from "@/components/eyebrow";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
@@ -37,9 +38,9 @@ export default function MentionsLegalesPage() {
         />
         <Reveal>
           <div className="mt-6 max-w-3xl">
-            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            <Eyebrow>
               Éditeur, hébergement, propriété
-            </p>
+            </Eyebrow>
             <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
               Mentions légales
             </h1>

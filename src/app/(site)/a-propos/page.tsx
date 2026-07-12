@@ -7,6 +7,7 @@ import { ACCENT_BORDER_T } from "@/lib/accents";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
+import { Eyebrow } from "@/components/eyebrow";
 import { FOCUS_RING_OUTER } from "@/lib/ui";
 
 export const metadata: Metadata = {
@@ -33,9 +34,9 @@ export default function AProposPage() {
         />
         <Reveal>
           <div className="mt-6 max-w-3xl">
-            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            <Eyebrow>
               Qui nous sommes
-            </p>
+            </Eyebrow>
             <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
               La maison de la pensée critique et des sciences sociales
             </h1>
@@ -62,9 +63,9 @@ export default function AProposPage() {
       <section className="border-t-2 border-black">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            <Eyebrow>
               Deux maisons
-            </p>
+            </Eyebrow>
             <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
               Deux catalogues, une seule équipe d&apos;éditrices
             </h2>
@@ -120,9 +121,9 @@ export default function AProposPage() {
         <Container className="py-16 sm:py-20">
           <Reveal>
             <div className="max-w-2xl">
-              <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+              <Eyebrow>
                 Sur ce site
-              </p>
+              </Eyebrow>
               <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
                 Le catalogue
               </h2>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { Eyebrow } from "@/components/eyebrow";
 
 export const metadata: Metadata = {
   title: "Confidentialité",
@@ -27,9 +28,9 @@ export default function ConfidentialitePage() {
         />
         <Reveal>
           <div className="mt-6 max-w-3xl">
-            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            <Eyebrow>
               Données personnelles
-            </p>
+            </Eyebrow>
             <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
               Politique de confidentialité
             </h1>

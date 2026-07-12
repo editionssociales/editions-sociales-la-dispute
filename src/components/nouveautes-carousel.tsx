@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
+import { Eyebrow } from "@/components/eyebrow";
 
 /** Un livre déjà mis en forme par la page serveur — aucune fonction, uniquement des données sérialisables. */
 export interface NouveauteBook {
@@ -306,9 +307,9 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           flèches à droite) — même mise en forme que l'ancien en-tête de page. */}
       <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-between gap-4 px-[clamp(16px,4vw,64px)]">
         <div className="min-w-0">
-          <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+          <Eyebrow>
             Les Éditions sociales × La Dispute
-          </p>
+          </Eyebrow>
           <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-black">
             Nouveautés
           </h1>

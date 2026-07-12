@@ -5,6 +5,7 @@ import { Reveal } from "@/components/reveal";
 import { CountUp } from "@/components/count-up";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
+import { Eyebrow } from "@/components/eyebrow";
 import { ACCENT_BG } from "@/lib/accents";
 import { EDITION_LIST } from "@/lib/editions";
 import { countBooks } from "@/lib/catalogue";
@@ -30,9 +31,9 @@ export default async function EditionsPage() {
 
       <Reveal>
         <div className="mt-3.5 max-w-2xl">
-          <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+          <Eyebrow>
             Deux maisons, une équipe
-          </p>
+          </Eyebrow>
           <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.96] text-black sm:text-5xl">
             Nos collections
           </h1>

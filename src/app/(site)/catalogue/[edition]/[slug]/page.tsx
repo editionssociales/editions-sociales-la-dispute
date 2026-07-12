@@ -7,6 +7,7 @@ import { Container } from "@/components/container";
 import { CollectionTag } from "@/components/collection-tag";
 import { BuyLinksList } from "@/components/buy-links";
 import { FramedGrid } from "@/components/framed-grid";
+import { Eyebrow } from "@/components/eyebrow";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
@@ -215,9 +216,9 @@ export default async function BookPage({
         </div>
 
         <article>
-          <p className="mb-2 font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+          <Eyebrow className="mb-2">
             {editionInfo.name}
-          </p>
+          </Eyebrow>
           {book.collection && <CollectionTag collection={book.collection} className="mb-3" />}
           <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-black">
             {book.title}

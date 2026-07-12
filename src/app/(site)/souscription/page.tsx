@@ -10,6 +10,7 @@ import { ShelfLock } from "@/components/shelf-lock";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
+import { Eyebrow } from "@/components/eyebrow";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
 import { CAMPAIGN_2024 } from "@/lib/campaign";
 import { coverAspectRatio } from "@/lib/cover";
@@ -28,16 +29,6 @@ import { createDonationCheckout } from "./actions";
  * « pop » codent ici les paliers et étiquettes (pas les sections de nav).
  */
 const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
-
-/** Étiquette de section : carré pop + libellé noir majuscule. */
-function Kicker({ dot, children }: { dot: string; children: React.ReactNode }) {
-  return (
-    <p className="flex items-center gap-2 font-sans text-xs font-extrabold uppercase tracking-[.22em] text-black">
-      <span aria-hidden="true" className={`h-2.5 w-2.5 ${dot}`} />
-      {children}
-    </p>
-  );
-}
 
 export const metadata: Metadata = {
   title: "Souscription",
@@ -378,7 +369,7 @@ export default async function SouscriptionPage() {
       <section className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-24">
           <Reveal>
-            <Kicker dot="bg-pop-teal">Nous soutenir</Kicker>
+            <Eyebrow dot="bg-pop-teal">Nous soutenir</Eyebrow>
             <h1 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
               En 2024, vous avez sauvé nos maisons
             </h1>
@@ -464,7 +455,7 @@ export default async function SouscriptionPage() {
         <section className="border-b-2 border-black bg-white">
           <Container className="py-16 sm:py-20">
             <Reveal>
-              <Kicker dot="bg-pop-orange">Souscription 2026</Kicker>
+              <Eyebrow dot="bg-pop-orange">Souscription 2026</Eyebrow>
               <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
                 La collecte en direct
               </h2>
@@ -500,7 +491,7 @@ export default async function SouscriptionPage() {
       <section id="paliers" className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <Kicker dot="bg-pop-pink">Les paliers</Kicker>
+            <Eyebrow dot="bg-pop-pink">Les paliers</Eyebrow>
             <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
               Choisissez votre contrepartie
             </h2>
@@ -622,7 +613,7 @@ export default async function SouscriptionPage() {
       <section className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <Kicker dot="bg-pop-orange">Où va votre argent</Kicker>
+            <Eyebrow dot="bg-pop-orange">Où va votre argent</Eyebrow>
             <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
               Cinq chantiers pour la suite
             </h2>
@@ -651,7 +642,7 @@ export default async function SouscriptionPage() {
       <section className="border-b-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <Kicker dot="bg-pop-teal">Et après</Kicker>
+            <Eyebrow dot="bg-pop-teal">Et après</Eyebrow>
             <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
               Des projets, on en a plein
             </h2>
@@ -715,7 +706,7 @@ export default async function SouscriptionPage() {
       <section className="bg-white">
         <Container className="max-w-3xl py-16 sm:py-20">
           <Reveal>
-            <Kicker dot="bg-pop-yellow">FAQ</Kicker>
+            <Eyebrow dot="bg-pop-yellow">FAQ</Eyebrow>
             <h2 className="mt-3 font-sans text-3xl font-black italic text-black">
               Questions fréquentes
             </h2>

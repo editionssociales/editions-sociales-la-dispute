@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Container } from "@/components/container";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
+import { Eyebrow } from "@/components/eyebrow";
 import { ACCENTS, ACCENT_BG } from "@/lib/accents";
 import { FOCUS_RING } from "@/lib/ui";
 
@@ -26,9 +27,9 @@ export default function PanierPage() {
       <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Panier" }]} />
 
       <div className="mt-3.5 max-w-2xl">
-        <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+        <Eyebrow>
           Commande
-        </p>
+        </Eyebrow>
         <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
           Votre panier
         </h1>

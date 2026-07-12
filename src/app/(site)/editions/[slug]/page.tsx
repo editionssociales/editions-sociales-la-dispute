@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
 import { Reveal } from "@/components/reveal";
+import { Eyebrow } from "@/components/eyebrow";
 import { ACCENT_BG } from "@/lib/accents";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { getBooks } from "@/lib/catalogue";
@@ -104,9 +105,9 @@ export default async function EditionPage({
       <Container className="bg-white py-12 sm:py-16">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b-2 border-black pb-4 sm:mb-8">
           <div>
-            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            <Eyebrow>
               {info.shortName}
-            </p>
+            </Eyebrow>
             <h2 className="mt-2 font-sans text-2xl font-black italic uppercase leading-[0.96] text-black sm:text-3xl">
               Parutions récentes
             </h2>

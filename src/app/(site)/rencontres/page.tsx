@@ -4,6 +4,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
 import { Reveal } from "@/components/reveal";
+import { Eyebrow } from "@/components/eyebrow";
 import { FOCUS_RING_OUTER } from "@/lib/ui";
 
 export const metadata: Metadata = {
@@ -47,9 +48,9 @@ export default function RencontresPage() {
       <section className="border-y-2 border-black bg-white">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <p className="font-sans text-xs font-bold uppercase tracking-[.22em] text-black/50">
+            <Eyebrow>
               En préparation
-            </p>
+            </Eyebrow>
             <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
               L&apos;agenda arrive bientôt
             </h2>
