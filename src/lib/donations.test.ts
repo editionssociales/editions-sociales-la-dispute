@@ -48,6 +48,22 @@ describe("sumDonations", () => {
     ];
     expect(sumDonations(charges).contributors).toBe(3);
   });
+
+  it("remboursement TOTAL (net 0) : ni euros ni contributeur — la requête ne garantit pas son exclusion (champ `refunded` non indexé en sandbox)", () => {
+    const charges: DonationCharge[] = [
+      { amount_captured: 5000, amount_refunded: 5000 }, // don de test remboursé (E11.5)
+      { amount_captured: 2000, amount_refunded: 0 },
+    ];
+    expect(sumDonations(charges)).toEqual({ collected: 20, contributors: 1 });
+  });
+
+  it("tout est intégralement remboursé → 0/0 (la section jauge disparaît)", () => {
+    const charges: DonationCharge[] = [
+      { amount_captured: 5000, amount_refunded: 5000 },
+      { amount_captured: 50000, amount_refunded: 50000 },
+    ];
+    expect(sumDonations(charges)).toEqual({ collected: 0, contributors: 0 });
+  });
 });
 
 describe("parseChargeSearchPage — parsing de la réponse Stripe charges/search", () => {

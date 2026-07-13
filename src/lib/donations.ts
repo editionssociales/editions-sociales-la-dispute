@@ -22,10 +22,16 @@ const REVALIDATE = 60;
 
 /**
  * Charges `succeeded`, non intégralement remboursées, de la campagne 2026.
- * `refunded:'false'` exclut déjà les remboursements totaux ; les partiels
- * restent et sont nettés par `sumDonations` via `amount_refunded`.
+ * La forme négation `-refunded:'true'` (et non `refunded:'false'`) : dans les
+ * sandboxes Stripe le champ `refunded` n'est pas indexé par la Search API
+ * (`refunded:'false'` ET `refunded:'true'` → 0 résultat, constaté le 13/07 en
+ * recette E9 alors que `disputed:'false'` matche) — la négation matche alors
+ * tout, et `sumDonations` neutralise les remboursements totaux via
+ * `amount_captured − amount_refunded` (net 0, exclus du compte) ; là où le
+ * champ est indexé (live), les deux formes sont équivalentes. Les partiels
+ * restent nettés par `amount_refunded` dans tous les cas.
  */
-const SEARCH_QUERY = `metadata['campaign']:'${CAMPAIGN_KEY}' AND status:'succeeded' AND refunded:'false'`;
+const SEARCH_QUERY = `metadata['campaign']:'${CAMPAIGN_KEY}' AND status:'succeeded' AND -refunded:'true'`;
 
 /** Garde-fou anti-boucle si Stripe renvoyait un `next_page` en boucle. */
 const MAX_PAGES = 20;
