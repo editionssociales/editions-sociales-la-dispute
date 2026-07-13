@@ -243,16 +243,14 @@ s'appuie sur les mêmes fiches `books`, donc sur la même preuve de fraîcheur.
 
 ## ② Ce qui reste avant le jour J
 
-### Décisions client — feuille à figer le 15/07
+### Décisions client — tranchées le 13/07 (relayées par Youri), reste le 15/07
 
-| # | Question | Défaut déjà en place (à confirmer ou à corriger) |
+| # | Question | Décision |
 |---|---|---|
-| 1 | **Trou 10,01–10,99 €** | Rattaché au palier 11–24 € (4,50 €) |
-| 2 | **Trou 24,01–24,99 €** | Rattaché au palier 25–49 € (5,50 €) |
-| 3 | **Trou 49,01–49,99 €** | Rattaché au palier 50–500 € (6,50 €) |
-| 4 | **Colonnes exactes des deux exports** (préparation + compta) | Celles listées en §① — à faire valider par la personne compta |
-| 5 | **Backlist pré-2020 (67 fiches) : encore expédiable par le routeur ?** | Sans réponse à ce jour — conditionne si elles restent en suivi purement manuel ou si le distributeur peut les réintégrer |
-| 6 | Contenus légaux bloquants pour un site public sur domaine réel : **SIRET, directeur de publication** (placeholders aujourd'hui) | Cf. `plan/02`, pages légales — bloquant pour le flip, pas spécifique au commerce mais partage la même fenêtre |
+| 1–3 | **Trous de la grille de port** (10,01–10,99 · 24,01–24,99 · 49,01–49,99 €) | **TRANCHÉ 13/07 : grille lissée** — chaque palier s'étend jusqu'au centime sous le suivant (`shipping-core.ts`), tarifs inchangés (ex-défaut « palier supérieur » entériné). Refus > 500 € conservé |
+| 4 | **Colonnes exactes des deux exports** (préparation + compta) | **VALIDÉ 13/07 (délégué à Youri)** : colonnes conservées telles quelles — la préparation est le décalque exact du profil Advanced Order Export déjà utilisé par le client, la compta porte adresses, totaux, part TVA 5,5 % et référence Stripe |
+| 5 | **Backlist pré-2020 (67 fiches) + toute fiche sans produit Woo apparié** | **TRANCHÉ 13/07 : tout ce qui est sur le site est vendable** — `sellable` par défaut à true + backfill (migration `20260713_035502`), stock en **suivi manuel** (fallback goodies) tant que le routeur ne les réintègre pas ; disponibilité gouvernée par le stock (0 = épuisé) et « à paraître » |
+| 6 | Contenus légaux bloquants pour un site public sur domaine réel : **SIRET, directeur de publication** (placeholders aujourd'hui) | Cf. `plan/02`, pages légales — bloquant pour le flip, pas urgent pour le dev (confirmé 13/07) ; contenus client attendus avec les paliers le 20/07 |
 | 7 | **Q1–Q8 du plan `02-mise-en-production.md`** (destinations des pages orphelines, sort des domaines défensifs, reçus fiscaux, date/modalités du transfert de propriété…) | Voir `plan/02` — hors commerce mais sur le chemin critique de la même fenêtre de bascule |
 | 8 | **Date de la fenêtre de bascule** | 21/07 devenu **agressif** maintenant que le commerce y entre (plus de marge de préparation qu'un simple flip catalogue) ; **24–28/07 réaliste** ; butée = campagne dons du 15/08, qui ne doit pas glisser |
 
