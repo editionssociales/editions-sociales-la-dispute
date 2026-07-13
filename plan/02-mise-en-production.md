@@ -35,6 +35,13 @@ largement reprise ici. Une passe de cohérence documentaire de ces deux
 fichiers reste à faire ; elle n'est pas dans le périmètre de cette
 réécriture.*
 
+*Mise à jour du 13/07 : la passe de cohérence pour `plan/07-cloture.md` a
+depuis été faite — son calendrier de clôture est désormais aligné sur le
+jalon terminal du 12/08 (livraison définitive) plutôt que sur une semaine
+d'octobre séparée. `plan/04-commerce.md` n'est toujours pas retouché : son
+calendrier (commerce en septembre) reste caduc pour les mêmes raisons qu'au
+12/07, sa substance technique reste la référence.*
+
 ---
 
 ## Objectif et livrable
@@ -608,8 +615,9 @@ secrets ; re-lier l'intégration Git Vercel sur le nouveau slug.
 | J−1 soir | Gel WP, coupure checkout Woo, dump frais, re-run migration + `compare-sources`, archive générée. |
 | **Jour J** | Flags Vercel + flips DNS (ES, LD, boutique) en un seul geste, vérifications, smoke tests. |
 | J → J+14 | Recouvrement : drainage `wc-processing`, proxy `/wc-api/*` actif. |
-| Fin de recouvrement | E7 (302 → 301) sur validation écrite ; résiliation Paybox (décision client). |
-| **Butée** | 15/08 — lancement de la campagne dons. |
+| Fin de recouvrement (~11/08) | E7 (302 → 301) sur validation écrite ; résiliation Paybox (décision client) ; recette de clôture (phase 7). |
+| **12/08 — jalon terminal** | **Livraison définitive** : PV de clôture signé, périmètre vendu livré/recetté, E9 résiduel soldé (facturation, GSC, trace écrite du transfert). Plus de semaine de clôture séparée en octobre. |
+| **Butée** | 15/08 — lancement de la campagne dons, trois jours après la livraison. |
 
 **Fenêtre proposée : 24–28/07.** Le 21/07, évoqué dans les versions
 antérieures pour le seul catalogue, est devenu **agressif** maintenant que
@@ -617,6 +625,13 @@ le commerce entre dans la même fenêtre (câblage de la table de
 redirections boutique, décisions du 15/07 à intégrer, dry-run E9) — 24–28/07
 est réaliste, avec la marge du 15/08 comme butée absolue (la campagne dons
 ne doit pas dépendre d'un chantier encore ouvert).
+
+**Contrainte dure sur la fenêtre de bascule.** Le recouvrement (drainage,
+2 semaines) doit se terminer avant la livraison définitive du 12/08 : **12/08
+− 14 j = 29/07**, dernier jour de bascule tenable. Toute glissade de la
+fenêtre 24–28/07 au-delà du 29/07 comprime directement le recouvrement et
+menace le jalon du 12/08 — à traiter comme une contrainte dure, pas comme une
+marge de confort.
 
 ---
 
