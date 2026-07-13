@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CartProvider } from "@/components/cart/cart-context";
 import { isCommerceNative } from "@/lib/env";
+import { getReglagesSite } from "@/lib/site-content";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -19,17 +20,27 @@ const spectral = Spectral({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"),
-  title: {
-    default: "Les Éditions sociales x La Dispute",
-    template: "%s — Les Éditions sociales x La Dispute",
-  },
-  description:
-    "Les Éditions sociales x La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
-};
+/**
+ * Metadata par défaut éditables (global `reglages-site`, spec « éditeur de
+ * contenus ») : `generateMetadata` remplace l'export `metadata` statique —
+ * mêmes valeurs tant que le global est vide (fallback dur,
+ * `site-content-core.ts`), le suffixe des titres de pages (`template`)
+ * suit le titre par défaut. Pas de `params` dans ce layout racine ; le hook
+ * `afterChange` du global revalide le layout entier.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = await getReglagesSite();
+  return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"),
+    title: {
+      default: seo.titre,
+      template: `%s — ${seo.titre}`,
+    },
+    description: seo.description,
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   // Lue ici (server, comme `NEXT_PUBLIC_SITE_URL` juste au-dessus) et
@@ -41,6 +52,9 @@ export default function RootLayout({
   // du lot (iso-rendu strict tant que le flag est bas).
   const commerceNative = isCommerceNative();
   const header = <SiteHeader commerceNative={commerceNative} />;
+  // Textes du pied de page (global `reglages-site`) : descendus en props —
+  // `SiteFooter` reste un composant serveur de pure présentation.
+  const { footer } = await getReglagesSite();
 
   return (
     <html
@@ -67,7 +81,7 @@ export default function RootLayout({
             <main id="contenu" className="flex-1">{children}</main>
           </>
         )}
-        <SiteFooter />
+        <SiteFooter footer={footer} />
       </body>
     </html>
   );

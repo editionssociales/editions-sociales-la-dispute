@@ -103,9 +103,17 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     'reglages-boutique': ReglagesBoutique;
+    'pages-legales': PagesLegales;
+    'reglages-site': ReglagesSite;
+    'page-a-propos': PageAPropos;
+    'page-souscription': PageSouscription;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
+    'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
+    'reglages-site': ReglagesSiteSelect<false> | ReglagesSiteSelect<true>;
+    'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
+    'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
   };
   locale: null;
   widgets: {
@@ -849,11 +857,395 @@ export interface ReglagesBoutique {
   createdAt?: string | null;
 }
 /**
+ * Texte des trois pages légales. Un onglet vide laisse la page servie avec son texte par défaut (placeholders [À COMPLÉTER…] inclus).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages-legales".
+ */
+export interface PagesLegales {
+  id: number;
+  /**
+   * Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.
+   */
+  cgv?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site, avec ses placeholders [À COMPLÉTER…].
+   */
+  mentionsLegales?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Remplace tout le corps de la page /confidentialite (chapeau compris). Vide = texte actuel du site.
+   */
+  confidentialite?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Pied de page, réseaux sociaux et référencement par défaut. Un champ vide = le texte actuel du site.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-site".
+ */
+export interface ReglagesSite {
+  id: number;
+  footer?: {
+    /**
+     * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
+     */
+    adresse?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    texteDiffusion?: string | null;
+  };
+  /**
+   * Affichés dans le pied de page (cellule « Suivez-nous »). Aucun lien = pied de page inchangé.
+   */
+  reseauxSociaux?:
+    | {
+        label: string;
+        /**
+         * URL complète (https://…).
+         */
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  seo?: {
+    /**
+     * Titre de la page d’accueil et suffixe des titres de pages (« Page — Titre »). Vide = titre actuel.
+     */
+    titreParDefaut?: string | null;
+    /**
+     * Méta-description par défaut du site. Vide = description actuelle.
+     */
+    descriptionParDefaut?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Textes de la page /a-propos. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-a-propos".
+ */
+export interface PageAPropos {
+  id: number;
+  heros?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    intro?: string | null;
+  };
+  citation?: {
+    /**
+     * Guillemets compris. Vide = citation actuelle.
+     */
+    texte?: string | null;
+    /**
+     * Vide = attribution actuelle.
+     */
+    attribution?: string | null;
+  };
+  /**
+   * Surcharge les textes de la section « Deux maisons ». Maison absente ou champ vide = texte actuel ; les couleurs restent en code.
+   */
+  maisons?:
+    | {
+        maison: 'editions-sociales' | 'la-dispute';
+        nom?: string | null;
+        tagline?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Remplacent la section « Le catalogue » (titre, texte et boutons actuels). Aucune section = section actuelle.
+   */
+  sections?:
+    | {
+        titre: string;
+        contenu?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Textes de la page /souscription. Un bloc vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-souscription".
+ */
+export interface PageSouscription {
+  id: number;
+  heros?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    intro?: string | null;
+  };
+  /**
+   * Aucun chantier = les cinq chantiers actuels. Les couleurs suivent l’ordre des cartes (en code).
+   */
+  chantiers?:
+    | {
+        titre: string;
+        desc: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Aucune contrepartie = les huit cartes actuelles. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.
+   */
+  contreparties?:
+    | {
+        tierId:
+          | 'palier-15'
+          | 'palier-35'
+          | 'palier-50'
+          | 'palier-75'
+          | 'palier-100'
+          | 'palier-150'
+          | 'palier-200'
+          | 'palier-300';
+        items?:
+          | {
+              texte: string;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * Compteur « N soutiens en 2024 » affiché sous la carte.
+         */
+        soutiens2024: number;
+        populaire?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Aucune entrée = les deux cartes actuelles (500 € / 1 000 €). Même règle : le montant vient du palier choisi.
+   */
+  mecenes?:
+    | {
+        tierId: 'mecene-500' | 'mecene-1000';
+        desc: string;
+        soutiens2024: number;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Aucune question = les quatre questions actuelles.
+   */
+  faq?:
+    | {
+        question: string;
+        reponse: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique_select".
  */
 export interface ReglagesBoutiqueSelect<T extends boolean = true> {
   seuilAlerteStockBas?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages-legales_select".
+ */
+export interface PagesLegalesSelect<T extends boolean = true> {
+  cgv?: T;
+  mentionsLegales?: T;
+  confidentialite?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-site_select".
+ */
+export interface ReglagesSiteSelect<T extends boolean = true> {
+  footer?:
+    | T
+    | {
+        adresse?: T;
+        texteDiffusion?: T;
+      };
+  reseauxSociaux?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  seo?:
+    | T
+    | {
+        titreParDefaut?: T;
+        descriptionParDefaut?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-a-propos_select".
+ */
+export interface PageAProposSelect<T extends boolean = true> {
+  heros?:
+    | T
+    | {
+        titre?: T;
+        intro?: T;
+      };
+  citation?:
+    | T
+    | {
+        texte?: T;
+        attribution?: T;
+      };
+  maisons?:
+    | T
+    | {
+        maison?: T;
+        nom?: T;
+        tagline?: T;
+        description?: T;
+        id?: T;
+      };
+  sections?:
+    | T
+    | {
+        titre?: T;
+        contenu?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-souscription_select".
+ */
+export interface PageSouscriptionSelect<T extends boolean = true> {
+  heros?:
+    | T
+    | {
+        titre?: T;
+        intro?: T;
+      };
+  chantiers?:
+    | T
+    | {
+        titre?: T;
+        desc?: T;
+        id?: T;
+      };
+  contreparties?:
+    | T
+    | {
+        tierId?: T;
+        items?:
+          | T
+          | {
+              texte?: T;
+              id?: T;
+            };
+        soutiens2024?: T;
+        populaire?: T;
+        id?: T;
+      };
+  mecenes?:
+    | T
+    | {
+        tierId?: T;
+        desc?: T;
+        soutiens2024?: T;
+        id?: T;
+      };
+  faq?:
+    | T
+    | {
+        question?: T;
+        reponse?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
