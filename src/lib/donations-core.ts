@@ -65,18 +65,21 @@ export function parseChargeSearchPage(raw: unknown): ChargeSearchPage {
 }
 
 /**
- * Agrégation pure : collecté net des remboursements (partiels compris — les
- * remboursements totaux sont déjà exclus en amont par le filtre
- * `refunded:'false'` de la requête Stripe), nombre de contributions = nombre
- * de charges retenues.
+ * Agrégation pure : collecté net des remboursements (partiels compris),
+ * nombre de contributions = charges à net strictement positif. Les
+ * remboursements TOTAUX ne sont pas garantis exclus en amont : le filtre
+ * `-refunded:'true'` de la requête (cf. `donations.ts`) laisse tout passer
+ * quand le champ `refunded` n'est pas indexé (sandboxes Stripe) — une charge
+ * intégralement remboursée arrive alors ici avec un net de 0 et ne doit
+ * compter ni en euros ni en contributeur.
  */
 export function sumDonations(charges: DonationCharge[]): {
   collected: number;
   contributors: number;
 } {
-  const collectedMinor = charges.reduce(
-    (sum, c) => sum + (c.amount_captured - c.amount_refunded),
-    0,
-  );
-  return { collected: collectedMinor / 100, contributors: charges.length };
+  const nets = charges
+    .map((c) => c.amount_captured - c.amount_refunded)
+    .filter((net) => net > 0);
+  const collectedMinor = nets.reduce((sum, net) => sum + net, 0);
+  return { collected: collectedMinor / 100, contributors: nets.length };
 }
