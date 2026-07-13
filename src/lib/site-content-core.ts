@@ -1,9 +1,15 @@
 import { lexicalToHtml } from "./catalogue-pg-map";
 import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
+import { DONATION_TIERS, type DonationTier } from "./donation-tiers";
 import { EDITION_LIST } from "./editions";
 import type { Accent } from "./format";
 import type { EditionSlug } from "./types";
-import type { PageAPropos, PagesLegales, ReglagesSite } from "@/payload-types";
+import type {
+  PageAPropos,
+  PageSouscription,
+  PagesLegales,
+  ReglagesSite,
+} from "@/payload-types";
 
 /**
  * Cœur pur de l'« éditeur de contenus » (spec du 13/07) : fusion des globals
@@ -215,5 +221,267 @@ export function mergePageAPropos(
     ),
     maisons,
     sections: sections.length > 0 ? sections : null,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Page Souscription (lot 4)                                           */
+/* ------------------------------------------------------------------ */
+
+export interface ChantierSouscription {
+  titre: string;
+  desc: string;
+  accent: Accent;
+}
+
+/**
+ * Carte de contrepartie/mécène : `tier` est TOUJOURS résolu depuis
+ * `DONATION_TIERS` (la table qui pilote Stripe via `parseDonation`) — le
+ * back-office ne choisit qu'un `tierId`, jamais un montant. Une entrée dont
+ * le palier a disparu de la table est ignorée (présentation seulement, le
+ * paiement n'est pas concerné).
+ */
+export interface ContrepartieSouscription {
+  tier: DonationTier;
+  items: string[];
+  soutiens2024: number;
+  populaire: boolean;
+}
+
+export interface MeceneSouscription {
+  tier: DonationTier;
+  desc: string;
+  soutiens2024: number;
+}
+
+export interface FaqSouscription {
+  q: string;
+  a: string;
+}
+
+export interface PageSouscriptionContent {
+  herosTitre: string;
+  herosIntro: string;
+  chantiers: ChantierSouscription[];
+  contreparties: ContrepartieSouscription[];
+  mecenes: MeceneSouscription[];
+  faq: FaqSouscription[];
+}
+
+/**
+ * Rotation de couleurs des cartes chantiers — reproduit la séquence en dur
+ * de la page actuelle (navy, brick, bottle, ocher, navy) : la couleur suit
+ * l'ordre des cartes, jamais le contenu (contrat : les accents restent en
+ * code, classes Tailwind littérales via `ACCENT_TEXT`).
+ */
+const CHANTIER_ACCENTS: Accent[] = ["navy", "brick", "bottle", "ocher"];
+
+function chantierAccent(index: number): Accent {
+  return CHANTIER_ACCENTS[index % CHANTIER_ACCENTS.length];
+}
+
+/** Palier obligatoire des contenus par défaut — jette au chargement du module si l'id sort de la table. */
+function tierObligatoire(id: string): DonationTier {
+  const tier = DONATION_TIERS.find((t) => t.id === id);
+  if (!tier) {
+    throw new Error(`site-content-core : palier DONATION_TIERS inconnu : ${id}`);
+  }
+  return tier;
+}
+
+/**
+ * Contenus actuels de `souscription/page.tsx` (repris de la campagne Ulule
+ * 2024), extraits **verbatim** — les `\u00a0` reproduisent les `&nbsp;` du
+ * JSX d'origine. Les tests verrouillent ces valeurs (iso-rendu).
+ */
+const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
+  herosTitre: "En 2024, vous avez sauvé nos maisons",
+  herosIntro:
+    "En deux semaines, la campagne « Sauvez les Éditions sociales et La Dispute » atteignait les 50\u00a0000\u00a0€ nécessaires pour sortir la tête de l'eau. À l'arrivée, l'objectif était dépassé de loin. Cette solidarité a tout changé — et cette nouvelle souscription en écrit la suite.",
+  chantiers: [
+    {
+      titre: "Consolider l'équipe",
+      desc: "Trois éditrices permanentes pour tenir notre rythme de publication et renforcer le travail en direction des libraires et de la presse — indispensable pour défendre nos livres.",
+    },
+    {
+      titre: "Réimprimer les épuisés",
+      desc: "Pensée et langage de Vygotski, l'Histoire de la Révolution française de Jaurès, la tétralogie de Lucien Sève, Le travail bénévole de Maud Simonet, les « Découvrir »… Plus de 400 titres aux catalogues, et trop d'épuisés.",
+    },
+    {
+      titre: "Passer au numérique",
+      desc: "Doubler le nombre de titres disponibles sur Cairn et proposer enfin nos livres au format numérique.",
+    },
+    {
+      titre: "Sillonner les librairies",
+      desc: "Une tournée des librairies indépendantes — elles jouent un rôle décisif pour défendre nos livres — et des initiatives multipliées, dans et hors les murs.",
+    },
+    {
+      titre: "Achever ce site",
+      desc: "Un catalogue unifié, une boutique en ligne sans intermédiaire, l'impression des ouvrages à paraître : l'outil que vous avez sous les yeux, à finir de construire.",
+    },
+  ].map((chantier, i) => ({ ...chantier, accent: chantierAccent(i) })),
+  contreparties: [
+    {
+      tier: tierObligatoire("palier-15"),
+      items: ["Une planche de stickers ou un lot de marque-pages au choix"],
+      soutiens2024: 108,
+      populaire: false,
+    },
+    {
+      tier: tierObligatoire("palier-35"),
+      items: [
+        "Un livre « petit mais irremplaçable » au choix",
+        "Stickers ou marque-pages",
+      ],
+      soutiens2024: 69,
+      populaire: false,
+    },
+    {
+      tier: tierObligatoire("palier-50"),
+      items: [
+        "Un livre « essentiel » au choix",
+        "Un sac « Make marxism great again » ou un carnet « Pour des savoirs populaires »",
+        "Stickers ou marque-pages",
+      ],
+      soutiens2024: 257,
+      populaire: true,
+    },
+    {
+      tier: tierObligatoire("palier-75"),
+      items: [
+        "Un livre « indispensable » au choix",
+        "Sac ou carnet au choix",
+        "Stickers ou marque-pages",
+      ],
+      soutiens2024: 27,
+      populaire: false,
+    },
+    {
+      tier: tierObligatoire("palier-100"),
+      items: [
+        "Un « incontournable » au choix",
+        "Sac ou carnet au choix",
+        "Stickers ou marque-pages",
+      ],
+      soutiens2024: 63,
+      populaire: false,
+    },
+    {
+      tier: tierObligatoire("palier-150"),
+      items: [
+        "Un très grand format au choix — ou une affiche de Dugudus",
+        "Sac ou carnet au choix",
+        "Stickers ou marque-pages",
+      ],
+      soutiens2024: 24,
+      populaire: false,
+    },
+    {
+      tier: tierObligatoire("palier-200"),
+      items: [
+        "Deux nouveautés de notre programmation au choix",
+        "Sac ou carnet au choix",
+        "Stickers ou marque-pages",
+      ],
+      soutiens2024: 15,
+      populaire: false,
+    },
+    {
+      tier: tierObligatoire("palier-300"),
+      items: [
+        "Un lot de grands livres au choix",
+        "Sac ou carnet au choix",
+        "Stickers ou marque-pages",
+      ],
+      soutiens2024: 9,
+      populaire: false,
+    },
+  ],
+  mecenes: [
+    {
+      tier: tierObligatoire("mecene-500"),
+      desc: "Une rencontre exceptionnelle avec vos éditrices, les membres des bureaux éditoriaux et certain·es de nos auteur·ices — sac ou carnet, stickers et marque-pages compris.",
+      soutiens2024: 4,
+    },
+    {
+      tier: tierObligatoire("mecene-1000"),
+      desc: "On prend directement contact avec vous pour vous offrir les livres que vous voulez dans nos catalogues — ou l'intégrale de la GEME, la Grande édition Marx-Engels.",
+      soutiens2024: 5,
+    },
+  ],
+  faq: [
+    {
+      q: "À quoi va servir ma contribution ?",
+      a: "À consolider l'équipe des maisons, réimprimer les titres épuisés, développer le numérique, aller à la rencontre des libraires — et financer ce nouveau site, son catalogue unifié et sa boutique en ligne, ainsi que l'impression des ouvrages à paraître.",
+    },
+    {
+      q: "Que devient la campagne Ulule de 2024 ?",
+      a: "Elle s'est achevée en juillet 2024 à 170 % de son objectif : 85 305 € collectés auprès de 958 contributeur·rices. Elle a permis aux deux maisons de passer le cap. Cette nouvelle souscription est hébergée directement sur notre site : pas de commission de plateforme, 100 % pour la maison.",
+    },
+    {
+      q: "Quand le nouveau site sera-t-il en ligne ?",
+      a: "Le catalogue et la page de souscription ouvrent dès maintenant ; la boutique intégrée suit dans un second temps.",
+    },
+    {
+      q: "Puis-je choisir mes livres dans les contreparties ?",
+      a: "Oui, une sélection vous sera proposée après votre contribution, pour chaque palier comprenant des livres.",
+    },
+  ],
+};
+
+/**
+ * Fusion du global `page-souscription` — bloc par bloc : un array vide (ou
+ * dont toutes les entrées sont invalides) retombe sur le contenu par défaut
+ * entier, un array rempli remplace entièrement le bloc correspondant.
+ */
+export function mergePageSouscription(
+  global: PageSouscription | null | undefined,
+): PageSouscriptionContent {
+  const chantiers = (global?.chantiers ?? [])
+    .flatMap((chantier) => {
+      const titre = chantier.titre?.trim();
+      const desc = chantier.desc?.trim();
+      return titre && desc ? [{ titre, desc }] : [];
+    })
+    .map((chantier, i) => ({ ...chantier, accent: chantierAccent(i) }));
+
+  const contreparties = (global?.contreparties ?? []).flatMap((entry) => {
+    const tier = DONATION_TIERS.find((t) => t.id === entry.tierId);
+    if (!tier) return [];
+    const items = (entry.items ?? []).flatMap((item) => {
+      const texte = item.texte?.trim();
+      return texte ? [texte] : [];
+    });
+    return [
+      {
+        tier,
+        items,
+        soutiens2024: entry.soutiens2024 ?? 0,
+        populaire: Boolean(entry.populaire),
+      },
+    ];
+  });
+
+  const mecenes = (global?.mecenes ?? []).flatMap((entry) => {
+    const tier = DONATION_TIERS.find((t) => t.id === entry.tierId);
+    const desc = entry.desc?.trim();
+    if (!tier || !desc) return [];
+    return [{ tier, desc, soutiens2024: entry.soutiens2024 ?? 0 }];
+  });
+
+  const faq = (global?.faq ?? []).flatMap((entry) => {
+    const q = entry.question?.trim();
+    const a = entry.reponse?.trim();
+    return q && a ? [{ q, a }] : [];
+  });
+
+  return {
+    herosTitre: texteOuDefaut(global?.heros?.titre, SOUSCRIPTION_DEFAUT.herosTitre),
+    herosIntro: texteOuDefaut(global?.heros?.intro, SOUSCRIPTION_DEFAUT.herosIntro),
+    chantiers: chantiers.length > 0 ? chantiers : SOUSCRIPTION_DEFAUT.chantiers,
+    contreparties:
+      contreparties.length > 0 ? contreparties : SOUSCRIPTION_DEFAUT.contreparties,
+    mecenes: mecenes.length > 0 ? mecenes : SOUSCRIPTION_DEFAUT.mecenes,
+    faq: faq.length > 0 ? faq : SOUSCRIPTION_DEFAUT.faq,
   };
 }

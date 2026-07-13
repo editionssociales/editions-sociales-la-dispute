@@ -104,12 +104,14 @@ export interface Config {
     'pages-legales': PagesLegales;
     'reglages-site': ReglagesSite;
     'page-a-propos': PageAPropos;
+    'page-souscription': PageSouscription;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
     'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
     'reglages-site': ReglagesSiteSelect<false> | ReglagesSiteSelect<true>;
     'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
+    'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
   };
   locale: null;
   widgets: {
@@ -983,6 +985,86 @@ export interface PageAPropos {
   createdAt?: string | null;
 }
 /**
+ * Textes de la page /souscription. Un bloc vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-souscription".
+ */
+export interface PageSouscription {
+  id: number;
+  heros?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    intro?: string | null;
+  };
+  /**
+   * Aucun chantier = les cinq chantiers actuels. Les couleurs suivent l’ordre des cartes (en code).
+   */
+  chantiers?:
+    | {
+        titre: string;
+        desc: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Aucune contrepartie = les huit cartes actuelles. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.
+   */
+  contreparties?:
+    | {
+        tierId:
+          | 'palier-15'
+          | 'palier-35'
+          | 'palier-50'
+          | 'palier-75'
+          | 'palier-100'
+          | 'palier-150'
+          | 'palier-200'
+          | 'palier-300';
+        items?:
+          | {
+              texte: string;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * Compteur « N soutiens en 2024 » affiché sous la carte.
+         */
+        soutiens2024: number;
+        populaire?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Aucune entrée = les deux cartes actuelles (500 € / 1 000 €). Même règle : le montant vient du palier choisi.
+   */
+  mecenes?:
+    | {
+        tierId: 'mecene-500' | 'mecene-1000';
+        desc: string;
+        soutiens2024: number;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Aucune question = les quatre questions actuelles.
+   */
+  faq?:
+    | {
+        question: string;
+        reponse: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique_select".
  */
@@ -1063,6 +1145,57 @@ export interface PageAProposSelect<T extends boolean = true> {
     | {
         titre?: T;
         contenu?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-souscription_select".
+ */
+export interface PageSouscriptionSelect<T extends boolean = true> {
+  heros?:
+    | T
+    | {
+        titre?: T;
+        intro?: T;
+      };
+  chantiers?:
+    | T
+    | {
+        titre?: T;
+        desc?: T;
+        id?: T;
+      };
+  contreparties?:
+    | T
+    | {
+        tierId?: T;
+        items?:
+          | T
+          | {
+              texte?: T;
+              id?: T;
+            };
+        soutiens2024?: T;
+        populaire?: T;
+        id?: T;
+      };
+  mecenes?:
+    | T
+    | {
+        tierId?: T;
+        desc?: T;
+        soutiens2024?: T;
+        id?: T;
+      };
+  faq?:
+    | T
+    | {
+        question?: T;
+        reponse?: T;
         id?: T;
       };
   updatedAt?: T;

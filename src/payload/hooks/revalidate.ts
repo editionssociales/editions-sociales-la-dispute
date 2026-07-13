@@ -116,3 +116,9 @@ export const revalidateAProposAfterChange: GlobalAfterChangeHook = ({ req }) => 
   if (req.context?.disableRevalidate) return
   revalidatePath('/a-propos')
 }
+
+/** Hook `page-souscription` : seule la page Souscription lit ce global. */
+export const revalidateSouscriptionAfterChange: GlobalAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidatePath('/souscription')
+}

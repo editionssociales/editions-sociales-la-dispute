@@ -3,9 +3,11 @@ import config from "@payload-config";
 import { getPayload } from "payload";
 import {
   mergePageAPropos,
+  mergePageSouscription,
   mergePagesLegales,
   mergeReglagesSite,
   type PageAProposContent,
+  type PageSouscriptionContent,
   type PagesLegalesContent,
   type ReglagesSiteContent,
 } from "./site-content-core";
@@ -59,5 +61,19 @@ export async function getPageAPropos(): Promise<PageAProposContent> {
       err,
     );
     return mergePageAPropos(null);
+  }
+}
+
+export async function getPageSouscription(): Promise<PageSouscriptionContent> {
+  try {
+    const payload = await getPayload({ config });
+    const doc = await payload.findGlobal({ slug: "page-souscription" });
+    return mergePageSouscription(doc);
+  } catch (err) {
+    console.error(
+      "[contenus] lecture Payload indisponible — page Souscription servie avec ses textes par défaut :",
+      err,
+    );
+    return mergePageSouscription(null);
   }
 }
