@@ -110,3 +110,9 @@ export const revalidateSiteLayoutAfterChange: GlobalAfterChangeHook = ({ req }) 
   if (req.context?.disableRevalidate) return
   revalidatePath('/', 'layout')
 }
+
+/** Hook `page-a-propos` : seule la page À propos lit ce global. */
+export const revalidateAProposAfterChange: GlobalAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidatePath('/a-propos')
+}

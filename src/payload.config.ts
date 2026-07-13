@@ -17,6 +17,7 @@ import { Media } from './payload/collections/Media.ts'
 import { Orders } from './payload/collections/Orders.ts'
 import { PromoCodes } from './payload/collections/PromoCodes.ts'
 import { Users } from './payload/collections/Users.ts'
+import { PageAPropos } from './payload/globals/PageAPropos.ts'
 import { PagesLegales } from './payload/globals/PagesLegales.ts'
 import { ReglagesBoutique } from './payload/globals/ReglagesBoutique.ts'
 import { ReglagesSite } from './payload/globals/ReglagesSite.ts'
@@ -41,7 +42,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes],
-  globals: [ReglagesBoutique, PagesLegales, ReglagesSite],
+  globals: [ReglagesBoutique, PagesLegales, ReglagesSite, PageAPropos],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({

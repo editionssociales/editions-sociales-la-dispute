@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  mergePageAPropos,
   mergePagesLegales,
   mergeReglagesSite,
   richTextToSafeHtml,
 } from "./site-content-core";
+import { EDITIONS } from "./editions";
 
 /* -------- fixtures lexical (même forme que catalogue-pg-map.test.ts) -------- */
 
@@ -173,5 +175,81 @@ describe("mergeReglagesSite — global vide ⇒ layout et footer actuels, verbat
       { label: "Instagram", url: "https://instagram.com/exemple" },
       { label: "Bluesky", url: "https://bsky.app/profile/exemple" },
     ]);
+  });
+});
+
+describe("mergePageAPropos — global vide ⇒ page actuelle, verbatim", () => {
+  it("global absent → textes par défaut exacts + maisons d'EDITION_LIST + sections null", () => {
+    const merged = mergePageAPropos(null);
+    expect(merged.herosTitre).toBe(
+      "La maison de la pensée critique et des sciences sociales",
+    );
+    expect(merged.herosIntro).toBe(
+      "Une maison d'édition de la pensée critique et des sciences sociales, portée par deux fonds historiques — sans rien perdre de ce qui fait leur singularité.",
+    );
+    expect(merged.citation).toBe(
+      "« Renforcer la puissance de penser et d'agir de celles et ceux qui veulent transformer le monde et changer la vie. »",
+    );
+    expect(merged.citationAttribution).toBe(
+      "Campagne 2024, « Sauvez les Éditions sociales et La Dispute »",
+    );
+    expect(merged.sections).toBeNull();
+    expect(merged.maisons).toEqual([
+      {
+        slug: "editions-sociales",
+        name: EDITIONS["editions-sociales"].name,
+        shortName: EDITIONS["editions-sociales"].shortName,
+        tagline: EDITIONS["editions-sociales"].tagline,
+        description: EDITIONS["editions-sociales"].description,
+        accent: EDITIONS["editions-sociales"].accent,
+      },
+      {
+        slug: "la-dispute",
+        name: EDITIONS["la-dispute"].name,
+        shortName: EDITIONS["la-dispute"].shortName,
+        tagline: EDITIONS["la-dispute"].tagline,
+        description: EDITIONS["la-dispute"].description,
+        accent: EDITIONS["la-dispute"].accent,
+      },
+    ]);
+  });
+
+  it("surcharge d'une maison par slug : champ vide = défaut, l'autre maison intacte", () => {
+    const merged = mergePageAPropos({
+      id: 1,
+      maisons: [
+        { maison: "la-dispute", nom: "La Dispute (nouveau)", tagline: "", description: "Nouvelle description." },
+      ],
+    });
+    const [es, ld] = merged.maisons;
+    expect(es.name).toBe(EDITIONS["editions-sociales"].name);
+    expect(ld.name).toBe("La Dispute (nouveau)");
+    expect(ld.tagline).toBe(EDITIONS["la-dispute"].tagline);
+    expect(ld.description).toBe("Nouvelle description.");
+    // L'ordre d'affichage reste celui d'EDITION_LIST, pas celui du tableau admin.
+    expect(merged.maisons.map((m) => m.slug)).toEqual(["editions-sociales", "la-dispute"]);
+  });
+
+  it("sections : titre requis, richText vide toléré (section titre seul)", () => {
+    const merged = mergePageAPropos({
+      id: 1,
+      sections: [
+        { titre: "Nous rencontrer", contenu: lexicalDoc("Toutes nos dates.") },
+        { titre: "  ", contenu: lexicalDoc("Perdue (sans titre).") },
+        { titre: "Sans contenu", contenu: null },
+      ],
+    });
+    expect(merged.sections).not.toBeNull();
+    expect(merged.sections).toHaveLength(2);
+    expect(merged.sections![0].titre).toBe("Nous rencontrer");
+    expect(merged.sections![0].html).toContain("Toutes nos dates.");
+    expect(merged.sections![1]).toEqual({ titre: "Sans contenu", html: null });
+  });
+
+  it("tableau de sections vide ou sans titre valide → null (section « Le catalogue » en dur)", () => {
+    expect(mergePageAPropos({ id: 1, sections: [] }).sections).toBeNull();
+    expect(
+      mergePageAPropos({ id: 1, sections: [{ titre: " ", contenu: null }] }).sections,
+    ).toBeNull();
   });
 });

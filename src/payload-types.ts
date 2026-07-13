@@ -103,11 +103,13 @@ export interface Config {
     'reglages-boutique': ReglagesBoutique;
     'pages-legales': PagesLegales;
     'reglages-site': ReglagesSite;
+    'page-a-propos': PageAPropos;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
     'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
     'reglages-site': ReglagesSiteSelect<false> | ReglagesSiteSelect<true>;
+    'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
   };
   locale: null;
   widgets: {
@@ -914,6 +916,73 @@ export interface ReglagesSite {
   createdAt?: string | null;
 }
 /**
+ * Textes de la page /a-propos. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-a-propos".
+ */
+export interface PageAPropos {
+  id: number;
+  heros?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    intro?: string | null;
+  };
+  citation?: {
+    /**
+     * Guillemets compris. Vide = citation actuelle.
+     */
+    texte?: string | null;
+    /**
+     * Vide = attribution actuelle.
+     */
+    attribution?: string | null;
+  };
+  /**
+   * Surcharge les textes de la section « Deux maisons ». Maison absente ou champ vide = texte actuel ; les couleurs restent en code.
+   */
+  maisons?:
+    | {
+        maison: 'editions-sociales' | 'la-dispute';
+        nom?: string | null;
+        tagline?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Remplacent la section « Le catalogue » (titre, texte et boutons actuels). Aucune section = section actuelle.
+   */
+  sections?:
+    | {
+        titre: string;
+        contenu?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique_select".
  */
@@ -958,6 +1027,43 @@ export interface ReglagesSiteSelect<T extends boolean = true> {
     | {
         titreParDefaut?: T;
         descriptionParDefaut?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-a-propos_select".
+ */
+export interface PageAProposSelect<T extends boolean = true> {
+  heros?:
+    | T
+    | {
+        titre?: T;
+        intro?: T;
+      };
+  citation?:
+    | T
+    | {
+        texte?: T;
+        attribution?: T;
+      };
+  maisons?:
+    | T
+    | {
+        maison?: T;
+        nom?: T;
+        tagline?: T;
+        description?: T;
+        id?: T;
+      };
+  sections?:
+    | T
+    | {
+        titre?: T;
+        contenu?: T;
+        id?: T;
       };
   updatedAt?: T;
   createdAt?: T;

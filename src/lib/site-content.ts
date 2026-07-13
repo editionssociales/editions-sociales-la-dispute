@@ -2,8 +2,10 @@ import "server-only";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import {
+  mergePageAPropos,
   mergePagesLegales,
   mergeReglagesSite,
+  type PageAProposContent,
   type PagesLegalesContent,
   type ReglagesSiteContent,
 } from "./site-content-core";
@@ -43,5 +45,19 @@ export async function getReglagesSite(): Promise<ReglagesSiteContent> {
       err,
     );
     return mergeReglagesSite(null);
+  }
+}
+
+export async function getPageAPropos(): Promise<PageAProposContent> {
+  try {
+    const payload = await getPayload({ config });
+    const doc = await payload.findGlobal({ slug: "page-a-propos" });
+    return mergePageAPropos(doc);
+  } catch (err) {
+    console.error(
+      "[contenus] lecture Payload indisponible — page À propos servie avec ses textes par défaut :",
+      err,
+    );
+    return mergePageAPropos(null);
   }
 }

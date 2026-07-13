@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
-import { EDITION_LIST } from "@/lib/editions";
 import { ACCENT_BORDER_T } from "@/lib/accents";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { Eyebrow } from "@/components/eyebrow";
 import { FOCUS_RING_OUTER } from "@/lib/ui";
+import { getPageAPropos } from "@/lib/site-content";
 
 export const metadata: Metadata = {
   title: "À propos",
@@ -24,7 +24,12 @@ const REPERES = [
   "Un même engagement",
 ];
 
-export default function AProposPage() {
+export default async function AProposPage() {
+  // Global `page-a-propos` (spec « éditeur de contenus ») : textes du héros,
+  // citation, surcharge des deux maisons et sections libres. Global vide =
+  // les textes en dur d'`EDITION_LIST` et de `site-content-core.ts`,
+  // strictement iso au rendu d'avant le chantier.
+  const content = await getPageAPropos();
   return (
     <>
       {/* Héro : qui nous sommes */}
@@ -38,12 +43,10 @@ export default function AProposPage() {
               Qui nous sommes
             </Eyebrow>
             <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
-              La maison de la pensée critique et des sciences sociales
+              {content.herosTitre}
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-black/70">
-              Une maison d&apos;édition de la pensée critique et des sciences
-              sociales, portée par deux fonds historiques — sans rien perdre
-              de ce qui fait leur singularité.
+              {content.herosIntro}
             </p>
             <div className="mt-7 flex flex-wrap gap-2">
               {REPERES.map((r) => (
@@ -71,25 +74,25 @@ export default function AProposPage() {
             </h2>
           </Reveal>
           <FramedGrid className="mt-8 md:grid-cols-2">
-            {EDITION_LIST.map((e, i) => (
-              <Reveal key={e.slug} delay={i * 120} className="h-full">
+            {content.maisons.map((m, i) => (
+              <Reveal key={m.slug} delay={i * 120} className="h-full">
                 <article
-                  className={`flex h-full flex-col border-t-4 bg-white p-7 ${ACCENT_BORDER_T[e.accent]}`}
+                  className={`flex h-full flex-col border-t-4 bg-white p-7 ${ACCENT_BORDER_T[m.accent]}`}
                 >
                   <h3 className="font-sans text-2xl font-black italic text-black">
-                    {e.name}
+                    {m.name}
                   </h3>
                   <p className="mt-1 font-sans text-xs font-bold uppercase tracking-[.05em] text-black/60">
-                    {e.tagline}
+                    {m.tagline}
                   </p>
                   <p className="mt-4 flex-1 text-[15px] leading-relaxed text-black/70">
-                    {e.description}
+                    {m.description}
                   </p>
                   <Link
-                    href={`/editions/${e.slug}`}
+                    href={`/editions/${m.slug}`}
                     className={`mt-6 inline-flex w-fit items-center gap-1.5 border-b-2 border-black font-sans text-xs font-bold uppercase tracking-[.05em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white ${FOCUS_RING_OUTER}`}
                   >
-                    Découvrir {e.shortName}
+                    Découvrir {m.shortName}
                     <span aria-hidden="true">→</span>
                   </Link>
                 </article>
@@ -105,53 +108,74 @@ export default function AProposPage() {
           <Reveal>
             <blockquote className="mx-auto max-w-3xl border-2 border-black bg-black p-8 text-white sm:p-12">
               <p className="font-sans text-2xl font-black italic leading-snug sm:text-3xl">
-                « Renforcer la puissance de penser et d&apos;agir de celles et
-                ceux qui veulent transformer le monde et changer la vie. »
+                {content.citation}
               </p>
               <footer className="mt-5 font-sans text-xs font-bold uppercase tracking-[.05em] text-white/70">
-                Campagne 2024, « Sauvez les Éditions sociales et La Dispute »
+                {content.citationAttribution}
               </footer>
             </blockquote>
           </Reveal>
         </Container>
       </section>
 
-      {/* Le catalogue, sur ce site */}
-      <section className="border-t-2 border-black">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <div className="max-w-2xl">
-              <Eyebrow>
-                Sur ce site
-              </Eyebrow>
-              <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
-                Le catalogue
-              </h2>
-              <p className="mt-4 text-[15px] leading-relaxed text-black/70">
-                Un catalogue filtrable par collection et par auteur, une
-                librairie en ligne, et une page de souscription pour
-                accompagner ce nouveau départ. Les deux fonds réunis, à
-                parcourir dès maintenant.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button
-                  href="/catalogue"
-                  className="px-7 py-3.5 text-sm tracking-[.04em]"
-                >
-                  Parcourir le catalogue
-                </Button>
-                <Button
-                  href="/souscription"
-                  variant="outline"
-                  className="px-7 py-3.5 text-sm tracking-[.04em]"
-                >
-                  Soutenir la souscription
-                </Button>
+      {/* Sections éditées dans /admin, sinon la section « Le catalogue » en dur */}
+      {content.sections ? (
+        content.sections.map((s, i) => (
+          <section key={`${i}-${s.titre}`} className="border-t-2 border-black">
+            <Container className="py-16 sm:py-20">
+              <Reveal>
+                <div className="max-w-2xl">
+                  <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+                    {s.titre}
+                  </h2>
+                  {s.html && (
+                    <div
+                      className="prose-book mt-4 max-w-none"
+                      dangerouslySetInnerHTML={{ __html: s.html }}
+                    />
+                  )}
+                </div>
+              </Reveal>
+            </Container>
+          </section>
+        ))
+      ) : (
+        <section className="border-t-2 border-black">
+          <Container className="py-16 sm:py-20">
+            <Reveal>
+              <div className="max-w-2xl">
+                <Eyebrow>
+                  Sur ce site
+                </Eyebrow>
+                <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+                  Le catalogue
+                </h2>
+                <p className="mt-4 text-[15px] leading-relaxed text-black/70">
+                  Un catalogue filtrable par collection et par auteur, une
+                  librairie en ligne, et une page de souscription pour
+                  accompagner ce nouveau départ. Les deux fonds réunis, à
+                  parcourir dès maintenant.
+                </p>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Button
+                    href="/catalogue"
+                    className="px-7 py-3.5 text-sm tracking-[.04em]"
+                  >
+                    Parcourir le catalogue
+                  </Button>
+                  <Button
+                    href="/souscription"
+                    variant="outline"
+                    className="px-7 py-3.5 text-sm tracking-[.04em]"
+                  >
+                    Soutenir la souscription
+                  </Button>
+                </div>
               </div>
-            </div>
-          </Reveal>
-        </Container>
-      </section>
+            </Reveal>
+          </Container>
+        </section>
+      )}
     </>
   );
 }

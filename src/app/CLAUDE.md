@@ -52,9 +52,10 @@ fichiers générés.
   jamais « temps réel ».
 - `dangerouslySetInnerHTML` n'injecte que du `SafeHtml` (sanitisé dans
   `src/lib`) : fiches livre `catalogue/[edition]/[slug]` et `boutique/[slug]`
-  (présentation + JSON-LD `Book` sérialisé et échappé côté serveur), et les
-  pages légales quand le global `pages-legales` est rempli (onglet vide =
-  fallback JSX en dur). Aucun autre HTML brut injecté.
+  (présentation + JSON-LD `Book` sérialisé et échappé côté serveur), les
+  pages légales (global `pages-legales`) et les sections éditées d'`a-propos`
+  (global `page-a-propos`) — champ vide = fallback JSX en dur. Aucun autre
+  HTML brut injecté.
 
 ## Work Guidance
 
