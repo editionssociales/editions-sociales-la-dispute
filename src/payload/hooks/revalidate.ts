@@ -100,3 +100,13 @@ export const revalidatePagesLegalesAfterChange: GlobalAfterChangeHook = ({ req }
   if (req.context?.disableRevalidate) return
   for (const path of LEGAL_PATHS) revalidatePath(path)
 }
+
+/**
+ * Hook `reglages-site` : metadata par défaut + pied de page sont rendus par
+ * le layout racine `(site)` — toutes les pages du site sont concernées, on
+ * revalide le layout entier (`revalidatePath('/', 'layout')`).
+ */
+export const revalidateSiteLayoutAfterChange: GlobalAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidatePath('/', 'layout')
+}

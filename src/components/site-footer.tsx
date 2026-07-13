@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
+import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
 /**
  * Pied de page brutaliste — même recette de quadrillage noir 2px que la
@@ -10,6 +11,13 @@ import { FramedGrid } from "@/components/framed-grid";
  * Desktop (lg+) : 3 colonnes × 2 rangées — gauche | vide | droite.
  * Mobile : empilé — les 4 cellules de contenu pleine largeur (la cellule
  * vide n'a pas de contenu, elle est masquée).
+ *
+ * Textes « Adresse »/« Diffusion » et liens réseaux sociaux : global
+ * `reglages-site` (spec « éditeur de contenus »), descendus en props depuis
+ * le layout — défauts durs dans `site-content-core.ts`, iso-rendu à global
+ * vide. Sans réseau social saisi, la cellule centrale reste la cellule vide
+ * décorative d'origine ; sinon elle devient la cellule « Suivez-nous »
+ * (footer uniquement — jamais dans le header, décision documentée).
  */
 
 const CELL_CLASS = "flex flex-col gap-3 bg-white p-6 font-sans sm:p-7";
@@ -19,7 +27,7 @@ const BODY_CLASS = "text-sm leading-relaxed text-black/70";
 const LINK_CLASS =
   "inline-flex w-fit font-bold text-black underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
 
-function AdresseCell({ className = "" }: { className?: string }) {
+function AdresseCell({ className = "", adresse }: { className?: string; adresse: string }) {
   return (
     <div className={`${CELL_CLASS} ${className}`}>
       <p className={HEADING_CLASS}>Adresse</p>
@@ -27,10 +35,7 @@ function AdresseCell({ className = "" }: { className?: string }) {
         Les Éditions sociales <span className="not-italic text-black/40">×</span>{" "}
         La Dispute
       </p>
-      <p className={BODY_CLASS}>
-        La maison de la pensée critique, des sciences sociales et du
-        mouvement ouvrier. Paris, France.
-      </p>
+      <p className={BODY_CLASS}>{adresse}</p>
       <nav aria-label="Liens utiles">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <li>
@@ -111,14 +116,11 @@ function NewsletterCell({ className = "" }: { className?: string }) {
   );
 }
 
-function DiffusionCell({ className = "" }: { className?: string }) {
+function DiffusionCell({ className = "", texte }: { className?: string; texte: string }) {
   return (
     <div className={`${CELL_CLASS} ${className}`}>
       <p className={HEADING_CLASS}>Diffusion-Distribution</p>
-      <p className={BODY_CLASS}>
-        Vente directe et distribution indépendante — sans mécène ni
-        actionnaire.
-      </p>
+      <p className={BODY_CLASS}>{texte}</p>
       <Link href="/catalogue" className={`${LINK_CLASS} text-sm`}>
         Parcourir le catalogue
       </Link>
@@ -126,31 +128,67 @@ function DiffusionCell({ className = "" }: { className?: string }) {
   );
 }
 
-export function SiteFooter() {
+function ReseauxCell({
+  className = "",
+  reseaux,
+}: {
+  className?: string;
+  reseaux: ReseauSocial[];
+}) {
+  return (
+    <div className={`${CELL_CLASS} ${className}`}>
+      <p className={HEADING_CLASS}>Suivez-nous</p>
+      <nav aria-label="Réseaux sociaux">
+        <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm lg:flex-col">
+          {reseaux.map((r) => (
+            <li key={r.url}>
+              <a href={r.url} target="_blank" rel="noreferrer" className={LINK_CLASS}>
+                {r.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  );
+}
+
+export function SiteFooter({ footer }: { footer: ReglagesSiteContent["footer"] }) {
   const year = new Date().getFullYear();
+  const reseaux = footer.reseauxSociaux;
 
   return (
     <footer className="bg-black">
       {/* Mobile (< lg) : cellules empilées pleine largeur ; la cellule
-          centrale vide n'a pas de contenu, elle est masquée. */}
+          centrale vide n'a pas de contenu, elle est masquée — la cellule
+          « Suivez-nous » n'apparaît que si des réseaux sont saisis. */}
       <FramedGrid className="grid-cols-1 lg:hidden">
-        <AdresseCell />
+        <AdresseCell adresse={footer.adresse} />
         <MentionsCell year={year} />
         <NewsletterCell />
-        <DiffusionCell />
+        <DiffusionCell texte={footer.texteDiffusion} />
+        {reseaux.length > 0 && <ReseauxCell reseaux={reseaux} />}
       </FramedGrid>
 
-      {/* Desktop (lg+) : gauche (Adresse / Mentions légales) | vide |
-          droite (Newsletter / Diffusion-Distribution). */}
+      {/* Desktop (lg+) : gauche (Adresse / Mentions légales) | centre (vide,
+          ou « Suivez-nous » si des réseaux sont saisis) | droite (Newsletter /
+          Diffusion-Distribution). */}
       <FramedGrid className="hidden grid-cols-[1fr_1fr_1fr] grid-rows-2 lg:grid">
-        <AdresseCell className="col-start-1 row-start-1" />
+        <AdresseCell className="col-start-1 row-start-1" adresse={footer.adresse} />
         <MentionsCell className="col-start-1 row-start-2" year={year} />
-        <div
-          aria-hidden="true"
-          className="col-start-2 row-span-2 row-start-1 bg-white"
-        />
+        {reseaux.length > 0 ? (
+          <ReseauxCell
+            className="col-start-2 row-span-2 row-start-1"
+            reseaux={reseaux}
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            className="col-start-2 row-span-2 row-start-1 bg-white"
+          />
+        )}
         <NewsletterCell className="col-start-3 row-start-1" />
-        <DiffusionCell className="col-start-3 row-start-2" />
+        <DiffusionCell className="col-start-3 row-start-2" texte={footer.texteDiffusion} />
       </FramedGrid>
     </footer>
   );

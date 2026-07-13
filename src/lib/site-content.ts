@@ -3,7 +3,9 @@ import config from "@payload-config";
 import { getPayload } from "payload";
 import {
   mergePagesLegales,
+  mergeReglagesSite,
   type PagesLegalesContent,
+  type ReglagesSiteContent,
 } from "./site-content-core";
 
 /**
@@ -27,5 +29,19 @@ export async function getPagesLegales(): Promise<PagesLegalesContent> {
       err,
     );
     return mergePagesLegales(null);
+  }
+}
+
+export async function getReglagesSite(): Promise<ReglagesSiteContent> {
+  try {
+    const payload = await getPayload({ config });
+    const doc = await payload.findGlobal({ slug: "reglages-site" });
+    return mergeReglagesSite(doc);
+  } catch (err) {
+    console.error(
+      "[contenus] lecture Payload indisponible — réglages du site servis avec leurs valeurs par défaut :",
+      err,
+    );
+    return mergeReglagesSite(null);
   }
 }

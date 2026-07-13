@@ -19,6 +19,7 @@ import { PromoCodes } from './payload/collections/PromoCodes.ts'
 import { Users } from './payload/collections/Users.ts'
 import { PagesLegales } from './payload/globals/PagesLegales.ts'
 import { ReglagesBoutique } from './payload/globals/ReglagesBoutique.ts'
+import { ReglagesSite } from './payload/globals/ReglagesSite.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -40,7 +41,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes],
-  globals: [ReglagesBoutique, PagesLegales],
+  globals: [ReglagesBoutique, PagesLegales, ReglagesSite],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({

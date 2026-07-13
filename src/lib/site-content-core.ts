@@ -1,6 +1,6 @@
 import { lexicalToHtml } from "./catalogue-pg-map";
 import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
-import type { PagesLegales } from "@/payload-types";
+import type { PagesLegales, ReglagesSite } from "@/payload-types";
 
 /**
  * Cœur pur de l'« éditeur de contenus » (spec du 13/07) : fusion des globals
@@ -52,5 +52,83 @@ export function mergePagesLegales(
     cgv: richTextToSafeHtml(global?.cgv),
     mentionsLegales: richTextToSafeHtml(global?.mentionsLegales),
     confidentialite: richTextToSafeHtml(global?.confidentialite),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Réglages du site (lot 2)                                            */
+/* ------------------------------------------------------------------ */
+
+/** Lien réseau social du pied de page — n'existe que si le client en saisit. */
+export interface ReseauSocial {
+  label: string;
+  url: string;
+}
+
+export interface ReglagesSiteContent {
+  footer: {
+    adresse: string;
+    texteDiffusion: string;
+    reseauxSociaux: ReseauSocial[];
+  };
+  seo: {
+    titre: string;
+    description: string;
+  };
+}
+
+/**
+ * Textes actuels du layout et du pied de page, extraits **verbatim** de
+ * `(site)/layout.tsx` et `site-footer.tsx` — le test verrouille ces chaînes
+ * pour garantir l'iso-rendu à global vide. Aucun réseau social par défaut :
+ * la fonctionnalité n'existait pas (cellule centrale du footer vide).
+ */
+const REGLAGES_SITE_DEFAUT: ReglagesSiteContent = {
+  footer: {
+    adresse:
+      "La maison de la pensée critique, des sciences sociales et du mouvement ouvrier. Paris, France.",
+    texteDiffusion:
+      "Vente directe et distribution indépendante — sans mécène ni actionnaire.",
+    reseauxSociaux: [],
+  },
+  seo: {
+    titre: "Les Éditions sociales x La Dispute",
+    description:
+      "Les Éditions sociales x La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
+  },
+};
+
+/** Chaîne saisie si non vide (espaces exclus), sinon le texte par défaut. */
+function texteOuDefaut(saisi: string | null | undefined, defaut: string): string {
+  const propre = saisi?.trim();
+  return propre ? propre : defaut;
+}
+
+/** Fusion du global `reglages-site` — champ par champ, vide = défaut dur. */
+export function mergeReglagesSite(
+  global: ReglagesSite | null | undefined,
+): ReglagesSiteContent {
+  return {
+    footer: {
+      adresse: texteOuDefaut(global?.footer?.adresse, REGLAGES_SITE_DEFAUT.footer.adresse),
+      texteDiffusion: texteOuDefaut(
+        global?.footer?.texteDiffusion,
+        REGLAGES_SITE_DEFAUT.footer.texteDiffusion,
+      ),
+      // Entrée sans libellé ou sans URL (ne devrait pas arriver, champs
+      // requis côté admin) : ignorée plutôt que de rendre un lien cassé.
+      reseauxSociaux: (global?.reseauxSociaux ?? []).flatMap((lien) => {
+        const label = lien.label?.trim();
+        const url = lien.url?.trim();
+        return label && url ? [{ label, url }] : [];
+      }),
+    },
+    seo: {
+      titre: texteOuDefaut(global?.seo?.titreParDefaut, REGLAGES_SITE_DEFAUT.seo.titre),
+      description: texteOuDefaut(
+        global?.seo?.descriptionParDefaut,
+        REGLAGES_SITE_DEFAUT.seo.description,
+      ),
+    },
   };
 }

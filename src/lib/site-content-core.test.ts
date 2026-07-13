@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { mergePagesLegales, richTextToSafeHtml } from "./site-content-core";
+import {
+  mergePagesLegales,
+  mergeReglagesSite,
+  richTextToSafeHtml,
+} from "./site-content-core";
 
 /* -------- fixtures lexical (même forme que catalogue-pg-map.test.ts) -------- */
 
@@ -112,5 +116,62 @@ describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut
     expect(merged.cgv).toBeNull();
     expect(merged.confidentialite).toBeNull();
     expect(merged.mentionsLegales).toContain("SIRET");
+  });
+});
+
+describe("mergeReglagesSite — global vide ⇒ layout et footer actuels, verbatim", () => {
+  it("global absent → textes par défaut exacts (contrat d'iso-rendu)", () => {
+    const merged = mergeReglagesSite(null);
+    expect(merged.footer.adresse).toBe(
+      "La maison de la pensée critique, des sciences sociales et du mouvement ouvrier. Paris, France.",
+    );
+    expect(merged.footer.texteDiffusion).toBe(
+      "Vente directe et distribution indépendante — sans mécène ni actionnaire.",
+    );
+    expect(merged.footer.reseauxSociaux).toEqual([]);
+    expect(merged.seo.titre).toBe("Les Éditions sociales x La Dispute");
+    expect(merged.seo.description).toBe(
+      "Les Éditions sociales x La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
+    );
+  });
+
+  it("document sauvegardé sans saisie (champs vides/espaces) → mêmes défauts", () => {
+    const merged = mergeReglagesSite({
+      id: 1,
+      footer: { adresse: "  ", texteDiffusion: "" },
+      reseauxSociaux: [],
+      seo: { titreParDefaut: null, descriptionParDefaut: "   " },
+    });
+    expect(merged).toEqual(mergeReglagesSite(null));
+  });
+
+  it("chaque champ saisi surcharge son défaut, indépendamment des autres", () => {
+    const merged = mergeReglagesSite({
+      id: 1,
+      footer: { adresse: "12 rue Exemple, 75000 Paris", texteDiffusion: null },
+      seo: { titreParDefaut: "Nouveau titre", descriptionParDefaut: null },
+    });
+    expect(merged.footer.adresse).toBe("12 rue Exemple, 75000 Paris");
+    expect(merged.footer.texteDiffusion).toBe(
+      "Vente directe et distribution indépendante — sans mécène ni actionnaire.",
+    );
+    expect(merged.seo.titre).toBe("Nouveau titre");
+    expect(merged.seo.description).toContain("essais critiques");
+  });
+
+  it("réseaux sociaux : liens gardés dans l'ordre, entrées incomplètes ignorées", () => {
+    const merged = mergeReglagesSite({
+      id: 1,
+      reseauxSociaux: [
+        { label: " Instagram ", url: " https://instagram.com/exemple " },
+        { label: "", url: "https://mastodon.social/@exemple" },
+        { label: "Facebook", url: "  " },
+        { label: "Bluesky", url: "https://bsky.app/profile/exemple" },
+      ],
+    });
+    expect(merged.footer.reseauxSociaux).toEqual([
+      { label: "Instagram", url: "https://instagram.com/exemple" },
+      { label: "Bluesky", url: "https://bsky.app/profile/exemple" },
+    ]);
   });
 });

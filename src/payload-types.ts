@@ -102,10 +102,12 @@ export interface Config {
   globals: {
     'reglages-boutique': ReglagesBoutique;
     'pages-legales': PagesLegales;
+    'reglages-site': ReglagesSite;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
     'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
+    'reglages-site': ReglagesSiteSelect<false> | ReglagesSiteSelect<true>;
   };
   locale: null;
   widgets: {
@@ -868,6 +870,50 @@ export interface PagesLegales {
   createdAt?: string | null;
 }
 /**
+ * Pied de page, réseaux sociaux et référencement par défaut. Un champ vide = le texte actuel du site.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-site".
+ */
+export interface ReglagesSite {
+  id: number;
+  footer?: {
+    /**
+     * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
+     */
+    adresse?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    texteDiffusion?: string | null;
+  };
+  /**
+   * Affichés dans le pied de page (cellule « Suivez-nous »). Aucun lien = pied de page inchangé.
+   */
+  reseauxSociaux?:
+    | {
+        label: string;
+        /**
+         * URL complète (https://…).
+         */
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  seo?: {
+    /**
+     * Titre de la page d’accueil et suffixe des titres de pages (« Page — Titre »). Vide = titre actuel.
+     */
+    titreParDefaut?: string | null;
+    /**
+     * Méta-description par défaut du site. Vide = description actuelle.
+     */
+    descriptionParDefaut?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique_select".
  */
@@ -885,6 +931,34 @@ export interface PagesLegalesSelect<T extends boolean = true> {
   cgv?: T;
   mentionsLegales?: T;
   confidentialite?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-site_select".
+ */
+export interface ReglagesSiteSelect<T extends boolean = true> {
+  footer?:
+    | T
+    | {
+        adresse?: T;
+        texteDiffusion?: T;
+      };
+  reseauxSociaux?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  seo?:
+    | T
+    | {
+        titreParDefaut?: T;
+        descriptionParDefaut?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
