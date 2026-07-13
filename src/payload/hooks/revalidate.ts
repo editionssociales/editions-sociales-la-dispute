@@ -1,6 +1,10 @@
 import { revalidatePath } from 'next/cache'
 
-import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
+import type {
+  CollectionAfterChangeHook,
+  CollectionAfterDeleteHook,
+  GlobalAfterChangeHook,
+} from 'payload'
 
 /**
  * Invalidation du cache Next à la sauvegarde back-office (E6 du plan).
@@ -78,4 +82,21 @@ export const revalidateHomeAfterChange: CollectionAfterChangeHook = ({ req }) =>
 export const revalidateHomeAfterDelete: CollectionAfterDeleteHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
   revalidateHome()
+}
+
+/*
+ * Hooks des globals « Contenus du site » (spec « éditeur de contenus ») :
+ * chaque global ne nourrit que des chemins littéraux connus d'avance — on
+ * revalide exactement ceux-là, avec la même garde `disableRevalidate` que
+ * les hooks de collections (aucun import de masse prévu sur ces globals,
+ * mais le contrat d'écriture Payload du repo reste uniforme).
+ */
+
+/** Pages nourries par le global `pages-legales` — trois chemins littéraux. */
+const LEGAL_PATHS = ['/cgv', '/mentions-legales', '/confidentialite']
+
+/** Hook `pages-legales` : seules les trois pages légales lisent ce global. */
+export const revalidatePagesLegalesAfterChange: GlobalAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  for (const path of LEGAL_PATHS) revalidatePath(path)
 }

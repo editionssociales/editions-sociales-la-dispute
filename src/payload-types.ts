@@ -101,9 +101,11 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     'reglages-boutique': ReglagesBoutique;
+    'pages-legales': PagesLegales;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
+    'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
   };
   locale: null;
   widgets: {
@@ -801,11 +803,88 @@ export interface ReglagesBoutique {
   createdAt?: string | null;
 }
 /**
+ * Texte des trois pages légales. Un onglet vide laisse la page servie avec son texte par défaut (placeholders [À COMPLÉTER…] inclus).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages-legales".
+ */
+export interface PagesLegales {
+  id: number;
+  /**
+   * Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.
+   */
+  cgv?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site, avec ses placeholders [À COMPLÉTER…].
+   */
+  mentionsLegales?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Remplace tout le corps de la page /confidentialite (chapeau compris). Vide = texte actuel du site.
+   */
+  confidentialite?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique_select".
  */
 export interface ReglagesBoutiqueSelect<T extends boolean = true> {
   seuilAlerteStockBas?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages-legales_select".
+ */
+export interface PagesLegalesSelect<T extends boolean = true> {
+  cgv?: T;
+  mentionsLegales?: T;
+  confidentialite?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

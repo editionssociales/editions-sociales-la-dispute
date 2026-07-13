@@ -50,9 +50,11 @@ fichiers générés.
   indexation (~1 min) + fenêtre de fetch (60 s) + un aller
   stale-while-revalidate ⇒ promesse client **« le don apparaît en ≤ 3 min »**,
   jamais « temps réel ».
-- La fiche livre est la seule route à `dangerouslySetInnerHTML` : HTML éditorial
-  typé `SafeHtml` (sanitisé dans `src/lib`) + JSON-LD `Book` sérialisé et échappé
-  côté serveur. Aucun autre HTML brut injecté.
+- `dangerouslySetInnerHTML` n'injecte que du `SafeHtml` (sanitisé dans
+  `src/lib`) : fiches livre `catalogue/[edition]/[slug]` et `boutique/[slug]`
+  (présentation + JSON-LD `Book` sérialisé et échappé côté serveur), et les
+  pages légales quand le global `pages-legales` est rempli (onglet vide =
+  fallback JSX en dur). Aucun autre HTML brut injecté.
 
 ## Work Guidance
 

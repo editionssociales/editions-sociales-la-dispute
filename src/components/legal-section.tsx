@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Container } from "./container";
+import type { SafeHtml } from "@/lib/cms-html";
 
 /**
  * Section des pages légales (mentions, confidentialité, CGV) — l'échafaudage
@@ -25,6 +26,23 @@ export function LegalSection({ title, children }: { title: string; children: Rea
       <Container className="py-12 sm:py-16">
         <h2 className={H2_CLASS}>{title}</h2>
         {children}
+      </Container>
+    </section>
+  );
+}
+
+/**
+ * Corps de page légale édité dans `/admin` (global `pages-legales`) : HTML
+ * déjà sanitisé (`SafeHtml`, fabriqué dans `src/lib`), stylé par le même
+ * wrapper de prose que la fiche livre (`prose-book`, globals.css). Rendu
+ * seulement quand l'onglet est rempli — sinon la page garde ses
+ * `LegalSection` en dur.
+ */
+export function LegalCmsBody({ html }: { html: SafeHtml }) {
+  return (
+    <section className="border-t-2 border-black">
+      <Container className="py-12 sm:py-16">
+        <div className="prose-book max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
       </Container>
     </section>
   );

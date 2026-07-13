@@ -41,7 +41,9 @@ appelés par aucune route.
   à être pur, sans I/O, sauf les exceptions **back-office/commerce**, toutes
   `server-only` et lisant Postgres via la Local API Payload (pas de `fetch`),
   sans mémoïsation `cache()` (`getPayload({config})` déjà mémoïsé côté Payload,
-  singleton par process) : `catalogue-pg.ts`/`highlight.ts` (E4/E6bis), et
+  singleton par process) : `catalogue-pg.ts`/`highlight.ts` (E4/E6bis),
+  `site-content.ts` (globals « Contenus du site » — fallback intégral sur
+  les textes en dur, fusion pure dans `site-content-core.ts`, testée), et
   depuis le commerce natif `cart-source.ts` (flag `reducedShippingFlag` par
   lot d'ids) et `checkout-source.ts` (relecture livres/promo pour la
   re-validation serveur) — ces deux derniers SÉPARÉS du port `CatalogueSource`
