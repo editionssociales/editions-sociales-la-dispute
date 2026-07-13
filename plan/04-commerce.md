@@ -256,10 +256,20 @@ s'appuie sur les mêmes fiches `books`, donc sur la même preuve de fraîcheur.
 
 ### E9 résiduel — intégrations à finir avant le jour J
 
-- **E2E Stripe en clés TEST sur preview** : parcours d'achat complet rejoué sur
-  preview Vercel (clés test) — panier multi-lignes, chaque tranche de port + les
-  quatre trous, promo valide/expirée/sous-minimum, livre passé `stock=0` entre
-  panier et checkout (refus propre), pays hors FR/BE/CH refusé. Pas encore fait.
+- **E2E Stripe en clés TEST : FAIT le 13/07** (en local contre le clone Postgres
+  réel + sandbox Stripe — les previews Vercel sont derrière SSO) : parcours
+  navigateur complet (panier 2 lignes, 27 € + 5,50 € de port − 5 € de promo,
+  payé 4242, page merci), matrice API 20/20 — 5 tranches de port dont ex-trous
+  + refus > 500 €, zones BE/CH acceptées + DE refusée, manifeste 2,50 € +
+  panier mixte en grille standard, promo valide/expirée/inactive/sous-minimum/
+  port offert, stock insuffisant, stock tombé à 0 entre panier et checkout
+  (refus propre), fiche à paraître refusée, fiche décochée refusée — puis
+  webhook signé → commande complète (lignes, promo, adresses) + décrément des
+  deux suivis de stock + idempotence au rejeu + `charge.refunded` → statut
+  remboursé sans re-crédit, exports préparation/compta conformes (403 sans
+  session). Au passage, bug corrigé : panier désormais vidé sur `/merci`
+  (`ClearCartOnConfirmation`). Reste à REJOUER en ~15 min sur prod-beta une
+  fois `COMMERCE_NATIVE=1` posé (smoke test du runbook jour J, plan/02).
 - **Brevo** : compte + branchement des emails de commande (l'interface
   `OrderMailer` est prête et n'attend que l'implémentation réelle — cf. §①) ;
   dépend du provisioning Brevo (phase communication).
