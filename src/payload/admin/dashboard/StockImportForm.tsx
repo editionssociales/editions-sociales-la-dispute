@@ -2,6 +2,10 @@
 
 import { useState, type FormEvent } from 'react'
 
+import { useRouter } from 'next/navigation'
+
+import styles from './dashboard.module.css'
+
 /** Forme de la réponse `POST /api/books/import-stock` (cf. `StockImportResult`, `stock-import.ts`). */
 interface StockImportReport {
   matched: { bookId: number; slug: string; title: string; stock: number }[]
@@ -12,15 +16,17 @@ interface StockImportReport {
 }
 
 /**
- * Vue/composant admin « Import stock » (mission point 1) : dépose le
- * classeur .xls du routeur, poste en multipart vers l'endpoint custom de la
- * collection `books`, affiche le rapport en quatre sections (décision client
- * du 12/07) : mises à jour (suivi routeur) · lignes routeur sans fiche en
- * ligne (backlist, normal) · fiches en suivi manuel absentes du fichier
- * (normal, informatif) · fiches anciennement suivies routeur absentes du
- * nouveau fichier (LA vraie alerte — titre disparu du routeur).
+ * Îlot client du panneau « Import routeur » (3.7, admin) : dépose le classeur
+ * .xls du routeur, poste en multipart vers l'endpoint custom de `books`,
+ * affiche le rapport en quatre sections (décision client du 12/07) — mises à
+ * jour · lignes routeur sans fiche (backlist, normal) · fiches en suivi
+ * manuel absentes (normal) · fiches anciennement suivies routeur disparues
+ * (LA vraie alerte). Après succès, `router.refresh()` recharge le RSC : le
+ * bloc « dernier import » du panneau reflète le run tout juste persisté
+ * (`import-runs`).
  */
-export function StockImportPanel() {
+export function StockImportForm() {
+  const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [report, setReport] = useState<StockImportReport | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +54,7 @@ export function StockImportPanel() {
         return
       }
       setReport(json as StockImportReport)
+      router.refresh()
     } catch {
       setError('Échec de l’import (réseau).')
     } finally {
@@ -56,16 +63,8 @@ export function StockImportPanel() {
   }
 
   return (
-    <div
-      style={{
-        margin: '1rem 0',
-        padding: '1rem',
-        border: '1px solid var(--theme-border-color, #ccc)',
-        borderRadius: 4,
-      }}
-    >
-      <h3 style={{ marginTop: 0 }}>Import stock routeur</h3>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+    <div>
+      <form onSubmit={handleSubmit} className={styles.formRow}>
         <input
           type="file"
           accept=".xls"
@@ -76,11 +75,11 @@ export function StockImportPanel() {
         </button>
       </form>
 
-      {error && <p style={{ color: '#b00020' }}>{error}</p>}
+      {error && <p className={styles.errorText}>{error}</p>}
 
       {report && (
-        <div style={{ marginTop: '1rem' }}>
-          <p>
+        <div>
+          <p className={styles.kbdNote}>
             <strong>{report.updatedCount}</strong> mise(s) à jour (suivi routeur) ·{' '}
             <strong>{report.routerRowsWithoutBook}</strong> ligne(s) routeur sans fiche en ligne
             (backlist, normal) · <strong>{report.manualBooksNotInFile.length}</strong> fiche(s) en
@@ -91,13 +90,13 @@ export function StockImportPanel() {
 
           {report.routerBooksMissingFromFile.length > 0 && (
             <>
-              <p style={{ color: '#b00020' }}>
+              <p className={styles.alertText}>
                 <strong>
                   ⚠️ Fiches suivies routeur absentes du nouveau fichier (titre disparu du routeur —
                   stock conservé tel quel, alerte reconduite à chaque import tant que non résolue) :
                 </strong>
               </p>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#b00020' }}>
+              <ul className={`${styles.reportList} ${styles.alertText}`}>
                 {report.routerBooksMissingFromFile.map((book) => (
                   <li key={book.id}>
                     {book.title} {book.isbn ? `(ISBN ${book.isbn})` : '(sans ISBN)'}
@@ -108,12 +107,12 @@ export function StockImportPanel() {
           )}
 
           {report.manualBooksNotInFile.length > 0 && (
-            <details style={{ marginTop: '0.75rem' }}>
+            <details className={styles.detailsBlock}>
               <summary>
                 Fiches en suivi manuel absentes du fichier — normal, à titre informatif (
                 {report.manualBooksNotInFile.length})
               </summary>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
+              <ul className={styles.reportList}>
                 {report.manualBooksNotInFile.map((book) => (
                   <li key={book.id}>
                     {book.title} {book.isbn ? `(ISBN ${book.isbn})` : '(sans ISBN)'}

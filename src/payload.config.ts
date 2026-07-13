@@ -30,13 +30,13 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
-      // Import stock routeur mensuel + alerte stock bas (mission — spec du
-      // 12/07) : deux composants distincts dans le même slot, l'ordre fixe
-      // l'ordre d'affichage sur le tableau de bord.
-      beforeDashboard: [
-        '/payload/admin/StockImportPanel.tsx#StockImportPanel',
-        '/payload/admin/StockLowWidget.tsx#StockLowWidget',
-      ],
+      // Dashboard v2 (`_specs/dashboard-admin/design-v2.md`) : bandeau d'état
+      // + panneaux 3.2→3.10 + codes promo expirés AVANT la grille native
+      // `CollectionCards` (3.11, rendue par Payload entre les deux slots) ;
+      // observabilité + configuration (3.12/3.13, rôle admin) APRÈS. Ces
+      // composants absorbent les anciens StockImportPanel/StockLowWidget.
+      beforeDashboard: ['/payload/admin/dashboard/Dashboard.tsx#Dashboard'],
+      afterDashboard: ['/payload/admin/dashboard/DashboardFooter.tsx#DashboardFooter'],
     },
   },
   collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes, ImportRuns],
