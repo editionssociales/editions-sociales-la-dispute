@@ -13,6 +13,7 @@ import { Authors } from './payload/collections/Authors.ts'
 import { BookCollections } from './payload/collections/BookCollections.ts'
 import { Books } from './payload/collections/Books.ts'
 import { Highlight } from './payload/collections/Highlight.ts'
+import { ImportRuns } from './payload/collections/ImportRuns.ts'
 import { Media } from './payload/collections/Media.ts'
 import { Orders } from './payload/collections/Orders.ts'
 import { PromoCodes } from './payload/collections/PromoCodes.ts'
@@ -38,7 +39,7 @@ export default buildConfig({
       ],
     },
   },
-  collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes],
+  collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes, ImportRuns],
   globals: [ReglagesBoutique],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

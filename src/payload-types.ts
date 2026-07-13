@@ -75,6 +75,7 @@ export interface Config {
     highlight: Highlight;
     orders: Order;
     'promo-codes': PromoCode;
+    'import-runs': ImportRun;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -90,6 +91,7 @@ export interface Config {
     highlight: HighlightSelect<false> | HighlightSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
+    'import-runs': ImportRunsSelect<false> | ImportRunsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -454,6 +456,37 @@ export interface PromoCode {
   createdAt: string;
 }
 /**
+ * Historique des imports mensuels du fichier stock routeur — un document par import réussi, créé automatiquement par l'import (jamais à la main). Le dernier run alimente le panneau « Import routeur » du tableau de bord.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "import-runs".
+ */
+export interface ImportRun {
+  id: number;
+  /**
+   * Lignes exploitables du fichier routeur (EAN présent).
+   */
+  nbLignes: number;
+  /**
+   * Fiches appariées par ISBN normalisé et mises à jour.
+   */
+  nbMatchees: number;
+  /**
+   * Rapport complet du run (`StockImportReport`) — les non-appariés se téléchargent en CSV via le tableau de bord.
+   */
+  rapport?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -508,6 +541,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'promo-codes';
         value: number | PromoCode;
+      } | null)
+    | ({
+        relationTo: 'import-runs';
+        value: number | ImportRun;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -744,6 +781,17 @@ export interface PromoCodesSelect<T extends boolean = true> {
   minCart?: T;
   expiresAt?: T;
   active?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "import-runs_select".
+ */
+export interface ImportRunsSelect<T extends boolean = true> {
+  nbLignes?: T;
+  nbMatchees?: T;
+  rapport?: T;
   updatedAt?: T;
   createdAt?: T;
 }
