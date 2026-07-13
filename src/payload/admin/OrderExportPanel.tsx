@@ -1,30 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { OrderExportForm } from './dashboard/OrderExportForm.tsx'
 
 /**
- * Panneau « Export CSV » au-dessus de la liste des commandes (mission
- * « exports compta + livraison de la PR », plan §4 étape 10). Les deux
- * profils sont de simples liens de téléchargement `GET` — la session admin
- * est déjà portée par le cookie Payload, pas besoin de fetch+blob (même
- * principe qu'un lien natif Payload).
+ * Panneau « Export CSV » au-dessus de la liste des commandes (slot
+ * `beforeListTable` d'`Orders.ts` — la clé d'importMap `chemin#export` de ce
+ * fichier ne doit pas changer). Le formulaire lui-même (bornes de dates +
+ * deux profils) est partagé avec le panneau 3.10 du dashboard v2 :
+ * `dashboard/OrderExportForm.tsx`, un seul îlot client d'export.
  *
- * Bornes de dates optionnelles (`AAAA-MM-JJ`, `<input type="date">`) : vides
- * = toutes les commandes. Cf. `order-export-handler.ts` pour le détail des
- * deux profils.
+ * Colonnes des deux profils validées par le client le 13/07
+ * (`plan/04-commerce.md`, décision n°5 close) — cf.
+ * `order-export-handler.ts` pour le détail des profils.
  */
 export function OrderExportPanel() {
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-
-  function href(profile: 'preparation' | 'compta'): string {
-    const params = new URLSearchParams()
-    if (from) params.set('from', from)
-    if (to) params.set('to', to)
-    const qs = params.toString()
-    return `/api/orders/export/${profile}${qs ? `?${qs}` : ''}`
-  }
-
   return (
     <div
       style={{
@@ -35,23 +24,11 @@ export function OrderExportPanel() {
       }}
     >
       <h3 style={{ marginTop: 0 }}>Export CSV des commandes</h3>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <label>
-          Du{' '}
-          <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-        </label>
-        <label>
-          Au{' '}
-          <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-        </label>
-        <a href={href('preparation')}>Télécharger « préparation »</a>
-        <a href={href('compta')}>Télécharger « compta »</a>
-      </div>
+      <OrderExportForm />
       <p style={{ marginBottom: 0, color: 'var(--theme-elevation-500, #666)' }}>
         Bornes vides = toutes les commandes. « Préparation » : décalque du profil Advanced Order
         Export historique (statuts « payée »/« préparée » uniquement). « Compta » : toutes
-        commandes, TVA 5,5 % ventilée — colonnes des deux profils encore à valider avec la
-        personne compta du client (décision n°5, plan §4).
+        commandes, TVA 5,5 % ventilée — colonnes des deux profils validées par le client le 13/07.
       </p>
     </div>
   )

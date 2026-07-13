@@ -1,0 +1,428 @@
+/*
+ * Dashboard /admin v2 (`_specs/dashboard-admin/`) — feuille de style unique
+ * des deux slots (`Dashboard.tsx` / `DashboardFooter.tsx`) et des îlots
+ * client. Couleurs : variables de thème Payload (clair/sombre suivis
+ * automatiquement) avec les hex de la maquette en secours. Pas de Tailwind
+ * ici : l'admin n'est pas compilé par le JIT du site.
+ */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Mobile : une colonne, ordre DOM conservé (stock bas reste 2ᵉ panneau de contenu). */
+@media (max-width: 1024px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--theme-elevation-0, #ffffff);
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.muted {
+  margin: 0;
+  font-size: 13px;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.empty {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+/* ── Pastilles / badges d'état ── */
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dotOk {
+  background: var(--theme-success-500, #1e7d46);
+}
+
+.dotWarn {
+  background: var(--theme-warning-500, #b26b00);
+}
+
+.dotAlert {
+  background: var(--theme-error-500, #b3362b);
+}
+
+.dotNa {
+  background: var(--theme-elevation-450, #8a867c);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 3px 11px;
+}
+
+.badgeOk {
+  background: var(--theme-success-100, #e3f1e9);
+  color: var(--theme-success-600, #1e7d46);
+}
+
+.badgeWarn {
+  background: var(--theme-warning-100, #faf0dc);
+  color: var(--theme-warning-600, #b26b00);
+}
+
+.badgeAlert {
+  background: var(--theme-error-100, #f9e7e4);
+  color: var(--theme-error-600, #b3362b);
+}
+
+.badgeNa {
+  background: var(--theme-elevation-100, #edebe4);
+  color: var(--theme-elevation-600, #8a867c);
+}
+
+/* ── Bandeau d'état (3.1) ── */
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  border-radius: 8px;
+  padding: 12px 18px;
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  background: var(--theme-elevation-50, #f1efe9);
+}
+
+.bannerWarn {
+  border-color: var(--theme-warning-500, #b26b00);
+  background: var(--theme-warning-50, #faf0dc);
+}
+
+.bannerAlert {
+  border-color: var(--theme-error-500, #b3362b);
+  background: var(--theme-error-50, #f9e7e4);
+}
+
+.bannerTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pastilles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+
+.pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+}
+
+.pastille a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* ── Gros chiffre d'entête de panneau ── */
+
+.bigRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.big {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.target {
+  color: var(--theme-elevation-500, #6b675e);
+  font-size: 14px;
+}
+
+/* ── Tables de données (commandes, stock, remboursements, quoi de neuf) ── */
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dataTable th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--theme-elevation-500, #6b675e);
+  padding: 0 8px 6px 0;
+  border-bottom: 1px solid var(--theme-border-color, #e4e1d8);
+}
+
+.dataTable td {
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--theme-border-color, #e4e1d8);
+  vertical-align: middle;
+}
+
+.dataTable tr:last-child td {
+  border-bottom: none;
+}
+
+.right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--theme-elevation-500, #6b675e);
+  white-space: nowrap;
+}
+
+.miniTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.miniTable td {
+  padding: 4.5px 0;
+  border-bottom: 1px solid var(--theme-border-color, #e4e1d8);
+}
+
+.miniTable tr:last-child td {
+  border-bottom: none;
+}
+
+.miniTable td:last-child {
+  text-align: right;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+/* ── Jauge dons (3.6) ── */
+
+.gauge {
+  height: 10px;
+  border-radius: 6px;
+  background: var(--theme-elevation-50, #f1efe9);
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  overflow: hidden;
+}
+
+.gaugeFill {
+  display: block;
+  height: 100%;
+  background: var(--theme-success-500, #1e7d46);
+  border-radius: 6px;
+}
+
+/* ── Tuiles travail éditorial (3.8) ── */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  background: var(--theme-elevation-50, #f1efe9);
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tileWarn {
+  border-color: var(--theme-warning-500, #b26b00);
+  background: var(--theme-warning-50, #faf0dc);
+}
+
+.tileN {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tileWarn .tileN {
+  color: var(--theme-warning-600, #b26b00);
+}
+
+.tileLbl {
+  font-size: 12px;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.tile a {
+  font-size: 12px;
+}
+
+/* ── Notes, actions, légende ── */
+
+.noteChip {
+  align-self: flex-start;
+  font-size: 11px;
+  color: var(--theme-elevation-500, #6b675e);
+  background: var(--theme-elevation-50, #f1efe9);
+  border: 1px dashed var(--theme-border-color, #e4e1d8);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kbdNote {
+  font-size: 12.5px;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.freshness {
+  font-size: 11.5px;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+  margin-top: auto;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  font-size: 12.5px;
+  color: var(--theme-elevation-500, #6b675e);
+  align-items: center;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Configuration & accès (3.13) / lignes code promo (3.11) ── */
+
+.configList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.configRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.configRow code {
+  font-size: 12px;
+  background: var(--theme-elevation-50, #f1efe9);
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.pushRight {
+  margin-left: auto;
+}
+
+.transitionBox {
+  border: 1px dashed var(--theme-border-color, #e4e1d8);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--theme-elevation-500, #6b675e);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Formulaires des îlots client (import, export) ── */
+
+.formRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.errorText {
+  color: var(--theme-error-500, #b3362b);
+  font-size: 13px;
+  margin: 0;
+}
+
+.reportList {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 13px;
+}
+
+.alertText {
+  color: var(--theme-error-500, #b3362b);
+}
+
+.detailsBlock {
+  font-size: 13px;
+}
