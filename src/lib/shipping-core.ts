@@ -36,90 +36,28 @@ interface StandardTier {
 }
 
 /**
- * La grille R2 §2.7, telle que publiée : 0–10 € → 2,00 · 11–24 € → 4,50 ·
- * 25–49 € → 5,50 · 50–500 € → 6,50. Les bornes ci-dessous sont EXACTEMENT
- * celles-là — les trous entre paliers (10–11 €, 24–25 €, 49–50 €) sont
- * volontairement absents d'ici : ils sont traités séparément par
- * `GRID_HOLE_DECISIONS` ci-dessous, seul endroit qui doit bouger le jour où
- * le client tranche (15/07).
+ * La grille R2 §2.7 LISSÉE (décision client relayée le 13/07 : « combler les
+ * trous ») : les bornes publiées 0–10 / 11–24 / 25–49 / 50–500 laissaient
+ * trois plages orphelines (10,01–10,99 · 24,01–24,99 · 49,01–49,99), gérées
+ * jusqu'ici par une table de décisions provisoire au défaut conservateur
+ * « palier supérieur ». Le lissage entérine exactement ce défaut : chaque
+ * palier s'étend désormais jusqu'au centime sous le palier suivant — la
+ * grille couvre [0, 500 €] sans trou, à comportement STRICTEMENT identique
+ * (aucun montant ne change de tarif). Au-delà de 500 € : refus assumé
+ * (`CART_MAX_CENTS`), la commande sort du parcours automatisé.
  */
 const STANDARD_TIERS: readonly StandardTier[] = [
   { minCents: 0, maxCents: 1000, costCents: 200, label: "0–10 €" },
-  { minCents: 1100, maxCents: 2400, costCents: 450, label: "11–24 €" },
-  { minCents: 2500, maxCents: 4900, costCents: 550, label: "25–49 €" },
-  { minCents: 5000, maxCents: 50000, costCents: 650, label: "50–500 €" },
+  { minCents: 1001, maxCents: 2400, costCents: 450, label: "10,01–24 €" },
+  { minCents: 2401, maxCents: 4900, costCents: 550, label: "24,01–49 €" },
+  { minCents: 4901, maxCents: 50000, costCents: 650, label: "49,01–500 €" },
 ];
 
-/** Comment un trou de la grille est tranché — soit rattaché au coût d'un palier existant, soit un refus pur et simple. */
-type HoleDecision =
-  | { kind: "attach-tier"; tierIndex: number }
-  | { kind: "refuse"; message: string };
+/** Plafond (inclus) du panier vendable en ligne — au-delà, refus explicite (plan §4 étape 5, « > 500 → refus avec message »). */
+export const CART_MAX_CENTS = 50000; // 500,00 €
 
-/**
- * Un trou de la grille — plage NON couverte par `STANDARD_TIERS` — et la
- * décision qui s'y applique.
- */
-interface GridHole {
-  id: string;
-  /** Plage inclusive du trou, en centimes. `Infinity` autorisé en borne haute (trou `>500 €`). */
-  rangeCents: readonly [number, number];
-  decision: HoleDecision;
-  /** Justification humaine — apparaît telle quelle dans les tests et la doc, jamais recopiée ailleurs. */
-  note: string;
-}
-
-/**
- * TABLE DE DÉCISIONS — les QUATRE trous de la grille R2 §2.7, avec le
- * défaut CONSERVATEUR retenu en attendant l'arbitrage client :
- * **rattacher au palier SUPÉRIEUR** (le client ne paie jamais moins cher que
- * ce à quoi la grille publiée lui donne droit).
- *
- * TODO décision client 15/07 : chacune des trois premières entrées peut être
- * retranchée à `{ kind: "refuse", message: "…" }` ou basculée vers un autre
- * `tierIndex` sans toucher au reste du module — c'est le seul endroit à
- * modifier. La quatrième (`>500 €`) n'est PAS un choix de tarif : au-delà du
- * dernier palier vendu, la commande sort du parcours automatisé (grille non
- * prévue au-delà de 500 €) et doit être traitée par email — cf. plan §4
- * étape 5, « > 500 → refus avec message ».
- */
-export const GRID_HOLE_DECISIONS: readonly GridHole[] = [
-  {
-    id: "10-11",
-    rangeCents: [1001, 1099],
-    decision: { kind: "attach-tier", tierIndex: 1 }, // 11–24 €, 4,50 €
-    note:
-      "TODO décision client 15/07 — défaut conservateur : rattaché au palier " +
-      "supérieur (11–24 €, 4,50 €).",
-  },
-  {
-    id: "24-25",
-    rangeCents: [2401, 2499],
-    decision: { kind: "attach-tier", tierIndex: 2 }, // 25–49 €, 5,50 €
-    note:
-      "TODO décision client 15/07 — défaut conservateur : rattaché au palier " +
-      "supérieur (25–49 €, 5,50 €).",
-  },
-  {
-    id: "49-50",
-    rangeCents: [4901, 4999],
-    decision: { kind: "attach-tier", tierIndex: 3 }, // 50–500 €, 6,50 €
-    note:
-      "TODO décision client 15/07 — défaut conservateur : rattaché au palier " +
-      "supérieur (50–500 €, 6,50 €).",
-  },
-  {
-    id: ">500",
-    rangeCents: [50001, Infinity],
-    decision: {
-      kind: "refuse",
-      message:
-        "Panier de plus de 500 € — hors grille de port automatisée, commande à traiter par email.",
-    },
-    note:
-      "Pas un trou de tarif : au-delà du dernier palier vendu (500 €), refus " +
-      "assumé — cf. plan §4 étape 5.",
-  },
-];
+const CART_TOO_HIGH_MESSAGE =
+  "Panier de plus de 500 € — hors grille de port automatisée, commande à traiter par email.";
 
 /** Ce que le module a besoin de savoir sur le panier pour calculer le port — rien de plus (pas les lignes, pas les prix). */
 export interface ShippingRequest {
@@ -148,32 +86,25 @@ export type ShippingResult =
   | { ok: false; reason: ShippingRefusalReason; message: string };
 
 /**
- * Résout le palier standard (ou le trou) applicable à un total de panier —
- * ne connaît ni le coupon ni la règle manifeste, appelée seulement après que
+ * Résout le palier standard applicable à un total de panier — ne connaît ni
+ * le coupon ni la règle manifeste, appelée seulement après que
  * `computeShipping` a écarté ces deux cas prioritaires.
  */
 function resolveStandardShipping(cartTotalCents: number): ShippingResult {
+  if (cartTotalCents > CART_MAX_CENTS) {
+    return { ok: false, reason: "cart-too-high", message: CART_TOO_HIGH_MESSAGE };
+  }
+
   for (const tier of STANDARD_TIERS) {
     if (cartTotalCents >= tier.minCents && cartTotalCents <= tier.maxCents) {
       return { ok: true, costCents: tier.costCents };
     }
   }
 
-  for (const hole of GRID_HOLE_DECISIONS) {
-    const [min, max] = hole.rangeCents;
-    if (cartTotalCents >= min && cartTotalCents <= max) {
-      if (hole.decision.kind === "refuse") {
-        return { ok: false, reason: "cart-too-high", message: hole.decision.message };
-      }
-      return { ok: true, costCents: STANDARD_TIERS[hole.decision.tierIndex].costCents };
-    }
-  }
-
-  // Filet de sécurité : ne doit jamais se déclencher si STANDARD_TIERS et
-  // GRID_HOLE_DECISIONS couvrent bien tout [0, +∞) — sinon la grille a un
-  // trou non documenté, à corriger dans ce module plutôt que dans l'appelant.
+  // Filet de sécurité : ne doit jamais se déclencher — la grille lissée
+  // couvre [0, CART_MAX_CENTS] sans trou (propriété verrouillée par test).
   throw new Error(
-    `shipping-core: aucun palier ni trou ne couvre ${cartTotalCents} centimes — grille incomplète.`,
+    `shipping-core: aucun palier ne couvre ${cartTotalCents} centimes — grille incomplète.`,
   );
 }
 
@@ -187,7 +118,7 @@ function resolveStandardShipping(cartTotalCents: number): ShippingResult {
  * 3. Panier « manifeste » (uniquement des articles à port réduit) → 2,50 €
  *    forfaitaire, quel que soit le montant — règle au format, pas à la
  *    valeur, donc non soumise à la grille standard ni à son refus > 500 €.
- * 4. Sinon, grille standard (paliers + trous, cf. `GRID_HOLE_DECISIONS`).
+ * 4. Sinon, grille standard lissée (refus explicite au-delà de `CART_MAX_CENTS`).
  */
 export function computeShipping(request: ShippingRequest): ShippingResult {
   if (!Number.isInteger(request.cartTotalCents) || request.cartTotalCents < 0) {

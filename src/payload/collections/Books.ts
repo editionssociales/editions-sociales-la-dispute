@@ -352,21 +352,23 @@ export const Books: CollectionConfig = {
       label: 'Commerce natif',
       admin: {
         description:
-          'Modèle de données du commerce natif (phase 4, lot 1) — sans effet ' +
-          "sur le front tant que le panier/checkout n'est pas branché (étapes " +
-          'ultérieures du plan).',
+          'Commerce natif (phase 4) — actif sur le front seulement quand ' +
+          'COMMERCE_NATIVE=1 (bascule du jour J).',
       },
       fields: [
         {
           name: 'sellable',
           type: 'checkbox',
-          defaultValue: false,
+          defaultValue: true,
           label: 'Vendable nativement',
           admin: {
             description:
-              'Coché = éligible au panier natif à venir. Un livre non vendable ' +
-              'reste au catalogue (jamais retiré, cf. §Local Contracts) — il ' +
-              'est simplement absent du commerce natif.',
+              'Tout ce qui est au catalogue est vendable par défaut (décision ' +
+              'client du 13/07) — décocher pour retirer un titre de la vente ' +
+              'en ligne. Un livre non vendable reste au catalogue (jamais ' +
+              'retiré, cf. §Local Contracts). La disponibilité réelle reste ' +
+              'gouvernée par le stock (0 = épuisé) et la date de parution ' +
+              '(« à paraître » prime sur tout).',
           },
         },
         {

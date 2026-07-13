@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  CART_MAX_CENTS,
   computeShipping,
   FREE_SHIPPING_MIN_CART_CENTS,
-  GRID_HOLE_DECISIONS,
   MANIFEST_SHIPPING_COST_CENTS,
   type ShippingRequest,
 } from "./shipping-core";
@@ -73,66 +73,36 @@ describe("computeShipping — grille standard (R2 §2.7), chaque palier", () => 
   });
 });
 
-describe("computeShipping — les quatre trous de la grille (défaut : palier supérieur)", () => {
-  it("trou 10–11 € — borne basse 10,01 € rattachée au palier 11–24 € (450 c)", () => {
-    expect(computeShipping(request({ cartTotalCents: 1001 }))).toEqual({
-      ok: true,
-      costCents: 450,
-    });
+describe("computeShipping — grille lissée (décision 13/07) : ex-trous couverts par le palier supérieur", () => {
+  it("10,01 € / 10,50 € / 10,99 € (ex-trou 10–11) → palier 10,01–24 € (450 c)", () => {
+    for (const cents of [1001, 1050, 1099]) {
+      expect(computeShipping(request({ cartTotalCents: cents }))).toEqual({
+        ok: true,
+        costCents: 450,
+      });
+    }
   });
 
-  it("trou 10–11 € — milieu 10,50 € rattaché au palier 11–24 € (450 c)", () => {
-    expect(computeShipping(request({ cartTotalCents: 1050 }))).toEqual({
-      ok: true,
-      costCents: 450,
-    });
+  it("24,01 € / 24,50 € / 24,99 € (ex-trou 24–25) → palier 24,01–49 € (550 c)", () => {
+    for (const cents of [2401, 2450, 2499]) {
+      expect(computeShipping(request({ cartTotalCents: cents }))).toEqual({
+        ok: true,
+        costCents: 550,
+      });
+    }
   });
 
-  it("trou 10–11 € — borne haute 10,99 € rattachée au palier 11–24 € (450 c)", () => {
-    expect(computeShipping(request({ cartTotalCents: 1099 }))).toEqual({
-      ok: true,
-      costCents: 450,
-    });
-  });
-
-  it("trou 24–25 € — milieu 24,50 € rattaché au palier 25–49 € (550 c)", () => {
-    expect(computeShipping(request({ cartTotalCents: 2450 }))).toEqual({
-      ok: true,
-      costCents: 550,
-    });
-  });
-
-  it("trou 24–25 € — bornes 24,01 € et 24,99 € rattachées au palier 25–49 € (550 c)", () => {
-    expect(computeShipping(request({ cartTotalCents: 2401 }))).toEqual({
-      ok: true,
-      costCents: 550,
-    });
-    expect(computeShipping(request({ cartTotalCents: 2499 }))).toEqual({
-      ok: true,
-      costCents: 550,
-    });
-  });
-
-  it("trou 49–50 € — milieu 49,50 € rattaché au palier 50–500 € (650 c)", () => {
-    expect(computeShipping(request({ cartTotalCents: 4950 }))).toEqual({
-      ok: true,
-      costCents: 650,
-    });
-  });
-
-  it("trou 49–50 € — bornes 49,01 € et 49,99 € rattachées au palier 50–500 € (650 c)", () => {
-    expect(computeShipping(request({ cartTotalCents: 4901 }))).toEqual({
-      ok: true,
-      costCents: 650,
-    });
-    expect(computeShipping(request({ cartTotalCents: 4999 }))).toEqual({
-      ok: true,
-      costCents: 650,
-    });
+  it("49,01 € / 49,50 € / 49,99 € (ex-trou 49–50) → palier 49,01–500 € (650 c)", () => {
+    for (const cents of [4901, 4950, 4999]) {
+      expect(computeShipping(request({ cartTotalCents: cents }))).toEqual({
+        ok: true,
+        costCents: 650,
+      });
+    }
   });
 
   it("> 500 € — refus explicite (500,01 € et 600,00 €), commande à traiter par email", () => {
-    expect(computeShipping(request({ cartTotalCents: 50001 }))).toEqual({
+    expect(computeShipping(request({ cartTotalCents: CART_MAX_CENTS + 1 }))).toEqual({
       ok: false,
       reason: "cart-too-high",
       message: expect.stringContaining("500 €"),
@@ -143,15 +113,20 @@ describe("computeShipping — les quatre trous de la grille (défaut : palier su
     });
   });
 
-  it("la table GRID_HOLE_DECISIONS documente bien les 4 trous, marqués TODO décision client 15/07", () => {
-    expect(GRID_HOLE_DECISIONS.map((h) => h.id)).toEqual(["10-11", "24-25", "49-50", ">500"]);
-    const priceHoles = GRID_HOLE_DECISIONS.filter((h) => h.id !== ">500");
-    expect(priceHoles).toHaveLength(3);
-    for (const hole of priceHoles) {
-      expect(hole.note).toMatch(/décision client 15\/07/);
-      expect(hole.decision.kind).toBe("attach-tier");
+  it("propriété : la grille couvre [0, CART_MAX_CENTS] sans trou — chaque centime a un tarif", () => {
+    // Balayer les 50 001 montants est instantané en pur calcul et verrouille
+    // structurellement l'absence de trou (le filet d'erreur du module ne doit
+    // jamais se déclencher) ; les sauts de tarif n'arrivent qu'aux frontières
+    // publiées (10 €→10,01 €, 24 €→24,01 €, 49 €→49,01 €).
+    let previous = -1;
+    const jumps: number[] = [];
+    for (let cents = 0; cents <= CART_MAX_CENTS; cents++) {
+      const result = computeShipping(request({ cartTotalCents: cents }));
+      if (!result.ok) throw new Error(`refus inattendu à ${cents} centimes`);
+      if (previous !== -1 && result.costCents !== previous) jumps.push(cents);
+      previous = result.costCents;
     }
-    expect(GRID_HOLE_DECISIONS.find((h) => h.id === ">500")?.decision.kind).toBe("refuse");
+    expect(jumps).toEqual([1001, 2401, 4901]);
   });
 });
 
@@ -186,7 +161,7 @@ describe("computeShipping — coupon free_shipping (sous/sur le seuil de 50 €)
   it("coupon posé, panier SOUS 50 € (49,99 €) → coupon inopérant, grille standard appliquée", () => {
     expect(
       computeShipping(request({ cartTotalCents: 4999, freeShippingCoupon: true })),
-    ).toEqual({ ok: true, costCents: 650 }); // trou 49–50 rattaché au palier supérieur, PAS gratuit
+    ).toEqual({ ok: true, costCents: 650 }); // 49,99 € = palier 49,01–500 €, PAS gratuit
   });
 
   it("coupon posé, panier SUR le seuil exact (50,00 €) → gratuit", () => {
