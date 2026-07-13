@@ -5,7 +5,8 @@ import * as migration_20260712_164840_commerce from './20260712_164840_commerce'
 import * as migration_20260712_175030_stock_updated_at from './20260712_175030_stock_updated_at';
 import * as migration_20260712_203246_order_status_failed from './20260712_203246_order_status_failed';
 import * as migration_20260713_035502_sellable_par_defaut from './20260713_035502_sellable_par_defaut';
-import * as migration_20260713_055724_contenus_editables from './20260713_055724_contenus_editables';
+import * as migration_20260713_060544_import_runs from './20260713_060544_import_runs';
+import * as migration_20260713_063159_contenus_editables from './20260713_063159_contenus_editables';
 
 export const migrations = [
   {
@@ -44,8 +45,13 @@ export const migrations = [
     name: '20260713_035502_sellable_par_defaut',
   },
   {
-    up: migration_20260713_055724_contenus_editables.up,
-    down: migration_20260713_055724_contenus_editables.down,
-    name: '20260713_055724_contenus_editables'
+    up: migration_20260713_060544_import_runs.up,
+    down: migration_20260713_060544_import_runs.down,
+    name: '20260713_060544_import_runs',
+  },
+  {
+    up: migration_20260713_063159_contenus_editables.up,
+    down: migration_20260713_063159_contenus_editables.down,
+    name: '20260713_063159_contenus_editables'
   },
 ];

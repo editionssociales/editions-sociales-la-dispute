@@ -1,7 +1,7 @@
 import { addDataAndFileToRequest } from 'payload'
 import type { Payload, PayloadHandler, PayloadRequest } from 'payload'
 
-import { isAdminOrEditor } from '../access.ts'
+import { isAdmin } from '../access.ts'
 import {
   matchStock,
   parseRouterWorkbook,
@@ -87,18 +87,40 @@ export async function importRouterStock(
     })
   }
 
+  // Trace du run (collection `import-runs`, dashboard v2 panneau 3.7) —
+  // créée seulement si l'import entier a réussi (toute erreur plus haut a
+  // déjà jeté) ; `create` est fermé partout ailleurs, seul ce point d'entrée
+  // écrit l'historique. Le cast : le champ `rapport` est un `json` Payload
+  // (type index-signature généré), structurellement équivalent au
+  // `StockImportReport` qu'on y sérialise.
+  await payload.create({
+    collection: 'import-runs',
+    data: {
+      nbLignes: routerRows.length,
+      nbMatchees: report.matched.length,
+      rapport: report as unknown as Record<string, unknown>,
+    },
+    overrideAccess: true,
+    context: { disableRevalidate: true },
+    req,
+  })
+
   return { ...report, updatedCount: report.matched.length }
 }
 
 /**
- * `POST /api/books/import-stock` (multipart, admin/éditeur authentifié) —
- * consommé par la vue « Import stock »
- * (`src/payload/admin/StockImportPanel.tsx`).
+ * `POST /api/books/import-stock` (multipart, admin authentifié) — consommé
+ * par le panneau « Import routeur » du tableau de bord
+ * (`src/payload/admin/dashboard/`).
+ *
+ * Resserré d'`isAdminOrEditor` à `isAdmin` avec le dashboard v2 (spec §3.7 :
+ * geste sensible, écrase des données de stock) — décision du chantier
+ * dashboard, alignée sur le rôle du panneau.
  */
 export const importStockHandler: PayloadHandler = async (req) => {
-  if (isAdminOrEditor({ req }) !== true) {
+  if (isAdmin({ req }) !== true) {
     return Response.json(
-      { error: 'Accès refusé — réservé aux administrateur·rice·s et éditrice·eur·s.' },
+      { error: 'Accès refusé — réservé aux administrateur·rice·s.' },
       { status: 403 },
     )
   }

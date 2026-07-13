@@ -2549,6 +2549,88 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "payload.import_runs": {
+      "name": "import_runs",
+      "schema": "payload",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nb_lignes": {
+          "name": "nb_lignes",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nb_matchees": {
+          "name": "nb_matchees",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rapport": {
+          "name": "rapport",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "import_runs_updated_at_idx": {
+          "name": "import_runs_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "import_runs_created_at_idx": {
+          "name": "import_runs_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "payload.payload_kv": {
       "name": "payload_kv",
       "schema": "payload",
@@ -2756,6 +2838,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "import_runs_id": {
+          "name": "import_runs_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -2923,6 +3011,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "payload_locked_documents_rels_import_runs_id_idx": {
+          "name": "payload_locked_documents_rels_import_runs_id_idx",
+          "columns": [
+            {
+              "expression": "import_runs_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3045,6 +3148,20 @@
           "schemaTo": "payload",
           "columnsFrom": [
             "promo_codes_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_import_runs_fk": {
+          "name": "payload_locked_documents_rels_import_runs_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "import_runs",
+          "schemaTo": "payload",
+          "columnsFrom": [
+            "import_runs_id"
           ],
           "columnsTo": [
             "id"
@@ -4521,6 +4638,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "284ba434-22a9-4954-b5c0-e4990600ebb6",
+  "id": "f3865e00-d4c2-43a0-adf3-fa99589305fb",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
