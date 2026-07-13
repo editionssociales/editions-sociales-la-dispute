@@ -27,6 +27,19 @@ client — et renvoie aux plans pour le détail d'exécution.*
 > technique reste la référence des lots déjà livrés, seul son calendrier est caduc
 > (non retouché dans cette passe).
 
+> **Mise à jour du 13/07 — livraison définitive au 12/08.** Le client tranche le
+> déroulé de clôture : tout le périmètre vendu est livré, recetté et signé le
+> **12/08**, trois jours avant la campagne de dons du 15/08 — bascule unique
+> 24–28/07 → recouvrement/drainage ~2 semaines (→ ~11/08) → E7 (302→301) +
+> recette + E9 résiduel (facturation, GSC, trace écrite du transfert) = 12/08.
+> **Contrainte dure : 12/08 − 14 j de recouvrement = 29/07**, dernier jour de
+> bascule tenable — toute glissade de la fenêtre 24–28/07 comprime directement
+> le recouvrement. Il n'y a plus de semaine de clôture séparée en octobre : la
+> clôture du projet EST la livraison du 12/08 (détail : §Calendrier ci-dessous,
+> `07-cloture.md`). Les actes tiers post-livraison (résiliation Paybox,
+> résiliation slot ladispi, extinctions d'hébergements OVH) restent listés sans
+> date imposée, côté client — ils ne conditionnent pas la livraison.
+
 ## Comment lire ce dossier
 
 | Document | Contenu | Profondeur |
@@ -45,8 +58,8 @@ client — et renvoie aux plans pour le détail d'exécution.*
 Le mandat (`IMPLEMENTATION-PROMPT.md`) demandait de *ne pas tout concevoir d'avance* :
 c'est respecté — les phases de juillet sont au niveau fichier. Le commerce (04) était
 au niveau jalons pour un kickoff de septembre ; il est désormais codé (lots 1–2) et sa
-mise en production rejoint la fenêtre de bascule de juillet — seule la clôture
-d'octobre (07) reste au niveau jalons.
+mise en production rejoint la fenêtre de bascule de juillet ; la clôture (07) est
+désormais calée sur le jalon terminal du 12/08, pas sur une semaine d'octobre séparée.
 
 ## La stack, en une ligne par composant
 
@@ -75,7 +88,9 @@ http) n'a plus lieu d'être invoqué.
 ```
 pages légales + contenus 2026 (client, →17/07)
   →  fenêtre de bascule unique (24–28/07 proposée : site + pg + commerce)
-  →  dons en RÉEL au flip (butée de secours 07/08)  →  campagne 15/08
+  →  dons en RÉEL au flip (butée de secours 07/08)
+  →  recouvrement ~2 semaines (→ ~11/08) → livraison définitive 12/08 (clôture)
+  →  campagne 15/08
 ```
 
 > ✅ **Le risque KYC Stripe est LEVÉ (vérifié par API le 11/07)** : le compte live
@@ -146,21 +161,40 @@ extinction. `cms-*` n'est plus un prérequis de la fenêtre de bascule — c'est
 optionnel recommandé (`cms-boutique` **obligatoire** pour le drainage `wp-admin` des
 107 commandes ; `cms-es`/`cms-ld` = assurance pas chère, pas un bloquant).
 
-### Août — fermeture client, mou du calendrier
+### Août — recouvrement puis clôture, jalon terminal 12/08
 
-Surveillance ; correctifs sécurité uniquement ; butée de secours dons **07/08** si le
-passage en réel a glissé ; **~10–14/08** checklist campagne (moniteurs, quotas, dump
-< 24 h, webhooks) ; **sam 15/08 : lancement, Youri disponible**. Rien d'irréversible en
-août.
+Recouvrement (Jour J → ~11/08, ~2 semaines) : drainage des commandes
+`wc-processing` via `cms-boutique`, surveillance, correctifs sécurité
+uniquement ; butée de secours dons **07/08** si le passage en réel a glissé.
+Fin de recouvrement (~11/08) : **E7** (302→301) sur validation écrite du
+client, après revue des 404 ; recette de clôture (phase 7, gates G1–G8 →
+archive remise + confirmation **écrite** → E7 → extinction réversible du
+catalogue et de la boutique, fichiers/bases intacts 7 jours → nettoyage code
+(adaptateurs http/Woo retirés, flags `CATALOGUE_SOURCE`/`COMMERCE_NATIVE`
+retirés, tag `wordpress-era-end`) → dossier de réversibilité + runbook).
 
-### Octobre — clôture (inchangé)
+**12/08 : PV de clôture signé — livraison définitive.** Tout le périmètre
+vendu est livré, recetté et signé, trois jours avant la campagne de dons du
+15/08. Il n'y a plus de semaine de clôture séparée en octobre : le déroulé
+ci-dessus tient dans la fenêtre recouvrement → 12/08. Seul geste
+post-signature, daté et prouvé par écrit : le drop des fichiers + bases à
+J+7 de la mise hors ligne réversible (cf. `07-cloture.md`) — aucune autre
+action destructrice après le 12/08. **~10–14/08** checklist campagne
+(moniteurs, quotas, dump < 24 h, webhooks) ; **sam 15/08 : lancement, Youri
+disponible.**
 
-La phase 7 possède la semaine : gates G1–G8 → archive remise + confirmation
-**écrite** → 301 définitifs → extinction complète (catalogue **et** boutique,
-phase A réversible) → nettoyage code (adaptateurs http/Woo retirés, flags
-`CATALOGUE_SOURCE`/`COMMERCE_NATIVE` retirés, tag `wordpress-era-end`) → dossier de
-réversibilité + runbook → **PV de clôture**. **~23/10** : drop fichiers + bases,
-preuve écrite au client. Chantier clos.
+**Contrainte dure sur la fenêtre de bascule.** Le recouvrement a besoin de
+ses ~14 jours pleins avant le 12/08 : **12/08 − 14 j = 29/07**, dernier jour
+de bascule tenable. Toute glissade de la fenêtre 24–28/07 mange directement
+le recouvrement et menace le 12/08.
+
+### Post-livraison (actes client, sans date imposée)
+
+Trois gestes tiers restent ouverts côté client, sans conditionner la
+livraison du 12/08 : résiliation du contrat Paybox (après drainage complet,
+jamais avant) ; résiliation du slot `ladispi` (si le gate E8 MXPLAN est
+levé) ; extinctions des hébergements OVH résiduels (le slot Pro reste
+conservé pour GEME). Décisions et calendrier de ces trois gestes = client.
 
 ## Contrats d'interface inter-phases (décisions transverses, déjà répercutées dans les plans)
 
@@ -184,8 +218,8 @@ preuve écrite au client. Chantier clos.
 5. **Transfert de propriété** : UN protocole de référence, phase 7 étape 9 (repo →
    projet → transferts **séparés** Neon + stores Blob — ils ne suivent PAS un
    transfert de projet — preuve = propriété dans le dashboard client, fallback team
-   entière). Dry-run 17–20/07, exécuté en fin de fenêtre de bascule, vérifié/soldé en
-   octobre. Team vs projet = décision client, démo du 15/07.
+   entière). Dry-run 17–20/07, exécuté en fin de fenêtre de bascule, vérifié/soldé au
+   12/08. Team vs projet = décision client, démo du 15/07.
 6. **Redirections** : `statusCode` explicites partout (302 pendant recouvrement, 301
    au définitif — jamais `permanent: false`, qui émet des 307).
 7. **Ordre de merge anti-conflit** — exécuté : PR #9 (compare-sources/E11), #10
@@ -207,7 +241,7 @@ retenus (déjà intégrés aux plans) :
 - Doublons supprimés : backup (−0,25 j), extinction boutique exécutée une fois (−0,4 j),
   transfert compté une fois (−0,5 j).
 - Les ~2 j d'engagements §9 sans ligne chiffrée (transfert, réversibilité, PV) sont du
-  travail de clôture assumé, étalé sur septembre–octobre.
+  travail de clôture assumé, étalé sur juillet–août, jusqu'au jalon terminal du 12/08.
 - Le reste (week-ends des 11–12 et 18–19/07) est le régime de chantier déjà pratiqué.
 - **Note coût récurrent à signaler au client** : le passage Neon Launch au swap (~19 $/mois
   au pire) dépasse la ligne unitaire « ~1 €/mois » du devis §8 ; l'enveloppe globale
