@@ -1,5 +1,4 @@
 import "server-only";
-import { getAllStoreProducts } from "./boutique";
 import type { CatalogueSource, RawBook } from "./catalogue-source";
 import { wpBookToRawBook, type WpBook } from "./catalogue-wp-map";
 import { fetchAllPages } from "./fetch-all-pages";
@@ -9,10 +8,11 @@ import type { EditionSlug } from "./types";
  * Adaptateur http du port `CatalogueSource` (prod) — mode WordPress *headless*.
  *
  * Seul point qui touche le réseau : REST WP (CPT `catalogue`, taxonomies + ACF
- * réexposés par le mu-plugin `wp-headless/es-headless-rest.php`) et, via
- * `boutique.ts`, la WooCommerce Store API. Le dialecte du fil WP est absorbé
- * par `catalogue-wp-map.ts` ; fusion et requêtes vivent dans
- * `catalogue-core.ts`.
+ * réexposés par le mu-plugin `wp-headless/es-headless-rest.php`). Le dialecte
+ * du fil WP est absorbé par `catalogue-wp-map.ts` ; fusion et requêtes vivent
+ * dans `catalogue-core.ts`. Les produits boutique (WooCommerce Store API) ne
+ * sont plus portés par cet adaptateur : `catalogue.ts` appelle directement
+ * `getAllStoreProducts()` (`boutique.ts`) — cf. `catalogue-source.ts`.
  */
 
 const SITES: Record<EditionSlug, string> = {
@@ -69,6 +69,5 @@ export function httpCatalogueSource(): CatalogueSource {
   return {
     listBooks,
     getBook,
-    listProducts: () => getAllStoreProducts(),
   };
 }

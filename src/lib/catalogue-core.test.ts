@@ -208,15 +208,17 @@ describe("countByEdition", () => {
 });
 
 describe("à travers le port en mémoire (bout en bout, sans réseau)", () => {
-  const source = inMemoryCatalogueSource({ books: rawByEdition, products: PRODUCTS });
+  const source = inMemoryCatalogueSource({ books: rawByEdition });
 
   it("charge et fusionne via l'adaptateur", async () => {
-    const [es, ld, products] = await Promise.all([
+    // Les produits boutique ne transitent plus par le port (S1) : ils sont
+    // composés directement par l'appelant, comme le fait `catalogue.ts` avec
+    // `getAllStoreProducts()`.
+    const [es, ld] = await Promise.all([
       source.listBooks("editions-sociales"),
       source.listBooks("la-dispute"),
-      source.listProducts(),
     ]);
-    const catalogue = buildCatalogue({ "editions-sociales": es, "la-dispute": ld }, products);
+    const catalogue = buildCatalogue({ "editions-sociales": es, "la-dispute": ld }, PRODUCTS);
     expect(catalogue).toHaveLength(5);
   });
 

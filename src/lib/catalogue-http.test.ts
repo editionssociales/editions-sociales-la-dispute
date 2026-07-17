@@ -13,7 +13,6 @@ import { setupServer } from "msw/node";
 
 process.env.WP_ES_URL = "https://wp-es.test";
 process.env.WP_LD_URL = "https://wp-ld.test";
-process.env.WC_STORE_URL = "https://wc.test";
 
 const { httpCatalogueSource } = await import("./catalogue-http");
 
@@ -24,15 +23,6 @@ const wpBook = (i: number) => ({
   slug: `livre-${i}`,
   title: { rendered: `Livre ${i}` },
   book: {},
-});
-
-const wcProduct = (i: number) => ({
-  id: i,
-  name: `Produit ${i}`,
-  slug: `produit-${i}`,
-  permalink: `https://wc.test/produit/produit-${i}/`,
-  is_purchasable: true,
-  is_in_stock: true,
 });
 
 const page = (url: URL) => Number(url.searchParams.get("page") ?? "1");
@@ -112,27 +102,5 @@ describe("getBook", () => {
     );
     const book = await httpCatalogueSource().getBook("editions-sociales", "le-capital");
     expect(book).toBeNull();
-  });
-});
-
-describe("listProducts — Store API", () => {
-  it("page courte → arrêt propre avec les produits reçus", async () => {
-    server.use(
-      http.get("https://wc.test/wp-json/wc/store/v1/products", () =>
-        HttpResponse.json([wcProduct(1), wcProduct(2)]),
-      ),
-    );
-    const products = await httpCatalogueSource().listProducts();
-    expect(products).toHaveLength(2);
-  });
-
-  it("boutique indisponible → catalogue sans produits, jamais d'exception", async () => {
-    server.use(
-      http.get("https://wc.test/wp-json/wc/store/v1/products", () =>
-        HttpResponse.json({}, { status: 500 }),
-      ),
-    );
-    const products = await httpCatalogueSource().listProducts();
-    expect(products).toEqual([]);
   });
 });

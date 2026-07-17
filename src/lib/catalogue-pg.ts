@@ -1,9 +1,13 @@
 import "server-only";
 import config from "@payload-config";
 import { getPayload } from "payload";
-import { getAllStoreProducts } from "./boutique";
 import { payloadBookToRawBook } from "./catalogue-pg-map";
-import type { CatalogueSource, RawBook } from "./catalogue-source";
+import {
+  PUBLIC_BOOKS_READ,
+  publicBooksWhere,
+  type CatalogueSource,
+  type RawBook,
+} from "./catalogue-source";
 import type { EditionSlug } from "./types";
 
 /**
@@ -11,36 +15,33 @@ import type { EditionSlug } from "./types";
  * back-office Payload via la Local API, connexion **poolée** (`DATABASE_URL`,
  * implicite : `payload.config.ts` ne configure que celle-ci) indispensable au
  * build SSG qui pré-rend ~295 fiches en parallèle sans épuiser les connexions
- * Neon. Sélectionné par `CATALOGUE_SOURCE=pg` (`catalogue.ts`) ; `listProducts`
- * délègue, inchangé, à `boutique.ts` (Woo reste la source de vérité des
- * ventes tant que `COMMERCE_NATIVE=0`, quel que soit `CATALOGUE_SOURCE` — le
- * flag qui gouverne les VENTES est distinct de celui qui gouverne le
- * contenu du catalogue, plan §4 étape 2c). L'ANGLE MORT n°2 du plan (des
- * `permalink` d'achat qui resteraient WooCommerce après le passage au
- * commerce natif) est refermé par `listBoutiqueOnlyBooks`/
+ * Neon. Sélectionné par `CATALOGUE_SOURCE=pg` (`catalogue.ts`). Ce port ne
+ * porte plus les produits boutique : la façade (`catalogue.ts`) appelle
+ * directement `getAllStoreProducts()` (`boutique.ts`, Woo reste la source de
+ * vérité des ventes tant que `COMMERCE_NATIVE=0`, quel que soit
+ * `CATALOGUE_SOURCE` — le flag qui gouverne les VENTES est distinct de celui
+ * qui gouverne le contenu du catalogue, plan §4 étape 2c). L'ANGLE MORT n°2
+ * du plan (des `permalink` d'achat qui resteraient WooCommerce après le
+ * passage au commerce natif) est refermé par `listBoutiqueOnlyBooks`/
  * `getBoutiqueOnlyBook` ci-dessous : à `COMMERCE_NATIVE=1`, `catalogue.ts`
- * n'appelle plus `listProducts()` du tout — il compose directement
+ * n'appelle plus `getAllStoreProducts()` du tout — il compose directement
  * `listBooks`/`getBook` (contenu, quelle que soit sa source) avec ces deux
  * fonctions (ventes, Payload uniquement) via `buildNativeCatalogue`/
  * `buildNativeBookDetail` (`catalogue-core.ts`).
  *
  * `getPayload({ config })` est mémoïsé par Payload lui-même (singleton par
- * process) — pas besoin d'un `cache()` React ici en plus de celui déjà posé
- * sur `getAllStoreProducts`.
+ * process) — pas besoin d'un `cache()` React ici.
  */
 
 async function listBooks(edition: EditionSlug): Promise<RawBook[]> {
   const payload = await getPayload({ config });
   const { docs } = await payload.find({
     collection: "books",
-    where: { edition: { equals: edition } },
-    draft: false,
-    // Sans utilisateur (lecture front public), la policy `read` de `Books.ts`
-    // ne laisse passer que `_status: 'published'` — `draft: false` choisit
-    // seulement la branche de requête (pas de `queryDrafts()`), il ne filtre
-    // PAS par statut à lui seul : `overrideAccess: false` est indispensable
-    // pour ne jamais servir un brouillon au public (cf. finding sécurité E4).
-    overrideAccess: false,
+    where: publicBooksWhere(edition),
+    // Contrat anti-brouillon (cf. finding sécurité E4), défini une seule fois
+    // dans `catalogue-source.ts:PUBLIC_BOOKS_READ` et partagé avec
+    // `compare-sources.ts` — jamais un brouillon servi au public.
+    ...PUBLIC_BOOKS_READ,
     depth: 2,
     // Clé de tri du port : `sortDate` (non-nul, cf. `Books.ts`) — jamais
     // `wpSource.wpDate`, qui placerait en tête les fiches nées dans Payload
@@ -57,11 +58,10 @@ async function getBook(edition: EditionSlug, slug: string): Promise<RawBook | nu
   const payload = await getPayload({ config });
   const { docs } = await payload.find({
     collection: "books",
-    where: { edition: { equals: edition }, slug: { equals: slug } },
-    draft: false,
+    where: { ...publicBooksWhere(edition), slug: { equals: slug } },
     // cf. `listBooks` : sans ça, une fiche jamais publiée serait servie (et
     // pré-générée en page statique via `generateStaticParams`).
-    overrideAccess: false,
+    ...PUBLIC_BOOKS_READ,
     depth: 2,
     limit: 1,
   });
@@ -73,7 +73,6 @@ export function pgCatalogueSource(): CatalogueSource {
   return {
     listBooks,
     getBook,
-    listProducts: () => getAllStoreProducts(),
   };
 }
 
@@ -90,9 +89,8 @@ export async function listBoutiqueOnlyBooks(): Promise<RawBook[]> {
   const { docs } = await payload.find({
     collection: "books",
     where: { origin: { equals: "boutique" } },
-    draft: false,
     // cf. `listBooks` : ne sert jamais un brouillon au public.
-    overrideAccess: false,
+    ...PUBLIC_BOOKS_READ,
     depth: 2,
     sort: "-sortDate",
     limit: 0,
@@ -106,8 +104,7 @@ export async function getBoutiqueOnlyBook(slug: string): Promise<RawBook | null>
   const { docs } = await payload.find({
     collection: "books",
     where: { origin: { equals: "boutique" }, slug: { equals: slug } },
-    draft: false,
-    overrideAccess: false,
+    ...PUBLIC_BOOKS_READ,
     depth: 2,
     limit: 1,
   });

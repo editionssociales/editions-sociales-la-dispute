@@ -42,7 +42,6 @@ vi.mock("./catalogue-http", () => ({
       return Array.from({ length: count }, (_, i) => rawBook(offset + i));
     },
     getBook: async () => null,
-    listProducts: async () => [],
   }),
 }));
 
@@ -54,6 +53,13 @@ vi.mock("./catalogue-pg", () => ({
   },
   listBoutiqueOnlyBooks: async () => [],
   getBoutiqueOnlyBook: async () => null,
+}));
+
+// Les produits boutique ne transitent plus par le port (S1) : `catalogue.ts`
+// appelle `getAllStoreProducts()` directement, à substituer ici comme les
+// sources http/pg (pas de réseau réel dans ce test de câblage).
+vi.mock("./boutique", () => ({
+  getAllStoreProducts: async () => [],
 }));
 
 const { getAllBooks } = await import("./catalogue");

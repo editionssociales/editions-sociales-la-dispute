@@ -4,8 +4,8 @@ import type { Cover, EditionSlug, Term } from "./types";
  * Port du catalogue + formes brutes neutres.
  *
  * Ce module ne fait **pas** d'I/O : il décrit l'interface `CatalogueSource`
- * (livres bruts des deux fonds + produits boutique) et les shapes que le port
- * transporte. La forme livre (`RawBook`) est **neutre** : chaque adaptateur —
+ * (livres bruts des deux fonds) et les shapes que le port transporte. La
+ * forme livre (`RawBook`) est **neutre** : chaque adaptateur —
  * http (`catalogue-http.ts` via `catalogue-wp-map.ts`), pg
  * (`catalogue-pg.ts` via `catalogue-pg-map.ts`), mémoire (tests, ci-dessous)
  * — a déjà absorbé son dialecte (entités WP, chaînes ACF sales, enveloppe
@@ -88,29 +88,79 @@ export function priceOf(p: WcProduct): number | null {
   return Number.isFinite(raw) ? raw / 10 ** minor : null;
 }
 
-/** Extrait le slug produit d'un lien boutique ACF (`…/produit/<slug>/`). */
+/**
+ * Extrait le slug produit d'un lien boutique ACF (`…/produit/<slug>/`).
+ * Décode l'URL (slug encodé) et le motif s'arrête sur `?`/`#` : un lien
+ * boutique malformé (query string, fragment) ne produit plus un slug pollué
+ * — version durcie, désormais la seule (reprise de la version défensive que
+ * `scripts/migrate-catalogue/sql-oracle.ts` recopiait localement).
+ */
 export function slugFromBoutiqueLink(link: string | null): string | null {
   if (!link) return null;
-  const m = /\/produit\/([^/]+)\/?/.exec(link);
+  let decoded = link;
+  try {
+    decoded = decodeURIComponent(link);
+  } catch {
+    // URL déjà décodée ou séquence invalide : on retente sur le brut.
+  }
+  const m = /\/produit\/([^/?#]+)\/?/.exec(decoded);
   return m?.[1] ?? null;
 }
 
-/* -------- Le port -------- */
+/* -------- Where « books lisibles publiquement » (pg) --------
+ *
+ * Seule concession Payload de ce module autrement neutre (http/pg/mémoire) :
+ * la forme du `where` par fonds, partagée entre l'adaptateur pg
+ * (`catalogue-pg.ts:listBooks`/`getBook`) et la preuve de parité
+ * (`scripts/compare-sources.ts:pgBooksForEdition`) — les deux lectures qui
+ * doivent voir EXACTEMENT le même sous-ensemble de la collection `books`.
+ * Ce constructeur ne fixe que le filtre `edition` ; le filtre de statut
+ * (« publié ») n'est pas dans le `where` lui-même mais vient de la policy
+ * `read` de `Books.ts` (`_status: { equals: 'published' }` pour un visiteur
+ * anonyme), appliquée dès lors que l'appelant pose `overrideAccess: false` —
+ * omis (donc `true` par défaut côté Local API), la policy ne joue plus et des
+ * brouillons fuitent (c'était le bug de `compare-sources.ts` avant ce
+ * changement : sa preuve de parité « 0 diff bloquant » laissait passer des
+ * fiches jamais publiées).
+ */
+
+/** Forme du `where` « livres d'un fonds lisibles publiquement » (Payload) — cf. note ci-dessus. */
+export function publicBooksWhere(edition: EditionSlug): { edition: { equals: EditionSlug } } {
+  return { edition: { equals: edition } };
+}
+
+/**
+ * Options de lecture « publique » de la collection `books` — l'autre moitié,
+ * indissociable, du contrat anti-brouillon : `draft: false` ne fait que
+ * choisir la branche de requête (pas de `queryDrafts()`), c'est
+ * `overrideAccess: false` qui fait jouer la policy `read` de `Books.ts`
+ * (`_status: 'published'` pour un anonyme). Défini UNE fois ici, étalé dans
+ * chaque `payload.find` public (`catalogue-pg.ts`, `compare-sources.ts`) —
+ * verrouillé par `catalogue-pg.test.ts`.
+ */
+export const PUBLIC_BOOKS_READ = { draft: false, overrideAccess: false } as const;
+
+/* -------- Le port --------
+ *
+ * Ne transporte plus les produits boutique : l'axe vente legacy (Store API
+ * WooCommerce) vit entièrement dans `boutique.ts` (`getAllStoreProducts`),
+ * appelé directement par la façade (`catalogue.ts`) — un port à adaptateur
+ * unique (http et pg délèguent tous deux, à l'identique, à la même fonction)
+ * n'ajoutait pas de profondeur. Supprimable à la clôture (plan/07 étape 7),
+ * avec le reste de l'axe Woo.
+ */
 
 export interface CatalogueSource {
   /** Toutes les fiches livre brutes d'un fonds (résilient : liste partielle si une page échoue). */
   listBooks(edition: EditionSlug): Promise<RawBook[]>;
   /** Fiche brute d'un livre (avec `presentationHtml`), ou `null` si absente. */
   getBook(edition: EditionSlug, slug: string): Promise<RawBook | null>;
-  /** Tous les produits boutique bruts. */
-  listProducts(): Promise<WcProduct[]>;
 }
 
 /* -------- Adaptateur en mémoire (tests) -------- */
 
 export interface CatalogueFixture {
   books: Partial<Record<EditionSlug, RawBook[]>>;
-  products?: WcProduct[];
 }
 
 /**
@@ -125,9 +175,6 @@ export function inMemoryCatalogueSource(fixture: CatalogueFixture): CatalogueSou
     },
     async getBook(edition, slug) {
       return (fixture.books[edition] ?? []).find((b) => b.slug === slug) ?? null;
-    },
-    async listProducts() {
-      return fixture.products ?? [];
     },
   };
 }

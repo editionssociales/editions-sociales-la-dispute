@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { getAllStoreProducts } from "./boutique";
 import { buildCatalogueView, type CatalogueView } from "./browse";
 import { httpCatalogueSource } from "./catalogue-http";
 import { assertCatalogueComplete } from "./catalogue-integrity";
@@ -28,9 +29,11 @@ export type { CatalogueView } from "./browse";
  *
  * `COMMERCE_NATIVE` (plan §4 étape 11) gouverne, INDÉPENDAMMENT de
  * `CATALOGUE_SOURCE`, d'où viennent les données de VENTE (prix TTC, stock,
- * sellable) : à `0` (défaut), la Store API WooCommerce, quel que soit le
- * contenu (`CATALOGUE_SOURCE`) ; à `1`, Payload — plus aucun appel Store API,
- * `source.listProducts()` n'est même plus invoqué. C'est aussi ce flag qui
+ * sellable) : à `0` (défaut), la Store API WooCommerce (`getAllStoreProducts`,
+ * `boutique.ts`, appelée directement — les produits boutique ne transitent
+ * plus par le port `CatalogueSource`), quel que soit le contenu
+ * (`CATALOGUE_SOURCE`) ; à `1`, Payload — plus aucun appel Store API,
+ * `getAllStoreProducts()` n'est même plus invoqué. C'est aussi ce flag qui
  * fait apparaître les articles boutique-seuls (`listBoutiqueOnlyBooks`,
  * `/boutique`, plan §4 étape 7) : à `0` ils restent des extras dérivés des
  * produits Woo non réclamés (`buildCatalogue`, inchangé).
@@ -53,7 +56,7 @@ export const getAllBooks = cache(async (): Promise<Book[]> => {
     source.listBooks("la-dispute"),
     // Plus aucun appel Store API à `COMMERCE_NATIVE=1` : `buildCatalogueForFlag`
     // ignore `products` dans ce cas, mais on évite même l'aller-retour réseau.
-    nativeCommerce ? Promise.resolve([]) : source.listProducts(),
+    nativeCommerce ? Promise.resolve([]) : getAllStoreProducts(),
     nativeCommerce ? listBoutiqueOnlyBooks() : Promise.resolve([]),
   ]);
   // Garde-fou DEVOPS.md §5 : jamais construire (ni donc mettre en cache ISR)
@@ -101,7 +104,7 @@ export const getBook = cache(
     if (isCommerceNative()) {
       return buildNativeBookDetail(edition, raw, `/catalogue/${edition}/${slug}`);
     }
-    const products = await source.listProducts();
+    const products = await getAllStoreProducts();
     return buildBookDetail(edition, raw, products);
   },
 );

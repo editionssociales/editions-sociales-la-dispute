@@ -29,6 +29,13 @@
  * Local API Payload) et on importe seulement la partie **pure** de la couche
  * data (`catalogue-core.ts`, `catalogue-source.ts`, `catalogue-pg-map.ts`,
  * `types.ts`), qui n'a jamais ce marqueur.
+ *
+ * `pgBooksForEdition` pose désormais **`overrideAccess: false` explicite**
+ * (comme `catalogue-pg.ts:listBooks`, dont elle reprend la forme du `where`
+ * via `publicBooksWhere`, `catalogue-source.ts`) : omis, `overrideAccess`
+ * vaut `true` par défaut en Local API, ce qui contournait la policy `read`
+ * de `Books.ts` et laissait des brouillons entrer dans la preuve de parité
+ * « 0 diff bloquant » du runbook (plan/03-catalogue.md:301).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -44,7 +51,13 @@ import {
   queryBooks,
 } from "../src/lib/catalogue-core.ts";
 import { payloadBookToRawBook } from "../src/lib/catalogue-pg-map.ts";
-import { slugFromBoutiqueLink, type RawBook, type WcProduct } from "../src/lib/catalogue-source.ts";
+import {
+  PUBLIC_BOOKS_READ,
+  publicBooksWhere,
+  slugFromBoutiqueLink,
+  type RawBook,
+  type WcProduct,
+} from "../src/lib/catalogue-source.ts";
 import { wpBookToRawBook } from "../src/lib/catalogue-wp-map.ts";
 import { fetchAllPages } from "../src/lib/fetch-all-pages.ts";
 import type { Book, BookDetail, EditionSlug, Facet } from "../src/lib/types.ts";
@@ -120,9 +133,10 @@ function parseCliOptions(argv: string[]): CliOptions {
  * `src/lib/boutique.ts` reste inimportable ici (`import "server-only"`), mais
  * la politique de pagination résiliente est désormais LA même module pur
  * (`src/lib/fetch-all-pages.ts`) — seul le transport (fetchWithRetry, sans
- * cache Next) reste propre à ce script. `listProducts()` est *identique* pour
- * les deux adaptateurs (`catalogue-pg.ts:58` délègue, inchangé, à
- * `getAllStoreProducts`) : un seul fetch, réutilisé des deux côtés — comparer
+ * cache Next) reste propre à ce script. Les produits boutique ne transitent
+ * plus par le port `CatalogueSource` (S1) : `getAllStoreProducts()` est la
+ * SEULE fonction qui les lit, appelée telle quelle par les deux adaptateurs
+ * (`catalogue.ts`) — un seul fetch ici, réutilisé des deux côtés : comparer
  * une liste à elle-même n'aurait rien appris.
  */
 
@@ -155,12 +169,21 @@ async function fetchStoreProducts(logger: Logger): Promise<WcProduct[]> {
 
 /* ─────────────────────────── Payload (lecture seule) ─────────────────────────── */
 
-/** Toutes les fiches publiées d'un fonds, avec leur doc brut (pour `wpSource`/`contentTouched`). */
+/**
+ * Toutes les fiches publiées d'un fonds, avec leur doc brut (pour
+ * `wpSource`/`contentTouched`) — même `where` que l'adaptateur pg
+ * (`publicBooksWhere`, `catalogue-source.ts`) et **`overrideAccess: false`
+ * explicite** : en Local API, `overrideAccess` vaut `true` par défaut quand
+ * il est omis, ce qui contournait la policy `read` de `Books.ts` et laissait
+ * des brouillons entrer dans la preuve de parité « 0 diff bloquant » du
+ * runbook (plan/03-catalogue.md:301) — corrigé ici, à l'identique de
+ * `catalogue-pg.ts:listBooks`.
+ */
 async function pgBooksForEdition(payload: Payload, edition: EditionSlug): Promise<PayloadBook[]> {
   const { docs } = await payload.find({
     collection: "books",
-    where: { edition: { equals: edition } },
-    draft: false,
+    where: publicBooksWhere(edition),
+    ...PUBLIC_BOOKS_READ,
     depth: 2,
     sort: "-sortDate",
     limit: 0,
@@ -535,10 +558,11 @@ async function main(): Promise<number> {
 
   const payload = await getPayload({ config });
   try {
-    // Boutique unique (E4 : `listProducts` identique des deux côtés) — un
-    // seul fetch, servi tel quel aux deux adaptateurs pour que `status` /
-    // `permalink` / `price` se résolvent réellement (pas juste symétriquement
-    // à vide) et que le mapping du lien boutique (`buy.boutique`) soit vérifié.
+    // Boutique unique (E4 : `getAllStoreProducts` identique des deux côtés,
+    // hors du port depuis S1) — un seul fetch, servi tel quel aux deux
+    // adaptateurs pour que `status` / `permalink` / `price` se résolvent
+    // réellement (pas juste symétriquement à vide) et que le mapping du lien
+    // boutique (`buy.boutique`) soit vérifié.
     const products = await fetchStoreProducts(logger);
 
     const diffs: Diff[] = [];

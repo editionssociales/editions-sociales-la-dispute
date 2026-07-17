@@ -22,7 +22,7 @@ Does NOT own : le contenu, la vente et les médias — tous trois côté WordPre
 ## Ubiquitous Language
 
 - **Book** : livre du catalogue unifié (deux fonds + boutique). **maison/edition** : `editions-sociales`|`la-dispute`. **origin** : `catalogue` (WP) | `boutique` (Woo seul). **PurchaseStatus** : `available`|`external`|`upcoming`|`unavailable`.
-- **CatalogueSource** : port de lecture des fonds + produits (`src/lib`). **fusion** : assemblage des deux fonds + boutique en une liste `Book`.
+- **CatalogueSource** : port de lecture des fonds (`src/lib`) — les produits boutique (Store API legacy) sont lus directement via `boutique.ts`, hors du port. **fusion** : assemblage des deux fonds + boutique en une liste `Book`.
 - **parachute `*LegacyHtml`/`contentTouched`** : le HTML WordPress fait foi tant qu'un humain n'a pas réédité la fiche dans Payload.
 - **`COMMERCE_NATIVE`** / **`stockSuivi`** / **routeur** : cf. Local Contracts ci-dessus (interrupteur de vente, origine du stock, distributeur mensuel).
 
