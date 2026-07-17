@@ -1,12 +1,17 @@
 /**
  * Helpers partagés du script de migration catalogue — purs ou à I/O minimale.
  *
- * Recopiés localement plutôt qu'importés depuis `@/lib/format` : le script est
- * lancé par `payload run` (chargeur `tsx` interne à Payload), et on ne veut pas
- * parier sur la résolution de l'alias `@/*` dans ce contexte d'exécution hors
- * Next — la duplication de ~20 lignes est moins risquée qu'un échec silencieux
- * de résolution de module en migration réelle.
+ * `parseWpDate`/`decodeEntities` ne sont plus recopiés ici : le script est
+ * lancé par `payload run` (chargeur `tsx` interne à Payload), où l'alias
+ * `@/*` n'est pas fiable — mais l'import RELATIF, lui, fonctionne (prouvé par
+ * `scripts/compare-sources.ts`, qui importe déjà `src/lib/catalogue-source.ts`
+ * ainsi) : ils sont réimportés depuis la canonique `src/lib/format.ts` et
+ * réexportés ci-dessous, pour ne rien changer aux appelants existants
+ * (`import.ts`, `index.ts`, `migrate-products-core.ts`). Le reste de ce
+ * fichier (clés de maps, réseau, logger, CLI) est propre au script de
+ * migration — rien à canoniser.
  */
+export { decodeEntities, parseWpDate } from "../../src/lib/format.ts";
 
 /** Les deux fonds WordPress source. */
 export type Site = "es" | "ld";
@@ -49,59 +54,7 @@ export function collectionKey(edition: EditionSlug, slug: string): string {
   return `${edition}:${slug}`;
 }
 
-/* ─────────────────────────── Dates ─────────────────────────── */
-
-/**
- * Normalise une date de parution en ISO `YYYY-MM-DD`.
- * Contexte vérifié en prod (09/07) : `date_parution` est `JJ/MM/AAAA` sur les
- * 295 fiches — on tolère aussi `AAAAMMJJ` (ancien format ACF brut) et l'ISO.
- */
-export function parseWpDate(value?: string | null): string | null {
-  if (!value) return null;
-  const v = value.trim();
-  let m = /^(\d{4})(\d{2})(\d{2})$/.exec(v); // AAAAMMJJ
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v); // ISO
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); // JJ/MM/AAAA
-  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
-}
-
 /* ─────────────────────────── Texte ─────────────────────────── */
-
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-  laquo: "«",
-  raquo: "»",
-  hellip: "…",
-  rsquo: "\u2019",
-  lsquo: "\u2018",
-  rdquo: "\u201d",
-  ldquo: "\u201c",
-  ndash: "\u2013",
-  mdash: "\u2014",
-};
-
-/** Décode les entités HTML renvoyées par l'API REST WordPress (titres, etc.). */
-export function decodeEntities(input: string): string {
-  return input.replace(/&(#?[\w]+);/g, (match, entity: string) => {
-    if (entity[0] === "#") {
-      const code =
-        entity[1] === "x" || entity[1] === "X"
-          ? parseInt(entity.slice(2), 16)
-          : parseInt(entity.slice(1), 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
-    }
-    return NAMED_ENTITIES[entity] ?? match;
-  });
-}
 
 /** ISBN pollué d'espaces/tabs (surtout côté LD, espace final) : trim complet. */
 export function trimIsbn(value?: string | null): string | null {

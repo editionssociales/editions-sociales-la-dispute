@@ -6,8 +6,16 @@
  * Le REST (`fetch-wp.ts`) reste la source primaire des données ; cette base
  * n'est jamais écrite, jamais utilisée pour autre chose que vérifier/patcher
  * ponctuellement le champ `plus_loin` côté ES.
+ *
+ * `slugFromBoutiqueLink` est importé (relatif) depuis `src/lib/catalogue-source.ts`
+ * plutôt que recopié : l'alias `@/*` n'est pas fiable sous `payload run`, mais
+ * l'import RELATIF fonctionne — même mécanisme déjà prouvé par
+ * `scripts/compare-sources.ts` (l.47) sous le même `payload run`.
  */
 import mysql from "mysql2/promise";
+
+import { slugFromBoutiqueLink } from "../../src/lib/catalogue-source.ts";
+
 import type { WpCatalogueRaw } from "./fetch-wp.ts";
 import { type Logger, type Site } from "./utils.ts";
 
@@ -87,17 +95,6 @@ function coalesceNullIf(...values: (string | null | undefined)[]): string | null
     if (v != null && v.trim() !== "") return v;
   }
   return null;
-}
-
-function slugFromBoutiqueLink(link: string): string | null {
-  let decoded = link;
-  try {
-    decoded = decodeURIComponent(link);
-  } catch {
-    // URL déjà décodée ou séquence invalide : on retente sur le brut.
-  }
-  const m = /\/produit\/([^/?#]+)\/?/.exec(decoded);
-  return m?.[1] ?? null;
 }
 
 /** Lit la réconciliation `plus_loin`/`pour_aller_plus_loin` + comptages + descriptions de termes pour un site. */

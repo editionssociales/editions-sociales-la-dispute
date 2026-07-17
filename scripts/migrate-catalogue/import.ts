@@ -21,6 +21,9 @@ import { convertHTMLToLexical, editorConfigFactory } from "@payloadcms/richtext-
 // @ts-expect-error -- pas de déclarations de types pour "jsdom"
 import { JSDOM } from "jsdom";
 import type { Payload } from "payload";
+
+import { displayAuthor } from "../../src/lib/format.ts";
+
 import type { WpCatalogueRaw } from "./fetch-wp.ts";
 import type { BookMediaResolution } from "./media.ts";
 import { prepareHtmlForLexical } from "./rewrite-html.ts";
@@ -125,19 +128,11 @@ async function findOne(
 
 /**
  * `Nom / Prénom` (WordPress) → `Prénom Nom` (Payload), conversion faite une
- * seule fois à l'import. Tolérant aux noms sans `/` (`displayAuthor`,
- * `format.ts:38`, recopié ici).
+ * seule fois à l'import — `displayAuthor` (`src/lib/format.ts`), importée en
+ * RELATIF plutôt que recopiée : l'alias `@/*` n'est pas fiable sous
+ * `payload run`, mais l'import relatif fonctionne (précédent :
+ * `scripts/compare-sources.ts`).
  */
-function wpAuthorToDisplayName(raw: string): string {
-  const idx = raw.indexOf("/");
-  if (idx === -1) return raw.trim();
-  const last = raw.slice(0, idx).trim();
-  const first = raw
-    .slice(idx + 1)
-    .replace(/^[\s/]+/, "")
-    .trim();
-  return [first, last].filter(Boolean).join(" ").trim() || raw.trim();
-}
 
 export interface AuthorDivergence {
   slug: string;
@@ -185,7 +180,7 @@ export async function upsertAuthors(
       for (const author of item.book?.authors ?? []) {
         if (!author?.slug || seen.has(author.slug)) continue;
         seen.add(author.slug);
-        const displayName = wpAuthorToDisplayName(author.name);
+        const displayName = displayAuthor(author.name);
 
         const existing = await findOne(payload, "authors", { slug: { equals: author.slug } });
         if (!existing) {
