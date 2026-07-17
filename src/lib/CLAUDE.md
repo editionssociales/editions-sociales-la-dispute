@@ -21,4 +21,4 @@ Unified product model and headless data layer: merges WordPress + WooCommerce/Pa
 
 - New catalogue data: extend `RawBook` and mappers (`catalogue-wp-map` for WP dialects, `catalogue-pg-map` for Payload); never fetch directly outside `catalogue-http`/`boutique`.
 - `catalogue.ts` is the sole app entry point; `browse.ts` wraps pure logic.
-- New rule: pure core in dedicated module, Payload reads in dedicated source (`cart-source`, `checkout-source`) to avoid widening `CommerceInfo` and breaking existing fixtures.
+- New rule: pure core in dedicated module, Payload I/O in dedicated source (`cart-source`, `checkout-source`, `order-source`) to avoid widening `CommerceInfo` and breaking existing fixtures.
