@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Inter, Spectral } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
@@ -82,6 +83,10 @@ export default async function RootLayout({
           </>
         )}
         <SiteFooter footer={footer} />
+        {/* Vercel Web Analytics (plan/06-operations.md, étape 4) — un
+            <script> first-party sans cookie, aucun nœud visible : seule
+            modification de DOM de cette phase, iso-rendu visuel préservé. */}
+        <Analytics />
       </body>
     </html>
   );

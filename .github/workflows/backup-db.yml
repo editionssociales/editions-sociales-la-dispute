@@ -1,0 +1,186 @@
+# Sauvegarde nocturne, chiffrée, hors fournisseur — plan/06-operations.md,
+# jalon S2, étape 6. Étage 2 de la chaîne (l'étage 1 est la restore window
+# native Neon, 7 jours, configurée hors CI). Dump Postgres (`pg_dump`, URL
+# DIRECTE `NEON_DATABASE_URL`, jamais le pooler) → chiffré par PAIRE DE CLÉS
+# age (mode passphrase non scriptable — vérifié upstream, cf. plan) → déposé
+# sur le store Vercel Blob PRIVÉ dédié `es-ld-backups` (région `fra1`, lecture
+# authentifiée uniquement) → purgé par rétention (`scripts/backup-prune.mjs`)
+# → heartbeat Better Stack (succès uniquement).
+#
+# ─────────────────────────────────────────────────────────────────────────
+# PROVISIONING HUMAIN REQUIS (aucun de ces éléments n'existe encore au moment
+# où ce workflow est écrit — cf. plan/06-operations.md, préconditions P7/P8) :
+#
+#   Secrets GitHub Actions (Settings → Secrets and variables → Actions) :
+#     - NEON_DATABASE_URL          URL Postgres DIRECTE/non-poolée de Neon
+#                                   (`DATABASE_URL_UNPOOLED` en local) — JAMAIS
+#                                   l'URL poolée (`-pooler`), pg_dump la refuse
+#                                   mal et ce n'est pas le contrat de connexion
+#                                   prévu pour un outil batch.
+#     - BLOB_BACKUP_RW_TOKEN       Token RW du store Vercel Blob PRIVÉ dédié
+#                                   `es-ld-backups` (`vercel blob create-store
+#                                   es-ld-backups --access private`, région
+#                                   `fra1`) — JAMAIS le token du store médias
+#                                   public de la phase catalogue.
+#     - BETTERSTACK_HEARTBEAT_URL  URL du heartbeat Better Stack (moniteur
+#                                   "sauvegarde manquante", période 24h,
+#                                   grace 6h).
+#
+#   Valeur EN CLAIR à coller ci-dessous (PAS un secret — c'est la clé
+#   PUBLIQUE d'une paire age, elle ne permet que de chiffrer ; la clé privée
+#   — le fichier d'identité — ne doit JAMAIS transiter par la CI ni être
+#   commitée) :
+#     - AGE_PUBLIC_KEY              Générer hors CI : `age-keygen -o
+#                                   backup-identity.txt` — remettre le fichier
+#                                   d'identité à Youri ET au client (gestion-
+#                                   naire de mots de passe de la structure),
+#                                   coller ici la ligne `age1…` affichée par
+#                                   `age-keygen` (ou `cat backup-identity.txt
+#                                   | grep public`).
+#
+# Tant que l'un de ces éléments n'est pas posé, ce workflow échoue
+# immédiatement (premier step) avec un message explicite — jamais de run
+# silencieusement inopérant, jamais de dump non chiffré.
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Hors scope de ce workflow (pour l'instant) : la copie additive des médias
+# (plan étape 6 point 5) — elle s'active à la migration médias de la phase
+# catalogue, qui pose son propre secret de lecture ; rien à faire ici avant
+# cela (cf. plan/06-operations.md, Dépendances).
+
+name: Backup base de données (nocturne, chiffré)
+
+on:
+  schedule:
+    # 03:47 UTC — heure creuse, décalée de l'heure pleine (le cron GitHub
+    # Actions n'est pas garanti à la minute près aux heures rondes, cf. plan
+    # risque R5).
+    - cron: "47 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  # Un seul run de sauvegarde à la fois ; ne jamais annuler un run en cours
+  # (un dump interrompu à mi-upload est pire qu'un run en retard).
+  group: backup-db
+  cancel-in-progress: false
+
+env:
+  NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+  BLOB_BACKUP_RW_TOKEN: ${{ secrets.BLOB_BACKUP_RW_TOKEN }}
+  BETTERSTACK_HEARTBEAT_URL: ${{ secrets.BETTERSTACK_HEARTBEAT_URL }}
+  # Clé PUBLIQUE age — voir le bloc PROVISIONING ci-dessus. Placeholder
+  # volontairement invalide comme clé age (échoue tout de suite, plutôt que
+  # de chiffrer avec une fausse clé que personne ne peut déchiffrer).
+  AGE_PUBLIC_KEY: "age1REPLACE_ME_WITH_REAL_PUBLIC_KEY_SEE_HEADER_OF_THIS_FILE"
+
+jobs:
+  backup:
+    name: pg_dump chiffré → Blob privé
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Premier step, avant tout autre travail : échoue proprement et vite
+      # si le provisioning humain (secrets + clé age) n'est pas complet.
+      - name: Vérifier le provisioning requis
+        run: |
+          missing=()
+          [ -z "$NEON_DATABASE_URL" ] && missing+=("secret NEON_DATABASE_URL")
+          [ -z "$BLOB_BACKUP_RW_TOKEN" ] && missing+=("secret BLOB_BACKUP_RW_TOKEN")
+          [ -z "$BETTERSTACK_HEARTBEAT_URL" ] && missing+=("secret BETTERSTACK_HEARTBEAT_URL")
+          if [ "$AGE_PUBLIC_KEY" = "age1REPLACE_ME_WITH_REAL_PUBLIC_KEY_SEE_HEADER_OF_THIS_FILE" ]; then
+            missing+=("AGE_PUBLIC_KEY (placeholder non remplacé dans .github/workflows/backup-db.yml)")
+          fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Sauvegarde annulée — provisioning manquant : ${missing[*]}. Voir l'en-tête de .github/workflows/backup-db.yml et plan/06-operations.md (P7/P8)."
+            exit 1
+          fi
+          echo "Provisioning complet, poursuite de la sauvegarde."
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # `@vercel/blob` (upload + purge) est déjà dans le repo (devDependency,
+      # `scripts/backup-prune.mjs`) — un `pnpm install` classique suffit,
+      # jamais d'install ad hoc dans ce job.
+      - run: pnpm install --frozen-lockfile
+
+      # Version majeure ALIGNÉE sur le serveur Neon (17) — un pg_dump plus
+      # récent/ancien que le serveur peut être refusé (plan risque R6).
+      - name: Installer postgresql-client-17 + age
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl ca-certificates gnupg lsb-release
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17 age
+
+      - name: pg_dump (URL Neon directe/non-poolée)
+        run: |
+          STAMP="$(date -u +%Y%m%d)"
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          pg_dump --format=custom --no-owner --dbname="$NEON_DATABASE_URL" \
+            --file="catalogue-${STAMP}.dump"
+
+      - name: Chiffrer par clé publique age (paire de clés, jamais de passphrase en CI)
+        run: |
+          age -r "$AGE_PUBLIC_KEY" -o "catalogue-${STAMP}.dump.age" "catalogue-${STAMP}.dump"
+          # Le clair ne doit pas traîner plus longtemps que nécessaire, même
+          # sur ce runner éphémère (défense en profondeur).
+          rm -f "catalogue-${STAMP}.dump"
+
+      # Upload direct en Node (le SDK `@vercel/blob` — pas de CLI dédiée) :
+      # dépose `backups/daily/catalogue-<STAMP>.dump.age`, et, le 1er du
+      # mois, une copie supplémentaire sous `backups/monthly/…` (même
+      # contenu, deux clés — retenues séparément par `backup-prune.mjs`).
+      # Chemins datés déterministes : acceptable ici, le store est PRIVÉ
+      # (lecture authentifiée uniquement) — cf. plan risque R4.
+      - name: Upload sur le store Blob privé (fra1)
+        run: |
+          cat > "$GITHUB_WORKSPACE/.backup-upload.mjs" <<'NODE'
+          import { readFileSync } from "node:fs";
+          import { put } from "@vercel/blob";
+
+          const stamp = process.env.STAMP;
+          const token = process.env.BLOB_BACKUP_RW_TOKEN;
+          const file = readFileSync(`catalogue-${stamp}.dump.age`);
+
+          async function upload(pathname) {
+            await put(pathname, file, {
+              access: "private",
+              token,
+              addRandomSuffix: false,
+              allowOverwrite: true, // ré-exécution manuelle (recette) le même jour = ré-écrit, ne duplique pas
+              contentType: "application/octet-stream",
+            });
+            console.log(`[backup] déposé : ${pathname}`);
+          }
+
+          await upload(`backups/daily/catalogue-${stamp}.dump.age`);
+          if (stamp.slice(6, 8) === "01") {
+            await upload(`backups/monthly/catalogue-${stamp}.dump.age`);
+          }
+          NODE
+          node "$GITHUB_WORKSPACE/.backup-upload.mjs"
+          rm -f "$GITHUB_WORKSPACE/.backup-upload.mjs" "catalogue-${STAMP}.dump.age"
+
+      - name: Purger la rétention (30 quotidiens + 12 mensuels)
+        run: node scripts/backup-prune.mjs
+
+      # Dernier step, SUCCÈS UNIQUEMENT (comportement par défaut de GitHub
+      # Actions : un step précédent en échec saute celui-ci) — c'est ce qui
+      # rend la promesse « une sauvegarde chaque nuit » vérifiable plutôt que
+      # déclarative (plan, Recette #6).
+      - name: Heartbeat Better Stack
+        run: curl -fsS "$BETTERSTACK_HEARTBEAT_URL"

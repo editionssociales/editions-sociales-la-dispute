@@ -22,6 +22,7 @@
     "vercel-build": "if [ \"$VERCEL_ENV\" = \"production\" ] && [ -n \"${DATABASE_URL_UNPOOLED:-$DATABASE_URL}\" ]; then pnpm migrate:prod && if [ -n \"$PAYLOAD_SEED_ADMIN_PASSWORD\" ]; then pnpm seed:users; fi; else echo \"[vercel-build] migrations/seed sautés : base non configurée ou environnement non-production\"; fi && next build",
     "migrate:catalogue": "payload run scripts/migrate-catalogue/index.ts",
     "migrate:products": "payload run scripts/migrate-products.ts",
+    "build:product-redirects": "payload run scripts/build-product-redirects.ts",
     "seed:users": "payload run scripts/seed-users.ts"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "@payloadcms/storage-vercel-blob": "3.79.1",
     "@payloadcms/translations": "3.79.1",
     "@sentry/nextjs": "^10.65.0",
+    "@vercel/analytics": "^2.0.1",
     "graphql": "16.12.0",
     "next": "16.2.9",
     "payload": "3.79.1",
@@ -49,6 +51,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
+    "@vercel/blob": "^2.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "jsdom": "^29.1.1",
