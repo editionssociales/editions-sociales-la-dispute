@@ -2,37 +2,19 @@
 
 ## Purpose
 
-Mu-plugin (`es-headless-rest.php`) qui réexpose en lecture le CPT `catalogue`
-sur l'API REST des deux WordPress sources (`www/`, `LaDispute/`). Fichier
-versionné = source de vérité du contrat ; à redéployer manuellement dans
-`wp-content/mu-plugins/` de chaque install s'il en disparaît.
+Mu-plugins du découplage WordPress–Payload pour le CPT catalogue, versionnés ici, à redéployer manuellement en `wp-content/mu-plugins/` des deux installs WordPress si absent.
 
 ## Ownership
 
-- **Owns** : la réexposition REST de `catalogue` (visibilité des taxonomies,
-  champ consolidé `book`).
-- **Does NOT own** : le front (`src`) ; la boutique (Store API WooCommerce
-  native, aucun plugin requis côté WP).
+- **Owns** : réexposition REST du catalogue avec taxonomies ; noindex des hosts de découplage ; gel des capacités d'écriture catalogue post-SWAP.
+- **Does NOT own** : le front (`src`) ; la boutique (Store API WooCommerce).
 
 ## Local Contracts
 
-- Additif et non destructif : n'altère jamais le rendu WordPress existant.
-- Rend visibles en REST les taxonomies `auteur`, `collection`, `parution` —
-  seules `auteur` et `collection` sont repliées dans `book` (`collection`
-  n'expose que le **premier** terme, même si plusieurs sont assignés).
-- Champ `book` par fiche : `isbn`, `prix`, `pages`, `date_parution`,
-  `plus_loin`, `table` (URL fichier), `extrait` (URL fichier), `boutique`,
-  `parislibrairies`, `lalibrairie`, `authors` (`{name, slug}[]`), `collection`
-  (`{name, slug}` ou `null`), `cover` (`{url, width, height}` à la taille
-  `large`, ou `null`).
-- Repli sans ACF : lecture de la meta brute du même nom si `get_field`
-  n'existe pas.
-- Le front ne lit du CPT que `id,slug,title,book` (liste) /
-  `...,content,book` (fiche) — tout champ dont le front a besoin doit vivre
-  dans `book` (cf. `src/lib/catalogue-http.ts`).
+- Non destructif : n'altère jamais le rendu WordPress.
+- Expose en REST les taxonomies `auteur`, `collection`, `parution` ; consolide la métadonnée catalogue en champ `book` (schéma in code, cf. `es-headless-rest.php`).
+- `es-freeze-catalogue.php` gèle l'écriture (capabilities) post-SWAP `CATALOGUE_SOURCE=pg` — ne déposer qu'avec accord du client, après SWAP ; retrait = dégel sans perte de données.
 
 ## Verification
 
-Après (re)déploiement, vérifier `GET /wp-json/wp/v2/catalogue?_fields=book`
-sur les deux installs : la forme doit rester compatible avec
-`WpBookField`/`WpCoverField` (`src/lib/catalogue-source.ts`).
+`GET /wp-json/wp/v2/catalogue?_fields=book` doit rester compatible post-déploiement. Après `es-freeze-catalogue.php` : plus aucune capacité d'écriture catalogue (menu wp-admin disparaît). Lecture publique et REST inchangées.

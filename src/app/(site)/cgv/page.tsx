@@ -5,6 +5,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { Eyebrow } from "@/components/eyebrow";
 import { LegalCmsBody, LegalSection, LEGAL_BODY, LEGAL_LINK } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
+import { isCommerceNative } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: "Conditions générales & conditions de don",
@@ -16,8 +17,11 @@ export const metadata: Metadata = {
 export default async function CgvPage() {
   // Global `pages-legales` (spec « éditeur de contenus ») : onglet rempli =
   // tout le corps (chapeau compris) vient du back-office ; onglet vide = le
-  // JSX ci-dessous, strictement iso au rendu d'avant le chantier.
+  // JSX ci-dessous, conditionné par `COMMERCE_NATIVE` (repli WordPress/Woo à
+  // `0`, section vente structurée à `1` — plan/02-mise-en-production.md
+  // §Recette point 6). Le global reste prioritaire dans les deux cas.
   const { cgv } = await getPagesLegales();
+  const native = isCommerceNative();
   return (
     <>
       <Container className="bg-white pb-16 pt-10 sm:pb-20 sm:pt-14">
@@ -37,9 +41,9 @@ export default async function CgvPage() {
             </h1>
             {!cgv && (
               <p className={LEGAL_BODY}>
-                Ce site ne propose pas encore de vente en ligne native : il
-                relaie les dons de la campagne en cours et renvoie vers la
-                boutique existante pour tout achat.
+                {native
+                  ? "Ce site propose la vente en ligne de nos livres, ainsi que les dons de la campagne en cours."
+                  : "Ce site ne propose pas encore de vente en ligne native : il relaie les dons de la campagne en cours et renvoie vers la boutique existante pour tout achat."}
               </p>
             )}
           </div>
@@ -77,30 +81,79 @@ export default async function CgvPage() {
 
           {/* Vente */}
           <LegalSection title="Conditions de vente">
-            <p className={LEGAL_BODY}>
-              La vente en ligne de nos livres est opérée sur la boutique{" "}
-              <a
-                href="https://boutique.editionssociales.fr"
-                className={LEGAL_LINK}
-                target="_blank"
-                rel="noreferrer"
-              >
-                boutique.editionssociales.fr
-              </a>
-              , dont les conditions générales de vente propres s&apos;appliquent
-              à toute commande.
-            </p>
-            <p className={LEGAL_BODY}>
-              Pour mémoire : les prix affichés sont TTC, la TVA applicable au
-              livre est de 5,5 %, et le prix du livre est unique en France
-              (loi n° 81-766 du 10 août 1981).
-            </p>
-            <p className={LEGAL_BODY}>
-              Les conditions générales de vente complètes (droit de
-              rétractation, médiateur de la consommation, livraison) seront
-              publiées lorsque la vente en ligne sera opérée directement sur
-              ce site.
-            </p>
+            {native ? (
+              <>
+                <p className={LEGAL_BODY}>
+                  La vente en ligne de nos livres est opérée directement sur
+                  ce site. Les prix affichés sont TTC, la TVA applicable au
+                  livre est de 5,5 %, et le prix du livre est unique en
+                  France (loi n° 81-766 du 10 août 1981).
+                </p>
+                <p className={LEGAL_BODY}>
+                  <span className="font-bold">Commande et paiement.</span> Le
+                  paiement s&apos;effectue en ligne par carte bancaire via
+                  Stripe, prestataire de paiement sécurisé. La commande
+                  n&apos;est considérée comme définitive qu&apos;à réception
+                  de la confirmation de paiement, qui fait office d&apos;accusé
+                  de réception envoyé par email.
+                </p>
+                <p className={LEGAL_BODY}>
+                  <span className="font-bold">Droit de rétractation.</span>{" "}
+                  Conformément aux articles L. 221-18 et suivants du code de
+                  la consommation, vous disposez d&apos;un délai de 14 jours
+                  à compter de la réception de votre commande pour exercer
+                  votre droit de rétractation, sans avoir à justifier de
+                  motifs ni à payer de pénalités autres que les frais de
+                  retour. [À COMPLÉTER : modalités pratiques d&apos;exercice
+                  du droit de rétractation — formulaire type, adresse de
+                  retour, prise en charge des frais de retour].
+                </p>
+                <p className={LEGAL_BODY}>
+                  <span className="font-bold">Livraison.</span> Les
+                  commandes sont expédiées en France métropolitaine, en
+                  Belgique et en Suisse ; les frais de port sont calculés
+                  selon le montant du panier et affichés avant paiement.
+                  [À COMPLÉTER : transporteur(s) retenu(s) et délais de
+                  livraison indicatifs].
+                </p>
+                <p className={LEGAL_BODY}>
+                  <span className="font-bold">Médiation de la consommation.</span>{" "}
+                  Conformément aux articles L. 616-1 et R. 616-1 du code de
+                  la consommation, tout consommateur a le droit de recourir
+                  gratuitement à un médiateur de la consommation en vue de
+                  la résolution amiable d&apos;un litige. Le médiateur
+                  compétent est [À COMPLÉTER : nom, adresse postale et site
+                  du médiateur de la consommation].
+                </p>
+              </>
+            ) : (
+              <>
+                <p className={LEGAL_BODY}>
+                  La vente en ligne de nos livres est opérée sur la boutique{" "}
+                  <a
+                    href="https://boutique.editionssociales.fr"
+                    className={LEGAL_LINK}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    boutique.editionssociales.fr
+                  </a>
+                  , dont les conditions générales de vente propres
+                  s&apos;appliquent à toute commande.
+                </p>
+                <p className={LEGAL_BODY}>
+                  Pour mémoire : les prix affichés sont TTC, la TVA applicable
+                  au livre est de 5,5 %, et le prix du livre est unique en
+                  France (loi n° 81-766 du 10 août 1981).
+                </p>
+                <p className={LEGAL_BODY}>
+                  Les conditions générales de vente complètes (droit de
+                  rétractation, médiateur de la consommation, livraison)
+                  seront publiées lorsque la vente en ligne sera opérée
+                  directement sur ce site.
+                </p>
+              </>
+            )}
           </LegalSection>
         </>
       )}
