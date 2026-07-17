@@ -10,6 +10,7 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import { checkCollectionEditionMatch, resolveCollectionEditionLookup } from '../lib/books-core.ts'
 import { importStockHandler } from '../lib/stock-import.ts'
 
 /**
@@ -35,6 +36,10 @@ const setContentTouched: CollectionBeforeChangeHook = ({ data, req, operation })
  * collection éditoriale ne peut pas afficher une maison différente de celle
  * de la collection. Neutralisé pendant l'import (le script de migration a
  * déjà réconcilié collections/éditions en amont — cf. plan, section migration).
+ *
+ * Règle pure (fusion `data`/`originalDoc`, formes de relation, comparaison)
+ * dans `../lib/books-core.ts` — ce hook reste un adapter mince : `findByID`
+ * (I/O) et traduction en `ValidationError` restent ici.
  */
 const ensureCollectionEditionMatches: CollectionBeforeChangeHook = async ({
   data,
@@ -44,40 +49,25 @@ const ensureCollectionEditionMatches: CollectionBeforeChangeHook = async ({
   if (req.context?.migration) {
     return data
   }
-  // Les données entrantes ne sont pas fusionnées avec le document existant :
-  // un update partiel (bulk-edit) ne portant que `collection` OU `edition`
-  // contournerait la contrainte — on complète chaque moitié manquante depuis
-  // `originalDoc`.
-  const effective = {
-    collection: data?.collection ?? originalDoc?.collection,
-    edition: data?.edition ?? originalDoc?.edition,
+
+  const lookup = resolveCollectionEditionLookup(data, originalDoc)
+  if (!lookup) {
+    return data
   }
-  if (effective.collection && effective.edition) {
-    const collectionId =
-      typeof effective.collection === 'object' && effective.collection !== null
-        ? (effective.collection as { id?: number | string }).id
-        : effective.collection
 
-    if (collectionId) {
-      const relatedCollection = await req.payload.findByID({
-        collection: 'collections',
-        id: collectionId,
-        req,
-        depth: 0,
-      })
+  const relatedCollection = await req.payload.findByID({
+    collection: 'collections',
+    id: lookup.collectionId,
+    req,
+    depth: 0,
+  })
 
-      if (relatedCollection?.edition && relatedCollection.edition !== effective.edition) {
-        throw new ValidationError({
-          errors: [
-            {
-              path: 'collection',
-              message: `Cette collection appartient à la maison « ${String(relatedCollection.edition)} », incompatible avec la maison « ${String(effective.edition)} » choisie pour ce livre.`,
-            },
-          ],
-          req,
-        })
-      }
-    }
+  const verdict = checkCollectionEditionMatch(lookup.bookEdition, relatedCollection?.edition)
+  if (!verdict.ok) {
+    throw new ValidationError({
+      errors: [{ path: 'collection', message: verdict.message }],
+      req,
+    })
   }
   return data
 }
