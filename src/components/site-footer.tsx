@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
+import { NewsletterForm } from "@/components/newsletter-form";
 import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
 /**
@@ -53,6 +54,11 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
               Souscription
             </Link>
           </li>
+          <li>
+            <Link href="/contact" className={LINK_CLASS}>
+              Contact
+            </Link>
+          </li>
         </ul>
       </nav>
     </div>
@@ -89,29 +95,7 @@ function NewsletterCell({ className = "" }: { className?: string }) {
         Parutions, rencontres et souscriptions : l&apos;essentiel, une fois
         par mois.
       </p>
-      <form
-        action="#"
-        method="get"
-        className="mt-1 flex border-2 border-black"
-      >
-        <label htmlFor="footer-newsletter-email" className="sr-only">
-          Adresse e-mail
-        </label>
-        <input
-          id="footer-newsletter-email"
-          name="email"
-          type="email"
-          required
-          placeholder="vous@exemple.fr"
-          className="min-w-0 flex-1 bg-white px-3 py-2 text-sm text-black placeholder:text-black/40 focus-visible:outline-none"
-        />
-        <button
-          type="submit"
-          className="shrink-0 border-l-2 border-black bg-black px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
-        >
-          S&apos;abonner
-        </button>
-      </form>
+      <NewsletterForm />
     </div>
   );
 }

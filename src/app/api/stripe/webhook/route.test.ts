@@ -9,10 +9,12 @@ import Stripe from "stripe";
  *
  * Côté commerce (`kind: "order"`, plan §4 étape 9) : `payload`/`@payload-config`
  * substitués par un magasin en mémoire (comme `panier/actions.test.ts`) —
- * `@/lib/checkout-source` (titre/ISBN/stock) et `@/lib/order-mail` (email, LOG
- * uniquement) sont mockés en bloc, déjà couverts ailleurs (même traitement que
- * `@/lib/cart-source` dans `panier/actions.test.ts`) : on ne revérifie ici que
- * la COMPOSITION du webhook (création/idempotence/décrément/remboursement).
+ * `@/lib/checkout-source` (titre/ISBN/stock) et `@/lib/order-mail` (sélection
+ * de mailer — LOG ou Brevo, plan §5) sont mockés en bloc, déjà couverts
+ * ailleurs (même traitement que `@/lib/cart-source` dans
+ * `panier/actions.test.ts`) : on ne revérifie ici que la COMPOSITION du
+ * webhook (création/idempotence/décrément/remboursement) — pas le choix
+ * Brevo/LOG lui-même (`order-mail.test.ts`).
  */
 
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
@@ -98,6 +100,7 @@ vi.mock("@/lib/checkout-source", () => ({
 const sendOrderConfirmation = vi.fn(async () => {});
 vi.mock("@/lib/order-mail", () => ({
   logOrderMailer: { sendOrderConfirmation },
+  selectOrderMailer: () => ({ sendOrderConfirmation }),
 }));
 
 const WEBHOOK_SECRET = "whsec_test_composition";

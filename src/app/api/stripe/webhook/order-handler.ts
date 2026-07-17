@@ -12,7 +12,7 @@ import {
   type OrderSessionFacts,
   type OrderShippingMethod,
 } from "@/lib/order-webhook-core";
-import { logOrderMailer } from "@/lib/order-mail";
+import { selectOrderMailer } from "@/lib/order-mail";
 
 /**
  * Orchestration I/O du webhook côté `kind: "order"` (plan §4 étape 9) —
@@ -173,7 +173,7 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
 
   await decrementStock(payload, decoded, books);
 
-  await logOrderMailer.sendOrderConfirmation({
+  await selectOrderMailer().sendOrderConfirmation({
     orderNumber: (order as { number?: string }).number ?? orderData.stripeSessionId,
     email: orderData.email,
     lines: orderData.lines.map((l) => ({
