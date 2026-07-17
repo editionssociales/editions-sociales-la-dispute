@@ -227,6 +227,11 @@ conservé pour GEME). Décisions et calendrier de ces trois gestes = client.
 8. **Sitemap** : chaque phase qui crée une route (`/contact` en P5, `/boutique` +
    `/boutique/[slug]` livrés par le lot commerce 2) met à jour `sitemap.ts` dans sa
    propre PR.
+9. **Réseaux sociaux** : liens rendus **uniquement en pied de page** (cellule
+   « Suivez-nous », visible seulement si au moins un lien est saisi dans le global
+   `reglages-site`), **jamais dans l'en-tête** — `src/components/site-footer.tsx`,
+   décision codée et documentée dans le commit `47484d2`. **À faire valider par le
+   client.**
 
 ## Budget et effort — l'écart, dit franchement
 

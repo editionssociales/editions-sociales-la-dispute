@@ -37,7 +37,8 @@ Does NOT own : le contenu, la vente et les médias — tous trois côté WordPre
 
 - **`@AGENTS.md`** : cette version de Next.js diffère de tes acquis — lire `node_modules/next/dist/docs/` avant d'écrire du code Next.
 - Ne pas casser le contrat WP ; refactor = **iso-rendu** (classes/DOM conservés).
-- **Migration/legacy** : `LEGACY-STACK.md` (inventaire vérifié) ; plan détaillé dans `plan/` (entrée `plan/README.md`) — ne pas re-planifier. **Dépôt, CI/CD, comptes, secrets** : `DEVOPS.md` — bascules de compte jamais sans accord explicite.
+- **Migration/legacy** : `LEGACY-STACK.md` (inventaire vérifié) ; plan détaillé dans `plan/README.md` (entrée complète du plan) — ne pas re-planifier. **Dépôt, CI/CD, comptes, secrets** : `DEVOPS.md` — bascules de compte jamais sans accord explicite.
+- **Opérations & pérennité** : `OPERATIONS.md` (runbook d'exploitation, monitoring/alertes) et `REVERSIBILITE.md` (dossier de réversibilité, escape routes de la stack) — à lire avant Jour J.
 
 ## Verification
 
@@ -52,6 +53,10 @@ Does NOT own : le contenu, la vente et les médias — tous trois côté WordPre
 - **`src/app`** — App Router : `(site)` front + `(payload)` back-office.
 - **`src/payload`** — collections + accès du back-office.
 - **`src/migrations`** — schéma Postgres versionné (schéma SQL `payload`).
-- **`scripts/migrate-catalogue`**, **`scripts/migrate-products.ts`** — migrations WordPress/WooCommerce→Postgres, idempotentes.
+- **`scripts/migrate-catalogue`**, **`scripts/migrate-products.ts`** — migrations WordPress/WooCommerce→Postgres, idempotentes ; **`scripts/newsletter-export.mjs`**, **`scripts/newsletter-import.mjs`** — export/import Brevo ; **`scripts/backup-prune.mjs`**, **`scripts/build-product-redirects.ts`** — maintenance.
 - **`wp-headless`** — contrat de données WordPress à préserver.
 - **`plan`** — plan directeur de la refonte (7 phases, stack, calendrier, devis).
+- **`.github/workflows/backup-db.yml`** — sauvegarde nocturne chiffrée Neon→Blob.
+- **`docs/BACK-OFFICE.md`** — guide d'utilisation du back-office pour l'équipe éditoriale.
+- **`OPERATIONS.md`** — runbook d'exploitation (monitoring, alertes, sauvegarde).
+- **`REVERSIBILITE.md`** — dossier de réversibilité (escape routes WordPress/Postgres/stack).
