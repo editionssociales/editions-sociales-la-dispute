@@ -156,6 +156,7 @@ export const Orders: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'paid',
+      index: true,
       label: 'Statut',
       options: [
         { value: 'paid', label: 'Payée' },

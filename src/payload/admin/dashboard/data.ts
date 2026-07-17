@@ -17,10 +17,10 @@ import { parseStoredImportReport } from '../../lib/import-run-report-core.ts'
  * pures (états, seuils, bornes) vivent dans `derive.ts` ; le rendu dans
  * `Dashboard.tsx` / `DashboardFooter.tsx`.
  *
- * NB requêtes commandes : PAS d'index Postgres sur `orders.status` ni
- * `orders.paid_at` — ces filtres scannent la table. Non bloquant à la
- * volumétrie attendue ; l'index est demandé au lot 2 commerce (design v2 §6),
- * hors périmètre de ce chantier.
+ * NB requêtes commandes : `orders.status` est indexé (design v2 §6, migration
+ * `20260717_150000_orders_status_index`) — PAS d'index sur `orders.paid_at`
+ * (filtre CA du mois, 3.5) : ce tri-là scanne encore la table, non bloquant à
+ * la volumétrie attendue.
  */
 
 const DAY_MS = 86_400_000
@@ -45,7 +45,6 @@ export async function readWorkOrders(payload: Payload): Promise<WorkOrdersData> 
   try {
     const { docs } = await payload.find({
       collection: 'orders',
-      // Scan de table assumé (pas d'index sur `status`, cf. entête).
       where: { status: { in: ['paid', 'prepared'] } },
       sort: 'createdAt',
       depth: 0,

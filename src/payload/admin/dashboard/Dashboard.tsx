@@ -314,7 +314,10 @@ export async function Dashboard({ payload, user }: ServerProps) {
           <h3 className={styles.panelTitle} id="t-remboursements">
             Remboursements en attente de reflet
           </h3>
-          <p className={styles.muted}>Aucune synchronisation automatique — vérifié dans Stripe d’abord.</p>
+          <p className={styles.muted}>
+            Statut basculé automatiquement par le webhook Stripe — montant et date de
+            remboursement non modélisés ici, à vérifier dans Stripe.
+          </p>
           {!commerceOn || refunds === null ? (
             <>
               <p className={styles.empty}>Aucune commande remboursée.</p>
