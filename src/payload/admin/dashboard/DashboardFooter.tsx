@@ -1,6 +1,7 @@
 import type { ServerProps } from 'payload'
 
-import { fmtDateTimeFr, sentrySignal, type PanelState } from './derive.ts'
+import { fmtDateTimeFr, sentrySignal } from './derive.ts'
+import { badgeClass, dotClass } from './dashboard-classes.ts'
 import { readConfig, readLastOrder, readSentryIssues } from './data.ts'
 import styles from './dashboard.module.css'
 import { DashboardLegend } from './Legend.tsx'
@@ -10,28 +11,9 @@ import { DashboardLegend } from './Legend.tsx'
  * configuration & accès (3.13), SOUS la grille native `CollectionCards` —
  * rôle strictement admin (`null` pour un editor, qui reçoit sa légende via
  * `Dashboard`). Mêmes lecteurs `data.ts` que le bandeau : `readSentryIssues`
- * est mémoïsé (`cache()`), une seule lecture par requête.
+ * est mémoïsé (`cache()`), une seule lecture par requête. `dotClass`/
+ * `badgeClass` : module partagé avec `Dashboard.tsx` (`dashboard-classes.ts`).
  */
-
-function dotClass(state: PanelState): string {
-  const byState: Record<PanelState, string> = {
-    ok: styles.dotOk,
-    warn: styles.dotWarn,
-    alert: styles.dotAlert,
-    na: styles.dotNa,
-  }
-  return `${styles.dot} ${byState[state]}`
-}
-
-function badgeClass(state: PanelState): string {
-  const byState: Record<PanelState, string> = {
-    ok: styles.badgeOk,
-    warn: styles.badgeWarn,
-    alert: styles.badgeAlert,
-    na: styles.badgeNa,
-  }
-  return `${styles.badge} ${byState[state]}`
-}
 
 export async function DashboardFooter({ payload, user }: ServerProps) {
   if (user?.role !== 'admin') return null

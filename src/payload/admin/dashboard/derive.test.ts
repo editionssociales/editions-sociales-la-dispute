@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import {
   bannerHidden,
   CAMPAIGN_LAUNCH_2026,
+  commandesState,
   donationsSignal,
+  donsState,
   editionTag,
   expiredActivePromos,
   fmtDateFr,
@@ -26,6 +28,7 @@ import {
   type BannerItem,
   type DonationSignalInput,
 } from './derive.ts'
+import type { DonationsData, WorkOrderRow, WorkOrdersData } from './data.ts'
 
 const HOUR_MS = 3_600_000
 const DAY_MS = 86_400_000
@@ -97,6 +100,59 @@ describe('worstState', () => {
     expect(worstState(['ok', 'na'])).toBe('na')
     expect(worstState(['ok', 'ok'])).toBe('ok')
     expect(worstState([])).toBe('ok')
+  })
+})
+
+/* ────────────────────────── commandesState (bandeau 3.1 / dot 3.2) ────────────────────────── */
+
+function workOrder(overrides: Partial<WorkOrderRow> = {}): WorkOrderRow {
+  return {
+    id: 1,
+    number: 'CMD-1',
+    status: 'paid',
+    createdAt: '2026-07-01T00:00:00Z',
+    paidAt: '2026-07-01T00:00:00Z',
+    linesCount: 1,
+    totalTTC: 20,
+    shippingMethod: 'standard',
+    ...overrides,
+  }
+}
+
+describe('commandesState — jamais de vert/rouge par défaut, seam data/derive/rendu', () => {
+  const now = new Date('2026-07-13T12:00:00Z')
+  const okWorkOrders: WorkOrdersData = { state: 'ok', orders: [] }
+  const alertOrder = workOrder({
+    paidAt: new Date(now.getTime() - (ORDER_ALERT_HOURS + 1) * HOUR_MS).toISOString(),
+  })
+  const warnOrder = workOrder({
+    paidAt: new Date(now.getTime() - (ORDER_WARN_HOURS + 1) * HOUR_MS).toISOString(),
+  })
+
+  it('commerce fermé : toujours OK, même avec des commandes en retard', () => {
+    expect(commandesState(false, null, now)).toBe('ok')
+    expect(commandesState(false, { state: 'ok', orders: [alertOrder] }, now)).toBe('ok')
+    expect(commandesState(false, { state: 'na' }, now)).toBe('ok')
+  })
+
+  it('commerce ouvert, liste de travail non lue (`null`) : gris', () => {
+    expect(commandesState(true, null, now)).toBe('na')
+  })
+
+  it('commerce ouvert, liste de travail illisible : gris', () => {
+    expect(commandesState(true, { state: 'na' }, now)).toBe('na')
+  })
+
+  it('commerce ouvert, aucune commande en attente : OK', () => {
+    expect(commandesState(true, okWorkOrders, now)).toBe('ok')
+  })
+
+  it('commerce ouvert, une commande en attention : attention', () => {
+    expect(commandesState(true, { state: 'ok', orders: [warnOrder] }, now)).toBe('warn')
+  })
+
+  it('commerce ouvert, une commande en alerte : alerte (pire état l’emporte)', () => {
+    expect(commandesState(true, { state: 'ok', orders: [warnOrder, alertOrder] }, now)).toBe('alert')
   })
 })
 
@@ -328,6 +384,65 @@ describe('donationsSignal', () => {
     expect(Date.parse(`${CAMPAIGN_LAUNCH_2026}T00:00:00+02:00`)).toBeGreaterThan(
       donationInput({}).now.getTime(),
     )
+  })
+})
+
+const FAKE_GAUGE: DonationsData['gauge'] = {
+  collected: 100,
+  goal: 1000,
+  contributors: 5,
+  percentOfGoal: 10,
+  gauge: { value: 100, max: 1000, markers: [] },
+}
+
+function donationsData(overrides: Partial<DonationsData> = {}): DonationsData {
+  return {
+    mode: 'live',
+    gauge: FAKE_GAUGE,
+    recent: [],
+    refunds7d: 0,
+    lastDonationAt: null,
+    ...overrides,
+  }
+}
+
+describe('donsState — base donationsSignal, rétrogradée en gris si les listes dérivées sont illisibles', () => {
+  const now = new Date('2026-07-13T12:00:00Z') // avant l'ouverture de la campagne (15/08).
+
+  it('clé Stripe absente : alerte de base, jamais rétrogradée par les listes (mode absent exclut la rétrogradation)', () => {
+    expect(
+      donsState(donationsData({ mode: 'absent', gauge: null, recent: null, refunds7d: null }), now),
+    ).toBe('alert')
+  })
+
+  it('base OK, derniers dons illisibles (`recent: null`) : rétrogradé en gris — jamais un OK par défaut', () => {
+    expect(donsState(donationsData({ recent: null }), now)).toBe('na')
+  })
+
+  it('base OK, remboursements 7 j illisibles (`refunds7d: null`) : rétrogradé en gris', () => {
+    expect(donsState(donationsData({ refunds7d: null }), now)).toBe('na')
+  })
+
+  it('base OK, les deux listes lisibles : reste OK', () => {
+    expect(donsState(donationsData(), now)).toBe('ok')
+  })
+
+  it('jauge non calculable (base déjà grise) : reste grise', () => {
+    expect(donsState(donationsData({ gauge: null }), now)).toBe('na')
+  })
+
+  it('base attention (campagne ouverte, aucun don depuis 48 h) + listes illisibles : reste attention, jamais une fausse alerte grise', () => {
+    const campaignNow = new Date('2026-08-20T12:00:00Z')
+    expect(
+      donsState(
+        donationsData({ recent: null, refunds7d: null, lastDonationAt: null }),
+        campaignNow,
+      ),
+    ).toBe('warn')
+  })
+
+  it('base alerte (remboursement récent) + derniers dons illisibles : reste alerte, l’alerte réelle prime sur la rétrogradation', () => {
+    expect(donsState(donationsData({ refunds7d: 1, recent: null }), now)).toBe('alert')
   })
 })
 

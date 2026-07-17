@@ -1,12 +1,18 @@
+import type { DonationsData, WorkOrdersData } from './data.ts'
+
 /**
  * Cœur pur du tableau de bord `/admin` (design v2, `_specs/dashboard-admin/`)
  * — dérivations sans I/O, testées dans `derive.test.ts`. Les lectures Payload/
- * Stripe/Sentry vivent dans `data.ts`, le rendu dans `Dashboard.tsx`/
- * `DashboardFooter.tsx`.
+ * Stripe/Sentry vivent dans `data.ts`, le rendu (et son CSS-module) dans
+ * `Dashboard.tsx`/`DashboardFooter.tsx`/`dashboard-classes.ts`.
  *
  * Principe non négociable du design : jamais de vert ni de zéro « par
  * défaut » — un signal non calculable est `na` (gris, « diagnostic
  * indisponible »), pas `ok`.
+ *
+ * `import type { ... } from './data.ts'` ci-dessus : uniquement des types
+ * (effacés à la compilation, `isolatedModules`) — `data.ts` importe des
+ * valeurs de ce module, pas l'inverse ; aucune dépendance runtime circulaire.
  */
 
 /** État d'un signal/panneau — `na` = non calculable (gris), jamais converti en vert. */
@@ -50,6 +56,22 @@ export function worstState(states: PanelState[]): PanelState {
   if (states.includes('warn')) return 'warn'
   if (states.includes('na')) return 'na'
   return 'ok'
+}
+
+/**
+ * État du signal Commandes (bandeau 3.1, dot du panneau 3.2) : commerce
+ * fermé → OK (écran vide assumé, jamais une alerte) ; liste de travail
+ * `null`/illisible → gris ; sinon le pire retard des commandes de la liste
+ * (cf. `orderLateness`).
+ */
+export function commandesState(
+  commerceOn: boolean,
+  workOrders: WorkOrdersData | null,
+  now: Date,
+): PanelState {
+  if (!commerceOn) return 'ok'
+  if (workOrders === null || workOrders.state === 'na') return 'na'
+  return worstState(workOrders.orders.map((order) => orderLateness(order, now)))
 }
 
 /* ────────────────────────── Stock bas (3.3) ────────────────────────── */
@@ -133,8 +155,12 @@ export function importSignal(lastRunAt: string | null, now: Date): PanelState {
 
 /**
  * Codes encore `active` dont `expiresAt` est dépassé (comparaison en jour,
- * comme l'évaluation panier de `promo-eval-core`) — candidats au
- * « désactiver en un clic ». `expiresAt` absent = jamais expiré.
+ * JOUR INCLUSIF — un code qui expire le 13/07 reste valable toute la
+ * journée du 13/07, décision produit 17/07) — candidats au « désactiver en
+ * un clic ». `expiresAt` absent = jamais expiré. Même règle, désormais
+ * réellement partagée (et non plus seulement affirmée en commentaire) avec
+ * l'évaluation panier de `promo-eval-core.ts:evaluatePromoCode` — alignée
+ * checkout ↔ dashboard.
  */
 export function expiredActivePromos<T extends { active?: boolean | null; expiresAt?: string | null }>(
   promos: T[],
@@ -203,6 +229,26 @@ export function donationsSignal(input: DonationSignalInput): PanelState {
     if (Number.isNaN(last) || nowMs - last > 48 * HOUR_MS) return 'warn'
   }
   return 'ok'
+}
+
+/**
+ * État du signal Dons (bandeau 3.1, dot du panneau 3.6) : état de base
+ * `donationsSignal`, PUIS rétrogradé de `ok` à `na` si les listes dérivées
+ * (derniers dons, remboursements 7 j) sont illisibles — un « OK » serait un
+ * vert par défaut trompeur ; une alerte/attention réelle reste prioritaire.
+ */
+export function donsState(donations: DonationsData, now: Date): PanelState {
+  const base = donationsSignal({
+    enabled: donations.mode !== 'absent',
+    mode: donations.mode,
+    gaugeAvailable: donations.gauge !== null,
+    lastDonationAt: donations.lastDonationAt,
+    refunds7d: donations.refunds7d ?? 0,
+    now,
+  })
+  const partial =
+    donations.mode !== 'absent' && (donations.recent === null || donations.refunds7d === null)
+  return partial && base === 'ok' ? 'na' : base
 }
 
 /* ────────────────────────── Bandeau d'état (3.1) ────────────────────────── */

@@ -4,7 +4,8 @@ import { isCommerceNative } from '@/lib/env'
 
 import {
   bannerHidden,
-  donationsSignal,
+  commandesState as deriveCommandesState,
+  donsState as deriveDonsState,
   editionTag,
   fmtDateFr,
   fmtDateTimeFr,
@@ -23,6 +24,7 @@ import {
   type BannerItem,
   type PanelState,
 } from './derive.ts'
+import { badgeClass, bannerStateClass, dotClass } from './dashboard-classes.ts'
 import {
   readDonations,
   readEditorialCounts,
@@ -52,26 +54,6 @@ import { StockImportForm } from './StockImportForm.tsx'
  * ne plante jamais), dérivations pures via `derive.ts`, trois îlots client
  * seulement (upload d'import, désactivation promo, export).
  */
-
-function dotClass(state: PanelState): string {
-  const byState: Record<PanelState, string> = {
-    ok: styles.dotOk,
-    warn: styles.dotWarn,
-    alert: styles.dotAlert,
-    na: styles.dotNa,
-  }
-  return `${styles.dot} ${byState[state]}`
-}
-
-function badgeClass(state: PanelState): string {
-  const byState: Record<PanelState, string> = {
-    ok: styles.badgeOk,
-    warn: styles.badgeWarn,
-    alert: styles.badgeAlert,
-    na: styles.badgeNa,
-  }
-  return `${styles.badge} ${byState[state]}`
-}
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
   paid: 'payée',
@@ -110,28 +92,12 @@ export async function Dashboard({ payload, user }: ServerProps) {
 
   /* ── Signaux (mêmes données que les panneaux — le bandeau n'a aucun fetch propre) ── */
 
-  const commandesState: PanelState = !commerceOn
-    ? 'ok'
-    : workOrders === null || workOrders.state === 'na'
-      ? 'na'
-      : worstState(workOrders.orders.map((order) => orderLateness(order, now)))
+  const commandesState: PanelState = deriveCommandesState(commerceOn, workOrders, now)
 
   const stockState: PanelState =
     lowStock.state === 'na' ? 'na' : stockSignal(lowStock.rows.map((row) => row.stock))
 
-  const donsBase = donationsSignal({
-    enabled: donations.mode !== 'absent',
-    mode: donations.mode,
-    gaugeAvailable: donations.gauge !== null,
-    lastDonationAt: donations.lastDonationAt,
-    refunds7d: donations.refunds7d ?? 0,
-    now,
-  })
-  // Derniers dons ou remboursements illisibles : un « OK » serait un vert par
-  // défaut — dégradé en gris ; une alerte/attention réelle reste prioritaire.
-  const donsPartial =
-    donations.mode !== 'absent' && (donations.recent === null || donations.refunds7d === null)
-  const donsState: PanelState = donsPartial && donsBase === 'ok' ? 'na' : donsBase
+  const donsState: PanelState = deriveDonsState(donations, now)
 
   const importState: PanelState =
     importRun.state === 'na' ? 'na' : importSignal(importRun.run?.createdAt ?? null, now)
@@ -153,14 +119,13 @@ export async function Dashboard({ payload, user }: ServerProps) {
     },
   ]
   const bannerWorst = worstState(bannerItems.map((item) => item.state))
-  const bannerStateClass =
-    bannerWorst === 'alert' ? styles.bannerAlert : bannerWorst === 'warn' ? styles.bannerWarn : ''
+  const bannerClass = bannerStateClass(bannerWorst)
 
   return (
     <div className={styles.board}>
       {/* ── 3.1 Bandeau d'état — masqué intégralement si tout est vert ── */}
       {!bannerHidden(bannerItems) && (
-        <section className={`${styles.banner} ${bannerStateClass}`} aria-label="État du site">
+        <section className={`${styles.banner} ${bannerClass}`} aria-label="État du site">
           <span className={styles.bannerTitle}>État du site</span>
           <span className={styles.pastilles}>
             {bannerItems.map((item) => (
