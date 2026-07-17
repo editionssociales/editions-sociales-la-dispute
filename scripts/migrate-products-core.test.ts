@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { WcProduct } from "../src/lib/catalogue-source.ts";
 import {
+  buildProductRedirectTable,
   cleanProductTitle,
   matchedBookUpdate,
   matchProducts,
@@ -229,5 +230,126 @@ describe("orphanBookData", () => {
   it("coverFallbackUrl est null si le produit n'a aucune image", () => {
     const p = product({ id: 1, slug: "x", name: "X", images: [] });
     expect(orphanBookData(p).coverFallbackUrl).toBeNull();
+  });
+});
+
+describe("buildProductRedirectTable", () => {
+  it("apparié : clé = slug produit courant, destination = édition/slug de la fiche", () => {
+    const p = product({ id: 1, slug: "decouvrir-gorz", name: "Découvrir Gorz" });
+    const b = book({
+      id: 10,
+      slug: "decouvrir-gorz",
+      edition: "la-dispute",
+      boutiqueUrl: "https://boutique.editionssociales.fr/produit/decouvrir-gorz/",
+    });
+    const match = matchProducts([b], [p], []);
+
+    expect(buildProductRedirectTable(match, [])).toEqual({
+      "decouvrir-gorz": { edition: "la-dispute", slug: "decouvrir-gorz" },
+    });
+  });
+
+  it("orphelin : clé = slug produit, destination edition:null (page /boutique/<slug> native)", () => {
+    const p = product({ id: 2, slug: "tote-bag", name: "Tote bag" });
+    const match = matchProducts([], [p], []);
+
+    expect(buildProductRedirectTable(match, [])).toEqual({
+      "tote-bag": { edition: null, slug: "tote-bag" },
+    });
+  });
+
+  it("lien cassé arbitré résolu : ajoute un alias sur le slug ORIGINAL (brokenSlug), même destination", () => {
+    const p = product({ id: 1, slug: "celine-marty-decouvrir-gorz", name: "Découvrir Gorz" });
+    const b = book({
+      id: 10,
+      slug: "decouvrir-gorz",
+      boutiqueUrl: "https://boutique.editionssociales.fr/produit/celine-marty-decouvrir-gorz-prevente/",
+    });
+    const arbitrage: ArbitrageEntry = {
+      category: "lien-casse",
+      bookSlug: "decouvrir-gorz",
+      brokenSlug: "celine-marty-decouvrir-gorz-prevente",
+      note: "dérive de slug post-prévente",
+      candidate: "celine-marty-decouvrir-gorz",
+      resolution: "celine-marty-decouvrir-gorz",
+    };
+    const match = matchProducts([b], [p], [arbitrage]);
+
+    expect(buildProductRedirectTable(match, [arbitrage])).toEqual({
+      "celine-marty-decouvrir-gorz": { edition: "editions-sociales", slug: "decouvrir-gorz" },
+      "celine-marty-decouvrir-gorz-prevente": { edition: "editions-sociales", slug: "decouvrir-gorz" },
+    });
+  });
+
+  it("deux arbitrages qui partagent par erreur le même brokenSlug : le premier de la table gagne, jamais écrasé", () => {
+    const p1 = product({ id: 1, slug: "produit-a", name: "Produit A" });
+    const p2 = product({ id: 2, slug: "produit-b", name: "Produit B" });
+    const b1 = book({ id: 10, slug: "fiche-a", boutiqueUrl: null });
+    const b2 = book({ id: 11, slug: "fiche-b", boutiqueUrl: null });
+    const arbitrageA: ArbitrageEntry = {
+      category: "lien-casse",
+      bookSlug: "fiche-a",
+      brokenSlug: "slug-mort-partage",
+      note: "premier",
+      candidate: "produit-a",
+      resolution: "produit-a",
+    };
+    // Saisie humaine dupliquée par erreur : même brokenSlug, autre fiche/produit.
+    const arbitrageB: ArbitrageEntry = {
+      category: "lien-casse",
+      bookSlug: "fiche-b",
+      brokenSlug: "slug-mort-partage",
+      note: "doublon accidentel",
+      candidate: "produit-b",
+      resolution: "produit-b",
+    };
+    const arbitrages = [arbitrageA, arbitrageB];
+    const match = matchProducts([b1, b2], [p1, p2], arbitrages);
+
+    const table = buildProductRedirectTable(match, arbitrages);
+    // Premier arbitrage rencontré dans la table (ordre stable) : jamais écrasé
+    // par le second, même résolu vers une destination différente.
+    expect(table["slug-mort-partage"]).toEqual({ edition: "editions-sociales", slug: "fiche-a" });
+  });
+
+  it("un TODO encore ouvert (resolution:null) ou une résolution invalide ne produit aucune entrée", () => {
+    const arbitragePending: ArbitrageEntry = {
+      category: "lien-casse",
+      bookSlug: "fiche-a",
+      brokenSlug: "slug-mort-a",
+      note: "test",
+      candidate: null,
+      resolution: null,
+    };
+    const arbitrageInvalid: ArbitrageEntry = {
+      category: "lien-casse",
+      bookSlug: "fiche-b",
+      brokenSlug: "slug-mort-b",
+      note: "test",
+      candidate: null,
+      resolution: "slug-qui-nexiste-plus",
+    };
+    const b1 = book({ id: 1, slug: "fiche-a", boutiqueUrl: null });
+    const b2 = book({ id: 2, slug: "fiche-b", boutiqueUrl: null });
+    const match = matchProducts([b1, b2], [], [arbitragePending, arbitrageInvalid]);
+
+    expect(buildProductRedirectTable(match, [arbitragePending, arbitrageInvalid])).toEqual({});
+  });
+
+  it("un conflit inattendu (garde-fou) ne produit aucune entrée pour le produit disputé", () => {
+    const p = product({ id: 1, slug: "stephane-haber-decouvrir-victor-hugo", name: "Découvrir Victor Hugo" });
+    const b1 = book({
+      id: 47,
+      slug: "decouvrir-victor-hugo",
+      boutiqueUrl: "https://boutique.editionssociales.fr/produit/stephane-haber-decouvrir-victor-hugo/",
+    });
+    const b2 = book({
+      id: 284,
+      slug: "decouvrir-le-programme-du-cnr",
+      boutiqueUrl: "https://boutique.editionssociales.fr/produit/stephane-haber-decouvrir-victor-hugo/",
+    });
+    const match = matchProducts([b1, b2], [p], []);
+
+    expect(buildProductRedirectTable(match, [])).toEqual({});
   });
 });

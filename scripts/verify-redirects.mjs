@@ -27,18 +27,46 @@
  * suivi manuel des `Location` (3 sauts max), assertions statut + `Location`.
  * Cas négatifs obligatoires (host `editionssociales.fr`) : `/catalogue/
  * editions-sociales`, `/catalogue/la-dispute` ne doivent PAS rediriger ;
- * `/a-propos`, `/`, `/souscription` doivent servir 200.
+ * `/a-propos`, `/`, `/souscription` doivent servir 200. Host boutique : `/panier`
+ * ne doit PAS rediriger (sur LUI-MÊME — `next.config.ts` n'a délibérément
+ * aucune règle `/panier`, la page native est déjà servie telle quelle sur ce
+ * host ; une règle source===destination y bouclerait à l'infini, cf. le
+ * commentaire de `next.config.ts`).
+ *
+ * Host boutique — mode dry/local (nouveau, plan/07-cloture.md étape 4, P7) :
+ * contrairement à `editionssociales.fr`/`ladispute.fr` (dont l'inventaire (a)
+ * MariaDB + (b) REST live sont requis), les lignes du host
+ * `boutique.editionssociales.fr`/`www.boutique.editionssociales.fr` de
+ * `redirect-inventory.csv` viennent d'une lecture PURE de l'artefact déjà
+ * versionné `src/lib/redirects-produits.json` (cf. `build-redirect-inventory.mjs`
+ * §(d)) — aucun réseau, aucune base. Sur un poste sans MariaDB locale (ni les
+ * dumps SQL, cf. LEGACY-STACK.md), `node scripts/build-redirect-inventory.mjs`
+ * dégrade proprement (`Promise.allSettled`) et écrit quand même l'inventaire
+ * boutique seul ; `--host-filter boutique.editionssociales.fr` permet alors de
+ * vérifier CE host isolément contre un `pnpm dev`/`pnpm start` local, sans rien
+ * d'autre à provisionner.
  *
  * Usage :
  *   node scripts/verify-redirects.mjs --self-test-only
  *   node scripts/verify-redirects.mjs --target http://localhost:3000
  *   node scripts/verify-redirects.mjs --target https://editions-sociales-la-dispute.vercel.app [--insecure]
  *   node scripts/verify-redirects.mjs --target https://editionssociales.fr --host-filter editionssociales.fr
+ *   # Host boutique, mode dry/local (aucune MariaDB requise) :
+ *   node scripts/build-redirect-inventory.mjs   # écrit au moins la partie boutique, même sans MariaDB
+ *   node scripts/verify-redirects.mjs --target http://localhost:3000 --host-filter boutique.editionssociales.fr
  *
  * `--host-filter <host>` : ne vérifie que les lignes de l'inventaire (et les
  * cas négatifs obligatoires) pour ce host — utilisé le jour du flip DNS en
  * mode direct (plus de spoof de `Host`, un seul domaine est réellement servi
  * par `target` à la fois).
+ *
+ * `--redirects-produits-since <ISO-date>` (optionnel) : garde-fou LÉGER,
+ * exécuté avant toute requête réseau (donc actif même en
+ * `--self-test-only`) — avertit (n'échoue JAMAIS) si `src/lib/redirects-
+ * produits.json` a été bootstrapé hors Local API Payload (champ `source`) ou
+ * si son `generatedAt` est antérieur à la date fournie. Ex., pour vérifier
+ * que l'artefact a été régénéré après le cadrage J-7 :
+ *   node scripts/verify-redirects.mjs --self-test-only --redirects-produits-since 2026-07-24
  */
 import http from "node:http";
 import { parseArgs } from "node:util";
@@ -64,6 +92,7 @@ function parseCliArgs(argv) {
         "self-test-only": { type: "boolean", default: false },
         insecure: { type: "boolean", default: false },
         "host-filter": { type: "string" },
+        "redirects-produits-since": { type: "string" },
       },
     }));
   } catch (err) {
@@ -75,6 +104,7 @@ function parseCliArgs(argv) {
     inventory: values.inventory,
     insecure: values.insecure,
     hostFilter: values["host-filter"] ?? null,
+    redirectsProduitsSince: values["redirects-produits-since"] ?? null,
   };
 }
 
@@ -138,7 +168,10 @@ async function compileSources() {
   }
   const rules = await redirects();
   if (!Array.isArray(rules) || rules.length === 0) {
-    throw new Error(`[compilation] redirects() n'a renvoyé aucune règle — inattendu (E4 en attend ~33).`);
+    throw new Error(
+      `[compilation] redirects() n'a renvoyé aucune règle — inattendu (E4 en attend ~33 pour ES/LD, ` +
+        `+ 2 × (1 par entrée de la table produit + 7 règles nommées) pour le host boutique, P7).`,
+    );
   }
 
   const { pathToRegexp } = (await import("next/dist/compiled/path-to-regexp/index.js")).default;
@@ -156,6 +189,89 @@ async function compileSources() {
   }
   console.error(`[compilation] OK — ${rules.length} règle(s) compilent (path-to-regexp).`);
   return rules;
+}
+
+/* ───────────────────── Garde-fou léger : fraîcheur de redirects-produits.json ───────────────────── */
+
+const PRODUCT_REDIRECTS_FILE = path.join(ROOT, "src/lib/redirects-produits.json");
+
+/**
+ * Garde-fou LÉGER (avertissement, jamais un échec) sur `src/lib/redirects-
+ * produits.json` : cet artefact a été bootstrapé une première fois hors Local
+ * API Payload (mode dégradé WP REST + Store API live, cf. son propre champ
+ * `source`) et DOIT être régénéré avec `scripts/build-product-redirects.ts`
+ * (`pnpm payload run`, Local API Payload) avant J-7 (P7 du plan) — un oubli
+ * laisserait le host boutique se fier à un instantané pris hors Payload sans
+ * qu'aucune vérification ne le signale. Ne fait jamais échouer ce script (pas
+ * de nouvelle porte CI) : juste un avertissement lisible dans le run recette
+ * habituel.
+ */
+async function checkRedirectsProduitsFreshness(sinceIso) {
+  let raw;
+  try {
+    raw = await readFile(PRODUCT_REDIRECTS_FILE, "utf8");
+  } catch {
+    console.error(
+      `[garde redirects-produits] "${PRODUCT_REDIRECTS_FILE}" introuvable — vérification de fraîcheur ignorée.`,
+    );
+    return;
+  }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (err) {
+    console.error(
+      `[garde redirects-produits] AVERTISSEMENT : JSON illisible (${err instanceof Error ? err.message : err}) — vérification de fraîcheur ignorée.`,
+    );
+    return;
+  }
+
+  const warnings = [];
+
+  // Le VRAI générateur (`build-product-redirects.ts`, ligne "source: …") écrit
+  // toujours exactement `"scripts/build-product-redirects.ts (Local API
+  // Payload + Store API live)"` — un `startsWith` (pas un simple `.includes`)
+  // est nécessaire : le bootstrap initial écrit un texte libre qui MENTIONNE
+  // aussi "Local API Payload" mais pour dire explicitement qu'il ne vient PAS
+  // d'elle ("… PAS la Local API Payload (DATABASE_URL absente…)") — un simple
+  // `.includes("Local API Payload")` aurait raté cet avertissement.
+  const isFromPayloadGenerator =
+    typeof data.source === "string" &&
+    data.source.startsWith("scripts/build-product-redirects.ts") &&
+    data.source.includes("Local API Payload");
+  if (!isFromPayloadGenerator) {
+    warnings.push(
+      `le champ "source" n'indique pas un run de scripts/build-product-redirects.ts via la Local API Payload (valeur actuelle : ${
+        typeof data.source === "string" ? `"${data.source}"` : "absente"
+      }) — probablement encore le bootstrap WP REST/Store API live ; régénérer avec ` +
+        `"pnpm payload run scripts/build-product-redirects.ts" avant J-7 (P7 du plan).`,
+    );
+  }
+
+  if (sinceIso) {
+    const since = new Date(sinceIso);
+    const generatedAt = new Date(data.generatedAt);
+    if (Number.isNaN(since.getTime())) {
+      warnings.push(`--redirects-produits-since="${sinceIso}" n'est pas une date valide — comparaison ignorée.`);
+    } else if (Number.isNaN(generatedAt.getTime())) {
+      warnings.push(`le champ "generatedAt" ("${data.generatedAt}") n'est pas une date valide — comparaison ignorée.`);
+    } else if (generatedAt < since) {
+      warnings.push(
+        `"generatedAt" (${data.generatedAt}) est antérieur à la date de fraîcheur attendue (${sinceIso}) — à régénérer avant J-7.`,
+      );
+    }
+  }
+
+  if (warnings.length > 0) {
+    console.error(
+      `[garde redirects-produits] AVERTISSEMENT (non bloquant) :\n${warnings.map((w) => `  - ${w}`).join("\n")}`,
+    );
+  } else {
+    console.error(
+      `[garde redirects-produits] OK — source Local API Payload${sinceIso ? `, generatedAt ≥ ${sinceIso}` : ""}.`,
+    );
+  }
 }
 
 /* ───────────────────────── requête HTTP manuelle (pas de fetch) ───────────────────────── */
@@ -284,6 +400,11 @@ const MANDATORY_CASES = [
   { host: "editionssociales.fr", path: "/a-propos", expectRedirect: false },
   { host: "editionssociales.fr", path: "/", expectRedirect: false },
   { host: "editionssociales.fr", path: "/souscription", expectRedirect: false },
+  // Host boutique : `/panier` n'a délibérément AUCUNE règle (source ===
+  // destination bouclerait à l'infini, cf. next.config.ts) — la page native
+  // doit répondre 200 directement, sur les deux hostnames (G5).
+  { host: "boutique.editionssociales.fr", path: "/panier", expectRedirect: false },
+  { host: "www.boutique.editionssociales.fr", path: "/panier", expectRedirect: false },
 ];
 
 /* ───────────────────────────── run ───────────────────────────── */
@@ -343,6 +464,7 @@ async function main() {
 
   await selfTestHost();
   await compileSources();
+  await checkRedirectsProduitsFreshness(args.redirectsProduitsSince);
 
   if (args.selfTestOnly) {
     console.error("[verify-redirects] --self-test-only : garde-fous passés, arrêt avant toute requête réseau.");

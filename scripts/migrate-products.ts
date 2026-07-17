@@ -44,10 +44,10 @@ import type { Book } from "../src/payload-types.ts";
 import { prepareHtmlForLexical } from "./migrate-catalogue/rewrite-html.ts";
 import { createLogger, fetchWithRetry, type Logger } from "./migrate-catalogue/utils.ts";
 import {
+  ARBITRAGES,
   matchedBookUpdate,
   matchProducts,
   orphanBookData,
-  type ArbitrageEntry,
   type BookRef,
   type MatchResult,
 } from "./migrate-products-core.ts";
@@ -57,121 +57,13 @@ const MIGRATION_CONTEXT = { migration: true, disableRevalidate: true };
 
 /* ─────────────────────────── Table de décisions (arbitrages humains) ───────────────────────────
  *
- * Constatée sur la base locale le 12/07 (213 liens `buy.boutiqueUrl`, 223
- * produits Store API) : 204 valides pour 203 produits distincts, 9 liens
- * cassés, 1 produit doublement réclamé, 20 orphelins — chiffres alignés sur
- * `plan/04-commerce.md` §Migration produits. `candidate` est une PISTE
- * d'investigation (grep + comparaison de noms) : jamais appliquée seule —
- * seul un `resolution` explicite (posé par un humain, ici ou en aval) écrit
- * quoi que ce soit. Défaut conservateur : tout TODO reste un TODO.
- *
- * Arbitrages du client (12/07) appliqués ci-dessous, vérifiés contre la base
- * locale (ISBN/dates `payload.books`) et la Store API live (`WC_STORE_URL`,
- * 223 produits) :
- *   - lien `-prevente` périmé ou coquille de lien avec un candidat réel et
- *     univoque (titre/auteur vérifiés) → `resolution` = le candidat.
- *   - doublon (même produit visé par deux éditions d'un même titre) → *drop
- *     oldest* : la fiche à la parution la plus récente reçoit le produit, la
- *     plus ancienne reste sans commerce natif. Trois cas relèvent de ce
- *     motif ; deux sont déjà tranchés silencieusement par un lien direct
- *     *valide* sur la fiche récente (pas besoin d'entrée ici, cf. note sous
- *     le tableau) et n'apparaissent donc plus dans `ARBITRAGES` :
- *     `larrangement-des-sexes` (2002) perd face à `larrangement-des-sexes-
- *     nouvelle-edition` (2026, lien direct → `erving-goffman-larrangement-
- *     des-sexe`) ; `le-capital-livre-1` (2016) perd face à `le-capital-
- *     livre-1-2` (2022, lien direct → `karl-marx-le-capital-livre-1-2`).
- *     Le troisième (`pensee-et-langage` 2019 vs `pensee-et-langage-2` 2025)
- *     était réellement disputé (les deux liens étaient cassés) : résolu par
- *     la date ci-dessous.
- *   - fiche sans aucun produit correspondant (recherche exacte + par
- *     similarité sur titre/auteur, infructueuse sur les 223 produits) →
- *     rien n'est écrit, rien n'est inventé ; ces fiches n'ont plus besoin
- *     d'entrée ici non plus (cf. note sous le tableau).
+ * `ARBITRAGES` a déménagé dans `migrate-products-core.ts` (exportée) : c'est
+ * la même table que consomme `scripts/build-product-redirects.ts` (E4/P7 du
+ * plan, table de redirections `/produit/<slug>`) — une seule source de
+ * vérité pour l'appariement produit⟷fiche, jamais deux tables qui pourraient
+ * diverger. Contenu et décisions inchangés, cf. le commentaire complet à sa
+ * nouvelle adresse.
  */
-const ARBITRAGES: ArbitrageEntry[] = [
-  {
-    category: "lien-casse",
-    bookSlug: "decouvrir-gorz",
-    brokenSlug: "celine-marty-decouvrir-gorz-prevente",
-    note: "Dérive « -prevente » : le produit a quitté la précommande, son slug final n'a jamais été reporté sur la fiche.",
-    candidate: "celine-marty-decouvrir-gorz",
-    // Décision client (12/07) : candidat vérifié (Store API live, id 5200,
-    // « Céline Marty, Découvrir Gorz ») — titre/auteur correspondent exactement.
-    resolution: "celine-marty-decouvrir-gorz",
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "decouvrir-la-revolution-francaise",
-    brokenSlug: "jean-marc-schiappa-decouvrir-la-revolution-francaise-prevente",
-    note: "Même dérive « -prevente ». Produit actuellement `outofstock` côté boutique.",
-    candidate: "jean-marc-schiappa-decouvrir-la-revolution-francaise",
-    // Décision client (12/07) : candidat vérifié (Store API live, id 5202,
-    // « Jean-Marc Schiappa, Découvrir la Révolution française »), `is_in_stock:
-    // false` confirmé — sans importance, le stock est désormais piloté par le
-    // routeur (`commerce.stock` n'est jamais écrit par ce script).
-    resolution: "jean-marc-schiappa-decouvrir-la-revolution-francaise",
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "linstitution-du-handicap",
-    brokenSlug: "romulad-bodin-linstitution-du-handicap",
-    note: "Coquille sur le lien (« romulad » pour « romuald ») — transposition de deux lettres, nom du produit sans ambiguïté.",
-    candidate: "romuald-bodin-linstitution-du-handicap",
-    // Décision client (12/07) : candidat vérifié (Store API live, id 1293,
-    // « Romuald Bodin, L'Institution du handicap ») — correspond exactement
-    // au titre de la fiche.
-    resolution: "romuald-bodin-linstitution-du-handicap",
-  },
-  {
-    category: "lien-casse",
-    bookSlug: "pensee-et-langage-2",
-    brokenSlug: "lev-vygotski-pensee-et-langage-prevente",
-    note:
-      "Édition 2025 (ISBN 9782843033490), dérive « -prevente ». Même produit candidat que « pensee-et-langage » " +
-      "(édition 2019, ISBN 9782843033018, lien cassé lui aussi — « lev-s-vygotski-pensee-et-langage ») : un seul " +
-      "produit boutique existant pour « Pensée et langage » (Store API live, id 5204, « Lev Vygotski, Pensée et " +
-      "langage »), aucun des deux liens ne le nommait exactement.",
-    candidate: "lev-vygotski-pensee-et-langage",
-    // Décision client (12/07) — règle « doublon → drop oldest » : le produit
-    // disputé revient à l'édition la plus récente (2025 > 2019). La fiche
-    // 2019 (`pensee-et-langage`) reste donc sans commerce natif — aucune
-    // entrée nécessaire pour elle (cf. note au-dessus du tableau).
-    resolution: "lev-vygotski-pensee-et-langage",
-  },
-  // --- Double réclamation : un même produit, deux fiches (plan §Migration produits) ---
-  {
-    category: "double-reclamation",
-    bookSlug: "decouvrir-victor-hugo",
-    brokenSlug: "stephane-haber-decouvrir-victor-hugo",
-    note:
-      "Produit réclamé par CETTE fiche ET par « decouvrir-le-programme-du-cnr » (entrée suivante). Le nom du " +
-      "produit (« Stéphane Haber, Découvrir Victor Hugo ») correspond exactement à cette fiche-ci ; la seconde " +
-      "réclamation ressemble à une erreur de saisie ACF (copier-coller) côté WordPress — son propre produit, " +
-      "non réclamé par personne, existe séparément (« laurent-douzou-decouvrir-le-programme-du-cnr »).",
-    candidate: "stephane-haber-decouvrir-victor-hugo",
-    // Décision client (12/07) — règle « coquille de lien » : le nom du produit
-    // (Store API live, id 2165) correspond exactement à CETTE fiche ; chacun
-    // son produit (voir l'entrée suivante pour l'autre fiche).
-    resolution: "stephane-haber-decouvrir-victor-hugo",
-  },
-  {
-    category: "double-reclamation",
-    bookSlug: "decouvrir-le-programme-du-cnr",
-    brokenSlug: "stephane-haber-decouvrir-victor-hugo",
-    note:
-      "Voir l'entrée « decouvrir-victor-hugo » ci-dessus — cette fiche pointe vraisemblablement par erreur vers " +
-      "le produit de Victor Hugo. Son propre produit boutique existe et n'est réclamé par personne : " +
-      "« laurent-douzou-decouvrir-le-programme-du-cnr ».",
-    candidate: "laurent-douzou-decouvrir-le-programme-du-cnr",
-    // Décision client (12/07) : produit propre vérifié (Store API live, id
-    // 2168, « Laurent Douzou, Découvrir le programme du CNR »), non réclamé
-    // par ailleurs. ⚠️ À signaler côté client : le champ ACF `buy.boutiqueUrl`
-    // de CETTE fiche WordPress pointe à tort vers le produit de Victor Hugo
-    // (erreur de saisie probable, copier-coller) — correction à faire à la
-    // source (WP), ce script ne peut pas la corriger (contrat lecture seule).
-    resolution: "laurent-douzou-decouvrir-le-programme-du-cnr",
-  },
-];
 
 /* ─── Fiches tranchées « restent sans produit » (décisions client 12/07) ───────
  *

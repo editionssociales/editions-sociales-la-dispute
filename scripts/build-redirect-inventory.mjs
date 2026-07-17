@@ -6,7 +6,7 @@
  * règles de `next.config.ts` (`redirects()`) couvrent bien toutes les URLs
  * réelles des deux WordPress, pas seulement les formes génériques.
  *
- * Trois sources, dans l'ordre :
+ * Quatre sources, dans l'ordre :
  *   (a) MariaDB locale des dumps SQL (`127.0.0.1:3307`, mêmes bases que
  *       `scripts/migrate-catalogue/sql-oracle.ts` — `CATALOG_ORACLE_*`) :
  *       pages publiées + termes `auteur`/`collection` avec `count > 0` (+
@@ -15,20 +15,30 @@
  *       plus frais que le dump SQL (fiches créées après le dernier export).
  *   (c) un échantillon d'URLs `/wp-content/uploads/…` extraites des mêmes
  *       réponses REST (couvertures + PDF des champs `table`/`extrait`).
+ *   (d) host `boutique.editionssociales.fr`/`www.boutique.editionssociales.fr`
+ *       (`plan/02-mise-en-production.md` §Table de redirections, P7) : lue
+ *       depuis l'artefact **versionné** `src/lib/redirects-produits.json`
+ *       (généré par `scripts/build-product-redirects.ts`) + les quelques
+ *       règles nommées de `next.config.ts` (`BOUTIQUE_HOSTS`, panier/compte,
+ *       catégories, accueil) — **aucune I/O réseau/DB** pour cette source,
+ *       contrairement à (a)/(b)/(c) : mode entièrement **dry/local**, cf.
+ *       `verify-redirects.mjs` pour l'usage documenté.
  *
- * Ce script suppose un réseau (REST live) et une MariaDB locale sur le poste
- * de l'exécutant — il échouera avec un message explicite si l'un ou l'autre
- * est absent (CI, environnement sans réseau) : c'est attendu, pas une
- * régression à corriger ici.
+ * (a)/(b)/(c) supposent un réseau (REST live) et une MariaDB locale sur le
+ * poste de l'exécutant — le script échoue avec un message explicite si l'un
+ * ou l'autre est absent (CI, environnement sans réseau) : c'est attendu, pas
+ * une régression à corriger ici. (d) fonctionne sans aucun des deux.
  *
  * `expected_status` reflète `REDIRECTS_PERMANENT` **au moment de la
  * génération** (302 par défaut, 301 si posée à "1") — cf. `r()`/`t()` de
  * `next.config.ts`. Comme les patterns eux-mêmes, cet inventaire est
- * régénéré à chaque étape (E5, E6, E7) plutôt que figé une fois pour toutes.
+ * régénéré à chaque étape (E5, E6, E7) plutôt que figé une fois pour toutes —
+ * à la différence de `src/lib/redirects-produits.json`, dont (d) ne fait que
+ * LIRE le contenu déjà versionné (jamais recalculé ici).
  *
  * Usage : `node scripts/build-redirect-inventory.mjs`
  */
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const REDIRECTS_PERMANENT = process.env.REDIRECTS_PERMANENT === "1";
@@ -295,14 +305,95 @@ async function buildLdRows() {
   return rows;
 }
 
+/* ───────────────── (d) host boutique — lecture pure de l'artefact versionné ───────────────── */
+
+const PRODUCT_REDIRECTS_FILE = path.join(process.cwd(), "src/lib/redirects-produits.json");
+
+/**
+ * Lignes du host boutique — mode dry/local total : ni MariaDB ni REST live,
+ * juste la lecture de `src/lib/redirects-produits.json` (déjà versionné) et
+ * la recopie des quelques règles nommées de `next.config.ts` (`onHost(host,
+ * […])` côté boutique). Un échec de lecture ici (fichier absent) est une
+ * vraie régression — contrairement à (a)/(b)/(c), ce n'est PAS un état
+ * réseau/environnement attendu : lancer `pnpm payload run
+ * scripts/build-product-redirects.ts` d'abord si le fichier manque.
+ */
+async function buildBoutiqueRows() {
+  const { BOUTIQUE_HOSTS } = await import(new URL("../next.config.ts", import.meta.url).href);
+
+  let table;
+  try {
+    const raw = await readFile(PRODUCT_REDIRECTS_FILE, "utf8");
+    table = JSON.parse(raw).entries;
+  } catch (err) {
+    throw new Error(
+      `[build-redirect-inventory] "${PRODUCT_REDIRECTS_FILE}" illisible : ${err instanceof Error ? err.message : err}\n` +
+        `→ Générer d'abord avec : pnpm payload run scripts/build-product-redirects.ts`,
+    );
+  }
+
+  const rows = [];
+  for (const host of BOUTIQUE_HOSTS) {
+    for (const [productSlug, target] of Object.entries(table)) {
+      const destination = target.edition != null ? `/catalogue/${target.edition}/${target.slug}` : `/boutique/${target.slug}`;
+      rows.push(row(host, `/produit/${productSlug}`, STATUS_R, destination));
+    }
+    // Règles nommées de `next.config.ts` (hors table produit) — recopiées ici
+    // à l'identique, jamais réinventées : toute dérive entre les deux
+    // fichiers doit faire échouer `verify-redirects.mjs`, pas être masquée
+    // par un inventaire qui aurait sa propre vérité.
+    rows.push(row(host, "/produit/slug-jamais-vu-dans-la-table", STATUS_R, "/catalogue"));
+    rows.push(row(host, "/commander", STATUS_R, "/panier"));
+    rows.push(row(host, "/mon-compte", STATUS_R, "/panier"));
+    rows.push(row(host, "/categorie-produit/la-dispute", STATUS_R, "/catalogue/la-dispute"));
+    rows.push(row(host, "/categorie-produit/editions-sociales", STATUS_R, "/catalogue/editions-sociales"));
+    rows.push(row(host, "/categorie-produit/goodies", STATUS_R, "/catalogue"));
+    rows.push(row(host, "/", STATUS_R, "/catalogue"));
+  }
+  return rows;
+}
+
+/**
+ * `allSettled`, pas `all` : (a)/(b)/(c) (ES/LD) exigent MariaDB+REST live, (d)
+ * (boutique) n'exige RIEN (mode dry/local, lecture pure de fichiers versionnés)
+ * — un poste sans MariaDB locale doit pouvoir régénérer AU MOINS l'inventaire
+ * boutique plutôt que de tout faire échouer en bloc. Un inventaire partiel (une
+ * ou deux sources en échec) est écrit quand même, avec un avertissement
+ * explicite par source manquante ; échec total seulement si RIEN n'a réussi.
+ */
 async function main() {
   const header = "host,path,expected_status,expected_location";
-  const [esRows, ldRows] = await Promise.all([buildEsRows(), buildLdRows()]);
-  const csv = [header, ...esRows, ...ldRows].join("\n") + "\n";
+  const sources = [
+    { label: "ES (MariaDB + REST live)", build: buildEsRows },
+    { label: "LD (MariaDB + REST live)", build: buildLdRows },
+    { label: "boutique (dry/local — src/lib/redirects-produits.json)", build: buildBoutiqueRows },
+  ];
+  const results = await Promise.allSettled(sources.map((s) => s.build()));
+
+  const rows = [];
+  let failures = 0;
+  results.forEach((res, i) => {
+    if (res.status === "fulfilled") {
+      rows.push(...res.value);
+    } else {
+      failures++;
+      console.error(
+        `[build-redirect-inventory] ⚠️ source "${sources[i].label}" indisponible : ` +
+          `${res.reason instanceof Error ? res.reason.message : res.reason}`,
+      );
+    }
+  });
+
+  if (rows.length === 0) {
+    throw new Error("[build-redirect-inventory] aucune source disponible — rien à écrire (toutes ont échoué).");
+  }
+
+  const csv = [header, ...rows].join("\n") + "\n";
   await writeFile(OUT_FILE, csv, "utf8");
   console.error(
-    `[build-redirect-inventory] ${esRows.length + ldRows.length} ligne(s) écrite(s) dans ${OUT_FILE} ` +
-      `(REDIRECTS_PERMANENT=${REDIRECTS_PERMANENT ? "1" : "0"} → règles "r" en ${STATUS_R}).`,
+    `[build-redirect-inventory] ${rows.length} ligne(s) écrite(s) dans ${OUT_FILE}` +
+      (failures > 0 ? ` (inventaire PARTIEL, ${failures} source(s) en échec — cf. avertissements ci-dessus)` : "") +
+      ` (REDIRECTS_PERMANENT=${REDIRECTS_PERMANENT ? "1" : "0"} → règles "r" en ${STATUS_R}).`,
   );
 }
 

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -5,6 +6,8 @@ import type { NextConfig } from "next";
 
 import { withPayload } from "@payloadcms/next/withPayload";
 import { withSentryConfig } from "@sentry/nextjs";
+
+const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * E4 du plan (`plan/02-mise-en-production.md`) — table de redirections 301 de
@@ -19,7 +22,12 @@ import { withSentryConfig } from "@sentry/nextjs";
  */
 const REDIRECTS_PERMANENT = process.env.REDIRECTS_PERMANENT === "1";
 
-type RedirectRule = { source: string; destination: string };
+type RedirectRule = {
+  source: string;
+  destination: string;
+  /** Cf. `redirects.md`, `has`/`missing` : items non transmis à `onHost` (qui ne touche que `has`). */
+  missing?: { type: "query"; key: string }[];
+};
 type StatusedRule = RedirectRule & { statusCode: 301 | 302 };
 type HostRule = StatusedRule & { has: [{ type: "host"; value: string }] };
 
@@ -30,6 +38,68 @@ const t = (o: RedirectRule): StatusedRule => ({ ...o, statusCode: 302 });
 /** Restreint un groupe de règles à un host (cohabitation ES/LD sur le même projet Vercel). */
 const onHost = (host: string, rules: StatusedRule[]): HostRule[] =>
   rules.map((x) => ({ ...x, has: [{ type: "host", value: host }] }));
+
+/**
+ * Boutique WooCommerce (`plan/02-mise-en-production.md` §Table de
+ * redirections, `plan/07-cloture.md` étape 4, P7) : **deux** hostnames à
+ * couvrir — l'apex ET `www.boutique.editionssociales.fr` (la zone OVH a des
+ * A/AAAA sur les deux, `plan/07-cloture.md` G5 : sans ça les vieux liens en
+ * `www.boutique` tombent sur une erreur OVH après détachement du WordPress).
+ */
+// Exporté (nommé) : réutilisé tel quel par `scripts/build-redirect-inventory.mjs`
+// pour générer l'inventaire de vérification du host boutique — une seule liste
+// de hosts, jamais deux qui pourraient diverger.
+export const BOUTIQUE_HOSTS = ["boutique.editionssociales.fr", "www.boutique.editionssociales.fr"];
+
+/**
+ * Table de redirections `/produit/<slug>` — artefact **versionné**
+ * (`src/lib/redirects-produits.json`, généré par
+ * `scripts/build-product-redirects.ts`), lu ici en synchrone : aucune I/O
+ * réseau/DB au build, contrairement à `scripts/redirect-inventory.csv`
+ * (régénéré à chaque étape, jamais commité — cf. le commentaire de
+ * `build-redirect-inventory.mjs`). Décision d'arbitrage du plan : UNE seule
+ * table, générée une fois, réutilisée telle quelle au Jour J (302) puis à la
+ * clôture (301) — seul `REDIRECTS_PERMANENT` change le statut, jamais le
+ * contenu de la table entre les deux moments.
+ */
+interface ProductRedirectTarget {
+  /** `null` = fiche `origin: "boutique"` (produit orphelin), destination `/boutique/<slug>`. */
+  edition: "editions-sociales" | "la-dispute" | null;
+  slug: string;
+}
+interface ProductRedirectsFile {
+  entries: Record<string, ProductRedirectTarget>;
+}
+function loadProductRedirects(): ProductRedirectsFile {
+  const file = path.join(ROOT_DIR, "src/lib/redirects-produits.json");
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch (err) {
+    // Dégradation propre (même politique que `env.ts`/`donations.ts` : jamais
+    // planter le site pour un artefact généré absent) : `src/lib/redirects-produits.json`
+    // est versionné et présent dans ce repo, mais un checkout partiel/CI mal
+    // configuré ne doit pas empêcher `next dev`/`next build` de démarrer —
+    // juste priver le host boutique de ses redirections produit (repli
+    // `/produit/:slug` → `/catalogue` toujours actif).
+    console.warn(
+      `[next.config] "${file}" illisible (${err instanceof Error ? err.message : err}) — ` +
+        `table de redirections produit vide (régénérer avec "pnpm build:product-redirects").`,
+    );
+    return { entries: {} };
+  }
+}
+const PRODUCT_REDIRECTS: ProductRedirectsFile = loadProductRedirects();
+
+/** Une règle par produit connu — placées AVANT le repli `/produit/:slug` générique (premier match gagnant). */
+function productRedirectRules(): StatusedRule[] {
+  return Object.entries(PRODUCT_REDIRECTS.entries).map(([productSlug, target]) =>
+    r({
+      source: `/produit/${productSlug}`,
+      destination:
+        target.edition != null ? `/catalogue/${target.edition}/${target.slug}` : `/boutique/${target.slug}`,
+    }),
+  );
+}
 
 /**
  * Formes d'URLs WordPress vérifiées dans les dumps (`permalink_structure =
@@ -115,7 +185,85 @@ async function redirects() {
       // `/feed` et tout le reste du domaine qui déménage).
       r({ source: "/:path*", destination: "https://editionssociales.fr/" }),
     ]),
+    // Host boutique.editionssociales.fr / www.boutique.editionssociales.fr —
+    // plan/02-mise-en-production.md §Table de redirections, câblé avant J-7 (P7).
+    ...BOUTIQUE_HOSTS.flatMap((host) =>
+      onHost(host, [
+        // Table produit → fiche (matched) / page boutique native (orphelin) —
+        // une règle littérale par slug connu, cf. `productRedirectRules()`.
+        ...productRedirectRules(),
+        // Repli : `/produit/<slug>` inconnu de la table (vieux lien mort déjà à
+        // l'époque WooCommerce, jamais couvert par aucun produit ni arbitrage) —
+        // DOIT rester après `productRedirectRules()` (premier match gagnant).
+        r({ source: "/produit/:slug", destination: "/catalogue" }),
+        // Panier/checkout/compte WooCommerce → panier natif unifié. `/panier`
+        // n'a PAS sa propre règle : source === destination créerait une boucle
+        // de redirection infinie (`/panier` est déjà servi nativement,
+        // identique sur ce host — rien à rediriger).
+        r({ source: "/commander", destination: "/panier" }),
+        r({ source: "/mon-compte", destination: "/panier" }),
+        // Catégories produit (`product_cat`) — seules les deux maisons sont
+        // nommément tranchées par le plan (`la-dispute`/`editions-sociales`) ;
+        // toute autre catégorie (« collections → filtres », mapping encore
+        // ouvert faute de liste exhaustive des slugs `product_cat`) retombe sur
+        // `/catalogue` — défaut conservateur, même politique que `/wp-content`
+        // (cms-* en filet) ou `/newsletter` (Q2/Q8) ailleurs dans ce fichier.
+        r({ source: "/categorie-produit/la-dispute", destination: "/catalogue/la-dispute" }),
+        r({ source: "/categorie-produit/editions-sociales", destination: "/catalogue/editions-sociales" }),
+        r({ source: "/categorie-produit/:cat", destination: "/catalogue" }),
+        // Accueil boutique → catalogue unifié — SAUF si `?wc-api=…` est présent
+        // (callback Paybox résiduel sur `/`) : les redirects sont évalués AVANT
+        // les rewrites dans Next (`rewrites.md`, « The order Next.js routes are
+        // checked »), donc sans ce `missing`, CE redirect détournerait le
+        // callback vers `/catalogue` avant que le rewrite `/?wc-api=*` (cf.
+        // `rewrites()` plus bas) n'ait la moindre chance de s'appliquer —
+        // vérifié empiriquement (302 au lieu du proxy attendu, corrigé ici).
+        r({ source: "/", destination: "/catalogue", missing: [{ type: "query", key: "wc-api" }] }),
+      ]),
+    ),
   ];
+}
+
+/**
+ * `/wc-api/*` et `/?wc-api=*` — callbacks de paiement WooCommerce (Paybox)
+ * résiduels pendant tout le recouvrement (`plan/02-mise-en-production.md` §Table
+ * de redirections) : **rewrite**, jamais redirect — le navigateur/serveur de
+ * paiement qui tape cette URL doit continuer d'atteindre WooCommerce en
+ * silence, la barre d'adresse ne doit pas bouger. Toujours actif, PAS gouverné
+ * par `REDIRECTS_PERMANENT` (aucun statut HTTP de redirection en jeu ici).
+ *
+ * ⚠️ Bucket `beforeFiles`, PAS le tableau simple (`afterFiles` implicite) :
+ * `/` est une VRAIE route de l'app (`(site)/page.tsx`) — la forme tableau
+ * simple n'est vérifiée qu'« after files » (`rewrites.md`, « The order
+ * Next.js routes are checked »), donc APRÈS que le filesystem ait déjà
+ * résolu `/` vers la page d'accueil : le rewrite `/?wc-api=…` ne serait
+ * JAMAIS atteint. Vérifié empiriquement (200 page d'accueil rendue, aucune
+ * tentative de proxy dans les logs, avant ce correctif) — `beforeFiles`
+ * force la vérification avant toute résolution de fichier/page.
+ */
+async function rewrites() {
+  return {
+    beforeFiles: BOUTIQUE_HOSTS.flatMap((host) => [
+      {
+        source: "/wc-api/:path*",
+        destination: "https://cms-boutique.editionssociales.fr/wc-api/:path*",
+        has: [{ type: "host" as const, value: host }],
+      },
+      // `/?wc-api=...` — capture nommée de la valeur de la query pour la
+      // reporter explicitement dans la destination (un `has` de type `query`
+      // sans référence dans `destination` n'est pas garanti d'être transmis).
+      {
+        source: "/",
+        has: [
+          { type: "host" as const, value: host },
+          { type: "query" as const, key: "wc-api", value: "(?<wcApi>.*)" },
+        ],
+        destination: "https://cms-boutique.editionssociales.fr/?wc-api=:wcApi",
+      },
+    ]),
+    afterFiles: [],
+    fallback: [],
+  };
 }
 
 const nextConfig: NextConfig = {
@@ -123,7 +271,7 @@ const nextConfig: NextConfig = {
   // remonterait sinon au pnpm-workspace.yaml du checkout parent et servirait le
   // mauvais arbre de fichiers.
   turbopack: {
-    root: path.dirname(fileURLToPath(import.meta.url)),
+    root: ROOT_DIR,
   },
   images: {
     // Les couvertures et visuels restent servis par les hébergements OVH existants
@@ -152,6 +300,7 @@ const nextConfig: NextConfig = {
     ],
   },
   redirects,
+  rewrites,
 };
 
 export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackages: false }), {

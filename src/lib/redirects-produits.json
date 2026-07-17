@@ -1,0 +1,921 @@
+{
+  "generatedAt": "2026-07-17T15:19:49.797Z",
+  "source": "bootstrap : WP REST (WP_ES_URL/WP_LD_URL live) + Store API live (WC_STORE_URL) — PAS la Local API Payload (DATABASE_URL absente de l'environnement de génération). À régénérer avec scripts/build-product-redirects.ts (pnpm payload run) dès qu'un DATABASE_URL est disponible, avant J-7 (P7 du plan) — cf. caveat de livraison.",
+  "productsTotal": 224,
+  "matchedTotal": 208,
+  "orphansTotal": 16,
+  "entries": {
+    "1382": {
+      "edition": "la-dispute",
+      "slug": "penser-avec-stuart-hall"
+    },
+    "fascisme-et-dictature": {
+      "edition": "editions-sociales",
+      "slug": "fascisme-et-dictature"
+    },
+    "friedrich-engels-textes-politiques-1883-1895": {
+      "edition": "editions-sociales",
+      "slug": "textes-politiques-1883-1895"
+    },
+    "decouvrir-rimbaud": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-rimbaud"
+    },
+    "karl-marx-les-luttes-des-classes-en-france": {
+      "edition": "editions-sociales",
+      "slug": "les-luttes-des-classes-en-france"
+    },
+    "jean-vigreux-decouvrir-le-front-populaire": {
+      "edition": "editions-sociales",
+      "slug": "jean-vigreux-decouvrir-le-front-populaire"
+    },
+    "emmanuel-barot-decouvrir-marcuse": {
+      "edition": "editions-sociales",
+      "slug": "emmanuel-barot-decouvrir-marcuse"
+    },
+    "karl-marx-notes-sur-mill": {
+      "edition": "editions-sociales",
+      "slug": "notes-sur-mill"
+    },
+    "lucien-seve-personnalite-individualite-et-biographie": {
+      "edition": "editions-sociales",
+      "slug": "personnalite-individualite-et-biographie"
+    },
+    "christopher-hill-le-monde-a-lenvers": {
+      "edition": "editions-sociales",
+      "slug": "le-monde-a-lenvers-histoire-des-idees-radicales-dans-la-revolution-anglaise"
+    },
+    "decouvrir-hegel": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-hegel"
+    },
+    "decouvrir-lukacs": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-lukacs"
+    },
+    "decouvrir-le-marxisme-ecologique": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-le-marxisme-ecologique"
+    },
+    "perry-anderson-sur-le-marxisme-occidental": {
+      "edition": "editions-sociales",
+      "slug": "sur-le-marxisme-occidental"
+    },
+    "stefanie-prezioso-decouvrir-lantifascisme": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-lantifascisme"
+    },
+    "vincent-berthelier-le-style-de-marx-copie": {
+      "edition": "editions-sociales",
+      "slug": "le-style-de-marx"
+    },
+    "christophe-magis-pour-une-critique-materialiste-des-medias": {
+      "edition": "editions-sociales",
+      "slug": "pour-une-critique-materialiste-des-medias"
+    },
+    "celine-marty-decouvrir-gorz": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-gorz"
+    },
+    "jean-marc-schiappa-decouvrir-la-revolution-francaise": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-la-revolution-francaise"
+    },
+    "tran-duc-thao-phenomenologie-marxisme-et-lutte-anticoloniale": {
+      "edition": "editions-sociales",
+      "slug": "phenomenologie-marxisme-et-lutte-anti-coloniale"
+    },
+    "suzanne-de-brunhoff-la-monnaie-chez-marx": {
+      "edition": "editions-sociales",
+      "slug": "la-monnaie-chez-marx"
+    },
+    "yves-clot-decouvrir-vygotski": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-vygotski"
+    },
+    "marc-belissa-et-yannick-bosc-decouvrir-saint-just": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-saint-just"
+    },
+    "louis-rouquayrol-decouvrir-descartes": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-descartes"
+    },
+    "juliette-farjat-le-langage-de-la-vie-reelle": {
+      "edition": "editions-sociales",
+      "slug": "le-langage-de-la-vie-reelle"
+    },
+    "agnes-heller-la-theorie-des-besoins-chez-marx": {
+      "edition": "editions-sociales",
+      "slug": "la-theorie-des-besoins-chez-marx"
+    },
+    "ugo-palheta-decouvrir-la-revolution-des-oeillets": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-la-revolution-des-oeillets"
+    },
+    "karl-marx-le-capital-livre-2": {
+      "edition": "editions-sociales",
+      "slug": "le-capital-livre-2"
+    },
+    "theories-sur-la-plus-value": {
+      "edition": "editions-sociales",
+      "slug": "karl-marx-theories-sur-la-plus-value"
+    },
+    "lars-lih-lenine-une-enquete-historique": {
+      "edition": "editions-sociales",
+      "slug": "lenine-une-enquete-historique"
+    },
+    "marina-garrisi-decouvrir-lenine": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-lenine"
+    },
+    "jean-jacques-lecercle-histoire-de-mots-et-luttes-de-langues": {
+      "edition": "editions-sociales",
+      "slug": "histoire-de-mots-et-luttes-de-langues"
+    },
+    "jean-quetier-sur-le-parti-revolutionnaire": {
+      "edition": "editions-sociales",
+      "slug": "sur-le-parti-revolutionnaire"
+    },
+    "franck-gaudichaud-decouvrir-la-revolution-chilienne-1970-1973": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-la-revolution-chilienne-1970-1973"
+    },
+    "yohann-douet-decouvrir-machiavel": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-machiavel"
+    },
+    "friedrich-engels-et-karl-marx-le-manifeste-du-parti-communiste-copie": {
+      "edition": "editions-sociales",
+      "slug": "manifeste-du-parti-communiste"
+    },
+    "harry-braverman-travail-et-capitalisme-monopoliste": {
+      "edition": "editions-sociales",
+      "slug": "travail-et-capitalisme-monopoliste"
+    },
+    "georges-lefebvre-quatre-ving-neuf": {
+      "edition": "editions-sociales",
+      "slug": "quatre-vingt-neuf"
+    },
+    "isabelle-garo-marx-une-critique-de-la-philosophie": {
+      "edition": "editions-sociales",
+      "slug": "marx-une-critique-de-la-philosophie"
+    },
+    "jean-batou-decouvrir-trotsky": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-trotsky"
+    },
+    "les-filles-marx-correspondance-de-jenny-laura-et-eleanor": {
+      "edition": "editions-sociales",
+      "slug": "les-filles-de-marx"
+    },
+    "e-p-thompson-les-romantiques-langleterre-a-lage-des-revolutions": {
+      "edition": "editions-sociales",
+      "slug": "les-romantiques-langleterre-a-lere-des-revolutions"
+    },
+    "friedrich-engels-et-karl-marx-les-articles-du-new-york-daily-tribune-1851-1852": {
+      "edition": "editions-sociales",
+      "slug": "les-articles-du-new-york-daily-tribune-volume-1-1851-1852"
+    },
+    "le-marxisme-et-loppression-des-femmes": {
+      "edition": "editions-sociales",
+      "slug": "le-marxisme-et-loppression-des-femmes-vers-une-theorie-unitaire"
+    },
+    "michael-lowy-la-theorie-de-la-revolution-chez-le-jeune-marx": {
+      "edition": "editions-sociales",
+      "slug": "la-theorie-de-la-revolution-chez-le-jeune-marx"
+    },
+    "claude-didry-decouvrir-durkheim": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-durkheim"
+    },
+    "marouane-essadek-decouvrir-fanon": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-fanon"
+    },
+    "karl-marx-friedrich-engels-maurice-godelier-sur-les-societes-precapitalistes": {
+      "edition": "editions-sociales",
+      "slug": "sur-les-societes-pre-capitalistes-edition-augmentee"
+    },
+    "ulysse-lojkine-joan-robinson-essai-sur-leconomie-de-marx": {
+      "edition": "editions-sociales",
+      "slug": "essai-sur-leconomie-de-marx"
+    },
+    "marcello-musto-pour-lire-la-premiere-internationale": {
+      "edition": "editions-sociales",
+      "slug": "pour-lire-la-premiere-internationale"
+    },
+    "karl-marx-le-capital-livre-1-2": {
+      "edition": "editions-sociales",
+      "slug": "le-capital-livre-1-2"
+    },
+    "laurent-douzou-decouvrir-le-programme-du-cnr": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-le-programme-du-cnr"
+    },
+    "stephane-haber-decouvrir-victor-hugo": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-victor-hugo"
+    },
+    "friedrich-engels-la-situation-de-la-classe-laborieuse-en-angleterre": {
+      "edition": "editions-sociales",
+      "slug": "la-situation-de-la-classe-laborieuse-en-angleterre"
+    },
+    "michael-burawoy-et-eric-olin-wright-pour-un-marxisme-sociologique": {
+      "edition": "editions-sociales",
+      "slug": "pour-un-marxisme-sociologique"
+    },
+    "alexandre-feron-decouvrir-beauvoir": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-beauvoir"
+    },
+    "ulysse-lojkine-et-alice-vincent-decouvrir-luxemburg": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-luxemburg"
+    },
+    "une-nouvelle-conception-du-marxisme-gramsci-et-le-marxisme": {
+      "edition": "editions-sociales",
+      "slug": "une-nouvelle-conception-du-monde-gramsci-et-le-marxisme"
+    },
+    "ludovic-hetzel-commenter-le-capital-livre-1": {
+      "edition": "editions-sociales",
+      "slug": "commenter-le-capital-livre-1"
+    },
+    "friedrich-engels-socialisme-utopique-et-socialisme-scientifique": {
+      "edition": "editions-sociales",
+      "slug": "socialisme-utopique-et-socialisme-scientifique"
+    },
+    "friedrich-engels-la-guerre-des-paysans-en-allemagne": {
+      "edition": "editions-sociales",
+      "slug": "la-guerre-des-paysans-en-allemagne"
+    },
+    "jean-baptiste-thomas-decouvrir-la-commune-de-paris": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-la-commune"
+    },
+    "karl-marx-et-friedrich-engels-sur-la-commune-de-paris": {
+      "edition": "editions-sociales",
+      "slug": "sur-la-commune-textes-et-controverses"
+    },
+    "florian-gulli-et-jean-qutier-dcouvrir-engels": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-engels"
+    },
+    "florian-gulli-et-jean-qutier-dcouvrir-marx": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-marx"
+    },
+    "simon-lemoine-dcouvrir-bourdieu": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-bourdieu"
+    },
+    "guillaume-fondu-dcouvrir-weber": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-weber"
+    },
+    "florian-gulli-et-jean-qutier-dcouvrir-gramsci": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-gramsci"
+    },
+    "friedrich-engels-et-karl-marx-correspondance-tome-13-1875-1880": {
+      "edition": "editions-sociales",
+      "slug": "correspondance-tome-13-1875-1880"
+    },
+    "friedrich-engels-et-karl-marx-annales-franco-allemandes": {
+      "edition": "editions-sociales",
+      "slug": "annales-franco-allemandes"
+    },
+    "les-principes-du-communisme": {
+      "edition": "editions-sociales",
+      "slug": "les-principes-du-communisme"
+    },
+    "fernando-rosaslart-de-durer-le-fascisme-au-portugal-covidepub-maintenantpuis-livre-papier": {
+      "edition": "editions-sociales",
+      "slug": "lart-de-durer-le-fascisme-au-portugal"
+    },
+    "judith-butler-deux-lectures-du-jeune-marx": {
+      "edition": "editions-sociales",
+      "slug": "deux-lectures-du-jeune-marx"
+    },
+    "michael-heinrich-karl-marx-et-la-naissance-de-la-socit-moderne-biographie-intellectuelle-1818-1841": {
+      "edition": "editions-sociales",
+      "slug": "karl-marx-et-la-naissance-de-la-societe-moderne-tome-1-1818-1841"
+    },
+    "friedrich-engels-et-karl-marx-la-sainte-famille": {
+      "edition": "editions-sociales",
+      "slug": "la-sainte-famille"
+    },
+    "friedrich-engels-et-karl-marx-correspondance-tomes-1-et-2-1835-1851": {
+      "edition": "editions-sociales",
+      "slug": "correspondance-tomes-1-et-2-1835-1851"
+    },
+    "karl-marx-manuscrits-de-1857-1858-dits-grundrisse": {
+      "edition": "editions-sociales",
+      "slug": "manuscrits-de-1857-1858-dits-grundrisse"
+    },
+    "karl-marx-contribution-la-critique-de-la-philosophie-du-droit-de-hegel": {
+      "edition": "editions-sociales",
+      "slug": "contribution-a-la-critique-de-la-philosophie-du-droit-de-hegel"
+    },
+    "antonio-negri-travail-vivant-contre-capital": {
+      "edition": "editions-sociales",
+      "slug": "travail-vivant-contre-capital"
+    },
+    "lecapital": {
+      "edition": "editions-sociales",
+      "slug": "la-capital-livre-1-fac-simile-de-la-traduction-originale-francaise"
+    },
+    "roger-martelli-communistes-en-1968": {
+      "edition": "editions-sociales",
+      "slug": "lannee-68-et-les-communistes-chronologie-documents-et-archives"
+    },
+    "louis-althusser-lucien-seve-correspondance-1948-1987": {
+      "edition": "editions-sociales",
+      "slug": "correspondance-1948-1987"
+    },
+    "alix-bouffard-alexandre-feron-guillaume-fondu-et-michael-heinrich-ce-quest-le-capital-de-marx": {
+      "edition": "editions-sociales",
+      "slug": "ce-quest-le-capital-de-marx"
+    },
+    "alain-badiou-quest-ce-que-jentends-par-marxisme": {
+      "edition": "editions-sociales",
+      "slug": "quest-ce-que-jentends-par-marxisme"
+    },
+    "norbert-elias-jai-suivi-mon-propre-chemin": {
+      "edition": "editions-sociales",
+      "slug": "jai-suivi-mon-propre-chemin"
+    },
+    "ivar-oddone-redecouvrir-lexperience-du-travail": {
+      "edition": "editions-sociales",
+      "slug": "redecouvrir-lexperience-du-travail"
+    },
+    "lucien-sve-pour-une-sciences-de-la-biographie": {
+      "edition": "editions-sociales",
+      "slug": "pour-une-science-de-la-biographie"
+    },
+    "histoire-socialiste-de-la-revolution-francaise-par-jean-jaures-tome-4": {
+      "edition": "editions-sociales",
+      "slug": "histoire-socialiste-de-la-revolution-francaise-tome-4"
+    },
+    "histoire-socialiste-de-la-revolution-francaise-par-jean-jaures-tome-3": {
+      "edition": "editions-sociales",
+      "slug": "histoire-socialiste-de-la-revolution-francaise-tome-3"
+    },
+    "friedrich-engels-karl-marx-et-joseph-weydemeyer-lideologie-allemande-1er-et-2e-chapitres": {
+      "edition": "editions-sociales",
+      "slug": "lideologie-allemande-1er-et-2e-chapitres-edition-bilingue"
+    },
+    "karl-marx-contribution-la-critique-de-lconomie-politique": {
+      "edition": "editions-sociales",
+      "slug": "contribution-a-la-critique-de-leconomie-politique"
+    },
+    "friedrich-engels-et-karl-marx-lideologie-allemande": {
+      "edition": "editions-sociales",
+      "slug": "lideologie-allemande"
+    },
+    "roger-martelli-lempreinte-communiste": {
+      "edition": "editions-sociales",
+      "slug": "lempreinte-communiste-pcf-et-societe-francaise-1920-2010"
+    },
+    "karl-marx-critique-du-programme-de-gotha": {
+      "edition": "editions-sociales",
+      "slug": "critique-du-programme-de-gotha"
+    },
+    "karl-marx-lettres-sur-le-capital": {
+      "edition": "editions-sociales",
+      "slug": "lettres-sur-le-capital"
+    },
+    "decoloniser-le-marxisme": {
+      "edition": "la-dispute",
+      "slug": "decoloniser-le-marxisme"
+    },
+    "manuel-contre-la-mise-en-echec-scolaire": {
+      "edition": "la-dispute",
+      "slug": "manuel-contre-la-mise-en-echec-scolaire"
+    },
+    "communisme-et-salaire-chez-bernard-friot": {
+      "edition": "la-dispute",
+      "slug": "le-communisme-de-bernard-friot"
+    },
+    "manifeste-pour-une-democratie-du-travail": {
+      "edition": "la-dispute",
+      "slug": "manifeste-pour-une-democratie-du-travail"
+    },
+    "contre-lecologie-de-guerre": {
+      "edition": "la-dispute",
+      "slug": "contre-lecologie-de-guerre"
+    },
+    "erving-goffman-larrangement-des-sexe": {
+      "edition": "la-dispute",
+      "slug": "larrangement-des-sexes-nouvelle-edition"
+    },
+    "mathilda-audasso-dix-idees-recues-sur-la-psychanalyse": {
+      "edition": "la-dispute",
+      "slug": "dix-idees-recues-sur-la-psychanalyse"
+    },
+    "florence-ihaddadene-promesse-dembauche": {
+      "edition": "la-dispute",
+      "slug": "promesse-dembauche"
+    },
+    "fabienne-montmasson-michel-petite-histoire-de-la-maternelle": {
+      "edition": "la-dispute",
+      "slug": "petite-histoire-de-la-maternelle"
+    },
+    "moha-le-retour-du-refoule": {
+      "edition": "la-dispute",
+      "slug": "moha-le-retour-du-refoule-recits-du-racisme-detat"
+    },
+    "gilbert-achcar-gaza-un-genocide-annonce": {
+      "edition": "la-dispute",
+      "slug": "gaza-un-genocide-annonce-un-tournant-dans-lhistoire-mondiale"
+    },
+    "sophie-noye-pour-un-feminisme-materialiste-et-queer-2": {
+      "edition": "la-dispute",
+      "slug": "pour-un-feminisme-materialiste-et-queer"
+    },
+    "vanina-mozziconacci-apprendre-a-philosopher-en-feministe": {
+      "edition": "la-dispute",
+      "slug": "apprendre-a-philosopher-en-feministe"
+    },
+    "marie-benilde-le-peril-bollore": {
+      "edition": "la-dispute",
+      "slug": "le-peril-bollore"
+    },
+    "samuel-bouron-politiser-la-haine-la-bataille-culturelle-de-lextreme-droite-identitaire": {
+      "edition": "la-dispute",
+      "slug": "politiser-la-haine"
+    },
+    "remy-ponge-se-tenir-debout": {
+      "edition": "la-dispute",
+      "slug": "lutter-contre-les-souffrances-au-travail"
+    },
+    "lev-vygotski-pensee-et-langage": {
+      "edition": "la-dispute",
+      "slug": "pensee-et-langage-2"
+    },
+    "collectif-la-condition-interimaire": {
+      "edition": "la-dispute",
+      "slug": "la-condition-interimaire"
+    },
+    "simon-massei-discipliner-les-banlieues-leducation-a-legalite-des-sexes-devoyee": {
+      "edition": "la-dispute",
+      "slug": "discipliner-les-banlieues-leducation-a-legalite-des-sexes-devoyee"
+    },
+    "bernard-friot-et-bernard-vasseur-le-communisme-qui-vient": {
+      "edition": "la-dispute",
+      "slug": "le-communisme-qui-vient"
+    },
+    "jean-pierre-terrail-la-crise-de-lecole-et-les-moyens-den-sortir": {
+      "edition": "la-dispute",
+      "slug": "la-crise-de-lecole-et-les-moyens-den-sortir"
+    },
+    "marie-peze-le-deuxieme-corps-2024": {
+      "edition": "la-dispute",
+      "slug": "le-deuxieme-corps"
+    },
+    "vincent-sizaire-gouverner-les-juges": {
+      "edition": "la-dispute",
+      "slug": "gouverner-les-juges"
+    },
+    "alain-bertho-de-lemeute-a-la-democratie": {
+      "edition": "la-dispute",
+      "slug": "des-emeutes-a-la-democratie"
+    },
+    "daniel-tanuro-ecologie-luttes-sociales-et-revolution": {
+      "edition": "la-dispute",
+      "slug": "ecologie-luttes-sociales-et-revolution"
+    },
+    "collectif-du-loriot-avoir-20-ans-a-sainte-soline": {
+      "edition": "la-dispute",
+      "slug": "avoir-20-ans-a-sainte-soline"
+    },
+    "daniel-veron-le-travail-migrant-lautre-delocalisation": {
+      "edition": "la-dispute",
+      "slug": "le-travail-migrant-lautre-delocalisation"
+    },
+    "margot-delon-enfants-des-bidonvilles": {
+      "edition": "la-dispute",
+      "slug": "enfants-des-bidonvilles"
+    },
+    "hugo-bouvard-ilana-eloit-mathias-quere-dir-lesbiennes-pedes-arretons-de-raser-les-murs": {
+      "edition": "la-dispute",
+      "slug": "lesbiennes-pedes-arretons-de-raser-les-murs"
+    },
+    "claude-didry-dir-face-au-covid-lenjeu-du-salariat": {
+      "edition": "la-dispute",
+      "slug": "face-au-covid-lenjeu-du-salariat"
+    },
+    "karel-yon-dir-le-syndicalisme-est-politique": {
+      "edition": "la-dispute",
+      "slug": "le-syndicalisme-est-politique"
+    },
+    "natacha-borgeaud-garciandia-dans-lintimite-du-care": {
+      "edition": "la-dispute",
+      "slug": "dans-lintimite-du-care"
+    },
+    "lise-gaignard-les-psychanalystes-et-le-travail": {
+      "edition": "la-dispute",
+      "slug": "les-psychanalystes-et-le-travail"
+    },
+    "christiane-marty-lenjeu-feministe-des-retraites": {
+      "edition": "la-dispute",
+      "slug": "lenjeu-feministe-des-retraites"
+    },
+    "teresa-de-lauretis-theorie-queer-et-cultures-populaires": {
+      "edition": "la-dispute",
+      "slug": "theorie-queer-et-cultures-populaires"
+    },
+    "alexis-louvion-des-salaries-sans-patrons": {
+      "edition": "la-dispute",
+      "slug": "des-salaries-sans-patrons"
+    },
+    "bernard-friot-prenons-le-pouvoir-sur-nos-retraites": {
+      "edition": "la-dispute",
+      "slug": "prenons-le-pouvoir-sur-nos-retraites"
+    },
+    "sandrine-garcia-enseignants-de-la-vocation-au-desenchantement": {
+      "edition": "la-dispute",
+      "slug": "enseignants-de-la-vocation-au-desenchantement"
+    },
+    "stephane-vaquero-les-ateliers-de-la-domination-scolaire": {
+      "edition": "la-dispute",
+      "slug": "les-ateliers-de-la-domination-scolaire"
+    },
+    "karine-clement-denys-gorbach-hanna-perekhoda-catherine-samary-tony-wood-linvasion-de-lukraine-histoires-conflits-et-resistances-populaires": {
+      "edition": "la-dispute",
+      "slug": "linvasion-de-lukraine-histoires-conflits-et-resistances-populaires"
+    },
+    "bruno-amable-et-stefano-palombarini-ou-va-le-bloc-bourgeois": {
+      "edition": "la-dispute",
+      "slug": "ou-va-le-bloc-bourgeois"
+    },
+    "liem-hoang-ngoc-petit-manuel-critique-des-theories-economiques": {
+      "edition": "la-dispute",
+      "slug": "petit-manuel-critique-des-theories-economiques"
+    },
+    "livia-scheller-la-force-collective-de-lindividu": {
+      "edition": "la-dispute",
+      "slug": "la-force-collective-de-lindividu-histoires-de-travail-et-clinique-de-lactivite"
+    },
+    "prisca-kergoatde-lindocilite-des-jeunesses-populaires-apprenti%c2%b7e%c2%b7s-et-eleves-de-lycees-professionnels": {
+      "edition": "la-dispute",
+      "slug": "de-lindocilite-des-jeunesses-populaires-apprenti%c2%b7e%c2%b7s-et-eleves-de-lycees-professionnels"
+    },
+    "fanny-renard-et-sophie-orange-des-femmes-qui-tiennent-la-campagne": {
+      "edition": "la-dispute",
+      "slug": "des-femmes-qui-tiennent-la-campagne"
+    },
+    "ugo-palheta-et-omar-slaouti-defaire-le-racisme-affronter-le-fascisme": {
+      "edition": "la-dispute",
+      "slug": "defaire-le-racisme-affronter-le-fascisme"
+    },
+    "catherine-quiminal-la-republique-et-ses-etrangers": {
+      "edition": "la-dispute",
+      "slug": "la-republique-et-ses-etrangers"
+    },
+    "gilles-moreau-sasseoir-et-se-regarder-passer-itineraires-dun-sociologue-de-province": {
+      "edition": "la-dispute",
+      "slug": "sasseoir-et-se-regarder-passer-itineraires-dun-sociologue-de-province"
+    },
+    "haude-rivoal-la-fabrique-des-masculinites-au-travail": {
+      "edition": "la-dispute",
+      "slug": "la-fabrique-des-masculinites-au-travail"
+    },
+    "lucien-seve-quel-communisme-pour-le-xxie-siecle-penser-avec-marx-aujourdhui-t-iv-deuxieme-partie": {
+      "edition": "la-dispute",
+      "slug": "quel-communisme-pour-le-xxie-siecle-penser-avec-marx-aujourdhui-t-iv-deuxieme-partie"
+    },
+    "bernard-friot-et-frederic-lordon-en-travail-conversation-sur-le-communisme": {
+      "edition": "la-dispute",
+      "slug": "en-travail-conversation-sur-le-communisme"
+    },
+    "helena-hirata-le-care-theories-et-pratiques": {
+      "edition": "la-dispute",
+      "slug": "le-care-theories-et-pratiques"
+    },
+    "natacha-chetcuti-osorovitz-femmes-en-prison-et-violences-de-genre-resistances-a-perpetuite": {
+      "edition": "la-dispute",
+      "slug": "femmes-en-prison-et-violences-de-genre-resistances-a-perpetuite"
+    },
+    "annie-thebaud-mony-politiques-assassines-et-luttes-pour-la-sante-au-travail": {
+      "edition": "la-dispute",
+      "slug": "politiques-assassines-et-luttes-pour-la-sante-au-travail"
+    },
+    "yves-schwartz-ergologie-et-politique": {
+      "edition": "la-dispute",
+      "slug": "travail-ergologie-et-politique"
+    },
+    "denis-bayon-lecologie-contre-le-revenu-de-base": {
+      "edition": "la-dispute",
+      "slug": "lecologie-contre-le-revenu-de-base"
+    },
+    "mathieu-van-criekingen-contre-la-gentrification": {
+      "edition": "la-dispute",
+      "slug": "contre-la-gentrification"
+    },
+    "lucien-seve-interventions": {
+      "edition": "la-dispute",
+      "slug": "interventions"
+    },
+    "anicet-lepors-la-trace": {
+      "edition": "la-dispute",
+      "slug": "la-trace"
+    },
+    "corine-maitte-et-didier-terrier-les-rythmes-du-labeur": {
+      "edition": "la-dispute",
+      "slug": "les-rythmes-du-labeur"
+    },
+    "roger-martelli-le-pcf-une-enigme-francaise": {
+      "edition": "la-dispute",
+      "slug": "le-pcf-une-enigme-francaise"
+    },
+    "stephane-bonnery-etienne-douat-dir-leducation-aux-temps-du-coronavirus": {
+      "edition": "la-dispute",
+      "slug": "leducation-aux-temps-du-coronavirus"
+    },
+    "pascale-molinier-le-travail-du-care": {
+      "edition": "la-dispute",
+      "slug": "le-travail-du-care"
+    },
+    "jean-pierre-terrail-pedagogies-de-lexigence": {
+      "edition": "la-dispute",
+      "slug": "pedagogies-de-lexigence-recit-de-pratiques-enseignantes-en-milieux-populaires"
+    },
+    "vincent-sizaire-etre-en-surete": {
+      "edition": "la-dispute",
+      "slug": "etre-en-surete"
+    },
+    "sylvia-faure-sen-sortir-malgre-tout": {
+      "edition": "la-dispute",
+      "slug": "sen-sortir-malgre-tout-parcours-en-classes-populaires"
+    },
+    "lucien-seve-le-communisme-penser-avec-marx-aujourdhui-t-iv-premiere-partie": {
+      "edition": "la-dispute",
+      "slug": "le-communisme-penser-avec-marx-aujourdhui-t-iv"
+    },
+    "avec-marx-philosophie-et-politique": {
+      "edition": "la-dispute",
+      "slug": "avec-marx-philosophie-et-politique"
+    },
+    "anne-sophie-romainville-les-faces-cachees-de-la-langue-scolaire": {
+      "edition": "la-dispute",
+      "slug": "les-faces-cachees-de-la-langue-scolaire"
+    },
+    "bernard-friot-le-travail-enjeu-des-retraites": {
+      "edition": "la-dispute",
+      "slug": "le-travail-enjeu-des-retraites"
+    },
+    "philippe-hambye-et-jean-louis-siroux-le-salut-par-lalternance": {
+      "edition": "la-dispute",
+      "slug": "le-salut-par-lalternance"
+    },
+    "caroline-fiat-daniele-obono-insoumises-a-lassemblee": {
+      "edition": "la-dispute",
+      "slug": "insoumises-a-lassemblee"
+    },
+    "nehara-feldman-migrantes-du-bassin-du-fleuve-senegal-aux-rives-de-la-seine": {
+      "edition": "la-dispute",
+      "slug": "migrantes-du-bassin-du-fleuve-senegal-aux-rives-de-la-seine"
+    },
+    "gabrielle-schutz-jeunes-jolies-et-sous-traitees-les-hotesses-daccueil": {
+      "edition": "la-dispute",
+      "slug": "jeunes-jolies-et-sous-traitees"
+    },
+    "paola-tabet-les-doigts-coupes": {
+      "edition": "la-dispute",
+      "slug": "les-doigts-coupes-une-anthropologie-feministe"
+    },
+    "romuald-bodin-linstitution-du-handicap": {
+      "edition": "la-dispute",
+      "slug": "linstitution-du-handicap"
+    },
+    "jean-et-lucien-seve-capitalexit-ou-catastrophe": {
+      "edition": "la-dispute",
+      "slug": "capitalexit-ou-catastrophe-entretiens"
+    },
+    "jean-claude-metraux-la-migration-comme-metaphore": {
+      "edition": "la-dispute",
+      "slug": "la-migration-comme-metaphore"
+    },
+    "bernard-friot-vaincre-macron": {
+      "edition": "la-dispute",
+      "slug": "vaincre-macron"
+    },
+    "lev-vygotski-conscience-inconscient-emotions": {
+      "edition": "la-dispute",
+      "slug": "conscience-inconcient-emotions"
+    },
+    "stephanie-prezioso-ed-contre-la-guerre-14-18-resistances-mondiales-et-revolution-sociale": {
+      "edition": "la-dispute",
+      "slug": "contre-la-guerre-14-18"
+    },
+    "la-fabrique-de-la-programmation-culturelle": {
+      "edition": "la-dispute",
+      "slug": "la-fabrique-de-la-programmation-culturelle"
+    },
+    "jerome-deauvieau-et-jean-pierre-terrail-les-sociologues-lecole-et-la-transmission-des-savoirs-dix-ans-apres": {
+      "edition": "la-dispute",
+      "slug": "les-sociologues-lecole-et-la-transmission-des-savoirs"
+    },
+    "kako-nubukpo-martial-ze-belinga-bruno-tinel-demba-moussa-dembele-sortir-lafrique-de-la-servitude-monetaire": {
+      "edition": "la-dispute",
+      "slug": "sortir-lafrique-de-la-servitude-monetaire"
+    },
+    "sophie-beroud-paul-bouffartigue-henri-eckert-et-denis-merklen-en-quete-des-classes-populaires-un-essai-politique": {
+      "edition": "la-dispute",
+      "slug": "en-quete-des-classes-populaires"
+    },
+    "vincent-sizaire-sortir-de-limposture-securitaire": {
+      "edition": "la-dispute",
+      "slug": "sortir-de-limposture-securitaire"
+    },
+    "claude-didry-linstitution-du-travail": {
+      "edition": "la-dispute",
+      "slug": "linstitution-du-travail"
+    },
+    "jean-pierre-terrail-pour-une-ecole-de-lexigence-intellectuelle-changer-de-paradigme-pedagogique": {
+      "edition": "la-dispute",
+      "slug": "pour-une-ecole-de-lexigence-intellectuelle"
+    },
+    "cahier-dexercices-je-lis-jecris-ce1": {
+      "edition": "la-dispute",
+      "slug": "je-lis-jecris-cahier-dexercices-ce1"
+    },
+    "manuel-je-lis-jecris-ce1": {
+      "edition": "la-dispute",
+      "slug": "je-lis-jecris-manuel-ce1"
+    },
+    "jean-numa-ducange-et-isabelle-garo-marx-politique": {
+      "edition": "la-dispute",
+      "slug": "marx-politique"
+    },
+    "stanislas-morel-la-medicalisation-de-lechec-scolaire": {
+      "edition": "la-dispute",
+      "slug": "la-medicalisation-de-lechec-scolaire"
+    },
+    "lucien-seve-penser-avec-marx-aujourdhui-tome-3-la-philosophie": {
+      "edition": "la-dispute",
+      "slug": "la-philosophie-penser-avec-marx-aujourdhui-t-iii"
+    },
+    "bernard-friot-emanciper-le-travail": {
+      "edition": "la-dispute",
+      "slug": "emanciper-le-travail"
+    },
+    "nicole-claude-mathieu-lanatomie-politique-2-usage-dereliction-et-resilience-des-femmes": {
+      "edition": "la-dispute",
+      "slug": "lanatomie-politique-2"
+    },
+    "christelle-avril-les-aides-a-domicile-un-autre-monde-populaire": {
+      "edition": "la-dispute",
+      "slug": "les-aides-a-domicile-un-monde-populaire"
+    },
+    "mathieu-gregoire-les-intermittents-du-spectacle": {
+      "edition": "la-dispute",
+      "slug": "les-intermittents-du-spectacle"
+    },
+    "bernard-friot-lenjeu-du-salaire": {
+      "edition": "la-dispute",
+      "slug": "lenjeu-du-salaire"
+    },
+    "daniele-kergoat-se-battre-disent-elles": {
+      "edition": "la-dispute",
+      "slug": "se-battre-disent-elles"
+    },
+    "grds-lecole-commune-proposition-pour-une-refondation-du-systeme-educatif": {
+      "edition": "la-dispute",
+      "slug": "lecole-commune"
+    },
+    "je-lis-jecris-cahier-dexercices": {
+      "edition": "la-dispute",
+      "slug": "je-lis-jecris-cahier-dexercices"
+    },
+    "je-lis-jecris-manuel": {
+      "edition": "la-dispute",
+      "slug": "je-lis-jecris-manuel"
+    },
+    "denis-merklen-quartiers-populaires-quartiers-politiques": {
+      "edition": "la-dispute",
+      "slug": "quartiers-populaires-quartiers-politiques"
+    },
+    "lucien-seve-penser-avec-marx-aujourdhui-tome-4-le-communisme-premiere-partie": {
+      "edition": "la-dispute",
+      "slug": "lhomme-penser-avec-marx-aujourdhui-t-ii"
+    },
+    "jules-falquet-de-gre-ou-de-force-les-femmes-dans-la-mondialisation": {
+      "edition": "la-dispute",
+      "slug": "de-gre-ou-de-force-les-femmes-dans-la-mondialisation"
+    },
+    "stephane-bonnery-comprendre-lechec-scolaire-eleves-en-difficultes-et-dispositifs-pedagogiques": {
+      "edition": "la-dispute",
+      "slug": "comprendre-lechec-scolaire"
+    },
+    "jack-goody-pouvoirs-et-savoirs-de-lecrit": {
+      "edition": "la-dispute",
+      "slug": "pouvoirs-et-savoirs-de-lecrit"
+    },
+    "lucien-seve-quest-ce-que-la-personne-humaine": {
+      "edition": "la-dispute",
+      "slug": "quest-ce-que-la-personne-humaine-bioethique-et-democratie"
+    },
+    "yves-clot-avec-vygotski": {
+      "edition": "la-dispute",
+      "slug": "avec-vygotski"
+    },
+    "djillali-hadjadj-corruption-et-democratie-en-algerie": {
+      "edition": "la-dispute",
+      "slug": "corruption-et-democratie-en-algerie"
+    },
+    "isabelle-coutant-politiques-du-squat": {
+      "edition": "la-dispute",
+      "slug": "politiques-du-squat"
+    },
+    "jean-marc-leveratto-la-mesure-de-lart": {
+      "edition": "la-dispute",
+      "slug": "la-mesure-de-lart"
+    },
+    "lucien-seve-dir-sciences-et-dialectiques-de-la-nature": {
+      "edition": "la-dispute",
+      "slug": "sciences-et-dialectiques-de-la-nature"
+    },
+    "celine-marty-decouvrir-gorz-prevente": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-gorz"
+    },
+    "jean-marc-schiappa-decouvrir-la-revolution-francaise-prevente": {
+      "edition": "editions-sociales",
+      "slug": "decouvrir-la-revolution-francaise"
+    },
+    "romulad-bodin-linstitution-du-handicap": {
+      "edition": "la-dispute",
+      "slug": "linstitution-du-handicap"
+    },
+    "lev-vygotski-pensee-et-langage-prevente": {
+      "edition": "la-dispute",
+      "slug": "pensee-et-langage-2"
+    },
+    "sac-en-toile-imake-marxism-great-again-i": {
+      "edition": null,
+      "slug": "sac-en-toile-imake-marxism-great-again-i"
+    },
+    "friedrich-engels-ludwig-feuerbach-et-la-fin-de-la-philosophie-allemande-classique": {
+      "edition": null,
+      "slug": "friedrich-engels-ludwig-feuerbach-et-la-fin-de-la-philosophie-allemande-classique"
+    },
+    "friedrich-engels-et-karl-marx-correspondance-tome-5-1857-1859-couverture-rigide": {
+      "edition": null,
+      "slug": "friedrich-engels-et-karl-marx-correspondance-tome-5-1857-1859-couverture-rigide"
+    },
+    "andre-seve-ortho-vert-dictionnaire-orthographique-et-grammatical": {
+      "edition": null,
+      "slug": "andre-seve-ortho-vert-dictionnaire-orthographique-et-grammatical"
+    },
+    "je-lis-jecris-manuelcahier-dexercices-cp": {
+      "edition": null,
+      "slug": "je-lis-jecris-manuelcahier-dexercices-cp"
+    },
+    "je-lis-jecris-manuelcahier-dexercices-ce2": {
+      "edition": null,
+      "slug": "je-lis-jecris-manuelcahier-dexercices-ce2"
+    },
+    "je-lis-jecris-ce2-cahier-dexercices": {
+      "edition": null,
+      "slug": "je-lis-jecris-ce2-cahier-dexercices"
+    },
+    "je-lis-jecris-ce2-manuel": {
+      "edition": null,
+      "slug": "je-lis-jecris-ce2-manuel"
+    },
+    "karl-marx-le-chapitre-vi-manuscrits-de-1863-1867": {
+      "edition": null,
+      "slug": "karl-marx-le-chapitre-vi-manuscrits-de-1863-1867"
+    },
+    "je-lis-jecris-manuelcahier-dexercices-ce1": {
+      "edition": null,
+      "slug": "je-lis-jecris-manuelcahier-dexercices-ce1"
+    },
+    "roger-martelli-une-dispute-communiste-le-comite-central-dargenteuil-sur-la-culture": {
+      "edition": null,
+      "slug": "roger-martelli-une-dispute-communiste-le-comite-central-dargenteuil-sur-la-culture"
+    },
+    "lucien-seve-structuralisme-et-dialectique": {
+      "edition": null,
+      "slug": "lucien-seve-structuralisme-et-dialectique"
+    },
+    "friedrich-engels-et-karl-marx-correspondance-tome-7-1862-1864": {
+      "edition": null,
+      "slug": "friedrich-engels-et-karl-marx-correspondance-tome-7-1862-1864"
+    },
+    "friedrich-engels-et-karl-marx-correspondance-tome-3-1852-1853": {
+      "edition": null,
+      "slug": "friedrich-engels-et-karl-marx-correspondance-tome-3-1852-1853"
+    },
+    "karl-marx-et-friedrich-engels-la-nouvelle-gazette-rhenane-tome-1": {
+      "edition": null,
+      "slug": "karl-marx-et-friedrich-engels-la-nouvelle-gazette-rhenane-tome-1"
+    },
+    "jean-jaures-histoire-socialiste-de-la-revolution-francaise-tome-2": {
+      "edition": null,
+      "slug": "jean-jaures-histoire-socialiste-de-la-revolution-francaise-tome-2"
+    }
+  }
+}

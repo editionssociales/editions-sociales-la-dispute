@@ -49,3 +49,9 @@ next-env.d.ts
 
 # payload — rapports + fichiers temporaires de la migration WordPress→Postgres
 scripts/migrate-catalogue/out/
+
+# inventaire de vérification des redirections (`build-redirect-inventory.mjs`) :
+# régénéré à chaque étape (E5, E6, E7), jamais commité — à la différence de
+# `src/lib/redirects-produits.json`, qui LUI est versionné (décision d'arbitrage
+# du plan, cf. next.config.ts).
+scripts/redirect-inventory.csv
