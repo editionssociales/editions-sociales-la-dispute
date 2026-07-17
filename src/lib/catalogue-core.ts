@@ -76,9 +76,14 @@ function productCover(p: WcProduct): Cover | null {
   return url ? { url, width: 2, height: 3 } : null;
 }
 
-/** Un livre à date de parution future est-il « à paraître » ? Aujourd'hui en ISO `YYYY-MM-DD`, comparaison lexicographique valide sur ce format. */
-function isUpcoming(publishedAt: string | null): boolean {
-  return publishedAt != null && publishedAt > new Date().toISOString().slice(0, 10);
+/**
+ * Un livre à date de parution future est-il « à paraître » ? Aujourd'hui en
+ * ISO `YYYY-MM-DD`, comparaison lexicographique valide sur ce format. `now`
+ * injectable pour les tests (défaut `new Date()`) — signature réconciliée
+ * avec la copie qu'importait `checkout-core.ts`, désormais unifiée ici.
+ */
+export function isUpcoming(publishedAt: string | null, now: Date = new Date()): boolean {
+  return publishedAt != null && publishedAt > now.toISOString().slice(0, 10);
 }
 
 /** Résout le statut d'achat d'un livre à partir du produit boutique associé. */

@@ -15,6 +15,7 @@
  * client) — même découpage pur/impur que `shipping-core.ts`/`cart-core.ts`.
  */
 import { MAX_LINE_QTY } from "./cart-core";
+import { isUpcoming } from "./catalogue-core";
 
 /* ------------------------------ requête entrante ------------------------------ */
 
@@ -115,11 +116,6 @@ export interface ValidatedCheckoutLine {
   unitPriceCents: number;
   lineTotalCents: number;
   reducedShippingFlag: boolean;
-}
-
-/** Aujourd'hui en ISO `YYYY-MM-DD` — même comparaison lexicographique que `catalogue-core.ts:isUpcoming`. */
-function isUpcoming(publishedAt: string | null, now: Date): boolean {
-  return publishedAt != null && publishedAt > now.toISOString().slice(0, 10);
 }
 
 /** Euros → centimes entiers, arrondi (même règle que `cart-core.ts:priceToCents`). */

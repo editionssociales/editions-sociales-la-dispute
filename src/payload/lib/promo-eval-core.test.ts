@@ -38,6 +38,19 @@ describe('evaluatePromoCode', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('jour d’expiration inclusif : `expiresAt` = jour de `now` (même si plus tôt dans la journée) → encore valide', () => {
+    // NOW = 2026-07-12T10:00:00.000Z — un `expiresAt` daté du même jour, même
+    // sans heure (minuit implicite), reste valable toute la journée (décision
+    // produit 17/07, alignée `catalogue-core.ts:isUpcoming` et le dashboard).
+    const result = evaluatePromoCode(fixedCart({ expiresAt: '2026-07-12' }), 5000, NOW)
+    expect(result.ok).toBe(true)
+  })
+
+  it('jour d’expiration inclusif : `expiresAt` = veille de `now` → expiré', () => {
+    const result = evaluatePromoCode(fixedCart({ expiresAt: '2026-07-11' }), 5000, NOW)
+    expect(result).toEqual({ ok: false, reason: 'expired', message: 'Ce code promo a expiré.' })
+  })
+
   it('panier sous le minimum requis → min-cart, message en euros', () => {
     const result = evaluatePromoCode(fixedCart({ minCart: 50 }), 4999, NOW)
     expect(result).toEqual({

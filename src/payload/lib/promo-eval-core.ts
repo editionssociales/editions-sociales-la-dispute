@@ -44,6 +44,11 @@ function toCents(euros: number): number {
  * minimum → sinon valide (remise calculée, jamais au-delà du sous-total —
  * ce dernier plafond reste la responsabilité de `computeCartTotals`,
  * ce module ne connaît pas le sous-total une fois la remise appliquée).
+ *
+ * Expiration en JOUR INCLUSIF (décision produit 17/07) : un code dont
+ * `expiresAt` tombe le 13/07 reste valable toute la journée du 13/07 — même
+ * comparaison lexicographique sur `slice(0, 10)` que `catalogue-core.ts:isUpcoming`
+ * et le panneau codes promo du dashboard (`derive.ts:expiredActivePromos`).
  */
 export function evaluatePromoCode(
   promo: PromoCodeLike | null,
@@ -56,7 +61,7 @@ export function evaluatePromoCode(
   if (!promo.active) {
     return { ok: false, reason: 'inactive', message: 'Ce code promo n’est plus actif.' }
   }
-  if (promo.expiresAt && new Date(promo.expiresAt).getTime() < now.getTime()) {
+  if (promo.expiresAt && promo.expiresAt.slice(0, 10) < now.toISOString().slice(0, 10)) {
     return { ok: false, reason: 'expired', message: 'Ce code promo a expiré.' }
   }
   if (promo.minCart != null && cartTotalCents < toCents(promo.minCart)) {
