@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { buildCatalogueView, type CatalogueView } from "./browse";
 import { httpCatalogueSource } from "./catalogue-http";
+import { assertCatalogueComplete } from "./catalogue-integrity";
 import { getBoutiqueOnlyBook, listBoutiqueOnlyBooks, pgCatalogueSource } from "./catalogue-pg";
 import {
   buildBookDetail,
@@ -55,6 +56,10 @@ export const getAllBooks = cache(async (): Promise<Book[]> => {
     nativeCommerce ? Promise.resolve([]) : source.listProducts(),
     nativeCommerce ? listBoutiqueOnlyBooks() : Promise.resolve([]),
   ]);
+  // Garde-fou DEVOPS.md §5 : jamais construire (ni donc mettre en cache ISR)
+  // un catalogue amputé par une page WordPress en échec — cf.
+  // `catalogue-integrity.ts` pour le détail du point d'insertion.
+  assertCatalogueComplete(es.length + ld.length);
   return buildCatalogueForFlag(
     nativeCommerce,
     { "editions-sociales": es, "la-dispute": ld },

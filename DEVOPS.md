@@ -144,17 +144,52 @@ Tout le reste de `.env` sert à l'outillage, jamais à l'application.
 
 ### 4.1 Variables lues par l'application (aujourd'hui)
 
-| Variable | Défaut codé en dur | Lue par |
+| Variable | Repli codé en dur (mort en pratique, cf. ci-dessous) | Lue par |
 |---|---|---|
 | `WP_ES_URL` | `https://editionssociales.fr` | `src/lib/catalogue-http.ts` |
 | `WP_LD_URL` | `https://ladispute.fr` | `src/lib/catalogue-http.ts` |
 | `WC_STORE_URL` | `https://boutique.editionssociales.fr` | `src/lib/boutique.ts` |
 | `WP_REVALIDATE` | `3600` | `catalogue-http.ts`, `boutique.ts` |
 
-⚠️ **Les défauts sont des URL publiques de production.** Un environnement mal
-configuré ne plante pas : il tape silencieusement le WordPress de prod. C'est
-acceptable en lecture seule, ce ne le sera plus dès qu'il y aura une base de données
-et un paiement. À la phase 3, ces défauts doivent devenir des **erreurs au démarrage**.
+✅ **`WP_ES_URL`/`WP_LD_URL`/`WC_STORE_URL` sont désormais REQUISES — erreur au
+démarrage si absentes** (`src/lib/env.ts:envSchema`, via `assertEnv()` que
+`instrumentation.ts:register()` appelle avant que le serveur Next n'accepte la
+moindre requête, dev comme prod). Avant ce lot, un environnement mal configuré
+ne plantait pas : il tapait silencieusement le WordPress de prod — acceptable
+tant que le site ne fait que *lire*, plus dès qu'il y a une base de données et
+un paiement (dons). Les replis `|| "https://…"` visibles dans
+`catalogue-http.ts`/`boutique.ts` restent dans le code (ceinture
+supplémentaire, jamais atteinte tant qu'`assertEnv` a tourné sans jeter) mais
+ne sont plus le comportement attendu.
+
+🔴 **Vérification pré-merge/pré-déploiement obligatoire.** Ce fail-fast tourne
+à **chaque cold start**, Preview comme Production (`register()` — pas
+seulement au build) : si `WP_ES_URL`/`WP_LD_URL`/`WC_STORE_URL` ne sont pas
+déjà posées côté Vercel pour un environnement donné, **chaque requête** vers
+une fonction serverless de cet environnement plante au démarrage — pas
+seulement un build cassé, un environnement entier down. Avant de merger ce
+lot (ou tout PR qui en dépend) et avant tout déploiement Preview/Production,
+confirmer que les trois variables sont posées sur les **trois** scopes
+(Production, Preview, Development) — commandes `vercel env add` en §6.3 — et
+vérifier qu'une PR de test produit bien une preview fonctionnelle après
+merge. Ce geste est **humain/infra**, hors du périmètre de ce commit.
+
+⚠️ **Angle mort résiduel.** `assertEnv()` tourne au *boot du serveur*
+(`register()` — « appelé une fois quand une nouvelle instance serveur Next
+démarre », doc Next), **pas** pendant `next build` (la génération statique /
+`generateStaticParams`, qui interroge WordPress, s'exécute hors de ce hook).
+Un build lancé avec ces variables réellement absentes de tout l'environnement
+retomberait donc encore, silencieusement, sur les URL de prod. En pratique ce
+risque résiduel est couvert autrement : `.env.example` fournit déjà les trois
+URL (Next charge `.env*` à toutes les phases, y compris le build) et §6.3
+exige de les poser explicitement dans Vercel (Production/Preview/Development)
+avant tout build réel. Fermer cet angle mort pour de bon supposerait de faire
+échouer la construction même de `SITES`/`WC` (`catalogue-http.ts`/
+`boutique.ts`) — non fait ici : ces modules sont importés inconditionnellement
+par `catalogue.ts` (l'aiguillage `CATALOGUE_SOURCE=pg` ne fait que ne pas
+*appeler* `httpCatalogueSource()`, il n'empêche pas son import), donc les y
+faire jeter romprait le découplage entre les deux adaptateurs même quand `pg`
+n'a besoin d'aucune des trois URL.
 
 ### 4.2 Variables d'outillage (jamais lues par `src/`)
 
@@ -213,23 +248,32 @@ build quand le diff ne touche ni `src/`, ni `public/`, ni les fichiers de conf.
 **Non appliqué ici** : cela modifie le comportement de déploiement d'un projet en
 production — à valider avant, pas à glisser dans une PR d'outillage.
 
-### 🔴 Risque actif : le catalogue tronqué en silence
+### 🟠 Risque mitigé (court terme) : le catalogue tronqué en silence
 
-`listBooks()` avale ses erreurs (`catch { break }`) et renvoie une **liste partielle**.
-Si WordPress limite le débit ou renvoie un 5xx à la page 2 pendant un build, alors :
+`listBooks()` délègue sa pagination à `fetchAllPages()` (`src/lib/fetch-all-pages.ts`),
+qui avale ses erreurs (`catch { …; break }`) et renvoie une **liste partielle**. Si
+WordPress limite le débit ou renvoie un 5xx à la page 2 pendant un build, alors :
 
-1. le build **réussit**, avec un catalogue amputé ;
-2. l'ISR met ce résultat en cache **une heure** ;
-3. `getBook()` renvoie `null` sur les slugs manquants → une fiche livre réelle est
+1. sans garde-fou, le build **réussirait**, avec un catalogue amputé ;
+2. l'ISR mettrait ce résultat en cache **une heure** ;
+3. `getBook()` renvoie `null` sur les slugs manquants → une fiche livre réelle serait
    **pré-rendue en 404**.
 
-Aucune alerte ne se déclenche. Mitigations, par ordre de coût croissant :
+Aucune alerte ne se déclencherait. Mitigations, par ordre de coût croissant :
 
-- **court terme** — faire échouer le build si le nombre de livres collectés s'écarte de
-  plus de ~5 % du dernier chiffre connu (295) ; ajouter la remontée d'erreurs (phase 6)
-  pour voir les `console.error` de production ;
+- **court terme — posé** : `src/lib/catalogue-integrity.ts:assertCatalogueComplete()`
+  fait échouer le total des deux fonds (`es.length + ld.length`) s'il s'écarte de plus
+  de 5 % du dernier chiffre connu (`KNOWN_CATALOGUE_SIZE = 295`, constante à ajuster au
+  fil des parutions). Câblé dans `catalogue.ts:getAllBooks()` — seul point qui combine
+  les deux fonds avant fusion/cache — l'échec y frappe indifféremment le build
+  (`generateStaticParams`, rien à perdre) et la revalidation ISR/Data Cache d'une page
+  déjà servie (régénération en arrière-plan écartée, Next conserve le rendu/le cache
+  précédent — le comportement voulu, jamais une page déjà en service qui tombe).
+  Reste à faire (phase 6) : remonter ces erreurs (Sentry) pour voir aussi les
+  `console.error` de production, pas seulement les échecs de build.
 - **définitif** — phase 3 : la source devient PostgreSQL, une transaction remplace 300
-  requêtes HTTP, et une lecture partielle n'est plus représentable.
+  requêtes HTTP, et une lecture partielle n'est plus représentable — ce garde-fou
+  redevient alors inutile et peut être retiré.
 
 ---
 

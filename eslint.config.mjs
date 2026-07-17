@@ -16,6 +16,10 @@ const eslintConfig = defineConfig([
     "src/app/(payload)/**",
     "src/payload-types.ts",
     "src/migrations/**",
+    // Worktrees git locaux (checkouts parallèles sous .claude/worktrees/) —
+    // pollueraient `pnpm lint` dans le checkout principal, qui les voit comme
+    // de simples sous-dossiers.
+    ".claude/**",
   ]),
 ]);
 

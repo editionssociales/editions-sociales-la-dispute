@@ -155,6 +155,7 @@ export function CartView() {
 
   const [snapshot, setSnapshot] = useState<CartSnapshot>({ books: [], reducedShippingFlags: [] });
   const [snapshotReady, setSnapshotReady] = useState(false);
+  const [snapshotError, setSnapshotError] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
@@ -164,12 +165,26 @@ export function CartView() {
     // sinon un faux positif : ceci relit un système externe (le catalogue
     // serveur) à chaque changement de composition du panier, le cas
     // légitime que la règle documente elle-même.
+    //
+    // `getCartSnapshot` relit `getAllBooks()` (`catalogue.ts`), qui peut
+    // jeter `CatalogueTruncatedError` (`catalogue-integrity.ts`) pendant une
+    // fenêtre de flakiness WordPress. Sans ce `try/catch`, l'échec resterait
+    // une promesse rejetée non gérée : `snapshotReady` ne passerait jamais à
+    // `true`, ce qui bloque déjà l'auto-guérison (garde ci-dessous) mais ne
+    // prévient jamais l'utilisateur — d'où `snapshotError`, affiché plutôt
+    // que de laisser le panier indéfiniment en chargement.
     async function load() {
       setSnapshotReady(false);
-      const next = await getCartSnapshot(ids);
-      if (cancelled) return;
-      setSnapshot(next);
-      setSnapshotReady(true);
+      setSnapshotError(false);
+      try {
+        const next = await getCartSnapshot(ids);
+        if (cancelled) return;
+        setSnapshot(next);
+        setSnapshotReady(true);
+      } catch {
+        if (cancelled) return;
+        setSnapshotError(true);
+      }
     }
     load();
     return () => {
@@ -276,6 +291,13 @@ export function CartView() {
 
   return (
     <div className={`transition-opacity motion-reduce:transition-none ${snapshotReady ? "" : "opacity-70"}`}>
+      {snapshotError && (
+        <p className="mb-4 font-sans text-sm font-bold text-brick" role="alert">
+          Impossible de vérifier votre panier pour le moment (catalogue
+          momentanément indisponible). Les prix et disponibilités affichés
+          peuvent être périmés — réessayez dans un instant.
+        </p>
+      )}
       <FramedGrid className="grid-cols-[64px_1fr_auto_auto] items-stretch">
         {summary.lines.map((line) => (
           <CartLineRow
