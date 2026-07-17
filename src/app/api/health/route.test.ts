@@ -2,35 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * `GET /api/health` testé à travers son interface réelle (Request →
- * Response) — même traitement que `api/stripe/webhook/route.test.ts` :
- * `payload`/`@payload-config` substitués par un magasin en mémoire, Sentry
- * observé par mock. `COMMERCE_NATIVE` basculé par test (jamais un état
- * partagé entre `describe`).
+ * Response) — Sentry observé par mock, `@/lib/order-source` mocké en bloc
+ * (seam nommé du cycle de vie Order — collection/where/options couverts par
+ * `order-source.test.ts`, même traitement que `@/lib/checkout-source` dans
+ * `api/stripe/webhook/route.test.ts`) : ce fichier ne revérifie que la
+ * COMPOSITION de la route (dégradation `COMMERCE_NATIVE`, calcul de l'âge,
+ * capture Sentry), pas le mock Payload sous-jacent.
  */
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
-vi.mock("@payload-config", () => ({ default: {} }));
 
-interface FakeOrder {
-  updatedAt: string;
-  [key: string]: unknown;
-}
-
-let orders: FakeOrder[] = [];
+let latestUpdatedAt: string | null = null;
 let findShouldThrow = false;
 
-vi.mock("payload", () => ({
-  getPayload: async () => ({
-    find: async (args: { collection: string; sort?: string }) => {
-      if (findShouldThrow) throw new Error("Postgres indisponible (test)");
-      if (args.collection !== "orders") {
-        throw new Error(`collection inattendue dans le test : ${args.collection}`);
-      }
-      // Même tri que la route (`-updatedAt`) — le plus récent en tête.
-      const sorted = [...orders].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
-      return { docs: sorted.slice(0, 1) };
-    },
-  }),
+vi.mock("@/lib/order-source", () => ({
+  findLatestOrderUpdatedAt: async () => {
+    if (findShouldThrow) throw new Error("Postgres indisponible (test)");
+    return latestUpdatedAt;
+  },
 }));
 
 const { GET } = await import("./route");
@@ -38,7 +27,7 @@ const Sentry = await import("@sentry/nextjs");
 
 beforeEach(() => {
   vi.clearAllMocks();
-  orders = [];
+  latestUpdatedAt = null;
   findShouldThrow = false;
 });
 
@@ -82,10 +71,7 @@ describe("GET /api/health — COMMERCE_NATIVE=1", () => {
   it("expose l'âge de la commande la plus récemment touchée", async () => {
     const now = new Date("2026-07-17T12:00:00.000Z");
     vi.setSystemTime(now);
-    orders = [
-      { updatedAt: "2026-07-17T11:30:00.000Z" }, // 30 min
-      { updatedAt: "2026-07-16T12:00:00.000Z" }, // 1 jour — pas le plus récent
-    ];
+    latestUpdatedAt = "2026-07-17T11:30:00.000Z"; // 30 min
     const res = await GET();
     expect(await res.json()).toEqual({
       status: "ok",

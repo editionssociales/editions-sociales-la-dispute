@@ -7,14 +7,16 @@ import Stripe from "stripe";
  * observés par mock. Rendu possible par l'alias `server-only` (route →
  * `@/lib/stripe`).
  *
- * Côté commerce (`kind: "order"`, plan §4 étape 9) : `payload`/`@payload-config`
- * substitués par un magasin en mémoire (comme `panier/actions.test.ts`) —
- * `@/lib/checkout-source` (titre/ISBN/stock) et `@/lib/order-mail` (sélection
- * de mailer — LOG ou Brevo, plan §5) sont mockés en bloc, déjà couverts
- * ailleurs (même traitement que `@/lib/cart-source` dans
- * `panier/actions.test.ts`) : on ne revérifie ici que la COMPOSITION du
- * webhook (création/idempotence/décrément/remboursement) — pas le choix
- * Brevo/LOG lui-même (`order-mail.test.ts`).
+ * Côté commerce (`kind: "order"`, plan §4 étape 9) : `@/lib/order-source`
+ * (seam nommé du cycle de vie Order — collection/where/options couverts par
+ * `order-source.test.ts`) substitué par un magasin en mémoire, comme
+ * `@/lib/checkout-source` (titre/ISBN/stock) et `@/lib/order-mail`
+ * (sélection de mailer — LOG ou Brevo, plan §5), déjà couverts ailleurs
+ * (même traitement que `@/lib/cart-source` dans `panier/actions.test.ts`) :
+ * on ne revérifie ici que la COMPOSITION du webhook
+ * (création/idempotence/décrément/remboursement) — pas le mock Payload
+ * sous-jacent d'`order-source`, ni le choix Brevo/LOG lui-même
+ * (`order-mail.test.ts`).
  */
 
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
@@ -44,46 +46,24 @@ interface FakeBookRecord {
 
 let bookRecords: Record<number, FakeBookRecord> = {};
 
-vi.mock("@payload-config", () => ({ default: {} }));
-vi.mock("payload", () => ({
-  getPayload: async () => ({
-    find: async (args: {
-      collection: string;
-      where?: { stripeSessionId?: { equals?: string }; stripePaymentIntentId?: { equals?: string } };
-    }) => {
-      if (args.collection !== "orders") {
-        throw new Error(`collection inattendue dans le test : ${args.collection}`);
-      }
-      if (args.where?.stripeSessionId?.equals != null) {
-        const id = args.where.stripeSessionId.equals;
-        return { docs: orders.filter((o) => o.stripeSessionId === id) };
-      }
-      if (args.where?.stripePaymentIntentId?.equals != null) {
-        const id = args.where.stripePaymentIntentId.equals;
-        return { docs: orders.filter((o) => o.stripePaymentIntentId === id) };
-      }
-      return { docs: orders };
-    },
-    create: async (args: { collection: string; data: Record<string, unknown> }) => {
-      if (args.collection !== "orders") throw new Error(`create inattendu : ${args.collection}`);
-      const doc: FakeOrder = { id: nextOrderId++, ...args.data } as FakeOrder;
-      orders.push(doc);
-      return doc;
-    },
-    update: async (args: { collection: string; id: number; data: Record<string, unknown> }) => {
-      if (args.collection === "orders") {
-        const order = orders.find((o) => o.id === args.id);
-        if (order) Object.assign(order, args.data);
-        return order;
-      }
-      if (args.collection === "books") {
-        const stock = (args.data as { commerce?: { stock?: number } }).commerce?.stock;
-        stockUpdates.push({ id: args.id, stock: stock ?? 0 });
-        return {};
-      }
-      throw new Error(`update inattendu : ${args.collection}`);
-    },
-  }),
+vi.mock("@/lib/order-source", () => ({
+  findOrderBySessionId: async (stripeSessionId: string) =>
+    orders.find((o) => o.stripeSessionId === stripeSessionId) ?? null,
+  findOrderByPaymentIntent: async (stripePaymentIntentId: string) =>
+    orders.find((o) => o.stripePaymentIntentId === stripePaymentIntentId) ?? null,
+  createOrder: async (data: Record<string, unknown>) => {
+    const doc: FakeOrder = { id: nextOrderId++, ...data } as FakeOrder;
+    orders.push(doc);
+    return doc;
+  },
+  updateOrder: async (id: number, data: Record<string, unknown>) => {
+    const order = orders.find((o) => o.id === id);
+    if (order) Object.assign(order, data);
+    return order;
+  },
+  updateBookStock: async (id: number, stock: number) => {
+    stockUpdates.push({ id, stock });
+  },
 }));
 
 vi.mock("@/lib/checkout-source", () => ({

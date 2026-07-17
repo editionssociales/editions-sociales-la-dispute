@@ -1,8 +1,13 @@
-import config from "@payload-config";
-import { getPayload } from "payload";
 import type Stripe from "stripe";
 import { decodeCheckoutLines, type DecodedCheckoutLine } from "@/lib/checkout-core";
 import { getCheckoutBookRecords } from "@/lib/checkout-source";
+import {
+  createOrder,
+  findOrderByPaymentIntent,
+  findOrderBySessionId,
+  updateBookStock,
+  updateOrder,
+} from "@/lib/order-source";
 import {
   buildOrderCreateData,
   computeStockAfterDecrement,
@@ -53,17 +58,6 @@ function paymentIntentId(session: Stripe.Checkout.Session | Stripe.Charge): stri
   const pi = "payment_intent" in session ? session.payment_intent : null;
   if (!pi) return null;
   return typeof pi === "string" ? pi : pi.id;
-}
-
-/** La commande existe-t-elle déjà pour cette session (idempotence — un event Stripe rejoué ne doit rien recréer) ? */
-async function findOrderBySessionId(payload: Awaited<ReturnType<typeof getPayload>>, stripeSessionId: string) {
-  const { docs } = await payload.find({
-    collection: "orders",
-    where: { stripeSessionId: { equals: stripeSessionId } },
-    limit: 1,
-    overrideAccess: true,
-  });
-  return docs[0] ?? null;
 }
 
 /**
@@ -117,7 +111,6 @@ function sessionFacts(
 
 /** Décrémente le stock de chaque ligne — plancher 0, jamais si `stock` n'est pas suivi (`null`). */
 async function decrementStock(
-  payload: Awaited<ReturnType<typeof getPayload>>,
   decoded: DecodedCheckoutLine[],
   books: Awaited<ReturnType<typeof getCheckoutBookRecords>>,
 ): Promise<void> {
@@ -126,16 +119,7 @@ async function decrementStock(
     if (!book) continue;
     const nextStock = computeStockAfterDecrement(book.stock, line.qty);
     if (nextStock === null) continue; // stock non suivi — rien à décrémenter
-    await payload.update({
-      collection: "books",
-      id: line.id,
-      data: { commerce: { stock: nextStock } },
-      overrideAccess: true,
-      // Même garde que l'import stock routeur (`stock-import.ts`) : écriture
-      // automatisée, pas une édition humaine — ni `contentTouched` ni
-      // revalidation par ligne (295 fiches potentiellement en jeu).
-      context: { migration: true, disableRevalidate: true },
-    });
+    await updateBookStock(line.id, nextStock);
   }
 }
 
@@ -152,8 +136,7 @@ async function decrementStock(
 async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
   if (session.payment_status !== "paid") return;
 
-  const payload = await getPayload({ config });
-  if (await findOrderBySessionId(payload, session.id)) return; // rejoué — ne décrémente pas deux fois
+  if (await findOrderBySessionId(session.id)) return; // rejoué — ne décrémente pas deux fois
 
   const { decoded, books, lines } = await resolveOrderLines(session);
   const orderData = buildOrderCreateData(sessionFacts(session, lines, createdAtEpoch), "paid");
@@ -161,20 +144,12 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
     throw new Error(orderData.error);
   }
 
-  const order = await payload.create({
-    collection: "orders",
-    data: orderData,
-    overrideAccess: true,
-    // Écriture opérationnelle du webhook, pas une édition humaine : ni
-    // `contentTouched` (bascule Lexical, sans objet sur `orders` de toute
-    // façon) ni revalidation Next pour une commande (contrat CLAUDE.md).
-    context: { disableRevalidate: true },
-  });
+  const order = await createOrder(orderData);
 
-  await decrementStock(payload, decoded, books);
+  await decrementStock(decoded, books);
 
   await selectOrderMailer().sendOrderConfirmation({
-    orderNumber: (order as { number?: string }).number ?? orderData.stripeSessionId,
+    orderNumber: order.number ?? orderData.stripeSessionId,
     email: orderData.email,
     lines: orderData.lines.map((l) => ({
       titleSnapshot: l.titleSnapshot,
@@ -195,8 +170,7 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
  * (ordre d'arrivée des events), ne la ré-écrase pas.
  */
 async function recordFailedOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
-  const payload = await getPayload({ config });
-  if (await findOrderBySessionId(payload, session.id)) return;
+  if (await findOrderBySessionId(session.id)) return;
 
   const { lines } = await resolveOrderLines(session);
   const orderData = buildOrderCreateData(sessionFacts(session, lines, createdAtEpoch), "failed");
@@ -204,12 +178,7 @@ async function recordFailedOrder(session: Stripe.Checkout.Session, createdAtEpoc
     throw new Error(orderData.error);
   }
 
-  await payload.create({
-    collection: "orders",
-    data: orderData,
-    overrideAccess: true,
-    context: { disableRevalidate: true },
-  });
+  await createOrder(orderData);
 }
 
 /**
@@ -225,24 +194,11 @@ async function markOrderRefunded(charge: Stripe.Charge): Promise<{ found: boolea
   const piId = paymentIntentId(charge);
   if (!piId) return { found: false };
 
-  const payload = await getPayload({ config });
-  const { docs } = await payload.find({
-    collection: "orders",
-    where: { stripePaymentIntentId: { equals: piId } },
-    limit: 1,
-    overrideAccess: true,
-  });
-  const order = docs[0];
+  const order = await findOrderByPaymentIntent(piId);
   if (!order) return { found: false };
 
   if (order.status !== "refunded") {
-    await payload.update({
-      collection: "orders",
-      id: order.id,
-      data: { status: "refunded" },
-      overrideAccess: true,
-      context: { disableRevalidate: true },
-    });
+    await updateOrder(order.id, { status: "refunded" });
   }
   return { found: true };
 }

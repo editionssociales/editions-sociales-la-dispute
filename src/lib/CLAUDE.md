@@ -12,7 +12,7 @@ Unified product model and headless data layer: merges WordPress + WooCommerce/Pa
 ## Local Contracts
 
 - Network modules: only `catalogue-http`, `boutique`, `donations`, `brevo` touch the network; first three cached per-request via `cache()`; `brevo` (write-side) never cached, degrades cleanly (`{ ok: false }` when `BREVO_API_KEY` absent).
-- Purity: rest is pure; exceptions are back-office/commerce (server-only, Payload via Local API, no `cache()`): `catalogue-pg`, `site-content`, `cart-source`, `checkout-source`, `highlight`, `stripe`.
+- Purity: rest is pure; exceptions are back-office/commerce (server-only, Payload via Local API, no `cache()`): `catalogue-pg`, `site-content`, `cart-source`, `checkout-source`, `order-source`, `highlight`, `stripe`.
 - Type ownership: `SafeHtml` (only `sanitizeCms`), RawBook/CatalogueSource (ports), CommerceInfo (port-owned).
 - Degradation: graceful (partial/empty) except `catalogue-integrity:assertCatalogueComplete()` (±5% via KNOWN_CATALOGUE_SIZE, DEVOPS.md §5).
 - URL codec: `catalogueHref`/`readFilters` (browse.ts) = unique encoder/decoder for filter URLs.

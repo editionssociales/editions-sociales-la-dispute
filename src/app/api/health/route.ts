@@ -1,7 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
-import config from "@payload-config";
-import { getPayload } from "payload";
 import { isCommerceNative } from "@/lib/env";
+import { findLatestOrderUpdatedAt } from "@/lib/order-source";
 
 /**
  * `GET /api/health` — moniteur #8 / risque R8 (`plan/06-operations.md`) :
@@ -57,18 +56,11 @@ interface StripeHealthSignal {
  */
 async function lastStripeEventAge(): Promise<StripeHealthSignal> {
   try {
-    const payload = await getPayload({ config });
-    const { docs } = await payload.find({
-      collection: "orders",
-      sort: "-updatedAt",
-      limit: 1,
-      overrideAccess: true,
-    });
-    const last = docs[0];
-    if (!last) return { lastEventAt: null, lastEventAgeSeconds: null };
+    const lastUpdatedAt = await findLatestOrderUpdatedAt();
+    if (!lastUpdatedAt) return { lastEventAt: null, lastEventAgeSeconds: null };
 
-    const ageSeconds = Math.round((Date.now() - new Date(last.updatedAt).getTime()) / 1000);
-    return { lastEventAt: last.updatedAt, lastEventAgeSeconds: Math.max(0, ageSeconds) };
+    const ageSeconds = Math.round((Date.now() - new Date(lastUpdatedAt).getTime()) / 1000);
+    return { lastEventAt: lastUpdatedAt, lastEventAgeSeconds: Math.max(0, ageSeconds) };
   } catch (err) {
     Sentry.captureException(err);
     return { lastEventAt: null, lastEventAgeSeconds: null };
