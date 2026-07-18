@@ -5,8 +5,9 @@
  * `evaluatePromoCode` (promo-eval-core.ts), `computeShipping`
  * (shipping-core.ts), `computeCartTotals` (cart-core.ts) — ce module n'ajoute
  * que ce qu'aucun des trois autres ne couvre : la validation ligne par ligne
- * (parution, vendabilité, STOCK SUFFISANT — pas seulement `stock > 0` comme
- * `canAddToCart`, cf. `cart-core.ts`) et l'encodage compact des lignes posé en
+ * (verdict `assessSellability` de `sellability.ts`, appelé avec la QUANTITÉ
+ * demandée — plancher strict, pas seulement `stock > 0` comme le statut
+ * catalogue) et l'encodage compact des lignes posé en
  * `metadata` Stripe (le webhook, étape 9, le décode pour reconstruire la
  * commande sans jamais refaire confiance à un prix client).
  *
@@ -15,7 +16,7 @@
  * panier client) — même découpage pur/impur que `shipping-core.ts`/`cart-core.ts`.
  */
 import { MAX_LINE_QTY } from "./cart-core";
-import { isUpcoming } from "./catalogue-core";
+import { assessSellability } from "./sellability";
 
 /* ------------------------------ requête entrante ------------------------------ */
 
@@ -125,9 +126,11 @@ function priceToCents(price: number): number {
 
 /**
  * Valide UNE ligne contre le livre fraîchement relu — jamais contre ce que le
- * client prétend. Ordre des règles : introuvable → parution future/non
- * vendable → stock insuffisant → prix manquant (fiche incomplète, ne devrait
- * jamais arriver pour un livre `sellable`, filet de sécurité).
+ * client prétend. Ordre des règles : introuvable → verdict `assessSellability`
+ * (parution future/non vendable → refus `not-sellable` ; épuisé/stock
+ * insuffisant → refus `insufficient-stock`) → prix manquant (fiche
+ * incomplète, ne devrait jamais arriver pour un livre vendable, filet de
+ * sécurité).
  */
 export function validateCheckoutLine(
   input: CheckoutRequestLine,
@@ -140,7 +143,12 @@ export function validateCheckoutLine(
       refusal: { id: input.id, reason: "not-found", message: "Livre introuvable ou dépublié." },
     };
   }
-  if (!book.sellable || isUpcoming(book.publishedAt, now)) {
+  const verdict = assessSellability(
+    { sellable: book.sellable, stock: book.stock, publishedAt: book.publishedAt },
+    input.qty,
+    now,
+  );
+  if (!verdict.ok && (verdict.reason === "upcoming" || verdict.reason === "not-sellable")) {
     return {
       ok: false,
       refusal: {
@@ -150,16 +158,18 @@ export function validateCheckoutLine(
       },
     };
   }
-  if (book.stock != null && book.stock < input.qty) {
+  if (!verdict.ok) {
+    // `out-of-stock`/`insufficient-stock` ⇒ stock suivi (non `null`) — repli 0 pour TS seulement.
+    const stock = book.stock ?? 0;
     return {
       ok: false,
       refusal: {
         id: input.id,
         reason: "insufficient-stock",
         message:
-          book.stock <= 0
+          verdict.reason === "out-of-stock"
             ? `« ${book.title} » est épuisé.`
-            : `Stock insuffisant pour « ${book.title} » (${book.stock} exemplaire${book.stock > 1 ? "s" : ""} disponible${book.stock > 1 ? "s" : ""}).`,
+            : `Stock insuffisant pour « ${book.title} » (${stock} exemplaire${stock > 1 ? "s" : ""} disponible${stock > 1 ? "s" : ""}).`,
       },
     };
   }

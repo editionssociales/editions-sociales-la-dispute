@@ -47,7 +47,7 @@ function toCents(euros: number): number {
  *
  * Expiration en JOUR INCLUSIF (décision produit 17/07) : un code dont
  * `expiresAt` tombe le 13/07 reste valable toute la journée du 13/07 — même
- * comparaison lexicographique sur `slice(0, 10)` que `catalogue-core.ts:isUpcoming`
+ * comparaison lexicographique sur `slice(0, 10)` que `sellability.ts:isUpcoming`
  * et le panneau codes promo du dashboard (`derive.ts:expiredActivePromos`).
  */
 export function evaluatePromoCode(

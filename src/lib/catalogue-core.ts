@@ -1,5 +1,6 @@
 import { decodeEntities, httpsify } from "./format";
 import { sanitizeCms } from "./cms-html";
+import { assessSellability, isUpcoming } from "./sellability";
 import { frenchTypo } from "./typo-fr";
 import {
   priceOf,
@@ -74,16 +75,6 @@ function productCover(p: WcProduct): Cover | null {
   const url = httpsify(p.images?.[0]?.src ?? null);
   // Dimensions inconnues côté Store API : ratio par défaut, rendu en `object-contain`.
   return url ? { url, width: 2, height: 3 } : null;
-}
-
-/**
- * Un livre à date de parution future est-il « à paraître » ? Aujourd'hui en
- * ISO `YYYY-MM-DD`, comparaison lexicographique valide sur ce format. `now`
- * injectable pour les tests (défaut `new Date()`) — signature réconciliée
- * avec la copie qu'importait `checkout-core.ts`, désormais unifiée ici.
- */
-export function isUpcoming(publishedAt: string | null, now: Date = new Date()): boolean {
-  return publishedAt != null && publishedAt > now.toISOString().slice(0, 10);
 }
 
 /** Résout le statut d'achat d'un livre à partir du produit boutique associé. */
@@ -182,13 +173,11 @@ const NO_COMMERCE: CommerceInfo = { sellable: false, stock: null };
  * `resolvePurchase` pour ce chemin, avec un ORDRE DE RÈGLES délibérément
  * différent (décision client, plan §4 étape 11) :
  *
- *  1. Parution FUTURE → « à paraître ». PRIME sur tout le reste, y compris un
- *     stock positif : un livre pas encore sorti ne se vend pas, même si sa
- *     fiche est déjà cochée vendable avec du stock en préparation.
- *  2. Sinon vendable ET (stock non suivi OU stock > 0) → disponible, panier
- *     natif. `stock === null` = non suivi = disponible (jamais un plancher
- *     qui bloquerait la vente d'un article dont le stock n'est pas géré) ;
- *     `stock === 0` = épuisé, ne passe PAS cette porte (plancher strict).
+ *  1. Verdict `upcoming` (« à paraître ») → PRIME sur tout le reste — la
+ *     règle stock/parution elle-même (non suivi, épuisé, priorité de la
+ *     parution) vit dans `sellability.ts:assessSellability`, ce module ne
+ *     fait plus que la traduire en statut d'achat.
+ *  2. Verdict vendable → disponible, panier natif.
  *  3. Sinon lien(s) externe(s) existant(s) (Paris Librairies / La Librairie)
  *     → « en librairie », lien externe inchangé.
  *  4. Sinon indisponible — jamais retiré du catalogue (contrat).
@@ -202,10 +191,15 @@ export function resolveNativePurchase(
   commerce: CommerceInfo,
   internalPermalink: string,
 ): { status: PurchaseStatus; permalink: string | null; purchaseMode: PurchaseMode } {
-  if (isUpcoming(book.publishedAt)) {
+  const verdict = assessSellability({
+    sellable: commerce.sellable,
+    stock: commerce.stock,
+    publishedAt: book.publishedAt,
+  });
+  if (!verdict.ok && verdict.reason === "upcoming") {
     return { status: "upcoming", permalink: null, purchaseMode: "legacy-link" };
   }
-  if (commerce.sellable && (commerce.stock == null || commerce.stock > 0)) {
+  if (verdict.ok) {
     return { status: "available", permalink: internalPermalink, purchaseMode: "cart" };
   }
   const external = book.buy.parislibrairies || book.buy.lalibrairie;
