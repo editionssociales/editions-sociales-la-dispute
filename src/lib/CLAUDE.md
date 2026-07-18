@@ -12,7 +12,7 @@ Unified product model and headless data layer: merges WordPress + WooCommerce/Pa
 ## Local Contracts
 
 - Network modules: only `catalogue-http`, `boutique`, `donations`, `brevo` touch the network; first three cached per-request via `cache()`; `brevo` (write-side) never cached, degrades cleanly (`{ ok: false }` when `BREVO_API_KEY` absent).
-- Purity: rest is pure; exceptions are back-office/commerce (server-only, Payload via Local API, no `cache()`): `catalogue-pg`, `site-content`, `cart-source`, `checkout-source`, `order-source`, `highlight`, `stripe`.
+- Purity: rest is pure; exceptions are back-office/commerce (server-only, Payload via Local API, no `cache()`): `catalogue-pg`, `site-content`, `commerce-source`, `order-source`, `highlight`, `stripe`.
 - Type ownership: `SafeHtml` (only `sanitizeCms`), RawBook/CatalogueSource (ports), CommerceInfo (port-owned).
 - Degradation: graceful (partial/empty) except `catalogue-integrity:assertCatalogueComplete()` (±5% via KNOWN_CATALOGUE_SIZE, DEVOPS.md §5).
 - URL codec: `catalogueHref`/`readFilters` (browse.ts) = unique encoder/decoder for filter URLs.
@@ -21,4 +21,4 @@ Unified product model and headless data layer: merges WordPress + WooCommerce/Pa
 
 - New catalogue data: extend `RawBook` and mappers (`catalogue-wp-map` for WP dialects, `catalogue-pg-map` for Payload); never fetch directly outside `catalogue-http`/`boutique`.
 - `catalogue.ts` is the sole app entry point; `browse.ts` wraps pure logic.
-- New rule: pure core in dedicated module, Payload I/O in dedicated source (`cart-source`, `checkout-source`, `order-source`) to avoid widening `CommerceInfo` and breaking existing fixtures.
+- New rule: pure core in dedicated module, Payload I/O behind the named seams (`commerce-source` for the purchase path — books facts + promo codes, its read policy locked by `commerce-source.test.ts` — `order-source` for the Order lifecycle); never widen `CommerceInfo` (port-owned), never inline `getPayload` in routes/actions.

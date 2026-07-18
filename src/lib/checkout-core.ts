@@ -11,8 +11,8 @@
  * commande sans jamais refaire confiance à un prix client).
  *
  * Zéro I/O ici : les données livre sont FOURNIES par l'appelant (relues
- * fraîchement depuis Payload par `checkout-source.ts`, jamais depuis le panier
- * client) — même découpage pur/impur que `shipping-core.ts`/`cart-core.ts`.
+ * fraîchement depuis Payload par `commerce-source.ts`, jamais depuis le
+ * panier client) — même découpage pur/impur que `shipping-core.ts`/`cart-core.ts`.
  */
 import { MAX_LINE_QTY } from "./cart-core";
 import { isUpcoming } from "./catalogue-core";
@@ -82,7 +82,7 @@ export function parseCheckoutRequest(body: unknown): CheckoutRequest | CheckoutR
 
 /**
  * Ce que le checkout a besoin de savoir d'UN livre — relu fraîchement depuis
- * Payload par l'appelant (`checkout-source.ts`), jamais depuis le panier
+ * Payload par l'appelant (`commerce-source.ts`), jamais depuis le panier
  * client. Volontairement plus riche que `CommerceInfo` (`catalogue-source.ts`) :
  * `stock` y est un NOMBRE exploitable (« stock suffisant » compare à la
  * quantité demandée), pas seulement collapsé en statut `available`/`unavailable`.

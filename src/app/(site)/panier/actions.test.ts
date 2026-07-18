@@ -1,15 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CheckoutBookLookup } from "@/lib/checkout-core";
+import type { PromoCodeRecord } from "@/lib/commerce-source";
 import type { Book } from "@/lib/types";
 
 /**
  * Couche de composition de `/panier`, testée à travers ses interfaces réelles
- * (alias `server-only` de vitest.config.ts) : `payload`/`@payload-config` sont
- * substitués (pas de réseau à intercepter ici, contrairement à Stripe —
- * `getPayload` parle directement à Postgres) ; `@/lib/catalogue` et
- * `@/lib/cart-source` sont eux aussi de fines façades déjà couvertes
- * indirectement par `catalogue-core.test.ts`/`shipping-core.test.ts` — on ne
- * revérifie ici que la COMPOSITION (bons arguments, bon mappage, bon
- * découpage promo-codes → `evaluatePromoCode`).
+ * (alias `server-only` de vitest.config.ts) : `@/lib/catalogue` et
+ * `@/lib/commerce-source` sont de fines façades couvertes par leurs propres
+ * tests (`catalogue-core.test.ts`, `commerce-source.test.ts` — c'est là que
+ * vivent la normalisation du code promo et le contrat anti-brouillon) — on ne
+ * revérifie ici que la COMPOSITION : bons ids demandés, projection des
+ * drapeaux depuis les faits de vente, découpage `getPromoCodeRecord` →
+ * `evaluatePromoCode`. Plus aucun mock du SDK `payload` : l'I/O vit derrière
+ * le seam.
  */
 
 const BOOKS: Book[] = [
@@ -34,37 +37,46 @@ const BOOKS: Book[] = [
 ];
 
 vi.mock("@/lib/catalogue", () => ({ getAllBooks: async () => BOOKS }));
-vi.mock("@/lib/cart-source", () => ({
-  getReducedShippingFlags: async (ids: number[]) => new Map(ids.map((id) => [id, id === 1])),
-}));
 
-interface FakePromoDoc {
-  code: string;
-  type: "fixed_cart" | "free_shipping";
-  amount?: number | null;
-  minCart?: number | null;
-  expiresAt?: string | null;
-  active?: boolean | null;
+function record(overrides: Partial<CheckoutBookLookup> = {}): CheckoutBookLookup {
+  return {
+    title: "Le Capital",
+    isbn: null,
+    priceEuros: 20,
+    publishedAt: null,
+    sellable: true,
+    stock: null,
+    reducedShippingFlag: false,
+    ...overrides,
+  };
 }
 
-let promoDocs: FakePromoDoc[] = [];
-let lastFindArgs: unknown = null;
+let bookRecords: Record<number, CheckoutBookLookup> = {};
+let promoRecords: Record<string, PromoCodeRecord> = {};
+let lastPromoCodeAsked: string | null = null;
 
-vi.mock("@payload-config", () => ({ default: {} }));
-vi.mock("payload", () => ({
-  getPayload: async () => ({
-    find: async (args: { collection: string; where?: { code?: { equals?: string } } }) => {
-      lastFindArgs = args;
-      if (args.collection !== "promo-codes") {
-        throw new Error(`collection inattendue dans le test : ${args.collection}`);
-      }
-      const code = args.where?.code?.equals;
-      return { docs: promoDocs.filter((d) => d.code === code) };
-    },
-  }),
+vi.mock("@/lib/commerce-source", () => ({
+  getCommerceBookRecords: async (ids: number[]) => {
+    const map = new Map<number, CheckoutBookLookup>();
+    for (const id of ids) {
+      const rec = bookRecords[id];
+      if (rec) map.set(id, rec);
+    }
+    return map;
+  },
+  getPromoCodeRecord: async (code: string) => {
+    lastPromoCodeAsked = code;
+    return promoRecords[code] ?? null;
+  },
 }));
 
 const { getCartSnapshot, validatePromoCode } = await import("./actions");
+
+beforeEach(() => {
+  bookRecords = {};
+  promoRecords = {};
+  lastPromoCodeAsked = null;
+});
 
 describe("getCartSnapshot", () => {
   it("ids vides → aucune lecture, réponse vide", async () => {
@@ -72,7 +84,8 @@ describe("getCartSnapshot", () => {
     expect(snapshot).toEqual({ books: [], reducedShippingFlags: [] });
   });
 
-  it("relit le catalogue courant et le drapeau de port réduit pour les ids demandés", async () => {
+  it("relit le catalogue courant et projette le drapeau de port réduit pour les ids demandés", async () => {
+    bookRecords = { 1: record({ reducedShippingFlag: true }) };
     const snapshot = await getCartSnapshot([1]);
     expect(snapshot.books).toEqual(BOOKS);
     expect(snapshot.reducedShippingFlags).toEqual([{ id: 1, flag: true }]);
@@ -81,22 +94,17 @@ describe("getCartSnapshot", () => {
   it("un id absent du catalogue est simplement omis (pas d'entrée fantôme)", async () => {
     const snapshot = await getCartSnapshot([999]);
     expect(snapshot.books).toEqual([]);
+    expect(snapshot.reducedShippingFlags).toEqual([]);
   });
 });
 
 describe("validatePromoCode", () => {
-  it("normalise le code avant recherche (majuscules, espaces de bord)", async () => {
-    promoDocs = [{ code: "AGREG2027", type: "fixed_cart", amount: 5, active: true }];
+  it("transmet le code saisi tel quel au seam (la normalisation vit dans commerce-source)", async () => {
     await validatePromoCode("  agreg2027 ", 10000);
-    expect(lastFindArgs).toMatchObject({
-      collection: "promo-codes",
-      where: { code: { equals: "AGREG2027" } },
-      overrideAccess: true,
-    });
+    expect(lastPromoCodeAsked).toBe("  agreg2027 ");
   });
 
   it("code introuvable → not-found (jamais une exception)", async () => {
-    promoDocs = [];
     const result = await validatePromoCode("INCONNU", 10000);
     expect(result).toEqual({
       ok: false,
@@ -105,20 +113,34 @@ describe("validatePromoCode", () => {
     });
   });
 
-  it("code fixed_cart valide → discountCents dérivé du document Payload", async () => {
-    promoDocs = [{ code: "AGREG2027", type: "fixed_cart", amount: 5, active: true }];
+  it("code fixed_cart valide → discountCents dérivé du record du seam", async () => {
+    promoRecords = {
+      AGREG2027: {
+        id: 7,
+        code: "AGREG2027",
+        type: "fixed_cart",
+        amount: 5,
+        minCart: null,
+        expiresAt: null,
+        active: true,
+      },
+    };
     const result = await validatePromoCode("AGREG2027", 10000);
     expect(result).toEqual({ ok: true, type: "fixed_cart", discountCents: 500 });
   });
 
-  it("champs Payload absents (amount/minCart/expiresAt null) → défauts sûrs, pas de crash", async () => {
-    promoDocs = [{ code: "PROMO", type: "fixed_cart", active: true }];
-    const result = await validatePromoCode("PROMO", 10000);
-    expect(result).toEqual({ ok: true, type: "fixed_cart", discountCents: 0 });
-  });
-
-  it("code inactif en base → refusé (inactive), le sous-total ne joue aucun rôle", async () => {
-    promoDocs = [{ code: "PROMO", type: "fixed_cart", amount: 5, active: false }];
+  it("code inactif → refusé (inactive), le sous-total ne joue aucun rôle", async () => {
+    promoRecords = {
+      PROMO: {
+        id: 8,
+        code: "PROMO",
+        type: "fixed_cart",
+        amount: 5,
+        minCart: null,
+        expiresAt: null,
+        active: false,
+      },
+    };
     const result = await validatePromoCode("PROMO", 10000);
     expect(result).toEqual({
       ok: false,

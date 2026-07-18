@@ -10,9 +10,9 @@ import Stripe from "stripe";
  * Côté commerce (`kind: "order"`, plan §4 étape 9) : `@/lib/order-source`
  * (seam nommé du cycle de vie Order — collection/where/options couverts par
  * `order-source.test.ts`) substitué par un magasin en mémoire, comme
- * `@/lib/checkout-source` (titre/ISBN/stock) et `@/lib/order-mail`
- * (sélection de mailer — LOG ou Brevo, plan §5), déjà couverts ailleurs
- * (même traitement que `@/lib/cart-source` dans `panier/actions.test.ts`) :
+ * `@/lib/commerce-source` (titre/ISBN/stock — couvert par
+ * `commerce-source.test.ts`) et `@/lib/order-mail` (sélection de mailer —
+ * LOG ou Brevo, plan §5, `order-mail.test.ts`) :
  * on ne revérifie ici que la COMPOSITION du webhook
  * (création/idempotence/décrément/remboursement) — pas le mock Payload
  * sous-jacent d'`order-source`, ni le choix Brevo/LOG lui-même
@@ -66,8 +66,8 @@ vi.mock("@/lib/order-source", () => ({
   },
 }));
 
-vi.mock("@/lib/checkout-source", () => ({
-  getCheckoutBookRecords: async (ids: number[]) => {
+vi.mock("@/lib/commerce-source", () => ({
+  getCommerceBookRecords: async (ids: number[]) => {
     const map = new Map<number, FakeBookRecord>();
     for (const id of ids) {
       const record = bookRecords[id];

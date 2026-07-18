@@ -2,7 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
 import { isCommerceNative } from "@/lib/env";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
-import { getCheckoutBookRecords, getPromoCodeRecord } from "@/lib/checkout-source";
+import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
 import {
   encodeCheckoutLines,
   parseCheckoutRequest,
@@ -45,7 +45,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const ids = parsed.lines.map((l) => l.id);
-  const books = await getCheckoutBookRecords(ids);
+  const books = await getCommerceBookRecords(ids);
 
   const validation = validateCheckoutLines(parsed.lines, books);
   if (!validation.ok) {

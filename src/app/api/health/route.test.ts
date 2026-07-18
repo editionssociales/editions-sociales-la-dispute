@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * `GET /api/health` testé à travers son interface réelle (Request →
  * Response) — Sentry observé par mock, `@/lib/order-source` mocké en bloc
  * (seam nommé du cycle de vie Order — collection/where/options couverts par
- * `order-source.test.ts`, même traitement que `@/lib/checkout-source` dans
+ * `order-source.test.ts`, même traitement que `@/lib/commerce-source` dans
  * `api/stripe/webhook/route.test.ts`) : ce fichier ne revérifie que la
  * COMPOSITION de la route (dégradation `COMMERCE_NATIVE`, calcul de l'âge,
  * capture Sentry), pas le mock Payload sous-jacent.

@@ -2,17 +2,17 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import type { CheckoutBookLookup } from "@/lib/checkout-core";
-import type { PromoCodeRecord } from "@/lib/checkout-source";
+import type { PromoCodeRecord } from "@/lib/commerce-source";
 
 /**
  * `POST /api/checkout` testé à travers son interface réelle (Request →
  * Response) : msw joue Stripe au niveau réseau (même client fetch injecté que
  * `souscription/actions.test.ts` — le `NodeHttpClient` du SDK attend un
- * `secureConnect` que msw émet trop tôt). `@/lib/checkout-source` est mocké
- * en bloc (déjà couvert par sa propre nature de façade mince, même
- * traitement que `@/lib/cart-source` dans `panier/actions.test.ts`) — on ne
- * revérifie ici que la COMPOSITION : re-validation serveur, refus, appel
- * Stripe (metadata, coupon, ligne de port).
+ * `secureConnect` que msw émet trop tôt). `@/lib/commerce-source` est mocké
+ * en bloc (collection/where/contrat anti-brouillon couverts par
+ * `commerce-source.test.ts`, même traitement que dans
+ * `panier/actions.test.ts`) — on ne revérifie ici que la COMPOSITION :
+ * re-validation serveur, refus, appel Stripe (metadata, coupon, ligne de port).
  */
 
 type FakeBook = CheckoutBookLookup;
@@ -20,8 +20,8 @@ type FakeBook = CheckoutBookLookup;
 let books: Record<number, FakeBook> = {};
 let promoCodes: Record<string, PromoCodeRecord> = {};
 
-vi.mock("@/lib/checkout-source", () => ({
-  getCheckoutBookRecords: async (ids: number[]) => {
+vi.mock("@/lib/commerce-source", () => ({
+  getCommerceBookRecords: async (ids: number[]) => {
     const map = new Map<number, FakeBook>();
     for (const id of ids) {
       const book = books[id];

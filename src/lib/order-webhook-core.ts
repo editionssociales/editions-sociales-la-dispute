@@ -4,7 +4,7 @@
  * l'appelant (`api/stripe/webhook/order-handler.ts`) extrait les champs bruts
  * de l'objet Stripe (déjà de simples valeurs JSON) et joint les lignes
  * décodées (`checkout-core.ts:decodeCheckoutLines`) au titre/ISBN/stock relus
- * fraîchement (`checkout-source.ts`) — ce module ne fait que la validation
+ * fraîchement (`commerce-source.ts`) — ce module ne fait que la validation
  * minimale (email/adresse/lignes présents) + la mise en forme vers le shape
  * `payload.create({collection:'orders'})`, symétrique de `checkout-core.ts`
  * côté création de session.

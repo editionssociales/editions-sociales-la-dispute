@@ -3,7 +3,7 @@ import type { BrevoResult } from "@/lib/brevo";
 
 /**
  * Composition de la server action : `@/lib/brevo` mocké en bloc (déjà couvert
- * par `brevo.test.ts`, même traitement que `@/lib/cart-source` dans
+ * par `brevo.test.ts`, même traitement que `@/lib/commerce-source` dans
  * `panier/actions.test.ts`) — ce fichier ne revérifie que la COMPOSITION
  * (routage honeypot/délai/email invalide → aucun appel Brevo, réponse
  * générique identique au succès ; email valide → appel avec les bons

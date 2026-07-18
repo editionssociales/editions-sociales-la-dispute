@@ -189,8 +189,8 @@ export function pickBooksByIds(books: Book[], ids: number[]): Book[] {
  * Confronte l'état persisté (ids + quantités) à un instantané `Book[]` frais
  * (relu au moment du rendu de `/panier`, jamais depuis le panier lui-même) et
  * à la carte des drapeaux de port réduit (lus séparément, cf.
- * `cart-source.ts` — `commerce.reducedShippingFlag` n'est pas porté par le
- * type `Book`, hors périmètre de la fusion catalogue). Ne fait AUCUN calcul
+ * `commerce-source.ts` — `commerce.reducedShippingFlag` n'est pas porté par
+ * le type `Book`, hors périmètre de la fusion catalogue). Ne fait AUCUN calcul
  * de port/remise : `computeShipping` (`shipping-core.ts`) et l'évaluation de
  * code promo restent la responsabilité de l'appelant.
  */

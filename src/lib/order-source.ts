@@ -8,14 +8,14 @@ import type { OrderCreateData } from "./order-webhook-core";
  * Seam Payload dédié au cycle de vie `orders` (webhook Stripe, plan §4 étape
  * 9) — le SEUL module qui parle au SDK Payload pour cette collection (+ la
  * mise à jour de stock `books` que le webhook déclenche au même moment).
- * Même esprit que `cart-source.ts`/`checkout-source.ts` (lecture Payload
- * dédiée, hors du port `CatalogueSource`) mais côté ÉCRITURE : PAS de
+ * Même esprit que `commerce-source.ts` (lecture Payload dédiée du parcours
+ * d'achat, hors du port `CatalogueSource`) mais côté ÉCRITURE : PAS de
  * `cache()` React ici (une commande créée deux fois par un rendu mis en
  * cache serait un bug, pas une optimisation) — `getPayload({ config })` reste
  * mémoïsé par Payload lui-même (singleton par process), c'est suffisant.
  *
- * `overrideAccess: true` partout (contrairement à `cart-source`/
- * `checkout-source`, qui servent un public anonyme en lecture) : les deux
+ * `overrideAccess: true` partout (contrairement aux lectures `books` de
+ * `commerce-source`, qui servent un public anonyme) : les deux
  * seuls appelants de ce module — le webhook Stripe et `/api/health` — sont
  * des contextes serveur de confiance, jamais une requête publique ; `orders`
  * n'a d'ailleurs aucune policy `read`/`create` publique (`Orders.ts`).

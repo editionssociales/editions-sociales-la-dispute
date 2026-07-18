@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { decodeCheckoutLines, type DecodedCheckoutLine } from "@/lib/checkout-core";
-import { getCheckoutBookRecords } from "@/lib/checkout-source";
+import { getCommerceBookRecords } from "@/lib/commerce-source";
 import {
   createOrder,
   findOrderByPaymentIntent,
@@ -62,14 +62,14 @@ function paymentIntentId(session: Stripe.Checkout.Session | Stripe.Charge): stri
 
 /**
  * Joint les lignes décodées des `metadata` au titre/ISBN/stock relus
- * fraîchement (`checkout-source.ts`, la même façade que le checkout — le
+ * fraîchement (`commerce-source.ts`, le même seam que le checkout — le
  * stock y est nécessaire pour le décrément, pas seulement pour le snapshot).
  * Un id introuvable (livre supprimé entre le checkout et le webhook) est
  * omis — snapshot honnête plutôt qu'un titre inventé.
  */
 async function resolveOrderLines(session: Stripe.Checkout.Session) {
   const decoded = decodeCheckoutLines(session.metadata?.lines);
-  const books = await getCheckoutBookRecords(decoded.map((l) => l.id));
+  const books = await getCommerceBookRecords(decoded.map((l) => l.id));
   const lines: OrderLineFacts[] = decoded.flatMap((l) => {
     const book = books.get(l.id);
     if (!book) return [];
@@ -112,7 +112,7 @@ function sessionFacts(
 /** Décrémente le stock de chaque ligne — plancher 0, jamais si `stock` n'est pas suivi (`null`). */
 async function decrementStock(
   decoded: DecodedCheckoutLine[],
-  books: Awaited<ReturnType<typeof getCheckoutBookRecords>>,
+  books: Awaited<ReturnType<typeof getCommerceBookRecords>>,
 ): Promise<void> {
   for (const line of decoded) {
     const book = books.get(line.id);
