@@ -164,33 +164,6 @@ export async function DashboardFooter({ payload, user }: ServerProps) {
           Présence des variables seulement — jamais leur valeur. Si une variable manque, relayer le
           nom exact au développeur.
         </span>
-        {/*
-         * Bloc de transition — rendu UNIQUEMENT tant que CATALOGUE_SOURCE !== 'pg'
-         * (cf. `readConfig`). À SUPPRIMER (bloc + branche de data.ts) une fois la
-         * bascule confirmée stable : simple test, jamais un flag long terme
-         * (design v2 §5, extinction des panneaux transitoires le jour du swap).
-         */}
-        {config.transition && (
-          <div className={styles.transitionBox}>
-            <strong>Transition (jusqu’à la bascule) — catalogue piloté par {config.transition.catalogueSourceLabel}</strong>
-            <div className={styles.configRow}>
-              <span className={dotClass(config.transition.wpEs ? 'ok' : 'warn')} />
-              <code>WP_ES_URL</code> {config.transition.wpEs ? 'posée' : 'absente'}
-            </div>
-            <div className={styles.configRow}>
-              <span className={dotClass(config.transition.wpLd ? 'ok' : 'warn')} />
-              <code>WP_LD_URL</code> {config.transition.wpLd ? 'posée' : 'absente'}
-            </div>
-            <div className={styles.configRow}>
-              <span className={dotClass(config.transition.wcStore ? 'ok' : 'warn')} />
-              <code>WC_STORE_URL</code> {config.transition.wcStore ? 'posée' : 'absente'}
-            </div>
-            <span>
-              Ce bloc disparaît (avec son code) une fois la bascule <code>CATALOGUE_SOURCE=pg</code>{' '}
-              confirmée stable.
-            </span>
-          </div>
-        )}
         <span className={styles.noteChip}>
           visible pour le rôle admin uniquement · aucune pastille correspondante dans le bandeau
           partagé

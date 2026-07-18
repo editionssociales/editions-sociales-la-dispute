@@ -46,10 +46,7 @@ const onHost = (host: string, rules: StatusedRule[]): HostRule[] =>
  * A/AAAA sur les deux, `plan/07-cloture.md` G5 : sans ça les vieux liens en
  * `www.boutique` tombent sur une erreur OVH après détachement du WordPress).
  */
-// Exporté (nommé) : réutilisé tel quel par `scripts/build-redirect-inventory.mjs`
-// pour générer l'inventaire de vérification du host boutique — une seule liste
-// de hosts, jamais deux qui pourraient diverger.
-export const BOUTIQUE_HOSTS = ["boutique.editionssociales.fr", "www.boutique.editionssociales.fr"];
+const BOUTIQUE_HOSTS = ["boutique.editionssociales.fr", "www.boutique.editionssociales.fr"];
 
 /**
  * Table de redirections `/produit/<slug>` — artefact **versionné**
@@ -144,15 +141,8 @@ async function redirects() {
       r({ source: "/feed", destination: "/" }),
       r({ source: "/feed/:rest*", destination: "/" }),
       r({ source: "/comments/feed", destination: "/" }),
-      // 12 — médias partagés (118 PDF + images de couverture) : gardés vivants
-      // sur le host de cohabitation (triple ceinture avec `rebaseWpMediaUrl`, E3e).
-      r({ source: "/wp-content/:path*", destination: "https://cms-es.editionssociales.fr/wp-content/:path*" }),
-      // 13 — signets wp-admin de l'équipe : 302 pour toujours (le host cms
-      // disparaîtra en phase d'extinction, jamais un 301 ici).
-      t({ source: "/wp-admin/:path*", destination: "https://cms-es.editionssociales.fr/wp-admin/:path*" }),
-      t({ source: "/wp-login.php", destination: "https://cms-es.editionssociales.fr/wp-login.php" }),
-      // 14 — REST WordPress (outillage éventuel de l'équipe)
-      t({ source: "/wp-json/:path*", destination: "https://cms-es.editionssociales.fr/wp-json/:path*" }),
+      // Coupure OVH : plus aucune règle `wp-content`/`wp-admin`/`wp-json` —
+      // les installs WordPress sont éteintes, ces URLs répondent 404 ici.
     ]),
     ...onHost("ladispute.fr", [
       // 1-3 — le domaine déménage en entier vers editionssociales.fr/catalogue/la-dispute
@@ -175,14 +165,8 @@ async function redirects() {
       // 9 — anciennes pages d'archive par taxonomie
       r({ source: "/catalogue-auteurs", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
       r({ source: "/catalogue-collection", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
-      // 10 — médias partagés
-      r({ source: "/wp-content/:path*", destination: "https://cms-ld.editionssociales.fr/wp-content/:path*" }),
-      // 11 — signets wp-admin de l'équipe : 302 pour toujours
-      t({ source: "/wp-admin/:path*", destination: "https://cms-ld.editionssociales.fr/wp-admin/:path*" }),
-      t({ source: "/wp-login.php", destination: "https://cms-ld.editionssociales.fr/wp-login.php" }),
-      t({ source: "/wp-json/:path*", destination: "https://cms-ld.editionssociales.fr/wp-json/:path*" }),
-      // 12 — catch-all FINAL (dernier de la liste : couvre `/`, `/article-0`,
-      // `/feed` et tout le reste du domaine qui déménage).
+      // 10 — catch-all FINAL (dernier de la liste : couvre `/`, `/article-0`,
+      // `/feed`, les anciens `wp-*` et tout le reste du domaine qui déménage).
       r({ source: "/:path*", destination: "https://editionssociales.fr/" }),
     ]),
     // Host boutique.editionssociales.fr / www.boutique.editionssociales.fr —
@@ -211,59 +195,13 @@ async function redirects() {
         r({ source: "/categorie-produit/la-dispute", destination: "/catalogue/la-dispute" }),
         r({ source: "/categorie-produit/editions-sociales", destination: "/catalogue/editions-sociales" }),
         r({ source: "/categorie-produit/:cat", destination: "/catalogue" }),
-        // Accueil boutique → catalogue unifié — SAUF si `?wc-api=…` est présent
-        // (callback Paybox résiduel sur `/`) : les redirects sont évalués AVANT
-        // les rewrites dans Next (`rewrites.md`, « The order Next.js routes are
-        // checked »), donc sans ce `missing`, CE redirect détournerait le
-        // callback vers `/catalogue` avant que le rewrite `/?wc-api=*` (cf.
-        // `rewrites()` plus bas) n'ait la moindre chance de s'appliquer —
-        // vérifié empiriquement (302 au lieu du proxy attendu, corrigé ici).
-        r({ source: "/", destination: "/catalogue", missing: [{ type: "query", key: "wc-api" }] }),
+        // Accueil boutique → catalogue unifié. (Coupure OVH : le proxy
+        // `?wc-api=…` vers WooCommerce a disparu avec les rewrites — un
+        // callback Paybox résiduel suit désormais cette redirection.)
+        r({ source: "/", destination: "/catalogue" }),
       ]),
     ),
   ];
-}
-
-/**
- * `/wc-api/*` et `/?wc-api=*` — callbacks de paiement WooCommerce (Paybox)
- * résiduels pendant tout le recouvrement (`plan/02-mise-en-production.md` §Table
- * de redirections) : **rewrite**, jamais redirect — le navigateur/serveur de
- * paiement qui tape cette URL doit continuer d'atteindre WooCommerce en
- * silence, la barre d'adresse ne doit pas bouger. Toujours actif, PAS gouverné
- * par `REDIRECTS_PERMANENT` (aucun statut HTTP de redirection en jeu ici).
- *
- * ⚠️ Bucket `beforeFiles`, PAS le tableau simple (`afterFiles` implicite) :
- * `/` est une VRAIE route de l'app (`(site)/page.tsx`) — la forme tableau
- * simple n'est vérifiée qu'« after files » (`rewrites.md`, « The order
- * Next.js routes are checked »), donc APRÈS que le filesystem ait déjà
- * résolu `/` vers la page d'accueil : le rewrite `/?wc-api=…` ne serait
- * JAMAIS atteint. Vérifié empiriquement (200 page d'accueil rendue, aucune
- * tentative de proxy dans les logs, avant ce correctif) — `beforeFiles`
- * force la vérification avant toute résolution de fichier/page.
- */
-async function rewrites() {
-  return {
-    beforeFiles: BOUTIQUE_HOSTS.flatMap((host) => [
-      {
-        source: "/wc-api/:path*",
-        destination: "https://cms-boutique.editionssociales.fr/wc-api/:path*",
-        has: [{ type: "host" as const, value: host }],
-      },
-      // `/?wc-api=...` — capture nommée de la valeur de la query pour la
-      // reporter explicitement dans la destination (un `has` de type `query`
-      // sans référence dans `destination` n'est pas garanti d'être transmis).
-      {
-        source: "/",
-        has: [
-          { type: "host" as const, value: host },
-          { type: "query" as const, key: "wc-api", value: "(?<wcApi>.*)" },
-        ],
-        destination: "https://cms-boutique.editionssociales.fr/?wc-api=:wcApi",
-      },
-    ]),
-    afterFiles: [],
-    fallback: [],
-  };
 }
 
 const nextConfig: NextConfig = {
@@ -274,33 +212,19 @@ const nextConfig: NextConfig = {
     root: ROOT_DIR,
   },
   images: {
-    // Les couvertures et visuels restent servis par les hébergements OVH existants
-    // le temps de la migration des médias. On autorise donc ces domaines.
+    // Couvertures/médias rapatriés par Payload (E6/E3) : chaque store Vercel
+    // Blob a un sous-domaine `<id>.public.blob.vercel-storage.com` distinct,
+    // aucun hostname fixe connu à l'avance. `*` (un seul niveau de
+    // sous-domaine) suffit et reste plus restrictif que `**` (cf.
+    // node_modules/next/dist/docs/.../02-components/image.md, "Wildcard
+    // Patterns") : le store ID est toujours un unique segment. Coupure OVH :
+    // plus aucun host WordPress autorisé — toute image encore pointée vers
+    // eux échouerait de toute façon, serveurs éteints.
     remotePatterns: [
-      { protocol: "https", hostname: "editionssociales.fr", pathname: "/wp-content/**" },
-      { protocol: "https", hostname: "www.editionssociales.fr", pathname: "/wp-content/**" },
-      { protocol: "https", hostname: "boutique.editionssociales.fr", pathname: "/wp-content/**" },
-      { protocol: "https", hostname: "ladispute.fr", pathname: "/wp-content/**" },
-      { protocol: "https", hostname: "www.ladispute.fr", pathname: "/wp-content/**" },
-      { protocol: "http", hostname: "editionssociales.fr", pathname: "/wp-content/**" },
-      { protocol: "http", hostname: "ladispute.fr", pathname: "/wp-content/**" },
-      // Découplage CMS (E3 du plan) : hosts de cohabitation, seuls hosts REST
-      // + médias une fois les domaines publics basculés sur Vercel (E5/E6).
-      // Cohabitation : gardés en plus des hosts publics ci-dessus, jamais à
-      // leur place, tant que la migration n'est pas achevée.
-      { protocol: "https", hostname: "cms-es.editionssociales.fr", pathname: "/wp-content/**" },
-      { protocol: "https", hostname: "cms-ld.editionssociales.fr", pathname: "/wp-content/**" },
-      // Couvertures/médias rapatriés par Payload (E6/E3) : chaque store Vercel
-      // Blob a un sous-domaine `<id>.public.blob.vercel-storage.com` distinct,
-      // aucun hostname fixe connu à l'avance. `*` (un seul niveau de
-      // sous-domaine) suffit et reste plus restrictif que `**` (cf.
-      // node_modules/next/dist/docs/.../02-components/image.md, "Wildcard
-      // Patterns") : le store ID est toujours un unique segment.
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
     ],
   },
   redirects,
-  rewrites,
 };
 
 export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackages: false }), {

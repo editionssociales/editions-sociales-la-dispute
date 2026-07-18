@@ -1,6 +1,5 @@
 import type { ServerProps } from 'payload'
 
-import { isCommerceNative } from '@/lib/env'
 
 import {
   bannerHidden,
@@ -66,22 +65,16 @@ const SHIPPING_LABELS: Record<string, string> = {
   offert: 'offert',
 }
 
-/** Note affichée sur les panneaux commerce tant que `COMMERCE_NATIVE` est à 0. */
-const VENTE_FERMEE = 'Vente en ligne pas encore ouverte — ce panneau s’activera à la bascule.'
-
 export async function Dashboard({ payload, user }: ServerProps) {
   const admin = user?.role === 'admin'
   const now = new Date()
-  const commerceOn = isCommerceNative()
 
   const [workOrders, lowStock, refunds, monthSales, donations, importRun, editorial, recentBooks, expiredPromos, sentry] =
     await Promise.all([
-      // Flag à 0 : pas de lecture commandes/CA — états vides/gris assumés
-      // (jamais un « 0 € » trompeur), données réelles dès le flag à 1.
-      commerceOn ? readWorkOrders(payload) : Promise.resolve(null),
+      readWorkOrders(payload),
       readLowStock(payload),
-      commerceOn ? readRefunds(payload) : Promise.resolve(null),
-      commerceOn ? readMonthSales(payload, now) : Promise.resolve(null),
+      readRefunds(payload),
+      readMonthSales(payload, now),
       readDonations(now),
       readLastImportRun(payload),
       readEditorialCounts(payload),
@@ -92,7 +85,7 @@ export async function Dashboard({ payload, user }: ServerProps) {
 
   /* ── Signaux (mêmes données que les panneaux — le bandeau n'a aucun fetch propre) ── */
 
-  const commandesState: PanelState = deriveCommandesState(commerceOn, workOrders, now)
+  const commandesState: PanelState = deriveCommandesState(workOrders, now)
 
   const stockState: PanelState =
     lowStock.state === 'na' ? 'na' : stockSignal(lowStock.rows.map((row) => row.stock))
@@ -148,12 +141,7 @@ export async function Dashboard({ payload, user }: ServerProps) {
           <h3 className={styles.panelTitle} id="t-commandes">
             <span className={dotClass(commandesState)} /> Commandes à traiter
           </h3>
-          {!commerceOn || workOrders === null ? (
-            <>
-              <p className={styles.empty}>Aucune commande en attente.</p>
-              <span className={styles.noteChip}>{VENTE_FERMEE}</span>
-            </>
-          ) : workOrders.state === 'na' ? (
+          {workOrders.state === 'na' ? (
             <span className={badgeClass('na')}>liste des commandes indisponible</span>
           ) : (
             <>
@@ -283,12 +271,7 @@ export async function Dashboard({ payload, user }: ServerProps) {
             Statut basculé automatiquement par le webhook Stripe — montant et date de
             remboursement non modélisés ici, à vérifier dans Stripe.
           </p>
-          {!commerceOn || refunds === null ? (
-            <>
-              <p className={styles.empty}>Aucune commande remboursée.</p>
-              <span className={styles.noteChip}>{VENTE_FERMEE}</span>
-            </>
-          ) : refunds.state === 'na' ? (
+          {refunds.state === 'na' ? (
             <span className={badgeClass('na')}>liste des remboursements indisponible</span>
           ) : refunds.refunds.length === 0 ? (
             <p className={styles.empty}>Aucune commande remboursée.</p>
@@ -327,13 +310,7 @@ export async function Dashboard({ payload, user }: ServerProps) {
           <h3 className={styles.panelTitle} id="t-ventes">
             Ventes du mois
           </h3>
-          {!commerceOn || monthSales === null ? (
-            // JAMAIS « 0 € » tant que la vente n'est pas ouverte : panneau gris.
-            <>
-              <span className={badgeClass('na')}>chiffre indisponible</span>
-              <span className={styles.noteChip}>{VENTE_FERMEE}</span>
-            </>
-          ) : monthSales.state === 'na' ? (
+          {monthSales.state === 'na' ? (
             <span className={badgeClass('na')}>chiffre indisponible (lecture en échec)</span>
           ) : (
             <>

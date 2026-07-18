@@ -1,82 +1,52 @@
 # Éditions sociales · La Dispute — site unifié
 
-Squelette du **site unique** réunissant les deux maisons d'édition **Les Éditions
-sociales** et **La Dispute** ainsi que leur **boutique commune**, en remplacement
-des trois WordPress historiques hébergés chez OVH.
+**Site unique** réunissant les deux maisons d'édition **Les Éditions sociales**
+et **La Dispute** ainsi que leur **boutique commune** — il remplace les trois
+WordPress historiques, désormais éteints (coupure OVH actée).
 
-Stack : **Next.js 16** (App Router) · **React 19** · **TypeScript** · **Tailwind
-CSS v4** · **mysql2**.
+Stack : **Next.js 16** (App Router) · **React 19** · **TypeScript** ·
+**Tailwind CSS v4** · **Payload 3** (back-office `/admin`) · **Postgres**
+(Neon, schéma `payload`) · **Stripe** (dons + commandes) · **Vercel**.
 
-## Principe : réutiliser les bases OVH
+## Principe : une seule source
 
-Le site ne duplique pas les données : il **lit directement les bases MySQL** des
-sites WordPress d'origine et les expose sous un modèle de domaine propre
-(`Book`, `Product`…), indépendant de WordPress.
-
-| Source     | Base OVH       | Préfixe   | Contenu                                                          |
-| ---------- | -------------- | --------- | --------------------------------------------------------------- |
-| `es`       | `editionskes`  | `es_`     | Catalogue Éditions sociales (CPT `catalogue` + ACF) — 117 livres |
-| `ld`       | `editionsk712` | `es_`     | Catalogue La Dispute — 176 livres                               |
-| `boutique` | `editionsk884` | `mod973_` | Boutique WooCommerce — 223 produits                             |
-
-Les deux catalogues partagent la même structure (CPT `catalogue`, taxonomies
-`auteur` / `collection` / `parution`, champs ACF `isbn`, `prix`,
-`date_parution`, `nombre_pages`, liens d'achat). La couche `src/lib/catalogue.ts`
-assemble un `Book` unifié à partir de ces tables, en taguant chaque titre par
-maison d'édition — c'est le cœur de la **fusion**.
+Tout — catalogue des deux fonds, articles boutique-seuls, contenus éditables,
+commandes — vit dans Postgres via Payload. Le front lit la collection `books`
+derrière un port (`CatalogueSource`, adaptateurs pg/mémoire) et l'expose sous
+un modèle de domaine propre (`Book`, statut d'achat résolu par
+`src/lib/sellability.ts`). Le commerce natif (panier `localStorage`, checkout
+Stripe re-validé serveur, export CSV) est toujours actif.
 
 ## Architecture
 
 ```
 src/
-  lib/
-    db.ts            Pools mysql2 par source (config via variables d'env)
-    types.ts         Modèle de domaine unifié
-    editions.ts      Métadonnées des deux maisons
-    catalogue.ts     Repository catalogue (ES + La Dispute fusionnés)
-    boutique.ts      Repository WooCommerce (lecture)
-    format.ts        Helpers (auteur « Nom/Prénom », dates AAAAMMJJ, prix…)
-    parse-filters.ts Parsing des filtres d'URL
-  components/        Header, footer, carte livre, grille, filtres, badges…
+  lib/         Modèle de domaine + couche data (port pg/mémoire, cœurs purs,
+               seams Payload commerce-source / order-source) — cf. src/lib/CLAUDE.md
+  components/  Présentation brutaliste (grille encadrée, cartes, panier client)
   app/
-    page.tsx                          Accueil (héro fusion + nouveautés)
-    catalogue/                        Catalogue commun + filtres
-      [edition]/                      Catalogue par maison
-      [edition]/[slug]/               Fiche livre (achat, extrait, table…)
-    editions/ [slug]/                 Présentation des deux maisons
-    boutique/                         Librairie (produits WooCommerce)
-    souscription/                     Campagne de dons (paliers)
-    rencontres/ · a-propos/ · panier/
+    (site)/    Front public : catalogue, fiches, boutique, panier, souscription…
+    (payload)/ Back-office /admin + API Payload (générés)
+    api/       checkout, webhook Stripe, health
+  payload/     Collections (Books, Orders, PromoCodes…), globals, dashboard admin
+  migrations/  Schéma Postgres versionné (jamais de push en prod)
 ```
-
-Les pages qui lisent la base sont en `force-dynamic` (données live, build
-indépendant de la base).
 
 ## Développement
 
-Les trois bases OVH sont chargées dans une **MariaDB locale** (port 3307). Voir
-`.env.example` (copié en `.env.local`).
-
 ```bash
-# 1. base locale (une fois) — importer les dumps OVH
-#    (mariadb-install-db + mariadbd-safe --port=3307, puis importer les .sql.gz)
-# 2. dépendances
+cp .env.example .env   # DATABASE_URL + PAYLOAD_SECRET requis (Neon)
 pnpm install
-# 3. lancer
-pnpm dev            # http://localhost:3000
-pnpm build && pnpm start
+pnpm dev               # http://localhost:3000 — /admin pour le back-office
 ```
 
-En production, pointer les variables `CATALOG_*_HOST/USER/PASSWORD` vers les
-hôtes OVH (`*.mysql.db`).
+Vérification : `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm knip`.
+Le build (`pnpm build`) est hermétique — Postgres uniquement.
 
-## Prochaines étapes
+## Documents
 
-- **Panier & paiement** : rebrancher le panier unifié sur WooCommerce/Stripe
-  (déjà configuré côté boutique).
-- **Migration des médias** : les couvertures sont encore servies par OVH
-  (`next.config.ts` → `images.remotePatterns`) ; à rapatrier.
-- **Back-office** : interface simple de mise à jour du catalogue.
-- **Souscription** : brancher le paiement des paliers (objectif ~15 août).
-- **Contenu éditorial** : pages « à propos » / « rencontres », DA fournie par la
-  graphiste interne, sécurisation du HTML (`presentation`).
+- `CLAUDE.md` / `src/*/CLAUDE.md` — cartes de scope (toujours vraies).
+- `DEVOPS.md` (comptes, secrets, CI/CD) · `OPERATIONS.md` (runbook) ·
+  `docs/BACK-OFFICE.md` (guide de l'équipe éditoriale).
+- `plan/`, `LEGACY-STACK.md`, `REVERSIBILITE.md` — documents d'époque de la
+  refonte (historiques).

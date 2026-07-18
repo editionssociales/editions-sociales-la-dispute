@@ -19,14 +19,10 @@ import { CartNavCell } from "./cart/cart-badge";
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » | nav 2×2.
  * Mobile : empilé — 2 maisons pleine largeur, nav 2×2, puis « Nous soutenir ».
  *
- * `commerceNative` (plan §4 étape 6, panier client) ajoute une 5e cellule
- * « Panier » — desktop et mobile — UNIQUEMENT quand elle vaut `true` : ce
- * prop vient d'une lecture serveur de `COMMERCE_NATIVE` (`layout.tsx`,
- * `isCommerceNative()`), jamais de `useSearchParams`/l'URL — piège documenté
- * du repo, un `useSearchParams` ici ferait basculer TOUT le site en rendu
- * dynamique (ce composant est monté par le layout racine, donc sur chaque
- * page). À `false` (défaut), le rendu de ce composant reste STRICTEMENT
- * celui d'avant ce lot — règle d'or du lot (iso-rendu à `COMMERCE_NATIVE=0`).
+ * La 5e cellule « Panier » (desktop et mobile, plan §4 étape 6) est
+ * permanente. Jamais de `useSearchParams`/l'URL ici — piège documenté du
+ * repo, un `useSearchParams` ferait basculer TOUT le site en rendu dynamique
+ * (ce composant est monté par le layout racine, donc sur chaque page).
  *
  * Sections et maisons viennent du modèle de données `lib/nav` (label, href,
  * matcher d'activité) ; ce composant n'ajoute que l'apparence.
@@ -55,13 +51,11 @@ const SECTION_PLACEMENT: Record<NavSectionId, string> = {
 };
 
 /**
- * Grille desktop : deux variantes littérales (jamais de gabarit assemblé par
- * concaténation, même contrat que `maisonCellClass` ci-dessous) — 4 colonnes
- * par défaut, une 5e (« Panier ») seulement à `commerceNative`.
+ * Grille desktop, littérale (jamais de gabarit assemblé par concaténation,
+ * même contrat que `maisonCellClass` ci-dessous) — 5 colonnes, « Panier » en
+ * dernière.
  */
-const DESKTOP_GRID_DEFAULT =
-  "hidden grid-cols-[1.3fr_1fr_0.9fr_0.9fr] grid-rows-2 gap-[2px] p-[2px] lg:grid";
-const DESKTOP_GRID_COMMERCE =
+const DESKTOP_GRID =
   "hidden grid-cols-[1.3fr_1fr_0.9fr_0.9fr_0.7fr] grid-rows-2 gap-[2px] p-[2px] lg:grid";
 
 // transition-all : la couleur (survol/actif) ET la taille (padding/police, au
@@ -206,14 +200,14 @@ function useCompactOnScroll(enter = 72, exit = 16): boolean {
   return compact;
 }
 
-export function SiteHeader({ commerceNative = false }: { commerceNative?: boolean }) {
+export function SiteHeader() {
   const active = useActiveSections();
   const compact = useCompactOnScroll();
 
   return (
     <header className="sticky top-0 z-50">
       <nav aria-label="Navigation principale" className="bg-black">
-        {/* Mobile (< lg) : maisons pleine largeur, nav 2×2, panier (si actif), puis « Nous soutenir ». */}
+        {/* Mobile (< lg) : maisons pleine largeur, nav 2×2, panier, puis « Nous soutenir ». */}
         <div className="grid grid-cols-2 gap-[2px] p-[2px] lg:hidden">
           {NAV_HOUSES.map((house) => (
             <Link
@@ -234,12 +228,12 @@ export function SiteHeader({ commerceNative = false }: { commerceNative?: boolea
               {section.label}
             </Link>
           ))}
-          {commerceNative && <CartNavCell compact={compact} placement="col-span-2" />}
+          <CartNavCell compact={compact} placement="col-span-2" />
           <SoutenirCell compact={compact} placement="col-span-2 py-4" />
         </div>
 
-        {/* Desktop (lg+) : maisons | « Nous soutenir » | nav 2×2 | panier (si actif). */}
-        <div className={commerceNative ? DESKTOP_GRID_COMMERCE : DESKTOP_GRID_DEFAULT}>
+        {/* Desktop (lg+) : maisons | « Nous soutenir » | nav 2×2 | panier. */}
+        <div className={DESKTOP_GRID}>
           {NAV_HOUSES.map((house, i) => (
             <Link
               key={house.href}
@@ -264,9 +258,7 @@ export function SiteHeader({ commerceNative = false }: { commerceNative?: boolea
             </Link>
           ))}
 
-          {commerceNative && (
-            <CartNavCell compact={compact} placement="col-start-5 row-span-2 row-start-1" />
-          )}
+          <CartNavCell compact={compact} placement="col-start-5 row-span-2 row-start-1" />
         </div>
       </nav>
     </header>

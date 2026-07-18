@@ -7,9 +7,8 @@ import { Button } from "@/components/button";
  * Filet de sécurité générique pour tout le groupe `(site)` — s'ajoute à
  * `catalogue/error.tsx` (plus précis sur ce segment) sans le remplacer :
  * l'imbrication Next choisit la frontière la plus proche de l'erreur, donc
- * `catalogue/error.tsx` reste prioritaire pour `catalogue`/`catalogue/[edition]`
- * (constat de revue majeur, `src/lib/catalogue-integrity.ts`). Sans cette
- * frontière-ci, toute exception non gérée d'une autre route du front (import
+ * `catalogue/error.tsx` reste prioritaire pour `catalogue`/`catalogue/[edition]`.
+ * Sans cette frontière-ci, toute exception non gérée d'une autre route du front (import
  * dynamique cassé, erreur de rendu inattendue) tomberait sur la page d'erreur
  * 500 générique de Next plutôt que sur un état dégradé cohérent avec le site.
  * L'erreur est déjà journalisée côté Sentry sans action ici (`onRequestError`,

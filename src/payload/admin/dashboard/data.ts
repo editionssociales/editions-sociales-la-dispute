@@ -536,18 +536,6 @@ export interface ConfigData {
   databaseUrl: boolean
   /** `null` = compte illisible. */
   lockedAccounts: number | null
-  /**
-   * Bloc de transition — non-`null` UNIQUEMENT tant que
-   * `CATALOGUE_SOURCE !== 'pg'`. Simple test à supprimer (avec son rendu)
-   * une fois la bascule confirmée stable — jamais un flag long terme
-   * (design v2 §5, panneaux transitoires).
-   */
-  transition: {
-    catalogueSourceLabel: string
-    wpEs: boolean
-    wpLd: boolean
-    wcStore: boolean
-  } | null
 }
 
 /** Présence des variables critiques (booléens seulement) + comptes verrouillés. */
@@ -577,14 +565,5 @@ export async function readConfig(payload: Payload, now: Date): Promise<ConfigDat
     sentryDashboardToken: Boolean(process.env.SENTRY_DASHBOARD_TOKEN),
     databaseUrl: Boolean(process.env.DATABASE_URL),
     lockedAccounts,
-    transition:
-      process.env.CATALOGUE_SOURCE !== 'pg'
-        ? {
-            catalogueSourceLabel: "l'ancien système (WordPress)",
-            wpEs: Boolean(process.env.WP_ES_URL),
-            wpLd: Boolean(process.env.WP_LD_URL),
-            wcStore: Boolean(process.env.WC_STORE_URL),
-          }
-        : null,
   }
 }

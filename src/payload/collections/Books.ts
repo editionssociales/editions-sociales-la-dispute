@@ -341,9 +341,7 @@ export const Books: CollectionConfig = {
       type: 'group',
       label: 'Commerce natif',
       admin: {
-        description:
-          'Commerce natif (phase 4) — actif sur le front seulement quand ' +
-          'COMMERCE_NATIVE=1 (bascule du jour J).',
+        description: 'Vente en ligne native — pilote le panier et le checkout du site.',
       },
       fields: [
         {

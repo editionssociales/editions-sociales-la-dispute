@@ -44,7 +44,6 @@ vi.mock("@/lib/stripe", async () => {
 });
 
 process.env.NEXT_PUBLIC_SITE_URL = "https://www.exemple.test";
-process.env.COMMERCE_NATIVE = "1";
 
 const { POST } = await import("./route");
 
@@ -108,22 +107,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   books = { 12: book() };
   promoCodes = {};
-  process.env.COMMERCE_NATIVE = "1";
-});
-
-describe("POST /api/checkout — garde COMMERCE_NATIVE", () => {
-  it("flag off → 503, ni lecture ni appel Stripe", async () => {
-    process.env.COMMERCE_NATIVE = "0";
-    const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
-    expect(res.status).toBe(503);
-    expect(sessionCalls).toBe(0);
-  });
-
-  it("flag absent → 503 (défaut iso-rendu)", async () => {
-    delete process.env.COMMERCE_NATIVE;
-    const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
-    expect(res.status).toBe(503);
-  });
 });
 
 describe("POST /api/checkout — validation du corps", () => {

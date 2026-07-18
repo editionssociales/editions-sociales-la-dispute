@@ -9,7 +9,7 @@ import { ACCENT_BG } from "@/lib/accents";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { getBooks } from "@/lib/catalogue";
 
-export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
+export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
 export function generateStaticParams() {
   return [{ slug: "editions-sociales" }, { slug: "la-dispute" }];

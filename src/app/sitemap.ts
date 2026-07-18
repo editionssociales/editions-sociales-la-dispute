@@ -1,26 +1,18 @@
 import type { MetadataRoute } from "next";
 import { getAllBookParams, getAllBoutiqueParams } from "@/lib/catalogue";
-import { isCommerceNative } from "@/lib/env";
 
 /**
  * Convention de fichier racine (`app/sitemap.ts`, hors des route groups) —
  * même raison qu'`app/robots.ts` : doit vivre à la racine littérale de `app/`
  * pour produire `/sitemap.xml`.
  *
- * Via la façade `@/lib/catalogue` (insensible au futur swap d'adaptateur
- * `CATALOGUE_SOURCE=pg`) : pages statiques du front + une entrée par fiche
- * livre (`getAllBookParams`, ~295 titres). ~310 URLs → un seul sitemap, pas
- * besoin de `generateSitemaps`.
- *
- * `/boutique` + une entrée par produit orphelin (`getAllBoutiqueParams`,
- * `origin: "boutique"`) : conditionnées à `COMMERCE_NATIVE=1` — même garde
- * que la route elle-même (`src/app/(site)/boutique/page.tsx`, qui redirige
- * vers `/catalogue` tant que le flag est à `0`) ; `getAllBoutiqueParams`
- * renvoie déjà `[]` à `0`, la garde explicite ici documente l'intention et
- * évite de dépendre silencieusement de ce détail d'implémentation.
+ * Via la façade `@/lib/catalogue` : pages statiques du front + une entrée
+ * par fiche livre (`getAllBookParams`, ~295 titres), plus `/boutique` et une
+ * entrée par article boutique-seul (`getAllBoutiqueParams`). ~330 URLs → un
+ * seul sitemap, pas besoin de `generateSitemaps`.
  */
 
-export const revalidate = 3600; // aligne la fraîcheur sur la fenêtre de cache REST (WP_REVALIDATE)
+export const revalidate = 3600;
 
 const STATIC_PATHS = [
   "/",
@@ -46,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"
   ).replace(/\/+$/, "");
   const books = await getAllBookParams();
-  const boutiqueOnly = isCommerceNative() ? await getAllBoutiqueParams() : [];
+  const boutiqueOnly = await getAllBoutiqueParams();
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
     url: `${base}${path}`,

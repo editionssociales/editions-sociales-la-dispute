@@ -16,11 +16,9 @@ import {
 
 /**
  * Provider client du panier (plan §4 étape 6) — état `localStorage`, îlot
- * client parmi les rares du repo (cf. `src/components/CLAUDE.md`). Monté
- * UNIQUEMENT à `COMMERCE_NATIVE=1` (`layout.tsx`) : à `0`, ni ce provider ni
- * aucun de ses consommateurs (`CartNavCell`, `AddToCartButton`, `CartView`)
- * n'existent dans l'arbre — règle d'or du lot, rien ne change en prod tant
- * que le flag est bas.
+ * client parmi les rares du repo (cf. `src/components/CLAUDE.md`). Monté par
+ * `layout.tsx` sur tout le site : ses consommateurs (`CartNavCell`,
+ * `AddToCartButton`, `CartView`) le supposent toujours présent dans l'arbre.
  */
 
 const STORAGE_KEY = "es-ld-panier";
@@ -102,12 +100,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-/** À utiliser uniquement sous `<CartProvider>` (donc uniquement à `COMMERCE_NATIVE=1`). */
+/** À utiliser uniquement sous `<CartProvider>` (monté par le layout du site). */
 export function useCart(): CartContextValue {
   const ctx = useContext(CartContext);
   if (!ctx) {
     throw new Error(
-      "useCart() appelé hors de <CartProvider> — ce provider n'est monté qu'à COMMERCE_NATIVE=1.",
+      "useCart() appelé hors de <CartProvider> — ce provider est monté par le layout (site).",
     );
   }
   return ctx;

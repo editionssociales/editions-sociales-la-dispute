@@ -11,23 +11,14 @@ import {
 import type { EditionSlug } from "./types";
 
 /**
- * Adaptateur Postgres du port `CatalogueSource` (E4 du plan) — lit le
- * back-office Payload via la Local API, connexion **poolée** (`DATABASE_URL`,
- * implicite : `payload.config.ts` ne configure que celle-ci) indispensable au
- * build SSG qui pré-rend ~295 fiches en parallèle sans épuiser les connexions
- * Neon. Sélectionné par `CATALOGUE_SOURCE=pg` (`catalogue.ts`). Ce port ne
- * porte plus les produits boutique : la façade (`catalogue.ts`) appelle
- * directement `getAllStoreProducts()` (`boutique.ts`, Woo reste la source de
- * vérité des ventes tant que `COMMERCE_NATIVE=0`, quel que soit
- * `CATALOGUE_SOURCE` — le flag qui gouverne les VENTES est distinct de celui
- * qui gouverne le contenu du catalogue, plan §4 étape 2c). L'ANGLE MORT n°2
- * du plan (des `permalink` d'achat qui resteraient WooCommerce après le
- * passage au commerce natif) est refermé par `listBoutiqueOnlyBooks`/
- * `getBoutiqueOnlyBook` ci-dessous : à `COMMERCE_NATIVE=1`, `catalogue.ts`
- * n'appelle plus `getAllStoreProducts()` du tout — il compose directement
- * `listBooks`/`getBook` (contenu, quelle que soit sa source) avec ces deux
- * fonctions (ventes, Payload uniquement) via `buildNativeCatalogue`/
- * `buildNativeBookDetail` (`catalogue-core.ts`).
+ * Adaptateur Postgres du port `CatalogueSource` — lit le back-office Payload
+ * via la Local API, connexion **poolée** (`DATABASE_URL`, implicite :
+ * `payload.config.ts` ne configure que celle-ci) indispensable au build SSG
+ * qui pré-rend ~295 fiches en parallèle sans épuiser les connexions Neon.
+ * Seule source du catalogue depuis la coupure OVH : la façade
+ * (`catalogue.ts`) compose `listBooks`/`getBook` avec
+ * `listBoutiqueOnlyBooks`/`getBoutiqueOnlyBook` ci-dessous via
+ * `buildNativeCatalogue`/`buildNativeBookDetail` (`catalogue-core.ts`).
  *
  * `getPayload({ config })` est mémoïsé par Payload lui-même (singleton par
  * process) — pas besoin d'un `cache()` React ici.
@@ -78,11 +69,8 @@ export function pgCatalogueSource(): CatalogueSource {
 
 /**
  * Tous les articles boutique-seuls (`origin: "boutique"`, `edition: null` —
- * goodies, manuels, produits WooCommerce jamais réclamés par une fiche,
- * `scripts/migrate-products.ts`). Fournit la grille `/boutique` (plan §4
- * étape 7) et les extras de `buildNativeCatalogue` — appelée uniquement à
- * `COMMERCE_NATIVE=1`, quel que soit `CATALOGUE_SOURCE` (ces articles n'ont
- * jamais existé côté WordPress).
+ * goodies, manuels, correspondances). Fournit la grille `/boutique` (plan §4
+ * étape 7) et les extras de `buildNativeCatalogue`.
  */
 export async function listBoutiqueOnlyBooks(): Promise<RawBook[]> {
   const payload = await getPayload({ config });

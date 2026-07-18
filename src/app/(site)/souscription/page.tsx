@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/souscription" },
 };
 
-export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
+export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
 /* ------------------------------------------------------------------ */
 /* Contenu repris de la campagne Ulule 2024                            */

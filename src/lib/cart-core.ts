@@ -133,9 +133,8 @@ export function serializeCartState(state: CartState): string {
 /**
  * Un livre affiche-t-il « Ajouter au panier » (`buy-links.tsx`, `book-card.tsx`) ?
  * Reflet exact de la décision de `resolveNativePurchase` (`catalogue-core.ts`) :
- * seul `purchaseMode === "cart"` (donc `COMMERCE_NATIVE=1` ET disponible) ouvre
- * le bouton — `external`/`upcoming`/`unavailable` gardent `buy-links.tsx`
- * strictement inchangé.
+ * seul `purchaseMode === "cart"` (disponible à la vente native) ouvre le
+ * bouton — `external`/`upcoming`/`unavailable` restent des liens/mentions.
  */
 export function canAddToCart(book: Pick<Book, "status" | "purchaseMode">): boolean {
   return book.status === "available" && book.purchaseMode === "cart";

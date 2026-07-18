@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * `GET /api/health` testé à travers son interface réelle (Request →
@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * (seam nommé du cycle de vie Order — collection/where/options couverts par
  * `order-source.test.ts`, même traitement que `@/lib/commerce-source` dans
  * `api/stripe/webhook/route.test.ts`) : ce fichier ne revérifie que la
- * COMPOSITION de la route (dégradation `COMMERCE_NATIVE`, calcul de l'âge,
+ * COMPOSITION de la route (calcul de l'âge,
  * capture Sentry), pas le mock Payload sous-jacent.
  */
 
@@ -31,34 +31,7 @@ beforeEach(() => {
   findShouldThrow = false;
 });
 
-afterEach(() => {
-  delete process.env.COMMERCE_NATIVE;
-});
-
-describe("GET /api/health — COMMERCE_NATIVE=0 (défaut)", () => {
-  it("dégrade proprement : signal Stripe null, aucune lecture Payload", async () => {
-    delete process.env.COMMERCE_NATIVE;
-    const res = await GET();
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      status: "ok",
-      commerceNative: false,
-      stripe: { lastEventAt: null, lastEventAgeSeconds: null },
-    });
-  });
-
-  it("valeur malformée (\"true\") désactive aussi — même garde que isCommerceNative()", async () => {
-    process.env.COMMERCE_NATIVE = "true";
-    const res = await GET();
-    expect((await res.json()).commerceNative).toBe(false);
-  });
-});
-
-describe("GET /api/health — COMMERCE_NATIVE=1", () => {
-  beforeEach(() => {
-    process.env.COMMERCE_NATIVE = "1";
-  });
-
+describe("GET /api/health", () => {
   it("aucune commande en base → signal Stripe null (état légitime juste après cutover)", async () => {
     const res = await GET();
     expect(await res.json()).toEqual({

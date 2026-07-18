@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllBoutiqueParams, getBoutiqueBook } from "@/lib/catalogue";
-import { isCommerceNative } from "@/lib/env";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { BuyLinksList } from "@/components/buy-links";
@@ -16,10 +15,8 @@ import { cmsExcerpt } from "@/lib/cms-html";
  * composant d'achat (`BuyLinksList`) que les fiches catalogue, sans les
  * métadonnées propres à un livre édité (collection, ISBN, ex-libris de
  * maison) que ces articles (goodies, manuels, correspondances) n'ont pas
- * toujours. N'existe qu'à `COMMERCE_NATIVE=1` : à `0`, `notFound()` — la
- * route `/boutique` redirige déjà vers `/catalogue`, mais un lien direct
- * historique (`/produit/<slug>/`, table de redirections à venir, plan §4
- * étape 12) ne doit pas non plus pré-rendre cette fiche prématurément.
+ * toujours. Les liens historiques `/produit/<slug>/` y arrivent via la table
+ * de redirections (`next.config.ts`).
  */
 
 export async function generateMetadata({
@@ -27,7 +24,6 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  if (!isCommerceNative()) return {};
   const { slug } = await params;
   const book = await getBoutiqueBook(slug);
   if (!book) return {};
@@ -49,7 +45,6 @@ export default async function BoutiqueBookPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  if (!isCommerceNative()) notFound();
   const { slug } = await params;
   const book = await getBoutiqueBook(slug);
   if (!book) notFound();

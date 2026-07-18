@@ -20,10 +20,10 @@ export function BuyLinksList({ book }: { book: Book }) {
     );
   }
 
-  // Panier natif (plan §4 étape 6, `COMMERCE_NATIVE=1` uniquement — reflet
-  // exact de `resolveNativePurchase`) : le lien externe Woo devient un
-  // bouton panier. `book.permalink` vaut alors la fiche interne elle-même
-  // (pas un lien d'achat externe) — inutile ici, remplacé par le bouton.
+  // Panier natif (plan §4 étape 6, reflet exact de `resolveNativePurchase`) :
+  // bouton panier pour un livre disponible. `book.permalink` vaut alors la
+  // fiche interne elle-même (pas un lien d'achat externe) — inutile ici,
+  // remplacé par le bouton.
   if (canAddToCart(book)) {
     return (
       <div className="flex flex-wrap items-center gap-3">

@@ -8,8 +8,7 @@ import { useCart } from "./cart-context";
  * transition/le focus reprennent exactement la recette des cellules nav
  * voisines (`CELL_TRANSITION`/`FOCUS_DARK` de `site-header.tsx`, redéfinies
  * ici en petit plutôt que ré-exportées : deux constantes, pas une dépendance
- * inverse `cart → site-header`). N'est rendue par l'appelant qu'à
- * `COMMERCE_NATIVE=1` (sous `<CartProvider>`), jamais à `0`.
+ * inverse `cart → site-header`). Toujours rendue sous `<CartProvider>`.
  */
 const CELL_TRANSITION = "transition-all duration-200 ease-out motion-reduce:transition-none";
 const FOCUS_DARK =

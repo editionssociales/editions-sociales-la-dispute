@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export const revalidate = 3600; // aligne la fraîcheur de la page sur le cache REST (WP_REVALIDATE)
+export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
 export default async function CataloguePage({
   searchParams,

@@ -10,7 +10,7 @@ import { useCart } from "./cart-context";
  * superposé à la couverture, `variant="chip"`) quand `canAddToCart(book)`
  * (`cart-core.ts`). Les deux appelants ne le rendent qu'à
  * `book.purchaseMode === "cart"` — donc toujours sous `<CartProvider>`
- * (monté uniquement à `COMMERCE_NATIVE=1`, `layout.tsx`).
+ * (monté par `layout.tsx`).
  */
 export function AddToCartButton({
   id,

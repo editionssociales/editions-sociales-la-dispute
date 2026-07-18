@@ -5,7 +5,6 @@ import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CartProvider } from "@/components/cart/cart-context";
-import { isCommerceNative } from "@/lib/env";
 import { getReglagesSite } from "@/lib/site-content";
 
 const inter = Inter({
@@ -44,15 +43,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Lue ici (server, comme `NEXT_PUBLIC_SITE_URL` juste au-dessus) et
-  // descendue en PROP jusqu'à `SiteHeader` — jamais via `useSearchParams` ni
-  // aucune API dynamique côté client (piège documenté : ce composant est
-  // monté par le layout racine, un `useSearchParams` y ferait basculer TOUT
-  // le site en rendu dynamique). `<CartProvider>` n'est monté qu'à `1` :
-  // à `0`, ni lui ni ses consommateurs n'existent dans l'arbre — règle d'or
-  // du lot (iso-rendu strict tant que le flag est bas).
-  const commerceNative = isCommerceNative();
-  const header = <SiteHeader commerceNative={commerceNative} />;
   // Textes du pied de page (global `reglages-site`) : descendus en props —
   // `SiteFooter` reste un composant serveur de pure présentation.
   const { footer } = await getReglagesSite();
@@ -71,17 +61,10 @@ export default async function RootLayout({
         >
           Aller au contenu
         </a>
-        {commerceNative ? (
-          <CartProvider>
-            {header}
-            <main id="contenu" className="flex-1">{children}</main>
-          </CartProvider>
-        ) : (
-          <>
-            {header}
-            <main id="contenu" className="flex-1">{children}</main>
-          </>
-        )}
+        <CartProvider>
+          <SiteHeader />
+          <main id="contenu" className="flex-1">{children}</main>
+        </CartProvider>
         <SiteFooter footer={footer} />
         {/* Vercel Web Analytics (plan/06-operations.md, étape 4) — un
             <script> first-party sans cookie, aucun nœud visible : seule

@@ -59,17 +59,11 @@ export function worstState(states: PanelState[]): PanelState {
 }
 
 /**
- * État du signal Commandes (bandeau 3.1, dot du panneau 3.2) : commerce
- * fermé → OK (écran vide assumé, jamais une alerte) ; liste de travail
- * `null`/illisible → gris ; sinon le pire retard des commandes de la liste
- * (cf. `orderLateness`).
+ * État du signal Commandes (bandeau 3.1, dot du panneau 3.2) : liste de
+ * travail `null`/illisible → gris ; sinon le pire retard des commandes de la
+ * liste (cf. `orderLateness`).
  */
-export function commandesState(
-  commerceOn: boolean,
-  workOrders: WorkOrdersData | null,
-  now: Date,
-): PanelState {
-  if (!commerceOn) return 'ok'
+export function commandesState(workOrders: WorkOrdersData | null, now: Date): PanelState {
   if (workOrders === null || workOrders.state === 'na') return 'na'
   return worstState(workOrders.orders.map((order) => orderLateness(order, now)))
 }

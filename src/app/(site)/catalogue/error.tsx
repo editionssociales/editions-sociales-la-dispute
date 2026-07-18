@@ -4,20 +4,17 @@ import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 
 /**
- * Limite de dégât pour `/catalogue` et `/catalogue/[edition]` (revue de code,
- * constat majeur `src/lib/catalogue-integrity.ts`) : ces deux routes lisent
- * `searchParams` et sont donc rendues **dynamiquement à chaque requête**
- * (`src/app/CLAUDE.md`) — sans cette frontière, un `CatalogueTruncatedError`
- * jeté par `assertCatalogueComplete` (drift > 5 % pendant une fenêtre de
- * flakiness WordPress) remonterait jusqu'à la page d'erreur 500 générique de
- * Next pour CHAQUE visiteur de la fenêtre, au lieu d'un catalogue tronqué
- * mais navigable. Avec cette frontière : un message dégradé, un bouton
- * « réessayer » (`unstable_retry` : re-fetch + re-rendu du segment, pas
- * seulement un effacement d'état côté client) — jamais un crash public. La
- * fiche livre (`catalogue/[edition]/[slug]`, pré-rendue via
- * `generateStaticParams`) n'a pas ce problème : une régénération ISR en
- * échec conserve le rendu déjà servi, cf. commentaire de
- * `catalogue-integrity.ts`.
+ * Limite de dégât pour `/catalogue` et `/catalogue/[edition]` : ces deux
+ * routes lisent `searchParams` et sont donc rendues **dynamiquement à chaque
+ * requête** (`src/app/CLAUDE.md`) — sans cette frontière, une lecture
+ * Payload/Postgres en échec remonterait jusqu'à la page d'erreur 500
+ * générique de Next pour CHAQUE visiteur de la fenêtre. Avec cette
+ * frontière : un message dégradé, un bouton « réessayer » (`unstable_retry` :
+ * re-fetch + re-rendu du segment, pas seulement un effacement d'état côté
+ * client) — jamais un crash public. La fiche livre
+ * (`catalogue/[edition]/[slug]`, pré-rendue via `generateStaticParams`) n'a
+ * pas ce problème : une régénération ISR en échec conserve le rendu déjà
+ * servi.
  *
  * L'erreur elle-même est déjà journalisée côté Sentry sans action
  * supplémentaire ici : `onRequestError` (`src/instrumentation.ts`) capture

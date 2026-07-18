@@ -1,18 +1,16 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { RawBook } from "./catalogue-source";
 import type { EditionSlug } from "./types";
 
 /**
- * Vérifie le CÂBLAGE du garde-fou §5 (DEVOPS.md, `catalogue-integrity.ts`) au
- * bon point d'insertion : `getAllBooks()`, la façade qui combine les deux
- * fonds — seul endroit qui connaît le total avant fusion/cache ISR/build
- * (`generateStaticParams`). Sources http/pg substituées (pas de réseau, pas
- * de Postgres, alias `server-only` de `vitest.config.ts`, même pattern que
- * `panier/actions.test.ts`) ; la logique de seuil elle-même est couverte en
- * isolation par `catalogue-integrity.test.ts`.
+ * Câblage de la façade `catalogue.ts` (alias `server-only` de
+ * vitest.config.ts) : `./catalogue-pg` est substitué (adaptateur couvert par
+ * `catalogue-pg.test.ts`, assemblage par `catalogue-core.test.ts`) — on ne
+ * vérifie ici que la COMPOSITION : les deux fonds + les boutique-seuls
+ * assemblés en un catalogue, la fiche détail construite depuis l'adaptateur.
  */
 
-const rawBook = (id: number): RawBook => ({
+const rawBook = (id: number, over: Partial<RawBook> = {}): RawBook => ({
   id,
   slug: `livre-${id}`,
   title: `Livre ${id}`,
@@ -28,61 +26,62 @@ const rawBook = (id: number): RawBook => ({
   furtherReadingHtml: null,
   tocUrl: null,
   excerptUrl: null,
+  ...over,
 });
-
-// 117 ES + 178 LD = 295, le dernier chiffre connu (DEVOPS.md §1.3) — état par
-// défaut, réinitialisé après chaque test.
-const state = vi.hoisted(() => ({ es: 117, ld: 178 }));
-
-vi.mock("./catalogue-http", () => ({
-  httpCatalogueSource: () => ({
-    listBooks: async (edition: EditionSlug) => {
-      const count = edition === "editions-sociales" ? state.es : state.ld;
-      const offset = edition === "editions-sociales" ? 0 : 100_000;
-      return Array.from({ length: count }, (_, i) => rawBook(offset + i));
-    },
-    getBook: async () => null,
-  }),
-}));
 
 vi.mock("./catalogue-pg", () => ({
-  pgCatalogueSource: () => {
-    throw new Error(
-      "pgCatalogueSource ne doit pas être appelé — CATALOGUE_SOURCE n'est pas posée à `pg` dans ce test",
-    );
-  },
-  listBoutiqueOnlyBooks: async () => [],
-  getBoutiqueOnlyBook: async () => null,
+  pgCatalogueSource: () => ({
+    listBooks: async (edition: EditionSlug) =>
+      edition === "editions-sociales"
+        ? [rawBook(1, { commerce: { sellable: true, stock: 3 } }), rawBook(2)]
+        : [rawBook(3)],
+    getBook: async (edition: EditionSlug, slug: string) =>
+      edition === "editions-sociales" && slug === "livre-1"
+        ? rawBook(1, {
+            commerce: { sellable: true, stock: 3 },
+            presentationHtml: "<p>Présentation</p>",
+          })
+        : null,
+  }),
+  listBoutiqueOnlyBooks: async () => [
+    rawBook(100, { slug: "tote-bag", title: "Tote bag", commerce: { sellable: true, stock: null } }),
+  ],
+  getBoutiqueOnlyBook: async (slug: string) =>
+    slug === "tote-bag"
+      ? rawBook(100, { slug: "tote-bag", title: "Tote bag", commerce: { sellable: true, stock: null } })
+      : null,
 }));
 
-// Les produits boutique ne transitent plus par le port (S1) : `catalogue.ts`
-// appelle `getAllStoreProducts()` directement, à substituer ici comme les
-// sources http/pg (pas de réseau réel dans ce test de câblage).
-vi.mock("./boutique", () => ({
-  getAllStoreProducts: async () => [],
-}));
+const { getAllBooks, getBook, getBoutiqueBook } = await import("./catalogue");
 
-const { getAllBooks } = await import("./catalogue");
-
-afterEach(() => {
-  state.es = 117;
-  state.ld = 178;
+describe("getAllBooks — assemblage pg (deux fonds + boutique-seuls)", () => {
+  it("compose les deux fonds et les articles boutique-seuls en un catalogue", async () => {
+    const books = await getAllBooks();
+    expect(books).toHaveLength(4);
+    const toteBag = books.find((b) => b.slug === "tote-bag")!;
+    expect(toteBag.origin).toBe("boutique");
+    expect(toteBag.edition).toBeNull();
+    expect(books.find((b) => b.id === 1)?.status).toBe("available");
+  });
 });
 
-describe("getAllBooks — garde-fou catalogue tronqué câblé (DEVOPS.md §5)", () => {
-  it("total proche du dernier chiffre connu → catalogue construit normalement", async () => {
-    const books = await getAllBooks();
-    expect(books).toHaveLength(295);
+describe("getBook / getBoutiqueBook — fiches détail depuis l'adaptateur pg", () => {
+  it("construit la fiche résolue (statut, SafeHtml) d'un livre du fonds", async () => {
+    const detail = await getBook("editions-sociales", "livre-1");
+    expect(detail).not.toBeNull();
+    expect(detail!.status).toBe("available");
+    expect(detail!.purchaseMode).toBe("cart");
+    expect(detail!.permalink).toBe("/catalogue/editions-sociales/livre-1");
   });
 
-  it("un fonds amputé (page WordPress en échec) → getAllBooks() jette, rien n'est construit ni mis en cache", async () => {
-    state.es = 20; // chute franche : simule une pagination interrompue en cours de build
-    await expect(getAllBooks()).rejects.toThrow(/catalogue tronqué/i);
+  it("renvoie null pour un slug inconnu", async () => {
+    expect(await getBook("la-dispute", "inconnu")).toBeNull();
   });
 
-  it("dérive normale (quelques parutions de plus) → toujours aucune exception", async () => {
-    state.es = 122; // 300 au total, +1.7%
-    const books = await getAllBooks();
-    expect(books).toHaveLength(300);
+  it("construit la fiche d'un article boutique-seul avec son permalink interne", async () => {
+    const detail = await getBoutiqueBook("tote-bag");
+    expect(detail).not.toBeNull();
+    expect(detail!.origin).toBe("boutique");
+    expect(detail!.permalink).toBe("/boutique/tote-bag");
   });
 });

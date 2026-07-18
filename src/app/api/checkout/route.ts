@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
-import { isCommerceNative } from "@/lib/env";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
 import {
@@ -23,12 +22,12 @@ import { evaluatePromoCode } from "@/payload/lib/promo-eval-core";
  * `cart-core.ts`) — cette route ne fait que la composition + l'appel Stripe,
  * même découpage que `souscription/actions.ts` (E1/phase dons).
  *
- * Garde `COMMERCE_NATIVE` en PREMIER, avant même de lire le corps de la
- * requête : défense en profondeur (plan §4 étape 2) — personne ne peut
- * commander en prod avant le jour J, même en forgeant la requête.
+ * Garde Stripe en PREMIER, avant même de lire le corps de la requête :
+ * sans clé (`donationsEnabled()`), aucun encaissement possible — 503 propre
+ * plutôt qu'une erreur au fond de l'appel Stripe.
  */
 export async function POST(req: Request): Promise<Response> {
-  if (!isCommerceNative() || !donationsEnabled()) {
+  if (!donationsEnabled()) {
     return Response.json({ error: "Commerce natif indisponible." }, { status: 503 });
   }
 

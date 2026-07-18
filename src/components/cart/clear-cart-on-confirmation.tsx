@@ -15,9 +15,8 @@ import { useCart } from "./cart-context";
  * aussitôt écrasé par la relecture du panier stocké. `ready` ne passe à true
  * qu'après cette relecture — le clear écrit alors réellement.
  *
- * À ne rendre que sous `<CartProvider>` (COMMERCE_NATIVE=1) ET quand la
- * session Stripe relue est bien une commande — c'est la page serveur qui
- * porte ces deux gardes, `useCart` jetterait hors provider.
+ * À ne rendre que quand la session Stripe relue est bien une commande —
+ * c'est la page serveur (`merci`) qui porte cette garde.
  */
 export function ClearCartOnConfirmation() {
   const { ready, clearCart } = useCart();

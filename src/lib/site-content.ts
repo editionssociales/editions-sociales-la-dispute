@@ -15,8 +15,8 @@ import {
 /**
  * Lecture server-only des globals « Contenus du site » via la Local API
  * Payload — pattern Highlight généralisé (`highlight.ts`) : toujours lus
- * depuis Postgres, hors du port `CatalogueSource`, quelle que soit
- * `CATALOGUE_SOURCE`. Toute la mécanique (lecture, dégradation sur les
+ * depuis Postgres, hors du port `CatalogueSource`. Toute la mécanique
+ * (lecture, dégradation sur les
  * textes par défaut — fusion pure dans `site-content-core.ts` — sur toute
  * erreur Payload/Postgres : schéma pas encore migré, Neon indisponible…)
  * vit UNE fois dans `readGlobal` ; chaque global éditable coûte une ligne,

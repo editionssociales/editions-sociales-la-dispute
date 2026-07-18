@@ -5,13 +5,10 @@ import type { Cover, EditionSlug, Term } from "./types";
  *
  * Ce module ne fait **pas** d'I/O : il décrit l'interface `CatalogueSource`
  * (livres bruts des deux fonds) et les shapes que le port transporte. La
- * forme livre (`RawBook`) est **neutre** : chaque adaptateur —
- * http (`catalogue-http.ts` via `catalogue-wp-map.ts`), pg
+ * forme livre (`RawBook`) est **neutre** : chaque adaptateur — pg
  * (`catalogue-pg.ts` via `catalogue-pg-map.ts`), mémoire (tests, ci-dessous)
- * — a déjà absorbé son dialecte (entités WP, chaînes ACF sales, enveloppe
- * Payload) avant la couture. Toute la fusion / filtre / facette / tri vit en
- * aval dans `catalogue-core.ts`. L'interface cesse ainsi d'être « le réseau »
- * — et cesse aussi d'être « WordPress ».
+ * — a déjà absorbé son dialecte (enveloppe Payload) avant la couture. Tout
+ * l'assemblage / filtre / facette / tri vit en aval dans `catalogue-core.ts`.
  */
 
 /* -------- Forme brute neutre d'une fiche livre -------- */
@@ -30,12 +27,12 @@ export interface RawBook {
   authors: Term[];
   collection: Term | null;
   isbn: string | null;
-  /** Prix en euros — déjà parsé (les chaînes sales ACF sont un dialecte WP). */
+  /** Prix en euros — déjà parsé par l'adaptateur. */
   price: number | null;
   pages: number | null;
   /** Parution ISO `YYYY-MM-DD`. */
   publishedAt: string | null;
-  /** Couverture prête à rendre (https, rebase cms-* déjà appliqué côté WP). */
+  /** Couverture prête à rendre (URL https — Media Payload/Blob). */
   cover: Cover | null;
   buy: {
     boutique: string | null;
@@ -51,16 +48,15 @@ export interface RawBook {
   /** Extrait choisi (PDF), URL prête à l'emploi. */
   excerptUrl: string | null;
   /**
-   * Données de vente natives (Payload, groupe `commerce` des `books`) —
-   * `null`/absent pour l'adaptateur http (WordPress ne connaît ni `sellable`
-   * ni `stock`) ; lues uniquement à `COMMERCE_NATIVE=1`
+   * Données de vente (Payload, groupe `commerce` des `books`) — absent sur
+   * une fixture minimale : `NO_COMMERCE` (jamais vendable) s'applique alors
    * (`catalogue-core.ts:resolveNativePurchase`). Optionnel pour ne pas
    * casser les fixtures `RawBook` existantes qui n'en ont pas besoin.
    */
   commerce?: CommerceInfo | null;
 }
 
-/** Ce que le commerce natif connaît de la vente d'un livre (Payload uniquement). */
+/** Ce que le moteur de commerce connaît de la vente d'un livre. */
 export interface CommerceInfo {
   /** Coché = éligible au panier natif — cf. `Books.ts:commerce.sellable`. */
   sellable: boolean;
@@ -68,60 +64,17 @@ export interface CommerceInfo {
   stock: number | null;
 }
 
-/* -------- Forme brute WooCommerce Store API -------- */
-
-export interface WcProduct {
-  id: number;
-  name: string;
-  slug: string;
-  permalink: string;
-  is_purchasable: boolean;
-  is_in_stock: boolean;
-  prices?: { price: string; currency_minor_unit: number };
-  images?: { src: string }[];
-}
-
-/** Prix d'un produit boutique en unités majeures (€), depuis le mineur Store API. */
-export function priceOf(p: WcProduct): number | null {
-  const minor = p.prices?.currency_minor_unit ?? 2;
-  const raw = p.prices?.price != null ? Number(p.prices.price) : NaN;
-  return Number.isFinite(raw) ? raw / 10 ** minor : null;
-}
-
-/**
- * Extrait le slug produit d'un lien boutique ACF (`…/produit/<slug>/`).
- * Décode l'URL (slug encodé) et le motif s'arrête sur `?`/`#` : un lien
- * boutique malformé (query string, fragment) ne produit plus un slug pollué
- * — version durcie, désormais la seule (reprise de la version défensive que
- * `scripts/migrate-catalogue/sql-oracle.ts` recopiait localement).
- */
-export function slugFromBoutiqueLink(link: string | null): string | null {
-  if (!link) return null;
-  let decoded = link;
-  try {
-    decoded = decodeURIComponent(link);
-  } catch {
-    // URL déjà décodée ou séquence invalide : on retente sur le brut.
-  }
-  const m = /\/produit\/([^/?#]+)\/?/.exec(decoded);
-  return m?.[1] ?? null;
-}
-
 /* -------- Where « books lisibles publiquement » (pg) --------
  *
- * Seule concession Payload de ce module autrement neutre (http/pg/mémoire) :
- * la forme du `where` par fonds, partagée entre l'adaptateur pg
- * (`catalogue-pg.ts:listBooks`/`getBook`) et la preuve de parité
- * (`scripts/compare-sources.ts:pgBooksForEdition`) — les deux lectures qui
- * doivent voir EXACTEMENT le même sous-ensemble de la collection `books`.
- * Ce constructeur ne fixe que le filtre `edition` ; le filtre de statut
- * (« publié ») n'est pas dans le `where` lui-même mais vient de la policy
- * `read` de `Books.ts` (`_status: { equals: 'published' }` pour un visiteur
- * anonyme), appliquée dès lors que l'appelant pose `overrideAccess: false` —
- * omis (donc `true` par défaut côté Local API), la policy ne joue plus et des
- * brouillons fuitent (c'était le bug de `compare-sources.ts` avant ce
- * changement : sa preuve de parité « 0 diff bloquant » laissait passer des
- * fiches jamais publiées).
+ * Seule concession Payload de ce module autrement neutre (pg/mémoire) : la
+ * forme du `where` par fonds, utilisée par l'adaptateur pg
+ * (`catalogue-pg.ts:listBooks`/`getBook`). Ce constructeur ne fixe que le
+ * filtre `edition` ; le filtre de statut (« publié ») n'est pas dans le
+ * `where` lui-même mais vient de la policy `read` de `Books.ts`
+ * (`_status: { equals: 'published' }` pour un visiteur anonyme), appliquée
+ * dès lors que l'appelant pose `overrideAccess: false` — omis (donc `true`
+ * par défaut côté Local API), la policy ne joue plus et des brouillons
+ * fuitent.
  */
 
 /** Forme du `where` « livres d'un fonds lisibles publiquement » (Payload) — cf. note ci-dessus. */
@@ -135,23 +88,15 @@ export function publicBooksWhere(edition: EditionSlug): { edition: { equals: Edi
  * choisir la branche de requête (pas de `queryDrafts()`), c'est
  * `overrideAccess: false` qui fait jouer la policy `read` de `Books.ts`
  * (`_status: 'published'` pour un anonyme). Défini UNE fois ici, étalé dans
- * chaque `payload.find` public (`catalogue-pg.ts`, `compare-sources.ts`) —
- * verrouillé par `catalogue-pg.test.ts`.
+ * chaque `payload.find` public (`catalogue-pg.ts`, `commerce-source.ts`) —
+ * verrouillé par `catalogue-pg.test.ts` et `commerce-source.test.ts`.
  */
 export const PUBLIC_BOOKS_READ = { draft: false, overrideAccess: false } as const;
 
-/* -------- Le port --------
- *
- * Ne transporte plus les produits boutique : l'axe vente legacy (Store API
- * WooCommerce) vit entièrement dans `boutique.ts` (`getAllStoreProducts`),
- * appelé directement par la façade (`catalogue.ts`) — un port à adaptateur
- * unique (http et pg délèguent tous deux, à l'identique, à la même fonction)
- * n'ajoutait pas de profondeur. Supprimable à la clôture (plan/07 étape 7),
- * avec le reste de l'axe Woo.
- */
+/* -------- Le port -------- */
 
 export interface CatalogueSource {
-  /** Toutes les fiches livre brutes d'un fonds (résilient : liste partielle si une page échoue). */
+  /** Toutes les fiches livre brutes d'un fonds. */
   listBooks(edition: EditionSlug): Promise<RawBook[]>;
   /** Fiche brute d'un livre (avec `presentationHtml`), ou `null` si absente. */
   getBook(edition: EditionSlug, slug: string): Promise<RawBook | null>;

@@ -17,29 +17,6 @@ import { frenchTypo } from "./typo-fr";
 /** HTML nettoyé, sûr à injecter — marque de type portée uniquement par `sanitizeCms`. */
 export type SafeHtml = string & { readonly __safeHtml: unique symbol };
 
-/**
- * Découplage CMS (E3 du plan) : `post_content` et le champ ACF `plus_loin`
- * contiennent ~190 URLs absolues codées en dur vers les domaines publics
- * (`editionssociales.fr`, `ladispute.fr`) — images de couverture, PDF de
- * `table`/`extrait`. Ces URLs casseraient dès que ces domaines pointeront sur
- * Vercel (E5/E6). `rebaseWpMediaUrl` les réécrit vers les hosts de
- * cohabitation (`cms-es`/`cms-ld…`), qui restent sur les installs WordPress
- * sources jusqu'à extinction. Pur : ne touche pas les URLs qui ne matchent
- * aucun des deux domaines historiques (boutique, hosts déjà `cms-*`, Blob…).
- */
-const CMS_REBASE_RULES: readonly { pattern: RegExp; host: string }[] = [
-  { pattern: /^(https?:\/\/)(?:www\.)?editionssociales\.fr(\/wp-content\/.*)$/i, host: "cms-es.editionssociales.fr" },
-  { pattern: /^(https?:\/\/)(?:www\.)?ladispute\.fr(\/wp-content\/.*)$/i, host: "cms-ld.editionssociales.fr" },
-];
-
-export function rebaseWpMediaUrl(url: string): string {
-  for (const { pattern, host } of CMS_REBASE_RULES) {
-    const m = url.match(pattern);
-    if (m) return `https://${host}${m[2]}`;
-  }
-  return url;
-}
-
 /** Balises autorisées : prose de présentation + listes de références « pour aller plus loin ». */
 const ALLOWED_TAGS = [
   "p", "br", "hr", "span", "div",
@@ -94,25 +71,19 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowedSchemesByTag: { img: ["http", "https"] },
   transformTags: {
     // Les liens sortants ne doivent pas pouvoir manipuler l'onglet ouvreur.
-    // `rebaseWpMediaUrl` : les liens historiques vers des fichiers `/wp-content/`
-    // (PDF de `plus_loin`…) suivent le même découplage CMS que les images.
     a: (tagName, attribs) => ({
       tagName,
       attribs: {
         ...attribs,
-        ...(attribs.href ? { href: rebaseWpMediaUrl(attribs.href) } : {}),
         rel: "noopener noreferrer nofollow",
       },
     }),
-    // Médias historiques en http (SSL actif chez OVH) → https, rebasés vers les
-    // hosts cms-* (E3 du plan) si absolus vers un domaine public, chargement paresseux.
+    // Médias historiques en http → https, chargement paresseux.
     img: (tagName, attribs) => ({
       tagName,
       attribs: {
         ...attribs,
-        ...(attribs.src
-          ? { src: rebaseWpMediaUrl(attribs.src.replace(/^http:\/\//i, "https://")) }
-          : {}),
+        ...(attribs.src ? { src: attribs.src.replace(/^http:\/\//i, "https://") } : {}),
         loading: "lazy",
       },
     }),

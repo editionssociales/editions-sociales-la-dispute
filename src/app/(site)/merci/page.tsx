@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirmation";
-import { isCommerceNative } from "@/lib/env";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 
 /**
@@ -61,7 +60,7 @@ export default async function MerciPage({
         <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-black/50">
           Commande
         </p>
-        {order && isCommerceNative() && <ClearCartOnConfirmation />}
+        {order && <ClearCartOnConfirmation />}
         {order ? (
           <>
             <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">

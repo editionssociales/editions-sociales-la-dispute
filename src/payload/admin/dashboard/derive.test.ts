@@ -129,30 +129,24 @@ describe('commandesState — jamais de vert/rouge par défaut, seam data/derive/
     paidAt: new Date(now.getTime() - (ORDER_WARN_HOURS + 1) * HOUR_MS).toISOString(),
   })
 
-  it('commerce fermé : toujours OK, même avec des commandes en retard', () => {
-    expect(commandesState(false, null, now)).toBe('ok')
-    expect(commandesState(false, { state: 'ok', orders: [alertOrder] }, now)).toBe('ok')
-    expect(commandesState(false, { state: 'na' }, now)).toBe('ok')
+  it('liste de travail non lue (`null`) : gris', () => {
+    expect(commandesState(null, now)).toBe('na')
   })
 
-  it('commerce ouvert, liste de travail non lue (`null`) : gris', () => {
-    expect(commandesState(true, null, now)).toBe('na')
+  it('liste de travail illisible : gris', () => {
+    expect(commandesState({ state: 'na' }, now)).toBe('na')
   })
 
-  it('commerce ouvert, liste de travail illisible : gris', () => {
-    expect(commandesState(true, { state: 'na' }, now)).toBe('na')
+  it('aucune commande en attente : OK', () => {
+    expect(commandesState(okWorkOrders, now)).toBe('ok')
   })
 
-  it('commerce ouvert, aucune commande en attente : OK', () => {
-    expect(commandesState(true, okWorkOrders, now)).toBe('ok')
+  it('une commande en attention : attention', () => {
+    expect(commandesState({ state: 'ok', orders: [warnOrder] }, now)).toBe('warn')
   })
 
-  it('commerce ouvert, une commande en attention : attention', () => {
-    expect(commandesState(true, { state: 'ok', orders: [warnOrder] }, now)).toBe('warn')
-  })
-
-  it('commerce ouvert, une commande en alerte : alerte (pire état l’emporte)', () => {
-    expect(commandesState(true, { state: 'ok', orders: [warnOrder, alertOrder] }, now)).toBe('alert')
+  it('une commande en alerte : alerte (pire état l’emporte)', () => {
+    expect(commandesState({ state: 'ok', orders: [warnOrder, alertOrder] }, now)).toBe('alert')
   })
 })
 

@@ -1,22 +1,14 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getBoutiqueBooks } from "@/lib/catalogue";
-import { isCommerceNative } from "@/lib/env";
 import { BookGrid } from "@/components/book-grid";
 import { Container } from "@/components/container";
 import { Breadcrumb } from "@/components/breadcrumb";
 
 /**
- * Destination publique des produits boutique-seuls (plan §4 étape 7). À
- * `COMMERCE_NATIVE=0` (défaut, règle d'or du lot) : redirection identique à
- * l'existant — la boutique reste fusionnée dans le catalogue unique, rien ne
- * change tant que le flag n'est pas explicitement à `1`. À `1` : grille des
- * ~15-20 articles `origin: "boutique"` (goodies, manuels, correspondances…),
- * même grammaire brutaliste que `/catalogue` — pas de filtres/pagination,
- * la liste reste courte (« pas de sur-design », plan §4 étape 7).
- *
- * Volontairement absente de `src/app/sitemap.ts` : elle suivra le flip du
- * flag (plan §4 étape 7, note explicite).
+ * Destination publique des produits boutique-seuls (plan §4 étape 7) :
+ * grille des ~15-20 articles `origin: "boutique"` (goodies, manuels,
+ * correspondances…), même grammaire brutaliste que `/catalogue` — pas de
+ * filtres/pagination, la liste reste courte (« pas de sur-design »).
  */
 
 export const metadata: Metadata = {
@@ -28,8 +20,6 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function BoutiquePage() {
-  if (!isCommerceNative()) redirect("/catalogue");
-
   const books = await getBoutiqueBooks();
 
   return (

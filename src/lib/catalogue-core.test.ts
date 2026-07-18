@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildBookDetail,
-  buildCatalogue,
-  buildCatalogueForFlag,
   buildNativeBookDetail,
   buildNativeCatalogue,
   computeFacets,
@@ -15,16 +12,14 @@ import {
   inMemoryCatalogueSource,
   type CommerceInfo,
   type RawBook,
-  type WcProduct,
 } from "./catalogue-source";
 import type { EditionSlug } from "./types";
 
 /* -------- fixtures brutes neutres (ce que le port transporte) --------
  *
- * Les dialectes de source (entités WP, `Nom/Prénom`, chaînes ACF sales…) sont
- * absorbés par les adaptateurs — testés dans `catalogue-wp-map.test.ts` /
- * `catalogue-pg-map.test.ts`. Ici, le cœur : fusion, résolution d'achat,
- * requêtes, facettes.
+ * Le dialecte de source (enveloppe Payload) est absorbé par l'adaptateur —
+ * testé dans `catalogue-pg-map.test.ts`. Ici, le cœur : assemblage,
+ * résolution d'achat, requêtes, facettes.
  */
 
 const rawBook = (
@@ -45,6 +40,9 @@ const rawBook = (
   ...over,
 });
 
+const sellable = (stock: number | null): CommerceInfo => ({ sellable: true, stock });
+const notSellable: CommerceInfo = { sellable: false, stock: null };
+
 const ES_BOOKS: RawBook[] = [
   rawBook({
     id: 1,
@@ -54,14 +52,10 @@ const ES_BOOKS: RawBook[] = [
     collection: { name: "GEME", slug: "geme" },
     price: 20,
     publishedAt: "2020-03-01",
-    buy: {
-      boutique: "https://boutique.editionssociales.fr/produit/capital/",
-      parislibrairies: null,
-      lalibrairie: null,
-    },
+    commerce: sellable(5),
     presentationHtml: "<p>Présentation <script>alert(1)</script></p>",
     furtherReadingHtml: "<p>Voir aussi</p>",
-    tocUrl: "https://medias.ovh/toc.pdf",
+    tocUrl: "https://blob.vercel-storage.test/toc.pdf",
   }),
   rawBook({
     id: 2,
@@ -88,26 +82,8 @@ const LD_BOOKS: RawBook[] = [
   }),
 ];
 
-const PRODUCTS: WcProduct[] = [
-  {
-    id: 99,
-    slug: "capital",
-    name: "Le Capital",
-    permalink: "https://boutique.editionssociales.fr/capital",
-    is_purchasable: true,
-    is_in_stock: true,
-    prices: { price: "1500", currency_minor_unit: 2 },
-    images: [{ src: "http://boutique.editionssociales.fr/capital.jpg" }],
-  },
-  {
-    id: 100,
-    slug: "tote-bag",
-    name: "Tote bag",
-    permalink: "https://boutique.editionssociales.fr/tote-bag",
-    is_purchasable: true,
-    is_in_stock: true,
-    prices: { price: "1200", currency_minor_unit: 2 },
-  },
+const BOUTIQUE_ONLY: RawBook[] = [
+  rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(null) }),
 ];
 
 const rawByEdition: Partial<Record<EditionSlug, RawBook[]>> = {
@@ -115,38 +91,10 @@ const rawByEdition: Partial<Record<EditionSlug, RawBook[]>> = {
   "la-dispute": LD_BOOKS,
 };
 
+const CATALOGUE = buildNativeCatalogue(rawByEdition, BOUTIQUE_ONLY);
+
 const bySlug = <T extends { slug: string }>(books: T[], slug: string) =>
   books.find((b) => b.slug === slug)!;
-
-describe("buildCatalogue (fusion fonds + boutique)", () => {
-  const catalogue = buildCatalogue(rawByEdition, PRODUCTS);
-
-  it("fusionne les deux fonds puis ajoute les produits non réclamés", () => {
-    expect(catalogue).toHaveLength(5); // 4 fiches + 1 produit sans fiche
-    const extra = bySlug(catalogue, "tote-bag");
-    expect(extra.edition).toBeNull();
-    expect(extra.origin).toBe("boutique");
-    expect(extra.status).toBe("available");
-  });
-
-  it("résout le prix et le lien d'achat depuis le produit associé", () => {
-    const capital = bySlug(catalogue, "capital");
-    expect(capital.status).toBe("available");
-    expect(capital.price).toBe(15); // 1500 / 10^2
-    expect(capital.permalink).toBe("https://boutique.editionssociales.fr/capital");
-  });
-
-  it("marque « en librairie » un livre à liens externes sans produit", () => {
-    const ideologie = bySlug(catalogue, "ideologie");
-    expect(ideologie.status).toBe("external");
-    expect(ideologie.permalink).toBe("https://parislibrairies.fr/ideologie");
-  });
-
-  it("marque « à paraître » un livre à date future, « indisponible » sinon", () => {
-    expect(bySlug(catalogue, "avenir").status).toBe("upcoming");
-    expect(bySlug(catalogue, "genre").status).toBe("unavailable");
-  });
-});
 
 describe("toBook — travail indépendant de la source", () => {
   it("applique l'orthotypo française au titre, quelle que soit la source", () => {
@@ -154,45 +102,42 @@ describe("toBook — travail indépendant de la source", () => {
       "editions-sociales",
       rawBook({ id: 9, slug: "commune", title: "Vive la Commune !" }),
     );
-    expect(book.title).toBe("Vive la Commune !");
+    // `frenchTypo` insère une espace fine insécable (U+202F) avant le « ! ».
+    expect(book.title).toBe("Vive la Commune\u202f!");
   });
 });
 
 describe("queryBooks (filtre + tri)", () => {
-  const catalogue = buildCatalogue(rawByEdition, PRODUCTS);
-
   it("filtre par collection", () => {
-    expect(queryBooks(catalogue, { collection: "geme" }).map((b) => b.slug).sort()).toEqual([
+    expect(queryBooks(CATALOGUE, { collection: "geme" }).map((b) => b.slug).sort()).toEqual([
       "capital",
       "ideologie",
     ]);
   });
 
   it("filtre par édition (chemin) et par recherche plein-texte", () => {
-    expect(queryBooks(catalogue, { edition: "editions-sociales" })).toHaveLength(3);
-    expect(queryBooks(catalogue, { q: "capital" }).map((b) => b.slug)).toEqual(["capital"]);
+    expect(queryBooks(CATALOGUE, { edition: "editions-sociales" })).toHaveLength(3);
+    expect(queryBooks(CATALOGUE, { q: "capital" }).map((b) => b.slug)).toEqual(["capital"]);
   });
 
   it("filtre les à-paraître", () => {
-    expect(queryBooks(catalogue, { upcoming: true }).map((b) => b.slug)).toEqual(["avenir"]);
+    expect(queryBooks(CATALOGUE, { upcoming: true }).map((b) => b.slug)).toEqual(["avenir"]);
   });
 
   it("trie par titre", () => {
-    expect(queryBooks(catalogue, { sort: "titre" })[0].title).toBe("Avenir");
+    expect(queryBooks(CATALOGUE, { sort: "titre" })[0].title).toBe("Avenir");
   });
 });
 
 describe("computeFacets (facettes dynamiques)", () => {
-  const catalogue = buildCatalogue(rawByEdition, PRODUCTS);
-
   it("compte les collections et renvoie le total « tous les livres »", () => {
-    const f = computeFacets(catalogue, {});
+    const f = computeFacets(CATALOGUE, {});
     expect(f.collections.find((c) => c.slug === "geme")?.count).toBe(2);
     expect(f.total).toBe(5);
   });
 
   it("restreint les auteurs à la collection active (croisement des dimensions)", () => {
-    const f = computeFacets(catalogue, { collection: "geme" });
+    const f = computeFacets(CATALOGUE, { collection: "geme" });
     expect(f.authors.map((a) => a.slug)).toEqual(["marx"]);
     expect(f.authors[0].count).toBe(2);
   });
@@ -200,37 +145,40 @@ describe("computeFacets (facettes dynamiques)", () => {
 
 describe("countByEdition", () => {
   it("compte par fonds ou au global", () => {
-    const catalogue = buildCatalogue(rawByEdition, PRODUCTS);
-    expect(countByEdition(catalogue)).toBe(5);
-    expect(countByEdition(catalogue, "editions-sociales")).toBe(3);
-    expect(countByEdition(catalogue, "la-dispute")).toBe(1);
+    expect(countByEdition(CATALOGUE)).toBe(5);
+    expect(countByEdition(CATALOGUE, "editions-sociales")).toBe(3);
+    expect(countByEdition(CATALOGUE, "la-dispute")).toBe(1);
   });
 });
 
 describe("à travers le port en mémoire (bout en bout, sans réseau)", () => {
   const source = inMemoryCatalogueSource({ books: rawByEdition });
 
-  it("charge et fusionne via l'adaptateur", async () => {
-    // Les produits boutique ne transitent plus par le port (S1) : ils sont
-    // composés directement par l'appelant, comme le fait `catalogue.ts` avec
-    // `getAllStoreProducts()`.
+  it("charge et assemble via l'adaptateur", async () => {
     const [es, ld] = await Promise.all([
       source.listBooks("editions-sociales"),
       source.listBooks("la-dispute"),
     ]);
-    const catalogue = buildCatalogue({ "editions-sociales": es, "la-dispute": ld }, PRODUCTS);
+    const catalogue = buildNativeCatalogue(
+      { "editions-sociales": es, "la-dispute": ld },
+      BOUTIQUE_ONLY,
+    );
     expect(catalogue).toHaveLength(5);
   });
 
   it("construit une fiche détail au HTML nettoyé (SafeHtml)", async () => {
     const raw = await source.getBook("editions-sociales", "capital");
     expect(raw).not.toBeNull();
-    const detail = buildBookDetail("editions-sociales", raw!, PRODUCTS);
+    const detail = buildNativeBookDetail(
+      "editions-sociales",
+      raw!,
+      "/catalogue/editions-sociales/capital",
+    );
     expect(detail.status).toBe("available");
     expect(detail.presentation).toContain("<p>Présentation");
     expect(detail.presentation).not.toContain("script");
     expect(detail.furtherReading).toBe("<p>Voir aussi</p>");
-    expect(detail.tocUrl).toBe("https://medias.ovh/toc.pdf");
+    expect(detail.tocUrl).toBe("https://blob.vercel-storage.test/toc.pdf");
   });
 
   it("renvoie null pour un slug absent", async () => {
@@ -238,12 +186,9 @@ describe("à travers le port en mémoire (bout en bout, sans réseau)", () => {
   });
 });
 
-/* -------- commerce natif (COMMERCE_NATIVE=1) -------- */
+/* -------- résolution d'achat (Payload) -------- */
 
-const sellable = (stock: number | null): CommerceInfo => ({ sellable: true, stock });
-const notSellable: CommerceInfo = { sellable: false, stock: null };
-
-describe("resolveNativePurchase — dérivation du statut d'achat natif (sans Store API)", () => {
+describe("resolveNativePurchase — dérivation du statut d'achat", () => {
   it("« à paraître » PRIME sur le stock : parution future + vendable + stock positif → upcoming quand même", () => {
     const book = rawBook({
       id: 1,
@@ -336,8 +281,8 @@ describe("resolveNativePurchase — dérivation du statut d'achat natif (sans St
   });
 });
 
-describe("buildNativeCatalogue — fusion sans Store API", () => {
-  it("résout chaque fiche via son groupe `commerce`, jamais via un produit Woo", () => {
+describe("buildNativeCatalogue — assemblage des fonds + boutique-seuls", () => {
+  it("résout chaque fiche via son groupe `commerce`", () => {
     const raw: RawBook[] = [
       rawBook({ id: 1, slug: "capital", title: "Le Capital", commerce: sellable(5) }),
       rawBook({ id: 2, slug: "epuise", title: "Épuisé", commerce: sellable(0) }),
@@ -374,7 +319,7 @@ describe("buildNativeCatalogue — fusion sans Store API", () => {
 });
 
 describe("buildNativeBookDetail", () => {
-  it("construit une fiche détail résolue en natif, HTML nettoyé (SafeHtml)", () => {
+  it("construit une fiche détail résolue, HTML nettoyé (SafeHtml)", () => {
     const raw = rawBook({
       id: 1,
       slug: "capital",
@@ -395,23 +340,5 @@ describe("buildNativeBookDetail", () => {
     expect(detail.edition).toBeNull();
     expect(detail.origin).toBe("boutique");
     expect(detail.status).toBe("available");
-  });
-});
-
-describe("buildCatalogueForFlag — sélection d'adaptateur par flag", () => {
-  it("iso-comportement à `false` : STRICTEMENT le même tableau que `buildCatalogue` (Store API/Woo)", () => {
-    const viaFlag = buildCatalogueForFlag(false, rawByEdition, PRODUCTS);
-    const direct = buildCatalogue(rawByEdition, PRODUCTS);
-    expect(viaFlag).toEqual(direct);
-  });
-
-  it("à `true` : bascule sur le natif, ignore `products` (plus de Store API)", () => {
-    const raw: Partial<Record<EditionSlug, RawBook[]>> = {
-      "editions-sociales": [rawBook({ id: 1, slug: "capital", title: "Le Capital", commerce: sellable(5) })],
-    };
-    // `products` volontairement peuplé pour prouver qu'il est ignoré à `true`.
-    const catalogue = buildCatalogueForFlag(true, raw, PRODUCTS);
-    expect(bySlug(catalogue, "capital").status).toBe("available");
-    expect(bySlug(catalogue, "capital").permalink).toBe("/catalogue/editions-sociales/capital");
   });
 });

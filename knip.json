@@ -2,7 +2,6 @@
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
     "scripts/*.{ts,mjs}",
-    "scripts/migrate-catalogue/index.ts",
     "src/migrations/*.ts"
   ],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,mjs}"],

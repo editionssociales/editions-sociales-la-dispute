@@ -3,9 +3,8 @@ import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Eyebrow } from "@/components/eyebrow";
-import { LegalCmsBody, LegalSection, LEGAL_BODY, LEGAL_LINK } from "@/components/legal-section";
+import { LegalCmsBody, LegalSection, LEGAL_BODY } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
-import { isCommerceNative } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: "Conditions générales & conditions de don",
@@ -17,11 +16,8 @@ export const metadata: Metadata = {
 export default async function CgvPage() {
   // Global `pages-legales` (spec « éditeur de contenus ») : onglet rempli =
   // tout le corps (chapeau compris) vient du back-office ; onglet vide = le
-  // JSX ci-dessous, conditionné par `COMMERCE_NATIVE` (repli WordPress/Woo à
-  // `0`, section vente structurée à `1` — plan/02-mise-en-production.md
-  // §Recette point 6). Le global reste prioritaire dans les deux cas.
+  // JSX ci-dessous. Le global reste prioritaire dans les deux cas.
   const { cgv } = await getPagesLegales();
-  const native = isCommerceNative();
   return (
     <>
       <Container className="bg-white pb-16 pt-10 sm:pb-20 sm:pt-14">
@@ -41,9 +37,8 @@ export default async function CgvPage() {
             </h1>
             {!cgv && (
               <p className={LEGAL_BODY}>
-                {native
-                  ? "Ce site propose la vente en ligne de nos livres, ainsi que les dons de la campagne en cours."
-                  : "Ce site ne propose pas encore de vente en ligne native : il relaie les dons de la campagne en cours et renvoie vers la boutique existante pour tout achat."}
+                Ce site propose la vente en ligne de nos livres, ainsi que les
+                dons de la campagne en cours.
               </p>
             )}
           </div>
@@ -81,8 +76,6 @@ export default async function CgvPage() {
 
           {/* Vente */}
           <LegalSection title="Conditions de vente">
-            {native ? (
-              <>
                 <p className={LEGAL_BODY}>
                   La vente en ligne de nos livres est opérée directement sur
                   ce site. Les prix affichés sont TTC, la TVA applicable au
@@ -125,35 +118,6 @@ export default async function CgvPage() {
                   compétent est [À COMPLÉTER : nom, adresse postale et site
                   du médiateur de la consommation].
                 </p>
-              </>
-            ) : (
-              <>
-                <p className={LEGAL_BODY}>
-                  La vente en ligne de nos livres est opérée sur la boutique{" "}
-                  <a
-                    href="https://boutique.editionssociales.fr"
-                    className={LEGAL_LINK}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    boutique.editionssociales.fr
-                  </a>
-                  , dont les conditions générales de vente propres
-                  s&apos;appliquent à toute commande.
-                </p>
-                <p className={LEGAL_BODY}>
-                  Pour mémoire : les prix affichés sont TTC, la TVA applicable
-                  au livre est de 5,5 %, et le prix du livre est unique en
-                  France (loi n° 81-766 du 10 août 1981).
-                </p>
-                <p className={LEGAL_BODY}>
-                  Les conditions générales de vente complètes (droit de
-                  rétractation, médiateur de la consommation, livraison)
-                  seront publiées lorsque la vente en ligne sera opérée
-                  directement sur ce site.
-                </p>
-              </>
-            )}
           </LegalSection>
         </>
       )}

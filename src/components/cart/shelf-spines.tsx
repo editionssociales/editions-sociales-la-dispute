@@ -12,10 +12,7 @@ const SPINES: { h: number; w: string }[] = [
 
 /**
  * Étagère décorative (dos de livres colorés) — motif de l'état vide de
- * `/panier`, réduction du héros de `/souscription`. Extraite ici pour être
- * partagée entre le placeholder historique (`COMMERCE_NATIVE=0`,
- * `panier/page.tsx`) et le panier natif réellement vide (`=1`,
- * `panier/cart-view.tsx`) — même décor, deux légendes différentes.
+ * `/panier` (`panier/cart-view.tsx`), réduction du héros de `/souscription`.
  */
 export function ShelfSpines() {
   return (

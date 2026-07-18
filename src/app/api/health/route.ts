@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/nextjs";
-import { isCommerceNative } from "@/lib/env";
 import { findLatestOrderUpdatedAt } from "@/lib/order-source";
 
 /**
@@ -16,28 +15,19 @@ import { findLatestOrderUpdatedAt } from "@/lib/order-source";
  * `donations.ts` recalcule la jauge depuis Stripe à la demande, jamais
  * depuis une table locale). Il n'existe donc, à ce jour, aucune trace
  * locale/DB d'un événement de don reçu : ce endpoint ne peut honnêtement
- * exposer que le signal COMMERCE (`orders`), jamais un signal dons. Pendant
- * la campagne (avant `COMMERCE_NATIVE=1`), le filet reste le moniteur #3
- * (keyword `/souscription`) + les notifications natives d'échec Stripe —
- * exactement l'assumption documentée par le plan (§ Dépendances, phase Dons).
+ * exposer que le signal COMMERCE (`orders`), jamais un signal dons — le
+ * filet dons reste le moniteur #3 (keyword `/souscription`) + les
+ * notifications natives d'échec Stripe (plan, § Dépendances, phase Dons).
  *
- * Dégrade proprement dans les deux cas non nominaux, jamais une erreur
- * 5xx : `COMMERCE_NATIVE=0` (aucune commande ne peut exister, `checkout`
- * répond 503) → signal `null` explicite ; lecture Payload/Postgres en échec
- * → capturé par Sentry, signal `null` (même contrat que `getActiveHighlight`,
- * `src/lib/highlight.ts`) — un endpoint de surveillance ne doit jamais
- * planter pour la panne qu'il a justement pour rôle de signaler.
+ * Dégrade proprement, jamais une erreur 5xx : lecture Payload/Postgres en
+ * échec → capturé par Sentry, signal `null` (même contrat que
+ * `getActiveHighlight`, `src/lib/highlight.ts`) — un endpoint de
+ * surveillance ne doit jamais planter pour la panne qu'il a justement pour
+ * rôle de signaler. `commerceNative: true` est conservé dans la réponse :
+ * contrat JSON des moniteurs existants (OPERATIONS.md), littéral depuis la
+ * coupure OVH (plus de flag).
  */
 export async function GET(): Promise<Response> {
-  const commerceNative = isCommerceNative();
-  if (!commerceNative) {
-    return Response.json({
-      status: "ok",
-      commerceNative: false,
-      stripe: { lastEventAt: null, lastEventAgeSeconds: null } satisfies StripeHealthSignal,
-    });
-  }
-
   const stripe = await lastStripeEventAge();
   return Response.json({ status: "ok", commerceNative: true, stripe });
 }

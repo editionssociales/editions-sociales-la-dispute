@@ -44,10 +44,8 @@ export type PurchaseStatus = "available" | "external" | "upcoming" | "unavailabl
 
 /**
  * Comment le bouton d'achat principal doit se comporter : `cart` (panier
- * natif — `COMMERCE_NATIVE=1` et `status === "available"` ; l'UI du panier
- * arrive au lot suivant, ce champ n'expose que la donnée) ou `legacy-link`
- * (lien externe historique — Woo ou librairie tierce, comportement par
- * défaut et STRICTEMENT inchangé à `COMMERCE_NATIVE=0`).
+ * natif — `status === "available"`) ou `legacy-link` (lien externe — librairie
+ * tierce type Paris Librairies / La Librairie).
  */
 export type PurchaseMode = "cart" | "legacy-link";
 

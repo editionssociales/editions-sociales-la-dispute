@@ -6,10 +6,8 @@ import type { Highlight } from "@/payload-types";
 /**
  * Mise en avant ponctuelle (E6bis du plan, engagement C32 du devis) — lit la
  * collection Payload `highlight` via la Local API, comme `catalogue-pg.ts`
- * (E4) : c'est une fonctionnalité **back-office uniquement**, sans
- * équivalent WordPress, donc hors du port `CatalogueSource`/bascule
- * `CATALOGUE_SOURCE` — toujours lue depuis Postgres, quelle que soit la
- * source du catalogue.
+ * (E4) : c'est une fonctionnalité **back-office uniquement**, hors du port
+ * `CatalogueSource` — toujours lue depuis Postgres.
  *
  * Le filtre « actif » est pré-appliqué dans la requête (`where`) ; le filtre
  * de date est recalculé côté appelant, en jour (`YYYY-MM-DD`) plutôt qu'à

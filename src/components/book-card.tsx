@@ -2,24 +2,16 @@ import Link from "next/link";
 import type { Book } from "@/lib/types";
 import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
-import { isCommerceNative } from "@/lib/env";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 
 export function BookCard({ book }: { book: Book }) {
-  // Catalogue : toujours la fiche interne, quel que soit le statut d'achat
-  // (comportement historique, inchangé). Boutique-seul (`edition` absent) :
-  // en commerce natif, sa propre fiche interne `/boutique/<slug>` existe pour
-  // CHAQUE article — achetable ou non, elle informe toujours (plan §4 étape
-  // 7) ; à `COMMERCE_NATIVE=0` (règle d'or du lot, iso-rendu strict), le lien
-  // Woo externe historique, inchangé.
-  const native = isCommerceNative();
+  // Catalogue : toujours la fiche interne, quel que soit le statut d'achat.
+  // Boutique-seul (`edition` absent) : sa propre fiche interne
+  // `/boutique/<slug>` existe pour CHAQUE article — achetable ou non, elle
+  // informe toujours (plan §4 étape 7).
   const href = book.edition
     ? `/catalogue/${book.edition}/${book.slug}`
-    : native
-      ? `/boutique/${book.slug}`
-      : book.permalink;
-  const external = !book.edition && !native;
-  const linkProps = external ? { target: "_blank" as const, rel: "noreferrer" } : {};
+    : `/boutique/${book.slug}`;
 
   // Couverture seule : plus de légende texte sous l'image (titre/auteurs déjà
   // imprimés dessus). Le titre + les auteurs vivent dans l'alt — canal légitime
@@ -52,8 +44,7 @@ export function BookCard({ book }: { book: Book }) {
   );
 
   // Panier natif (plan §4 étape 6) : petit chip superposé, en plus du lien
-  // vers la fiche — jamais à `COMMERCE_NATIVE=0` (`canAddToCart` y est
-  // toujours faux, `purchaseMode` n'y vaut jamais `"cart"`).
+  // vers la fiche — seulement si le livre est disponible au panier.
   const cartChip = canAddToCart(book) && <AddToCartButton id={book.id} variant="chip" />;
 
   return (
@@ -61,7 +52,6 @@ export function BookCard({ book }: { book: Book }) {
       {href ? (
         <Link
           href={href}
-          {...linkProps}
           className="relative block w-full overflow-hidden border-2 border-black bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-2"
         >
           {upcomingBadge}

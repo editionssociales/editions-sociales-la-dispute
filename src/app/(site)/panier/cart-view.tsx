@@ -25,8 +25,7 @@ interface CheckoutErrorBody {
 }
 
 /**
- * Le vrai panier (plan §4 étape 6, `COMMERCE_NATIVE=1` uniquement — rendu
- * exclusivement par `page.tsx` sous ce flag). Le panier lui-même (ids +
+ * Le vrai panier (plan §4 étape 6) — rendu par `page.tsx`. Le panier lui-même (ids +
  * quantités) vit dans `<CartProvider>` (`localStorage`) ; ce composant se
  * contente de le confronter à une relecture serveur fraîche à chaque
  * changement de composition (`getCartSnapshot`), jamais aux prix qu'il aurait
@@ -167,8 +166,7 @@ export function CartView() {
     // légitime que la règle documente elle-même.
     //
     // `getCartSnapshot` relit `getAllBooks()` (`catalogue.ts`), qui peut
-    // jeter `CatalogueTruncatedError` (`catalogue-integrity.ts`) pendant une
-    // fenêtre de flakiness WordPress. Sans ce `try/catch`, l'échec resterait
+    // jeter si la lecture Payload/Postgres échoue. Sans ce `try/catch`, l'échec resterait
     // une promesse rejetée non gérée : `snapshotReady` ne passerait jamais à
     // `true`, ce qui bloque déjà l'auto-guérison (garde ci-dessous) mais ne
     // prévient jamais l'utilisateur — d'où `snapshotError`, affiché plutôt
