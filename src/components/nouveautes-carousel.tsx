@@ -279,13 +279,15 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
             >
               {/* Hauteur commune fixée ; la largeur suit le ratio réel de
                   l'image (aucune bande, jamais coupée). draggable=false : le
-                  drag HTML5 natif entrerait en conflit avec le glissé du rail. */}
+                  drag HTML5 natif entrerait en conflit avec le glissé du rail.
+                  1re couverture : preload (LCP) — les suivantes restent lazy. */}
               <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[0_14px_34px_rgba(23,20,15,0.16)] ring-1 ring-line">
                 <Cover
                   cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
-                  alt=""
+                  alt={book.title}
                   fit="height"
                   sizes="(max-width: 640px) 42vw, 260px"
+                  preload={i === 0}
                   draggable={false}
                   className="block h-full w-auto select-none"
                 />
@@ -336,9 +338,10 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
       {rail}
 
-      {/* Légende du livre centré — remplace les étiquettes sur les couvertures. */}
+      {/* Légende du livre centré — remplace les étiquettes sur les couvertures.
+          aria-live pour les lecteurs d'écran quand la carte active change. */}
       <div
-        aria-hidden="true"
+        aria-live="polite"
         className="mx-auto mt-[clamp(14px,2vw,26px)] min-h-[68px] max-w-[42ch] px-6 text-center"
       >
         {current.upcoming && (
@@ -350,7 +353,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           {current.title}
         </p>
         {current.author && (
-          <p className="mt-1 text-sm text-muted">{current.author}</p>
+          <p className="mt-1 text-sm text-ink-soft">{current.author}</p>
         )}
       </div>
     </section>

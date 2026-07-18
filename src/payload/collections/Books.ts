@@ -102,7 +102,9 @@ export const Books: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'edition', 'dateParution', '_status'],
+    // Colonnes légères — pas de richText/legacy dans la liste (payload volumineux).
+    defaultColumns: ['title', 'edition', 'cover', 'dateParution', '_status'],
+    listSearchableFields: ['title', 'isbn', 'slug'],
   },
   access: {
     // Un visiteur anonyme (front public via la Local API) ne voit que les fiches publiées ;
@@ -189,6 +191,11 @@ export const Books: CollectionConfig = {
       type: 'richText',
       required: true,
       label: 'Présentation',
+      admin: {
+        disableListColumn: true,
+        description:
+          'Tant que « Contenu réédité » (barre latérale) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.',
+      },
     },
     {
       name: 'presentationLegacyHtml',
@@ -199,12 +206,16 @@ export const Books: CollectionConfig = {
       access: { read: ({ req }) => Boolean(req.user) },
       admin: {
         hidden: true,
+        disableListColumn: true,
       },
     },
     {
       name: 'plusLoin',
       type: 'richText',
       label: 'Pour aller plus loin',
+      admin: {
+        disableListColumn: true,
+      },
     },
     {
       name: 'plusLoinLegacyHtml',
@@ -212,15 +223,21 @@ export const Books: CollectionConfig = {
       access: { read: ({ req }) => Boolean(req.user) },
       admin: {
         hidden: true,
+        disableListColumn: true,
       },
     },
     {
       name: 'contentTouched',
       type: 'checkbox',
       defaultValue: false,
+      label: 'Contenu réédité',
       access: { read: ({ req }) => Boolean(req.user) },
       admin: {
-        hidden: true,
+        position: 'sidebar',
+        readOnly: true,
+        disableListColumn: true,
+        description:
+          'Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.',
       },
     },
     {

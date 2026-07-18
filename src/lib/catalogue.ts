@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { buildCatalogueView, type CatalogueView } from "./browse";
 import { getBoutiqueOnlyBook, listBoutiqueOnlyBooks, pgCatalogueSource } from "./catalogue-pg";
@@ -27,19 +28,36 @@ export type { CatalogueView } from "./browse";
  * viennent tous de la collection `books`. Un livre n'est jamais retiré du
  * catalogue faute d'être en vente : il est simplement marqué « à paraître »
  * ou « indisponible en ligne ».
+ *
+ * Cache data (`unstable_cache`, tag `catalogue`, 3600 s) : les pages catalogue
+ * lisent `searchParams` donc restent dynamiques (`no-store`), mais le
+ * chargement Postgres n'est plus rejoué à chaque MISS — invalidé via
+ * `revalidateTag('catalogue', 'max')` dans les hooks Payload.
  */
 
 const source = pgCatalogueSource();
 
-/** Catalogue unifié complet (deux fonds + boutique-seuls), mémoïsé par requête. */
-export const getAllBooks = cache(async (): Promise<Book[]> => {
+async function loadAllBooks(): Promise<Book[]> {
   const [es, ld, boutiqueOnly] = await Promise.all([
     source.listBooks("editions-sociales"),
     source.listBooks("la-dispute"),
     listBoutiqueOnlyBooks(),
   ]);
   return buildNativeCatalogue({ "editions-sociales": es, "la-dispute": ld }, boutiqueOnly);
-});
+}
+
+// `unstable_cache` exige un store Next (absent sous Vitest) — en test on
+// appelle `loadAllBooks` directement ; en runtime Next, data-cache 3600 s.
+const getAllBooksData =
+  process.env.VITEST === "true"
+    ? loadAllBooks
+    : unstable_cache(loadAllBooks, ["catalogue-all-books"], {
+        revalidate: 3600,
+        tags: ["catalogue"],
+      });
+
+/** Catalogue unifié complet (deux fonds + boutique-seuls), mémoïsé par requête + data cache. */
+export const getAllBooks = cache(async (): Promise<Book[]> => getAllBooksData());
 
 /** Applique filtres + tri (pagination gérée par l'appelant). */
 export async function getBooks(filters: BookFilters = {}): Promise<Book[]> {

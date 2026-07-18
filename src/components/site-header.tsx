@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import {
   NAV_HOUSES,
   NAV_SECTIONS,
@@ -20,9 +20,8 @@ import { CartNavCell } from "./cart/cart-badge";
  * Mobile : empilé — 2 maisons pleine largeur, nav 2×2, puis « Nous soutenir ».
  *
  * La 5e cellule « Panier » (desktop et mobile, plan §4 étape 6) est
- * permanente. Jamais de `useSearchParams`/l'URL ici — piège documenté du
- * repo, un `useSearchParams` ferait basculer TOUT le site en rendu dynamique
- * (ce composant est monté par le layout racine, donc sur chaque page).
+ * permanente. `useSearchParams` (états Geme / À paraître) est confiné derrière
+ * `<Suspense>` — sans ça, le layout racine dynamiserait tout le site.
  *
  * Sections et maisons viennent du modèle de données `lib/nav` (label, href,
  * matcher d'activité) ; ce composant n'ajoute que l'apparence.
@@ -158,9 +157,11 @@ function SoutenirCell({ compact, placement }: { compact: boolean; placement: str
   );
 }
 
-/** Sections actives d'après le pathname (logique dans `lib/nav`). */
+/** Sections actives d'après pathname + query (logique dans `lib/nav`). */
 function useActiveSections(): Record<NavSectionId, boolean> {
-  return activeSections(usePathname() ?? "/");
+  const pathname = usePathname() ?? "/";
+  const searchParams = useSearchParams();
+  return activeSections(pathname, searchParams);
 }
 
 /**
@@ -200,10 +201,13 @@ function useCompactOnScroll(enter = 72, exit = 16): boolean {
   return compact;
 }
 
-export function SiteHeader() {
-  const active = useActiveSections();
-  const compact = useCompactOnScroll();
-
+function SiteHeaderChrome({
+  active,
+  compact,
+}: {
+  active: Record<NavSectionId, boolean>;
+  compact: boolean;
+}) {
   return (
     <header className="sticky top-0 z-50">
       <nav aria-label="Navigation principale" className="bg-black">
@@ -262,5 +266,32 @@ export function SiteHeader() {
         </div>
       </nav>
     </header>
+  );
+}
+
+function SiteHeaderInner() {
+  const active = useActiveSections();
+  const compact = useCompactOnScroll();
+  return <SiteHeaderChrome active={active} compact={compact} />;
+}
+
+/** Fallback Suspense : pathname seul, sans `useSearchParams` (pas de query). */
+function SiteHeaderFallback() {
+  const pathname = usePathname() ?? "/";
+  const active = activeSections(pathname, null);
+  const compact = useCompactOnScroll();
+  return <SiteHeaderChrome active={active} compact={compact} />;
+}
+
+/**
+ * `useSearchParams` (Geme / À paraître) est confiné derrière `<Suspense>` :
+ * sans ça, le layout racine basculerait tout le site en rendu dynamique
+ * (piège documenté).
+ */
+export function SiteHeader() {
+  return (
+    <Suspense fallback={<SiteHeaderFallback />}>
+      <SiteHeaderInner />
+    </Suspense>
   );
 }

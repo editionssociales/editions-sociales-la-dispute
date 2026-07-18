@@ -30,6 +30,13 @@ export const Media: CollectionConfig = {
   upload: {
     mimeTypes: ['image/*', 'application/pdf'],
     staticDir: path.resolve(dirname, '../../../media'),
+    // Miniatures admin + éventuels usages directs — les existants ne sont
+    // régénérés qu'au prochain upload ; le front public passe par next/image.
+    imageSizes: [
+      { name: 'thumbnail', width: 300, height: 480, position: 'inside' },
+      { name: 'card', width: 600, height: 960, position: 'inside' },
+    ],
+    adminThumbnail: 'thumbnail',
   },
   access: {
     read: () => true,

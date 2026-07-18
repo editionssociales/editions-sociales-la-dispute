@@ -80,7 +80,7 @@ function MentionsCell({ className = "", year }: { className?: string; year: numb
           CGV &amp; dons
         </Link>
       </div>
-      <p className="mt-auto text-xs text-black/60">
+      <p className="mt-auto text-xs text-black/70">
         © {year} Les Éditions sociales × La Dispute
       </p>
     </div>

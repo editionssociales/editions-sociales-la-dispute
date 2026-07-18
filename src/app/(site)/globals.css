@@ -12,7 +12,8 @@
   --color-paper-2: #f2ece1;
   --color-ink: #17140f;
   --color-ink-soft: #4a463d;
-  --color-muted: #8a8578;
+  /* Assombri pour AA sur paper (~4,6:1) — l'ancien #8a8578 échouait Lighthouse. */
+  --color-muted: #5c574c;
   --color-line: #e4ded1;
 
   /*

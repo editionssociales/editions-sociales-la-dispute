@@ -84,7 +84,7 @@ export function NewsletterForm() {
       </p>
 
       {/* Mention RGPD — additive. */}
-      <p className="text-[11px] leading-snug text-black/50">
+      <p className="text-[11px] leading-snug text-black/70">
         Votre email est utilisé uniquement pour vous adresser cette lettre
         d&apos;information, via notre prestataire Brevo (sous-traitant).{" "}
         <Link href="/mentions-legales" className={LEGAL_LINK}>

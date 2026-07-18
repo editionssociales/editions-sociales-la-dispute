@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { catalogueView } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
+import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -85,7 +87,7 @@ function ThemeCell({
   );
 }
 
-export default async function EditionCataloguePage({
+async function EditionCatalogueBody({
   params,
   searchParams,
 }: {
@@ -164,7 +166,7 @@ export default async function EditionCataloguePage({
           {total} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
         {totalPages > 1 && (
-          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/50">
+          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/70">
             Page {page} sur {totalPages}
           </span>
         )}
@@ -176,5 +178,19 @@ export default async function EditionCataloguePage({
 
       <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
     </Container>
+  );
+}
+
+export default function EditionCataloguePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ edition: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
+  return (
+    <Suspense fallback={<CatalogueFallback />}>
+      <EditionCatalogueBody params={params} searchParams={searchParams} />
+    </Suspense>
   );
 }

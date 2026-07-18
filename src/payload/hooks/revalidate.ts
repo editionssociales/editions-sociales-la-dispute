@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 import type {
   CollectionAfterChangeHook,
@@ -14,15 +14,11 @@ import type {
  * ne lisent jamais Payload en direct, elles passent par la façade
  * `src/lib/catalogue.ts`, elle-même consommée par des pages en ISR
  * classique — `export const revalidate = 3600` (voir chaque page.tsx), pas
- * `use cache`/`cacheTag`, pas de `fetch(..., { next: { tags } })` côté
- * source pg (`catalogue-pg.ts` interroge Postgres via la Local API, hors
- * fetch). Aucun tag explicite n'est donc posé sur ces lectures :
- * `revalidateTag` n'aurait rien à invalider et rendrait ce hook
- * silencieusement inopérant (pas d'erreur, juste un cache jamais purgé).
- * Le levier qui fonctionne réellement pour ce mode est `revalidatePath`
- * sur les segments de route affectés (cf. how-revalidation-works.md,
- * section « Tag System Architecture » : `revalidatePath` s'appuie sur les
- * soft tags posés automatiquement par route/segment).
+ * Les pages ISR classiques s'appuient sur `revalidatePath` (soft tags de
+ * route). En plus, `getAllBooks` pose un data-cache tagué `catalogue`
+ * (`unstable_cache`) — indispensable pour les vues catalogue dynamiques
+ * (`searchParams` → `no-store`) qui sinon rechargeraient Postgres à chaque
+ * MISS. Les deux leviers sont donc nécessaires.
  *
  * `revalidatePath(pattern, 'page')` cible **tous** les rendus d'un même
  * fichier de page, quel que soit le paramètre dynamique (édition, slug) —
@@ -41,6 +37,7 @@ const CATALOGUE_PAGE_PATTERNS = [
 
 /** Revalide toutes les pages qui peuvent afficher un livre/auteur/collection/média. */
 function revalidateCatalogueRoutes(): void {
+  revalidateTag('catalogue', 'max')
   for (const path of CATALOGUE_LITERAL_PATHS) revalidatePath(path)
   for (const pattern of CATALOGUE_PAGE_PATTERNS) revalidatePath(pattern, 'page')
 }

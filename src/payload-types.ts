@@ -192,6 +192,24 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    card?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -247,6 +265,9 @@ export interface Book {
   slug: string;
   edition?: ('editions-sociales' | 'la-dispute') | null;
   origin: 'catalogue' | 'boutique';
+  /**
+   * Tant que « Contenu réédité » (barre latérale) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.
+   */
   presentation: {
     root: {
       type: string;
@@ -279,6 +300,9 @@ export interface Book {
     [k: string]: unknown;
   } | null;
   plusLoinLegacyHtml?: string | null;
+  /**
+   * Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.
+   */
   contentTouched?: boolean | null;
   isbn?: string | null;
   /**
@@ -638,6 +662,30 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        card?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

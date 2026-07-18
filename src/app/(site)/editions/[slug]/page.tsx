@@ -7,7 +7,7 @@ import { Reveal } from "@/components/reveal";
 import { Eyebrow } from "@/components/eyebrow";
 import { ACCENT_BG } from "@/lib/accents";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
-import { getBooks } from "@/lib/catalogue";
+import { countBooks, getBooks } from "@/lib/catalogue";
 
 export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
@@ -37,7 +37,13 @@ export default async function EditionPage({
   const { slug } = await params;
   if (!isEditionSlug(slug)) notFound();
   const info = EDITIONS[slug];
-  const books = await getBooks({ edition: slug, sort: "recent" });
+  // Une seule lecture catalogue (cache) : total + 8 récentes, sans matérialiser
+  // toute la grille dans le HTML.
+  const [total, recent] = await Promise.all([
+    countBooks(slug),
+    getBooks({ edition: slug, sort: "recent" }),
+  ]);
+  const books = recent.slice(0, 8);
 
   return (
     <>
@@ -81,7 +87,7 @@ export default async function EditionPage({
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <p className="flex items-baseline gap-2 border-2 border-white px-4 py-2.5">
                 <span className="font-sans text-2xl font-black italic text-white">
-                  {books.length}
+                  {total}
                 </span>
                 <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-white/80">
                   titres au catalogue
@@ -119,15 +125,15 @@ export default async function EditionPage({
             Tout le catalogue →
           </Link>
         </div>
-        <BookGrid books={books.slice(0, 8)} />
+        <BookGrid books={books} />
       </Container>
 
       {/* Bandeau final, discret, vers le catalogue de la maison */}
       <section className="border-t-2 border-black bg-white">
         <Container className="flex flex-col items-start gap-5 py-10 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-xl text-[15px] leading-relaxed text-black/70">
-            Le fonds {info.shortName} compte {books.length} titres — tous
-            réunis dans le catalogue de la maison.
+            Le fonds {info.shortName} compte {total} titres — tous réunis dans
+            le catalogue de la maison.
           </p>
           <Link
             href={`/catalogue/${slug}`}

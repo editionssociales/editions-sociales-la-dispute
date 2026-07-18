@@ -212,14 +212,13 @@ const nextConfig: NextConfig = {
     root: ROOT_DIR,
   },
   images: {
-    // Couvertures/médias rapatriés par Payload (E6/E3) : chaque store Vercel
-    // Blob a un sous-domaine `<id>.public.blob.vercel-storage.com` distinct,
-    // aucun hostname fixe connu à l'avance. `*` (un seul niveau de
-    // sous-domaine) suffit et reste plus restrictif que `**` (cf.
-    // node_modules/next/dist/docs/.../02-components/image.md, "Wildcard
-    // Patterns") : le store ID est toujours un unique segment. Coupure OVH :
-    // plus aucun host WordPress autorisé — toute image encore pointée vers
-    // eux échouerait de toute façon, serveurs éteints.
+    // Couvertures affichées ≤ ~400px CSS : inutile de générer 1920/2048/3840w
+    // (srcset gonflé, LCP/catalogue). 1080 couvre retina 2× sur une fiche 300–400px.
+    deviceSizes: [384, 640, 750, 828, 1080],
+    imageSizes: [32, 64, 96, 128, 256, 384],
+    // Couvertures/médias Payload (Blob) : chaque store Vercel Blob a un
+    // sous-domaine `<id>.public.blob.vercel-storage.com` distinct. Coupure OVH :
+    // plus aucun host WordPress autorisé.
     remotePatterns: [
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
     ],

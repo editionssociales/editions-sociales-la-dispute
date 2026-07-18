@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { catalogueView } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
+import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -21,7 +23,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
-export default async function CataloguePage({
+async function CatalogueBody({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
@@ -54,7 +56,7 @@ export default async function CataloguePage({
           {total} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
         {totalPages > 1 && (
-          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/50">
+          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/70">
             Page {page} sur {totalPages}
           </span>
         )}
@@ -66,5 +68,17 @@ export default async function CataloguePage({
 
       <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
     </Container>
+  );
+}
+
+export default function CataloguePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  return (
+    <Suspense fallback={<CatalogueFallback />}>
+      <CatalogueBody searchParams={searchParams} />
+    </Suspense>
   );
 }

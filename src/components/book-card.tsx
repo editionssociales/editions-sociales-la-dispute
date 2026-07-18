@@ -13,14 +13,9 @@ export function BookCard({ book }: { book: Book }) {
     ? `/catalogue/${book.edition}/${book.slug}`
     : `/boutique/${book.slug}`;
 
-  // Couverture seule : plus de légende texte sous l'image (titre/auteurs déjà
-  // imprimés dessus). Le titre + les auteurs vivent dans l'alt — canal légitime
-  // pour les crawlers, Google Images et les lecteurs d'écran, qui sert aussi de
-  // texte d'ancre du lien interne.
-  const alt =
-    book.authors.length > 0
-      ? `${book.title}, ${book.authors.map((a) => a.name).join(", ")}`
-      : book.title;
+  const authors =
+    book.authors.length > 0 ? book.authors.map((a) => a.name).join(", ") : "";
+  const alt = authors ? `${book.title}, ${authors}` : book.title;
 
   // Largeur fixée par la colonne de la grille ; la hauteur suit le ratio réel
   // de la couverture (jamais recadrée, jamais de bande). Sans couverture, la
@@ -47,24 +42,30 @@ export function BookCard({ book }: { book: Book }) {
   // vers la fiche — seulement si le livre est disponible au panier.
   const cartChip = canAddToCart(book) && <AddToCartButton id={book.id} variant="chip" />;
 
+  const meta = (
+    <div className="mt-3 flex min-w-0 flex-col gap-0.5">
+      <p className="font-sans text-sm font-bold leading-snug text-black line-clamp-2">
+        {book.title}
+      </p>
+      {authors ? (
+        <p className="font-sans text-xs leading-snug text-ink-soft line-clamp-1">{authors}</p>
+      ) : null}
+    </div>
+  );
+
   return (
     <article className="group flex flex-col bg-white p-4">
-      {href ? (
-        <Link
-          href={href}
-          className="relative block w-full overflow-hidden border-2 border-black bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-2"
-        >
+      <Link
+        href={href}
+        className="flex flex-col focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-2"
+      >
+        <span className="relative block w-full overflow-hidden border-2 border-black bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none">
           {upcomingBadge}
           {cover}
           {cartChip}
-        </Link>
-      ) : (
-        <div className="relative w-full overflow-hidden border-2 border-black bg-paper-2">
-          {upcomingBadge}
-          {cover}
-          {cartChip}
-        </div>
-      )}
+        </span>
+        {meta}
+      </Link>
     </article>
   );
 }

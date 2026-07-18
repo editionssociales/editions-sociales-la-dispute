@@ -45,13 +45,27 @@ export function coverAspectRatio(cover: CoverLike): string {
 }
 
 /**
+ * Plafond des dimensions passées à `next/image` : au-delà, le srcset généré
+ * monte jusqu'à 2048/3840w alors que les couvertures s'affichent à ≤ ~400px
+ * CSS (carrousel, grille, fiche). On conserve le ratio, on borne le grand côté.
+ */
+const MAX_RESERVATION = 1080;
+
+/**
  * Dimensions à passer à `next/image` pour réserver l'espace. Jamais de valeur
  * dégénérée (2px…) qui ferait demander une image minuscule à l'optimiseur :
  * on retombe sur une résolution nominale quand la base ne fournit rien.
  */
 function reservation(cover: CoverLike): { w: number; h: number } {
   if (cover && cover.width >= 20 && cover.height >= 20) {
-    return { w: Math.round(cover.width), h: Math.round(cover.height) };
+    const w0 = cover.width;
+    const h0 = cover.height;
+    const long = Math.max(w0, h0);
+    if (long <= MAX_RESERVATION) {
+      return { w: Math.round(w0), h: Math.round(h0) };
+    }
+    const scale = MAX_RESERVATION / long;
+    return { w: Math.round(w0 * scale), h: Math.round(h0 * scale) };
   }
   return { w: FALLBACK_W, h: FALLBACK_H };
 }
