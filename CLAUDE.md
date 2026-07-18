@@ -17,7 +17,7 @@ Does NOT own : le contenu, la vente et les médias — tous trois côté WordPre
 - Un livre n'est **jamais retiré** du catalogue faute d'être en vente (« à paraître » ou « indisponible en ligne ») ; tout HTML éditorial passe par `sanitizeCms` (marque `SafeHtml`) ; classes Tailwind **littérales** partout (le JIT ne compile pas le dynamique).
 - **Payload** : Next et Payload montent **en tandem** (versions épinglées) ; écritures via `context.migration`/`context.disableRevalidate` ; URL Neon **poolée** (app/build) vs **directe** `DATABASE_URL_UNPOOLED` (`payload migrate`, `pg_dump`) ; imports `.ts` explicites sous le CLI payload ; scripts `payload run` en **top-level await**.
 - **`COMMERCE_NATIVE`** : `0` (défaut) = iso-rendu strict (Woo intact, `/boutique`→`/catalogue`, panier placeholder, checkout `503`) ; `1` = panier/checkout/port natifs, plus aucun appel Store API — montants **toujours en centimes entiers**.
-- **Stock** : champ unique `stock` (nullable, livres ET boutique-seuls), `stockSuivi` `routeur`|`manuel` ; le stock EST la disponibilité ; décrément au paiement **idempotent** ; `upcoming` **prime toujours**.
+- **Stock** : champ unique `stock` (nullable, livres ET boutique-seuls), `stockSuivi` `routeur`|`manuel` ; le stock EST la disponibilité ; décrément au paiement **idempotent** ; `upcoming` **prime toujours** — règle énoncée une seule fois : `src/lib/sellability.ts`.
 
 ## Ubiquitous Language
 
