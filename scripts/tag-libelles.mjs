@@ -559,8 +559,10 @@ async function main() {
         have.add(lid)
       }
 
-      // Books a `versions.drafts` : l'admin lit la version `latest`
-      // (`_books_v_rels`), pas `books_rels`. On aligne les deux.
+      // Books a `versions.drafts` : l'admin lit la version `latest`.
+      // Sur `_books_v_rels`, le path Payload est `version.<field>` (comme
+      // `version.authors`), PAS le nom nu du champ.
+      const VERSION_PATH = 'version.libelles'
       const { rows: versions } = await client.query(
         `SELECT id FROM payload._books_v WHERE parent_id = $1 AND latest = true LIMIT 1`,
         [p.id],
@@ -570,20 +572,19 @@ async function main() {
 
       const { rows: vExisting } = await client.query(
         `SELECT libelles_id FROM payload._books_v_rels
-         WHERE parent_id = $1 AND path = 'libelles' AND libelles_id IS NOT NULL`,
-        [versionId],
+         WHERE parent_id = $1 AND path = $2 AND libelles_id IS NOT NULL`,
+        [versionId, VERSION_PATH],
       )
       const vHave = new Set(vExisting.map((r) => r.libelles_id))
       let vOrder = vExisting.length
-      // Tous les libellés finaux (existants + ajoutés), pas seulement added —
-      // pour rattraper un décalage books ↔ version.
+      // Tous les libellés finaux — rattrape un décalage books ↔ version.
       for (const slug of p.after) {
         const lid = idBySlug[slug]
         if (!lid || vHave.has(lid)) continue
         await client.query(
           `INSERT INTO payload._books_v_rels ("order", parent_id, path, libelles_id)
-           VALUES ($1, $2, 'libelles', $3)`,
-          [vOrder++, versionId, lid],
+           VALUES ($1, $2, $3, $4)`,
+          [vOrder++, versionId, VERSION_PATH, lid],
         )
         versionInserts++
         vHave.add(lid)
