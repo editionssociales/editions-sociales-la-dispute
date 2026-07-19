@@ -25,6 +25,20 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
+/**
+ * Couleur du bandeau de mise en avant (`Highlight.couleur`, PR #29) →
+ * classes littérales (contrat Tailwind JIT). Depuis la refonte (chantier 4
+ * §3, R2), la couleur éditée ne peint plus un aplat de fond : elle devient
+ * le LISERÉ du bloc éditorial — la palette pop reste un langage de nav, le
+ * bandeau reste lisible (texte ink sur paper-2).
+ */
+const HIGHLIGHT_EDGE: Record<string, string> = {
+  "pop-pink": "border-l-pop-pink",
+  "pop-teal": "border-l-pop-teal",
+  "pop-orange": "border-l-pop-orange",
+  "pop-yellow": "border-l-pop-yellow",
+};
+
 /** Un livre est éligible au carrousel s'il a une couverture et une fiche d'origine (édition connue). */
 function readyForCarousel(
   book: Book,
@@ -150,66 +164,71 @@ export default async function HomePage() {
         </FramedGrid>
       </Container>
 
-      {/* Mise en avant ponctuelle (E6bis, engagement C32) : rien n'est rendu
-          quand `highlight` est absent (inactif ou hors dates) — page
-          strictement iso à l'état actuel, aucun wrapper laissé derrière.
-          Bandeau highlight éditorial (chantier 4 §3, R2) : hors palette pop
-          — bloc bg-paper-2 bordé, liseré navy, jamais un aplat pop réservé
-          au langage de nav. */}
-      {highlight && (
-        <Container className="mt-[clamp(48px,7vw,88px)]">
-          <Reveal>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 border-2 border-ink border-l-4 border-l-navy bg-paper-2 px-6 py-6 sm:px-7">
-                <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-ink">
-                  {highlight.titre}
-                </p>
-                {highlight.texte && (
-                  <p className="mt-0.5 max-w-[56ch] text-sm text-ink/70">{highlight.texte}</p>
-                )}
-              </div>
-              {highlight.lien && (
+      {/* Mise en avant ponctuelle (E6bis / PR #29) : une seule entrée active à
+          la fois (collection Highlight — l'ex-bandeau souscription codé en dur
+          est devenu une entrée semée par la migration `highlight_couleur_cta`).
+          Deux rendus (chantier 4 §3, R2) : la campagne souscription (lien vers
+          /souscription) garde l'identité du héros de la page de dons (bg-ink,
+          eyebrow pop-yellow) ; toute autre mise en avant est un highlight
+          éditorial bg-paper-2 bordé, la couleur choisie dans /admin en liseré
+          (HIGHLIGHT_EDGE) — jamais un aplat pop (R2). Rien n'est rendu sans
+          entrée active : aucun wrapper laissé derrière. */}
+      {highlight &&
+        (highlight.lien?.startsWith("/souscription") ? (
+          <Container className="mt-[clamp(30px,4.5vw,60px)]">
+            <Reveal>
+              <div className="flex flex-col gap-6 bg-ink px-6 py-8 text-paper sm:flex-row sm:items-center sm:justify-between sm:px-9 sm:py-9">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
+                    Souscription 2026
+                  </p>
+                  <p className="mt-1 font-sans text-[clamp(22px,2.8vw,34px)] font-black italic leading-[1.05] text-paper">
+                    {highlight.titre}
+                  </p>
+                  {highlight.texte && (
+                    <p className="mt-0.5 max-w-[56ch] text-sm text-paper/75">
+                      {highlight.texte}
+                    </p>
+                  )}
+                </div>
                 <Button
                   href={highlight.lien}
-                  className="flex-none items-center gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em] sm:self-stretch"
+                  variant="outline"
+                  className="flex-none gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em]"
                 >
-                  En savoir plus <span aria-hidden="true">→</span>
+                  {highlight.lienLibelle?.trim() || "Souscrire"}{" "}
+                  <span aria-hidden="true">→</span>
                 </Button>
-              )}
-            </div>
-          </Reveal>
-        </Container>
-      )}
-
-      {/* Bandeau souscription (chantier 4 §3, R2/R3) : identité du héros de
-          /souscription (bg-ink text-paper, eyebrow pop-yellow) — hiérarchie
-          claire entre l'info éditoriale ponctuelle ci-dessus et la campagne
-          prioritaire ici. */}
-      <Container className="mt-[clamp(30px,4.5vw,60px)]">
-        <Reveal>
-          <div className="flex flex-col gap-6 bg-ink px-6 py-8 text-paper sm:flex-row sm:items-center sm:justify-between sm:px-9 sm:py-9">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
-                Souscription 2026
-              </p>
-              <p className="mt-1 font-sans text-[clamp(22px,2.8vw,34px)] font-black italic leading-[1.05] text-paper">
-                La souscription est ouverte
-              </p>
-              <p className="mt-0.5 max-w-[56ch] text-sm text-paper/75">
-                Soutenez les Éditions sociales et La Dispute — chaque
-                souscription finance les prochains titres.
-              </p>
-            </div>
-            <Button
-              href="/souscription"
-              variant="outline"
-              className="flex-none gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em]"
-            >
-              Souscrire <span aria-hidden="true">→</span>
-            </Button>
-          </div>
-        </Reveal>
-      </Container>
+              </div>
+            </Reveal>
+          </Container>
+        ) : (
+          <Container className="mt-[clamp(48px,7vw,88px)]">
+            <Reveal>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                <div
+                  className={`flex min-w-0 flex-1 flex-col justify-center gap-1.5 border-2 border-ink border-l-4 bg-paper-2 px-6 py-6 sm:px-7 ${HIGHLIGHT_EDGE[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_EDGE["pop-pink"]}`}
+                >
+                  <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-ink">
+                    {highlight.titre}
+                  </p>
+                  {highlight.texte && (
+                    <p className="mt-0.5 max-w-[56ch] text-sm text-ink/70">{highlight.texte}</p>
+                  )}
+                </div>
+                {highlight.lien && (
+                  <Button
+                    href={highlight.lien}
+                    className="flex-none items-center gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em] sm:self-stretch"
+                  >
+                    {highlight.lienLibelle?.trim() || "En savoir plus"}{" "}
+                    <span aria-hidden="true">→</span>
+                  </Button>
+                )}
+              </div>
+            </Reveal>
+          </Container>
+        ))}
 
       {/* Mosaïque pop de pied de page (chantier 4 §4, R2) : les 4 sections
           du quadrillage du header (mêmes hrefs/couleurs, `lib/nav` +

@@ -10,6 +10,12 @@ import { revalidateHomeAfterChange, revalidateHomeAfterDelete } from '../hooks/r
  * uniquement quand `actif` est coché **et** que la date courante tombe dans
  * `[dateDebut, dateFin]` — sinon la page reste strictement iso-rendu (aucun
  * wrapper ajouté, cf. la page d'accueil).
+ *
+ * `couleur` (4 pop du site, texte noir par-dessus) et `lienLibelle` pilotent
+ * le rendu du bandeau — l'ex-bandeau souscription codé en dur de la home est
+ * depuis devenu une entrée de cette collection (semée par la migration
+ * `highlight_couleur_cta`), soumise comme les autres à « une campagne à la
+ * fois ».
  */
 export const Highlight: CollectionConfig = {
   slug: 'highlight',
@@ -18,6 +24,7 @@ export const Highlight: CollectionConfig = {
     plural: 'Mises en avant',
   },
   admin: {
+    group: 'Catalogue',
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'actif', 'dateDebut', 'dateFin'],
     description: 'Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).',
@@ -51,11 +58,36 @@ export const Highlight: CollectionConfig = {
       },
     },
     {
+      name: 'couleur',
+      type: 'select',
+      label: 'Couleur',
+      defaultValue: 'pop-pink',
+      options: [
+        { value: 'pop-pink', label: 'Rose' },
+        { value: 'pop-teal', label: 'Turquoise' },
+        { value: 'pop-orange', label: 'Orange' },
+        { value: 'pop-yellow', label: 'Jaune' },
+      ],
+      admin: {
+        description: "Couleur d'accent du bandeau (liseré à gauche du bloc). Ignorée pour la campagne souscription (lien vers /souscription), qui garde son identité sombre propre.",
+      },
+    },
+    {
       name: 'lien',
       type: 'text',
       label: 'Lien',
       admin: {
         description: 'URL absolue ou chemin du site (ex. /souscription) — facultatif.',
+      },
+    },
+    {
+      name: 'lienLibelle',
+      type: 'text',
+      label: 'Libellé du lien',
+      defaultValue: 'En savoir plus',
+      admin: {
+        description: 'Texte du bouton — utilisé seulement si un lien est renseigné.',
+        condition: (data) => Boolean(data?.lien),
       },
     },
     {

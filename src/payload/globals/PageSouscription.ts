@@ -34,7 +34,7 @@ export const PageSouscription: GlobalConfig = {
     interface: 'PageSouscription',
   },
   admin: {
-    group: 'Contenus du site',
+    group: 'Site',
     description:
       'Textes de la page /souscription. Un bloc vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).',
   },

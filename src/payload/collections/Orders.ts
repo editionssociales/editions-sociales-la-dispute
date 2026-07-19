@@ -101,6 +101,7 @@ export const Orders: CollectionConfig = {
     plural: 'Commandes',
   },
   admin: {
+    group: 'Quotidien',
     useAsTitle: 'number',
     defaultColumns: ['number', 'status', 'email', 'totalTTC', 'createdAt'],
     description:
