@@ -60,11 +60,19 @@ Branches distantes résiduelles à nettoyer : `feat/catalogue-couverture-seule`,
 | Champ | Valeur |
 |---|---|
 | Plateforme | **Vercel** (imposé : OVH mutualisé ne peut pas exécuter Node — cf. `LEGACY-STACK.md` §0) |
-| Projet | `editions-sociales-la-dispute` (`.vercel/project.json`) |
-| Team | `solidz` — **provisoire**, prestataire |
-| URL beta | `https://editions-sociales-la-dispute.vercel.app` |
-| Intégration Git | **active** (`vercel[bot]`, depuis le 2026-07-02) : `main` → Production, branche → Preview |
+| Projet | `editions-sociales-la-dispute` (`prj_A5GU0DpjwpzJEK4nbhTFmK4ToBP5`) |
+| Team | **LDES** (`team_1xHVCSjDQnrhRVC139r0pODZ`, compte client `administrer-7372`) — accès API via `VERCEL_PAT` de `site/.env` |
+| URL beta | `https://editions-sociales-la-dispute-mu.vercel.app` |
+| Intégration Git | **active** (`vercel[bot]`) : `main` → Production, branche → Preview |
 | Variables d'env prod | posées à la main (non auditables depuis le dépôt) |
+
+> ⚠️ (vérifié 2026-07-19) Un **projet fantôme homonyme** subsiste dans le scope
+> Vercel perso du prestataire (`prj_Mi6jIFHz…`, celui de `.vercel/project.json`) :
+> toujours git-lié au dépôt, il double chaque build de `main` (en échec depuis la
+> coupure OVH — il n'a que les vars `WP_*`) et squatte le domaine nu
+> `editions-sociales-la-dispute.vercel.app`, figé sur un build du 2026-07-11.
+> À délier/supprimer (geste humain). Tout diagnostic mené avec `$VERCEL_TOKEN`
+> (scopes perso/solidz) tombe sur ce fantôme, pas sur le vrai projet.
 
 ### 1.3 Base de référence (vérifiée sur `main`, commit `012fe02`)
 
