@@ -26,6 +26,7 @@ export const PromoCodes: CollectionConfig = {
     plural: 'Codes promo',
   },
   admin: {
+    group: 'Boutique',
     useAsTitle: 'code',
     defaultColumns: ['code', 'type', 'amount', 'active', 'expiresAt'],
   },

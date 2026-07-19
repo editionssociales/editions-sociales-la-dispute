@@ -9,6 +9,9 @@ import { isAdmin, isAdminOrEditor } from '../access.ts'
 export const ReglagesBoutique: GlobalConfig = {
   slug: 'reglages-boutique',
   label: 'Réglages boutique',
+  admin: {
+    group: 'Boutique',
+  },
   access: {
     read: isAdminOrEditor,
     update: isAdmin,

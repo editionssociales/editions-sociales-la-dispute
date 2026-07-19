@@ -11,7 +11,7 @@ import { revalidateSiteLayoutAfterChange } from '../hooks/revalidate.ts'
  * Chaque champ vide retombe sur le texte actuel codé en dur
  * (`src/lib/site-content-core.ts`) — iso-rendu strict tant que rien n'est
  * saisi. Distinct de `reglages-boutique` (réglage interne du commerce natif,
- * hors groupe « Contenus du site »).
+ * groupé « Boutique » — nav groupée, issue #25).
  */
 export const ReglagesSite: GlobalConfig = {
   slug: 'reglages-site',
@@ -20,7 +20,7 @@ export const ReglagesSite: GlobalConfig = {
     interface: 'ReglagesSite',
   },
   admin: {
-    group: 'Contenus du site',
+    group: 'Site',
     description:
       'Pied de page, réseaux sociaux et référencement par défaut. Un champ vide = le texte actuel du site.',
   },
