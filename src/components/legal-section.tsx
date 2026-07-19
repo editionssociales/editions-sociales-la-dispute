@@ -31,7 +31,8 @@ export function LegalSection({ title, children }: { title: string; children: Rea
     <section className="border-t-2 border-ink">
       <Container className="py-12 sm:py-16">
         <h2 className={H2_CLASS}>{title}</h2>
-        {children}
+        {/* Mesure de lecture (R6) : 70ch, même contrat que LegalCmsBody. */}
+        <div className="max-w-[70ch]">{children}</div>
       </Container>
     </section>
   );

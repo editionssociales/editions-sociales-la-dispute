@@ -22,8 +22,18 @@ export default function SiteError({
 }) {
   return (
     <Container className="bg-paper py-24 text-center sm:py-32">
-      <h1 className="font-sans text-3xl font-black italic text-ink sm:text-4xl">
-        Une erreur est survenue
+      {/* Carré brick + barre paper : point d'exclamation minimal, dans le
+          vocabulaire déjà validé par `not-found.tsx` (losange bg-brick) —
+          on étend le système existant à l'erreur générique (5.3). */}
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center border-2 border-ink bg-brick"
+      >
+        <span className="h-7 w-2 bg-paper" />
+      </div>
+
+      <h1 className="mt-6 font-sans text-3xl font-black italic text-ink sm:text-4xl">
+        <span className="sr-only">Erreur — </span>Une erreur est survenue
       </h1>
       <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink/70">
         La page n&apos;a pas pu s&apos;afficher. Réessayez, ou revenez à

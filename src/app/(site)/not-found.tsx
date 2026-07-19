@@ -14,8 +14,9 @@ const SPINES: { h: number; w: string; accent: Accent; fallen?: boolean }[] = [
 /**
  * Composition bespoke (R6/0.3) — exception nommée à l'échelle `<PageHero>` :
  * le « 404 » géant est le vrai titre visuel de cette page, aucun tone ne le
- * couvre. `error.tsx`/`catalogue/error.tsx` reprendront ce vocabulaire au
- * chantier « finitions » (5.3) ; pas cette page-ci.
+ * couvre. `error.tsx`/`catalogue/error.tsx` reprennent le vocabulaire
+ * (carré brick + barre paper) depuis le chantier « finitions » (5.3) ; pas
+ * cette page-ci, qui garde son glyphe dédié.
  */
 export default function NotFound() {
   return (

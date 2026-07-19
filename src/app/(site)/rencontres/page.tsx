@@ -13,12 +13,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * Silhouettes d'événements à venir : purement décoratives (aucune date
- * réelle), elles donnent la forme de l'agenda en attendant son contenu — la
- * structure reprend la maquette agenda : en-tête (date sur fond noir +
- * lieu), puis vignette de couverture + description.
+ * Emplacements d'événements à venir : purement décoratifs (aucune date
+ * réelle). État honnête plutôt que skeleton (5.4/R8, bordures pointillées
+ * assumées) — pas de barres grises qui imiteraient un chargement en cours,
+ * juste la forme de l'agenda (en-tête date/lieu) et le mot « en préparation ».
  */
-const GHOSTS = [1, 2, 3];
+const PLACEHOLDER_EVENTS = [1, 2, 3];
 
 export default function RencontresPage() {
   return (
@@ -28,9 +28,7 @@ export default function RencontresPage() {
         <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Rencontres" }]} />
         <Reveal>
           <div className="max-w-3xl">
-            <span className="inline-flex border-2 border-ink bg-pop-yellow px-3 py-1 font-sans text-xs font-extrabold uppercase tracking-[.08em] text-black">
-              Agenda
-            </span>
+            <Eyebrow dot="bg-pop-yellow">Agenda</Eyebrow>
             <h1 className="mt-4 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
               Faire vivre les livres, dans et hors les murs
             </h1>
@@ -60,33 +58,34 @@ export default function RencontresPage() {
             </p>
           </Reveal>
 
-          {/* Cartes fantômes : décor, en attendant les vraies dates */}
+          {/* État « programmation en préparation » : décor, en attendant les
+              vraies dates — bordures pointillées (R8 assumé, exception
+              nommée), aucune barre grise qui laisserait croire à un
+              chargement imminent. */}
           <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
-            {GHOSTS.map((g, i) => (
+            {PLACEHOLDER_EVENTS.map((g, i) => (
               <Reveal key={g} delay={i * 120} className="h-full">
-                <article className="flex h-full select-none flex-col bg-paper">
+                <article className="flex h-full select-none flex-col border-2 border-dashed border-ink bg-paper-2">
                   {/* En-tête : date sur fond noir + lieu */}
-                  <div className="flex items-stretch border-b-2 border-ink">
+                  <div className="flex items-stretch border-b-2 border-dashed border-ink">
                     <div className="flex items-center bg-ink px-4 py-3">
                       <span className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-pop-yellow">
                         Date à venir
                       </span>
                     </div>
-                    <div className="flex flex-1 items-center border-l-2 border-ink px-4 py-3">
+                    <div className="flex flex-1 items-center border-l-2 border-dashed border-ink px-4 py-3">
                       <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
                         Lieu à préciser
                       </span>
                     </div>
                   </div>
-                  {/* Vignette de couverture + description */}
-                  <div className="flex flex-1 gap-4 p-5">
-                    <div className="h-24 w-16 shrink-0 border-2 border-ink bg-paper-2" />
-                    <div className="flex-1 space-y-2.5 pt-1">
-                      <div className="h-3 w-3/4 bg-ink/10" />
-                      <div className="h-2.5 w-1/2 bg-ink/10" />
-                      <div className="mt-3 h-2.5 w-full bg-ink/10" />
-                      <div className="h-2.5 w-2/3 bg-ink/10" />
-                    </div>
+                  {/* État honnête : pas de vraie date tant que le back-office
+                      n'a rien à afficher. */}
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1 p-6 text-center">
+                    <span className="font-sans text-xs font-bold uppercase tracking-[.08em] text-muted">
+                      Programmation
+                    </span>
+                    <span className="font-sans text-sm text-ink-soft">en préparation</span>
                   </div>
                 </article>
               </Reveal>

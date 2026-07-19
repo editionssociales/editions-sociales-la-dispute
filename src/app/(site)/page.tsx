@@ -13,7 +13,7 @@ import { getNewReleases, countBooks } from "@/lib/catalogue";
 import { EDITIONS, EDITION_LIST } from "@/lib/editions";
 import { ACCENT_BG } from "@/lib/accents";
 import { NAV_BOUTIQUE, NAV_SECTIONS } from "@/lib/nav";
-import { FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import type { Book, Cover, EditionSlug } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -254,7 +254,7 @@ export default async function HomePage() {
               <li className="contents">
                 <Link
                   href={NAV_BOUTIQUE.href}
-                  className={`col-span-2 flex min-h-11 items-center justify-between gap-2 bg-ink px-5 py-6 font-sans text-sm font-extrabold uppercase tracking-[.04em] text-paper transition-colors hover:bg-paper hover:text-ink motion-reduce:transition-none sm:col-span-1 ${FOCUS_RING_LIGHT}`}
+                  className={`col-span-2 flex min-h-11 items-center justify-between gap-2 bg-ink px-5 py-6 font-sans text-sm font-extrabold uppercase tracking-[.04em] text-paper transition-colors hover:bg-paper hover:text-ink motion-reduce:transition-none sm:col-span-1 ${FOCUS_RING_DARK}`}
                 >
                   {NAV_BOUTIQUE.label}
                   <span aria-hidden="true">→</span>

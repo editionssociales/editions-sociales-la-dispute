@@ -15,34 +15,13 @@ données ni le routage.
 
 ## Local Contracts
 
-- **Serveur par défaut** : `"use client"` réservé aux composants qui portent
-  réellement un état/effet/handler — `site-header` (compactage au scroll +
-  section active), `catalogue-filters` (sync URL, debounce, `useTransition`) et
-  `filter-chips` qu'il rend, `nouveautes-carousel` (drag pointeur, coverflow
-  « spring »), `count-up` / `gauge` / `reveal` (révélation au scroll via
-  `useInView`, `src/hooks/use-in-view`), `newsletter-form` / `contact-form`
-  (soumission via server action, gestion d'état de formulaire), `shelf-lock` /
-  `shelf-cover` (étagère 3D du héro : exclusion d'ouverture entre livres, ratio
-  réel de couverture), `cart/cart-context` (état global du panier — Context +
-  `localStorage`, monté par le layout `(site)` sur tout le site),
-  `cart/cart-badge` (compteur dans `site-header`), `cart/add-to-cart-button`
-  (handler d'ajout, rendu par `buy-links`/`book-card`) et `submit-button`
-  (état `pending` d'une server action via `useFormStatus` — doit vivre sous le
-  `<form>`, jamais l'englober). Tout le reste est composant serveur — dont
-  `cart/shelf-spines` (décor de l'état vide du panier, sans état propre).
-- Les couvertures passent toujours par `Cover` / `BookCover` (`src/lib/cover.tsx`) :
-  jamais recadrées, au ratio réel de l'image.
+- **Serveur par défaut** : `"use client"` seulement pour Navigation (`site-header`, `catalogue-filters` et `filter-chips` qu'il rend), Carrousels (`nouveautes-carousel`), Métriques (`count-up`, `gauge`, `reveal`), Formulaires (`newsletter-form`, `contact-form`, `submit-button`), Étagères 3D (`shelf-lock`, `shelf-cover`), Panier (`cart/cart-context`, `cart/cart-badge`, `cart/add-to-cart-button`, `cart/clear-cart-on-confirmation`) — cf. implémentation pour détails des états/effets portés. `nav-accent.ts` reste plat, importable des deux arbres.
+- **Couvertures** : toujours via `Cover`/`BookCover` (`src/lib/cover.tsx`), ratio réel.
+- **Constitution graphique (R1-R8, refonte 2026-07)** : R1 ink/paper seul, jamais black/white littéraux (`text-black/70` → `text-ink/70`), `bg-paper-2` seule 3ᵉ teinte • R2 pop-colors (pink/teal/orange/yellow) pour nav/statut seulement • R3 accents maison (navy=Éditions, brick=Dispute) + sémantique (bottle=succès, ocher=attente, brick=échec) via `lib/accents`, `lib/format` • R4 un seul CTA : `<Button>` (`button.tsx`), hover ink↔paper • R5 deux anneaux focus `FOCUS_RING_*` (`lib/ui.ts`), zéro fait main • R6 typo fermée : `<PageHero>` + `<Eyebrow>`, `text-muted` secondaire, `max-w-[70ch]` prose • R7 tout interactif : hover/focus-visible/active/disabled/pending, cibles `min-h-11`/`h-11 w-11` • R8 brutalisme : aplat shadow `shadow-[8px...]`, zéro radius sauf pointillés `/rencontres`, skeletons = trame réelle.
 
 ## Ubiquitous Language
 
-- **Primitive partagée** : composant plat, sans `"use client"`, utilisable aussi
-  bien dans un arbre serveur que client — `FramedGrid` (recette de la grille
-  encadrée, hairline noir), `Breadcrumb` (fil d'ariane ; porte sa propre marge
-  `mb-6`, `tone="light"|"dark"` selon le fond de la page, et
-  `currentIsPage={false}` pour les fiches produit dont le fil s'arrête à la
-  collection — la dernière miette redevient alors un lien), `Button` (recette
-  CTA couleur/bordure/hover/focus, états `disabled` inclus), `PageHero`
-  (en-tête de page : eyebrow/titre/chapeau, échelle fermée par `tone`).
+- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid` (grille), `Breadcrumb` (fil d'ariane), `Button` (CTA), `PageHero` (en-têtes page).
 
 ## Decisions
 

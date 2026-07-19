@@ -218,7 +218,29 @@ h1, h2, h3, h4 {
 }
 .prose-book p { margin: 0 0 1rem; }
 .prose-book a { color: var(--color-ink); text-decoration: underline; text-underline-offset: 2px; }
-.prose-book h2, .prose-book h3 { color: var(--color-ink); margin: 1.6rem 0 0.6rem; }
+/* Échelle maison (R6) : les h2/h3 du HTML éditorial rejoignent la recette
+   italic/uppercase/graisse du reste du site au lieu d'hériter du défaut
+   navigateur. */
+.prose-book h2 {
+  margin: 1.75rem 0 0.75rem;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+.prose-book h3 {
+  margin: 1.5rem 0 0.5rem;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
 .prose-book ul { list-style: disc; padding-left: 1.25rem; margin: 0 0 1rem; }
 .prose-book ol { list-style: decimal; padding-left: 1.25rem; margin: 0 0 1rem; }
-.prose-book img { max-width: 100%; height: auto; }
+/* Bordure franche (R8) : zéro border-radius, y compris sur les images
+   éditoriales — seul arrondi du site avant ce correctif. */
+.prose-book img { max-width: 100%; height: auto; border: 2px solid var(--color-ink); }
