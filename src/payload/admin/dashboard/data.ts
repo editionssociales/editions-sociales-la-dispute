@@ -2,28 +2,19 @@ import { cache } from 'react'
 
 import type { Payload } from 'payload'
 
-import { CAMPAIGN_KEY, type Campaign2026 } from '@/lib/donation-tiers'
-import { getCampaign2026 } from '@/lib/donations'
-import { donationsEnabled, getStripe } from '@/lib/stripe'
-
-import { expiredActivePromos, parisMonthBounds, STOCK_SEUIL_FALLBACK, sumSalesTTC } from './derive.ts'
+import { expiredActivePromos, STOCK_SEUIL_FALLBACK } from './derive.ts'
 import { parseStoredImportReport } from '../../lib/import-run-report-core.ts'
 
 /**
- * Lecteurs I/O du dashboard `/admin` v2 — Local API Payload, Stripe (SDK) et
- * API Sentry. Règle du chantier : chaque lecteur attrape TOUT et dégrade en
- * `{ state: 'na' }` — le RSC appelant ne plante jamais (l'ancien
- * `StockLowWidget` n'avait aucun filet, défaut corrigé ici). Les dérivations
- * pures (états, seuils, bornes) vivent dans `derive.ts` ; le rendu dans
- * `Dashboard.tsx` / `DashboardFooter.tsx`.
+ * Lecteurs I/O du dashboard `/admin` v3 (home = zones A/B/C, issue #23) —
+ * Local API Payload et API Sentry. Règle du chantier : chaque lecteur attrape
+ * TOUT et dégrade en `{ state: 'na' }` — le RSC appelant ne plante jamais.
+ * Les dérivations pures (états, seuils, bornes) vivent dans `derive.ts` ; le
+ * rendu dans `Dashboard.tsx` / `DashboardFooter.tsx`.
  *
- * NB requêtes commandes : `orders.status` est indexé (design v2 §6, migration
- * `20260717_150000_orders_status_index`) — PAS d'index sur `orders.paid_at`
- * (filtre CA du mois, 3.5) : ce tri-là scanne encore la table, non bloquant à
- * la volumétrie attendue.
+ * NB requêtes commandes : `orders.status` est indexé (migration
+ * `20260717_150000_orders_status_index`).
  */
-
-const DAY_MS = 86_400_000
 
 /* ────────────────────────── Commandes à traiter (3.2) ────────────────────────── */
 
@@ -131,151 +122,6 @@ export async function readLowStock(payload: Payload): Promise<LowStockData> {
   }
 }
 
-/* ────────────────────────── Remboursements (3.4) ────────────────────────── */
-
-export interface RefundRow {
-  id: number
-  number: string
-  email: string
-  totalTTC: number
-  createdAt: string
-}
-
-export type RefundsData = { state: 'ok'; refunds: RefundRow[] } | { state: 'na' }
-
-/**
- * Commandes `refunded`, plus récentes d'abord. Pas de `refundedAt` ni de
- * montant remboursé dans le modèle (remboursement partiel non modélisé,
- * demande au lot 2 — design v2 §6) : la liste est triée par `createdAt`.
- */
-export async function readRefunds(payload: Payload): Promise<RefundsData> {
-  try {
-    const { docs } = await payload.find({
-      collection: 'orders',
-      where: { status: { equals: 'refunded' } },
-      sort: '-createdAt',
-      depth: 0,
-      limit: 0,
-      overrideAccess: true,
-    })
-    return {
-      state: 'ok',
-      refunds: docs.map((doc) => ({
-        id: doc.id,
-        number: doc.number ?? `#${doc.id}`,
-        email: doc.email,
-        totalTTC: doc.totalTTC,
-        createdAt: doc.createdAt,
-      })),
-    }
-  } catch {
-    return { state: 'na' }
-  }
-}
-
-/* ────────────────────────── Ventes du mois (3.5) ────────────────────────── */
-
-export type MonthSalesData =
-  | { state: 'ok'; totalTTC: number; count: number; monthLabel: string; start: Date; end: Date }
-  | { state: 'na'; monthLabel: string }
-
-/**
- * CA BRUT du mois civil de Paris (`paidAt` dans les bornes) + nombre de
- * commandes. `cancelled` est exclu (spec §3.5) et `failed` AUSSI : une
- * commande `failed` (paiement différé refusé) n'a jamais été encaissée — la
- * compter fausserait le chiffre. `refunded` reste inclus : CA brut,
- * « remboursements non déduits » affiché tant que la décision produit
- * (design v2 §6) n'est pas tranchée.
- */
-export async function readMonthSales(payload: Payload, now: Date): Promise<MonthSalesData> {
-  const { start, end, label } = parisMonthBounds(now)
-  try {
-    const { docs } = await payload.find({
-      collection: 'orders',
-      where: {
-        and: [
-          { paidAt: { greater_than_equal: start.toISOString() } },
-          { paidAt: { less_than: end.toISOString() } },
-          { status: { not_in: ['cancelled', 'failed'] } },
-        ],
-      },
-      depth: 0,
-      limit: 0,
-      overrideAccess: true,
-    })
-    return {
-      state: 'ok',
-      totalTTC: sumSalesTTC(docs),
-      count: docs.length,
-      monthLabel: label,
-      start,
-      end,
-    }
-  } catch {
-    return { state: 'na', monthLabel: label }
-  }
-}
-
-/* ────────────────────────── Dons (3.6) ────────────────────────── */
-
-export interface DonationsData {
-  /** Dérivé du préfixe de `STRIPE_SECRET_KEY` — jamais la valeur. */
-  mode: 'live' | 'test' | 'absent'
-  /** `null` = jauge non calculable (`getCampaign2026()` absorbe toute erreur). */
-  gauge: Campaign2026 | null
-  /** 5 derniers dons (montant + date, JAMAIS nom/email) — `null` = liste illisible, distinct de « aucun don ». */
-  recent: { amountEur: number; createdAt: string }[] | null
-  /** Remboursements ≤ 7 jours — `null` = illisible. */
-  refunds7d: number | null
-  lastDonationAt: string | null
-}
-
-/**
- * Panneau dons, repris du design v1 §3.2 : jauge via `getCampaign2026()`,
- * derniers dons via `charges.list` (PAS la Search API — latence d'indexation
- * incompatible avec « récent »), remboursements via `refunds.list`.
- */
-export async function readDonations(now: Date): Promise<DonationsData> {
-  const key = process.env.STRIPE_SECRET_KEY ?? ''
-  const mode: DonationsData['mode'] = key.startsWith('sk_live_')
-    ? 'live'
-    : key.startsWith('sk_test_')
-      ? 'test'
-      : 'absent'
-
-  if (mode === 'absent' || !donationsEnabled()) {
-    return { mode: 'absent', gauge: null, recent: null, refunds7d: null, lastDonationAt: null }
-  }
-
-  const gauge = await getCampaign2026()
-
-  let recent: DonationsData['recent'] = null
-  let lastDonationAt: string | null = null
-  try {
-    const { data } = await getStripe().charges.list({ limit: 10 })
-    recent = data
-      .filter((charge) => charge.metadata?.campaign === CAMPAIGN_KEY)
-      .slice(0, 5)
-      .map((charge) => ({
-        amountEur: charge.amount / 100,
-        createdAt: new Date(charge.created * 1000).toISOString(),
-      }))
-    lastDonationAt = recent[0]?.createdAt ?? null
-  } catch {
-    recent = null
-  }
-
-  let refunds7d: number | null = null
-  try {
-    const { data } = await getStripe().refunds.list({ limit: 10 })
-    refunds7d = data.filter((refund) => now.getTime() - refund.created * 1000 <= 7 * DAY_MS).length
-  } catch {
-    refunds7d = null
-  }
-
-  return { mode, gauge, recent, refunds7d, lastDonationAt }
-}
-
 /* ────────────────────────── Import routeur (3.7) ────────────────────────── */
 
 export interface LastImportRun {
@@ -315,72 +161,6 @@ export async function readLastImportRun(payload: Payload): Promise<LastImportRun
             report.manualBooksNotInFile.length
           : null,
       },
-    }
-  } catch {
-    return { state: 'na' }
-  }
-}
-
-/* ────────────────────────── Travail éditorial (3.8) ────────────────────────── */
-
-export type EditorialCountsData =
-  | { state: 'ok'; aParaitre: number; sansCouverture: number; sansIsbn: number; sansPrix: number }
-  | { state: 'na' }
-
-/** 4 compteurs de complétude catalogue — chacun a son lien profond vers la liste filtrée côté rendu. */
-export async function readEditorialCounts(payload: Payload): Promise<EditorialCountsData> {
-  try {
-    const [aParaitre, sansCouverture, sansIsbn, sansPrix] = await Promise.all([
-      payload.count({ collection: 'books', where: { aParaitre: { equals: true } }, overrideAccess: true }),
-      payload.count({ collection: 'books', where: { cover: { exists: false } }, overrideAccess: true }),
-      payload.count({
-        collection: 'books',
-        where: { or: [{ isbn: { exists: false } }, { isbn: { equals: '' } }] },
-        overrideAccess: true,
-      }),
-      payload.count({ collection: 'books', where: { prix: { exists: false } }, overrideAccess: true }),
-    ])
-    return {
-      state: 'ok',
-      aParaitre: aParaitre.totalDocs,
-      sansCouverture: sansCouverture.totalDocs,
-      sansIsbn: sansIsbn.totalDocs,
-      sansPrix: sansPrix.totalDocs,
-    }
-  } catch {
-    return { state: 'na' }
-  }
-}
-
-/* ────────────────────────── Quoi de neuf (3.9) ────────────────────────── */
-
-export interface RecentBookRow {
-  id: number
-  title: string
-  edition: string | null
-  updatedAt: string
-}
-
-export type RecentBooksData = { state: 'ok'; books: RecentBookRow[] } | { state: 'na' }
-
-/** 5 dernières fiches modifiées (`-updatedAt`). */
-export async function readRecentBooks(payload: Payload): Promise<RecentBooksData> {
-  try {
-    const { docs } = await payload.find({
-      collection: 'books',
-      sort: '-updatedAt',
-      depth: 0,
-      limit: 5,
-      overrideAccess: true,
-    })
-    return {
-      state: 'ok',
-      books: docs.map((doc) => ({
-        id: doc.id,
-        title: doc.title,
-        edition: doc.edition ?? null,
-        updatedAt: doc.updatedAt,
-      })),
     }
   } catch {
     return { state: 'na' }

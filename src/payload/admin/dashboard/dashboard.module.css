@@ -1,7 +1,7 @@
 /*
- * Dashboard /admin v2 (`_specs/dashboard-admin/`) — feuille de style unique
- * des deux slots (`Dashboard.tsx` / `DashboardFooter.tsx`) et des îlots
- * client. Couleurs : variables de thème Payload (clair/sombre suivis
+ * Dashboard /admin v3 (home = zones A/B/C, issue #23) — feuille de style
+ * unique des deux slots (`Dashboard.tsx` / `DashboardFooter.tsx`) et des
+ * îlots client. Couleurs : variables de thème Payload (clair/sombre suivis
  * automatiquement) avec les hex de la maquette en secours. Pas de Tailwind
  * ici : l'admin n'est pas compilé par le JIT du site.
  */
@@ -24,6 +24,23 @@
   .grid2 {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Zones (home v3 : A « File du jour » / B « Alertes » / C « Raccourcis ») ── */
+
+.zone {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.zoneTitle {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--theme-elevation-500, #6b675e);
 }
 
 .panel {
@@ -228,85 +245,6 @@
   white-space: nowrap;
 }
 
-.miniTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.miniTable td {
-  padding: 4.5px 0;
-  border-bottom: 1px solid var(--theme-border-color, #e4e1d8);
-}
-
-.miniTable tr:last-child td {
-  border-bottom: none;
-}
-
-.miniTable td:last-child {
-  text-align: right;
-  color: var(--theme-elevation-500, #6b675e);
-}
-
-/* ── Jauge dons (3.6) ── */
-
-.gauge {
-  height: 10px;
-  border-radius: 6px;
-  background: var(--theme-elevation-50, #f1efe9);
-  border: 1px solid var(--theme-border-color, #e4e1d8);
-  overflow: hidden;
-}
-
-.gaugeFill {
-  display: block;
-  height: 100%;
-  background: var(--theme-success-500, #1e7d46);
-  border-radius: 6px;
-}
-
-/* ── Tuiles travail éditorial (3.8) ── */
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 10px;
-}
-
-.tile {
-  background: var(--theme-elevation-50, #f1efe9);
-  border: 1px solid var(--theme-border-color, #e4e1d8);
-  border-radius: 6px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.tileWarn {
-  border-color: var(--theme-warning-500, #b26b00);
-  background: var(--theme-warning-50, #faf0dc);
-}
-
-.tileN {
-  font-size: 22px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.tileWarn .tileN {
-  color: var(--theme-warning-600, #b26b00);
-}
-
-.tileLbl {
-  font-size: 12px;
-  color: var(--theme-elevation-500, #6b675e);
-}
-
-.tile a {
-  font-size: 12px;
-}
-
 /* ── Notes, actions, légende ── */
 
 .noteChip {
@@ -341,6 +279,42 @@
   gap: 14px;
   font-size: 13px;
   margin-top: auto;
+}
+
+/* ── Raccourcis (zone C) ── */
+
+.shortcutLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.shortcutLink {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: var(--theme-elevation-50, #f1efe9);
+}
+
+.shortcutHeading {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.secondaryLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 12px;
+  color: var(--theme-elevation-500, #6b675e);
 }
 
 .legend {
