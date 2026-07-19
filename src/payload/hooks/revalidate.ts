@@ -77,9 +77,22 @@ function revalidateHome(): void {
  * `payload run` hors requête HTTP (et lèverait l'invariant Next
  * « static generation store missing », faute de contexte de rendu).
  */
-export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = ({ req }) => {
+export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = ({ doc, req }) => {
   if (req.context?.disableRevalidate) return
   revalidateCatalogueRoutes()
+  // Purge LITTÉRALE de la fiche modifiée (books uniquement — les autres
+  // collections n'ont pas de page propre) : constat live (boucle 3 de
+  // l'audit), la purge par motif `[edition]/[slug]` ne débloque pas les
+  // entrées ISR sur Vercel, seuls les chemins littéraux sont fiables.
+  // L'éditeur doit voir SA fiche à jour immédiatement ; les fiches voisines
+  // (bandeaux « même libellé ») suivent à l'expiration ISR (1 h).
+  if (typeof doc?.slug === 'string') {
+    if (typeof doc.edition === 'string') {
+      revalidatePath(`/catalogue/${doc.edition}/${doc.slug}`)
+    } else if (doc.origin === 'boutique') {
+      revalidatePath(`/boutique/${doc.slug}`)
+    }
+  }
 }
 
 export const revalidateCatalogueAfterDelete: CollectionAfterDeleteHook = ({ req }) => {
