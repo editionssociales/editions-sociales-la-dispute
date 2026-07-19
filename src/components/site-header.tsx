@@ -30,24 +30,27 @@ import { CartNavCell } from "./cart/cart-badge";
  * par `useCompactOnScroll`, ~200ms) — comportement scroll inchangé, mais
  * cantonné au desktop.
  *
- * Desktop (lg+) : 6 colonnes × 2 rangées — Accueil | maisons | « Nous
- * soutenir » | nav 2×2 | panier.
- * Mobile : 2 rangées — [Accueil icône | monogrammes maisons | « Nous
- * soutenir » | panier icône] puis [Catalogue | Agenda]. La Geme et À paraître
- * n'ont pas de cellule téléphone (elles restent accessibles par la mosaïque
- * de thèmes de /catalogue et la mosaïque pop du pied de page) — le
- * quadrillage tient au premier paint sans pousser le contenu hors écran.
+ * Desktop (lg+) : 5 colonnes × 2 rangées — maisons | « Nous soutenir » |
+ * nav 2×2 | panier. L'Accueil n'est plus une colonne : c'est un petit carré
+ * icône centré sur la séparation ink entre les deux cellules maisons.
+ * Mobile : 2 rangées — [LD | Accueil icône | ES | « Nous soutenir » | panier
+ * icône] puis [Catalogue | Agenda]. La Geme et À paraître n'ont pas de
+ * cellule téléphone (elles restent accessibles par la mosaïque de thèmes de
+ * /catalogue et la mosaïque pop du pied de page) — le quadrillage tient au
+ * premier paint sans pousser le contenu hors écran.
  *
- * Les cellules « Accueil » et « Panier » (desktop et mobile) sont permanentes.
- * `useSearchParams` (états Geme / À paraître) est confiné derrière
- * `<Suspense>` — sans ça, le layout racine dynamiserait tout le site.
+ * La cellule « Panier » (desktop et mobile) et le carré « Accueil » (entre
+ * LD/ES) sont permanents. `useSearchParams` (états Geme / À paraître) est
+ * confiné derrière `<Suspense>` — sans ça, le layout racine dynamiserait
+ * tout le site.
  *
  * Sections et maisons viennent du modèle de données `lib/nav` (label, href,
  * matcher d'activité) ; ce composant n'ajoute que l'apparence. Les cellules
- * (accueil, maisons, sections, panier, CTA) sont des `<li>` d'un `<ul>` —
+ * (maisons, accueil, sections, panier, CTA) sont des `<li>` d'un `<ul>` —
  * parité avec le footer pour une annonce cohérente en lecteur d'écran ;
  * `display: contents` les rend transparentes à la grille CSS (aucun
- * changement visuel).
+ * changement visuel), sauf le groupe maisons desktop qui reste un vrai
+ * item de grille (pour ancrer le carré Accueil sur la séparation).
  */
 
 const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
@@ -78,21 +81,20 @@ const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string }> = {
 const MOBILE_SECTION_IDS: NavSectionId[] = ["catalogue", "agenda"];
 
 /** Placement en grille desktop (littéral : le JIT ne compile pas `col-start-${n}`). */
-const HOUSE_ROW = ["row-start-1", "row-start-2"];
 const SECTION_PLACEMENT: Record<NavSectionId, string> = {
-  catalogue: "col-start-4 row-start-1",
-  geme: "col-start-5 row-start-1",
-  "a-paraitre": "col-start-4 row-start-2",
-  agenda: "col-start-5 row-start-2",
+  catalogue: "col-start-3 row-start-1",
+  geme: "col-start-4 row-start-1",
+  "a-paraitre": "col-start-3 row-start-2",
+  agenda: "col-start-4 row-start-2",
 };
 
 /**
  * Grille desktop, littérale (jamais de gabarit assemblé par concaténation,
- * même contrat que `maisonCellClass` ci-dessous) — 6 colonnes, Accueil en
- * première, « Panier » en dernière.
+ * même contrat que `maisonCellClass` ci-dessous) — 5 colonnes, « Panier » en
+ * dernière ; Accueil est le carré sur la séparation des maisons (col 1).
  */
 const DESKTOP_GRID =
-  "hidden grid-cols-[0.7fr_1.3fr_1fr_0.9fr_0.9fr_0.7fr] grid-rows-2 gap-[2px] p-[2px] lg:grid";
+  "hidden grid-cols-[1.3fr_1fr_0.9fr_0.9fr_0.7fr] grid-rows-2 gap-[2px] p-[2px] lg:grid";
 
 // transition-all : la couleur (survol/actif) ET la taille (padding/police, au
 // compactage) s'animent sur la même durée.
@@ -141,6 +143,61 @@ function soutenirClass(placement: string) {
 }
 
 /**
+ * Pictogramme maison (angles droits, R8) — seul rendu de la cellule Accueil ;
+ * le libellé reste porté par l'`aria-label`.
+ */
+function HomeGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="M2 11 L12 2 L22 11 V22 H14 V14 H10 V22 H2 Z" />
+    </svg>
+  );
+}
+
+/**
+ * Carré « Accueil » (icône seule) — entre LD et ES. Hover ink↔paper (identité
+ * de marque, pas une section pop R2) ; actif = ink plein + `aria-current`.
+ * `placement` fixe la taille / la position (flex mobile, absolute desktop sur
+ * la séparation des maisons).
+ */
+function HomeNavCell({ placement, active }: { placement: string; active: boolean }) {
+  const tone = active
+    ? "bg-ink text-paper hover:bg-paper hover:text-ink"
+    : "bg-paper text-ink hover:bg-ink hover:text-paper";
+  return (
+    <Link
+      href={NAV_HOME.href}
+      aria-label={NAV_HOME.label}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center justify-center border-2 border-ink ${tone} ${CELL_TRANSITION} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${placement}`}
+    >
+      <HomeGlyph />
+    </Link>
+  );
+}
+
+/** Monogramme maison (rangée mobile) — sigle + accent R3. */
+function MaisonMonogramLink({ href, label }: { href: string; label: string }) {
+  const m = MAISON_MONOGRAM[href];
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className={`flex min-h-11 w-14 items-center justify-center font-sans text-[15px] font-black italic uppercase leading-none ${m?.cellClass ?? "bg-paper text-ink hover:bg-ink hover:text-paper"} ${CELL_TRANSITION} ${FOCUS_RING_DARK}`}
+    >
+      <span aria-hidden="true">{m?.sigle ?? label.slice(0, 2)}</span>
+    </Link>
+  );
+}
+
+/**
  * Cellule CTA « Nous soutenir ». Deux calques SUPERPOSÉS dans la même cellule de
  * grille ([grid-area:1/1]), chacun figé dans sa mise en page — on ne redimensionne
  * jamais un libellé unique (dont le passage 2 lignes → 1 ligne « sauterait ») :
@@ -161,71 +218,6 @@ function soutenirClass(placement: string) {
  * nom accessible unique et stable vient de l'`aria-label` du lien. `placement`
  * place la cellule.
  */
-/**
- * Pictogramme maison (angles droits, R8) — rangée mobile uniquement ; le
- * libellé « Accueil » reste porté par l'`aria-label` / le rendu desktop.
- */
-function HomeGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path d="M2 11 L12 2 L22 11 V22 H14 V14 H10 V22 H2 Z" />
-    </svg>
-  );
-}
-
-/**
- * Cellule « Accueil » — miroir structurel du panier (colonne étroite, span 2
- * rangées desktop ; pictogramme sous `lg`). Hover ink↔paper (identité de
- * marque, pas une section pop R2) ; actif = ink plein + `aria-current`.
- */
-function HomeNavCell({
-  compact,
-  placement,
-  active,
-  icon = false,
-}: {
-  compact: boolean;
-  placement: string;
-  active: boolean;
-  /** Rendu pictogramme (rangée mobile) au lieu du libellé texte. */
-  icon?: boolean;
-}) {
-  const tone = active
-    ? "bg-ink text-paper hover:bg-paper hover:text-ink"
-    : "bg-paper text-ink hover:bg-ink hover:text-paper";
-
-  if (icon) {
-    return (
-      <Link
-        href={NAV_HOME.href}
-        aria-label={NAV_HOME.label}
-        aria-current={active ? "page" : undefined}
-        className={`flex min-h-11 items-center justify-center ${tone} ${CELL_TRANSITION} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${placement}`}
-      >
-        <HomeGlyph />
-      </Link>
-    );
-  }
-
-  const lg = compact ? "lg:min-h-0 lg:py-0 lg:text-[12px]" : "lg:min-h-0 lg:py-0 lg:text-[14px]";
-  return (
-    <Link
-      href={NAV_HOME.href}
-      aria-current={active ? "page" : undefined}
-      className={`flex min-h-11 items-center justify-center px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] ${tone} ${CELL_TRANSITION} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${lg} ${placement}`}
-    >
-      {NAV_HOME.label}
-    </Link>
-  );
-}
-
 function SoutenirCell({ compact, placement }: { compact: boolean; placement: string }) {
   return (
     <Link
@@ -336,28 +328,19 @@ function SiteHeaderChrome({
             fixes sous lg (compact par défaut, chantier 3 §3), cibles ≥ 44px (R7). */}
         <div className="flex flex-col gap-[2px] p-[2px] lg:hidden">
           <ul className="flex items-stretch gap-[2px]">
+            {/* LD | Accueil | ES — Accueil est le carré sur la séparation. */}
+            <li className="contents">
+              <MaisonMonogramLink href={NAV_HOUSES[0].href} label={NAV_HOUSES[0].label} />
+            </li>
             <li className="contents">
               <HomeNavCell
-                compact={compact}
                 active={homeActive}
-                icon
-                placement="w-14"
+                placement="h-11 w-11 shrink-0 self-center"
               />
             </li>
-            {NAV_HOUSES.map((house) => {
-              const m = MAISON_MONOGRAM[house.href];
-              return (
-                <li key={house.href} className="contents">
-                  <Link
-                    href={house.href}
-                    aria-label={house.label}
-                    className={`flex min-h-11 w-14 items-center justify-center font-sans text-[15px] font-black italic uppercase leading-none ${m?.cellClass ?? "bg-paper text-ink hover:bg-ink hover:text-paper"} ${CELL_TRANSITION} ${FOCUS_RING_DARK}`}
-                  >
-                    <span aria-hidden="true">{m?.sigle ?? house.label.slice(0, 2)}</span>
-                  </Link>
-                </li>
-              );
-            })}
+            <li className="contents">
+              <MaisonMonogramLink href={NAV_HOUSES[1].href} label={NAV_HOUSES[1].label} />
+            </li>
             <li className="contents">
               <SoutenirCell compact={compact} placement="min-w-0 flex-1 py-3" />
             </li>
@@ -382,30 +365,25 @@ function SiteHeaderChrome({
           </ul>
         </div>
 
-        {/* Desktop (lg+) : Accueil | maisons | « Nous soutenir » | nav 2×2 | panier. */}
+        {/* Desktop (lg+) : maisons (+ Accueil sur la séparation) | « Nous soutenir » | nav 2×2 | panier. */}
         <ul className={DESKTOP_GRID}>
-          <li className="contents">
+          {/* Groupe maisons : vrai item de grille (pas `contents`) pour ancrer
+              le carré Accueil au centre de la séparation ink 2px. */}
+          <li className="relative col-start-1 row-span-2 row-start-1 grid grid-rows-2 gap-[2px]">
+            {NAV_HOUSES.map((house) => (
+              <Link key={house.href} href={house.href} className={maisonCellClass(compact)}>
+                {house.label}
+              </Link>
+            ))}
             <HomeNavCell
-              compact={compact}
               active={homeActive}
-              placement="col-start-1 row-span-2 row-start-1"
+              placement="absolute left-1/2 top-1/2 z-10 h-11 w-11 -translate-x-1/2 -translate-y-1/2"
             />
           </li>
 
-          {NAV_HOUSES.map((house, i) => (
-            <li key={house.href} className="contents">
-              <Link
-                href={house.href}
-                className={`col-start-2 ${HOUSE_ROW[i]} ${maisonCellClass(compact)}`}
-              >
-                {house.label}
-              </Link>
-            </li>
-          ))}
-
           {/* Cellule centrale (vide dans la maquette) : CTA « Nous soutenir ». */}
           <li className="contents">
-            <SoutenirCell compact={compact} placement="col-start-3 row-span-2 row-start-1" />
+            <SoutenirCell compact={compact} placement="col-start-2 row-span-2 row-start-1" />
           </li>
 
           {NAV_SECTIONS.map((section) => (
@@ -421,7 +399,7 @@ function SiteHeaderChrome({
           ))}
 
           <li className="contents">
-            <CartNavCell compact={compact} placement="col-start-6 row-span-2 row-start-1" />
+            <CartNavCell compact={compact} placement="col-start-5 row-span-2 row-start-1" />
           </li>
         </ul>
       </nav>
