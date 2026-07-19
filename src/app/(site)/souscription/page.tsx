@@ -15,7 +15,7 @@ import { Reveal } from "@/components/reveal";
 import { Eyebrow } from "@/components/eyebrow";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
 import { CAMPAIGN_2024 } from "@/lib/campaign";
-import type { Accent } from "@/lib/format";
+import { formatInt, type Accent } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
 import { FOCUS_RING_DARK, FOCUS_RING_DARK_OUTER, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
@@ -39,6 +39,13 @@ const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
 /** Microcopie honnête (R7) : le paiement n'ouvre qu'à cette date, jamais un CTA muet. */
 const OPENING_MICROCOPY = "Ouverture le 15 août";
 
+/**
+ * Vidéo de campagne — le bloc pleine largeur sous le héros de la maquette
+ * 2026-07. Aucune vidéo livrée à ce jour (E10) : renseigner ici l'URL d'embed
+ * à réception ; le bloc reste masqué tant que `null`.
+ */
+const CAMPAIGN_VIDEO_URL: string | null = null;
+
 export const metadata: Metadata = {
   title: "Souscription",
   description:
@@ -55,12 +62,21 @@ export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Po
 /* Faits + dérivations (collecte, paliers atteints, % de l'objectif,   */
 /* plafond de jauge, tuiles de stats) : voir lib/campaign.             */
 /*                                                                     */
+/* Disposition (maquette « essai page souscription », 2026-07) :       */
+/* héros-bandeau (pitch 2026 + CTA montant libre + étagère), vidéo     */
+/* pleine largeur (masquée tant que CAMPAIGN_VIDEO_URL est null),      */
+/* jauge « collecte en direct » + objectif pleine largeur, puis corps  */
+/* en deux colonnes — récit à gauche (rétrospective 2024 en preuve     */
+/* sociale, chantiers, perspectives), contreparties empilées à droite  */
+/* (`#paliers`, premières dans le DOM : sur mobile elles suivent la    */
+/* jauge). Catalogue, FAQ et CTA final restent en pleine largeur.      */
+/*                                                                     */
 /* Héros, chantiers, contreparties, mécènes et FAQ sont éditables dans */
 /* /admin (global `page-souscription`, spec « éditeur de contenus ») : */
 /* lus via `getPageSouscription` — bloc vide = contenu par défaut de   */
 /* `lib/site-content-core.ts` (l'ex-contenu en dur de cette page,      */
-/* extrait verbatim, iso-rendu). `herosTitre`/`herosIntro` décrivent   */
-/* désormais la RÉTROSPECTIVE 2024 (3e section, preuve sociale) — le   */
+/* extrait verbatim). `herosTitre`/`herosIntro` décrivent la           */
+/* RÉTROSPECTIVE 2024 (tête de la colonne récit, preuve sociale) — le  */
 /* pitch 2026 du héros (1re section) est éditorial figé, pas dans le   */
 /* CMS. Montant et intitulé des paliers restent dérivés de             */
 /* DONATION_TIERS (la table qui pilote Stripe) : la présentation est   */
@@ -329,11 +345,11 @@ export default async function SouscriptionPage() {
 
   return (
     <>
-      {/* Héros — l'ask 2026 au-dessus de la ligne de flottaison : pitch,
-          CTA immédiats, jauge vivante toujours visible. La rétrospective
-          2024 (preuve sociale) redescend en 3e section. */}
+      {/* Héros-bandeau — l'ask 2026 au-dessus de la ligne de flottaison :
+          pitch, CTA montant libre immédiat, étagère. La jauge vit désormais
+          dans sa propre section pleine largeur, juste en dessous. */}
       <section className="bg-ink text-paper">
-        <Container className="py-16 sm:py-24">
+        <Container className="py-16 sm:py-20">
           <div className="grid items-end gap-12 lg:grid-cols-[1fr_auto]">
             <div>
               <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
@@ -367,47 +383,6 @@ export default async function SouscriptionPage() {
               <div className="mt-8">
                 <FreeAmountForm enabled={enabled} idSuffix="hero" />
               </div>
-
-              {/* Jauge 2026 vivante — n'affiche que ce qu'une campagne en cours
-                  peut honnêtement montrer (collecté net + contributeurs),
-                  jamais les 4 tuiles `stats` du gabarit 2024 rétrospectif
-                  (piège documenté dans `lib/donation-tiers.ts`/`lib/donations.ts`).
-                  Fenêtre de fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
-              <Reveal delay={120} className="mt-8 max-w-xl">
-                <div className="border-2 border-paper/30 bg-ink p-6">
-                  <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
-                    La collecte en direct
-                  </p>
-                  {liveCampaign.collected > 0 ? (
-                    <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-paper/85">
-                      Déjà
-                      <CountUp
-                        value={liveCampaign.collected}
-                        suffix=" €"
-                        className="font-sans text-lg font-black italic text-paper"
-                      />
-                      réunis auprès de
-                      <CountUp
-                        value={liveCampaign.contributors}
-                        className="font-sans text-lg font-black italic text-paper"
-                      />
-                      contributeur·rices.
-                    </p>
-                  ) : (
-                    <p className="mt-3 max-w-md text-[15px] leading-relaxed text-paper/85">
-                      Campagne tout juste lancée — soyez les premier·ères à
-                      contribuer.
-                    </p>
-                  )}
-                  <Gauge
-                    tone="dark"
-                    className="mt-5"
-                    value={liveCampaign.gauge.value}
-                    max={liveCampaign.gauge.max}
-                    markers={liveCampaign.gauge.markers}
-                  />
-                </div>
-              </Reveal>
             </div>
             <HeroShelf books={shelfBooks} />
           </div>
@@ -415,249 +390,328 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
-      {/* Contreparties */}
-      <section id="paliers" className="border-b-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
+      {/* Vidéo de campagne — le bloc pleine largeur de la maquette ; absent
+          tant qu'aucune vidéo n'est livrée (E10). */}
+      {CAMPAIGN_VIDEO_URL && (
+        <section className="border-b-2 border-ink bg-paper">
+          <Container className="py-12 sm:py-16">
+            <Reveal>
+              <div className="border-2 border-ink bg-ink">
+                <iframe
+                  src={CAMPAIGN_VIDEO_URL}
+                  title="La vidéo de la souscription"
+                  className="aspect-video w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+            </Reveal>
+          </Container>
+        </section>
+      )}
+
+      {/* La collecte en direct — jauge 2026 vivante + objectif, pleine
+          largeur (maquette : barre + « OBJECTIF 50 000 € »). N'affiche que ce
+          qu'une campagne en cours peut honnêtement montrer (collecté net +
+          contributeurs), jamais les 4 tuiles `stats` du gabarit 2024
+          rétrospectif (piège documenté dans `lib/donation-tiers.ts`/
+          `lib/donations.ts`). Fenêtre de fraîcheur ~1–3 min, voir
+          `src/app/CLAUDE.md`. */}
+      <section className="border-b-2 border-ink bg-paper">
+        <Container className="py-12 sm:py-16">
           <Reveal>
-            <Eyebrow dot="bg-pop-pink">Les paliers</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
-              Choisissez votre contrepartie
-            </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
-              Les contreparties de notre campagne 2024, de retour pour la
-              souscription de lancement. Contributions directes, sans
-              intermédiaire — 100&nbsp;% pour la maison. Et bien sûr, notre
-              reconnaissance éternelle est comprise dans tous les paliers.
-            </p>
+            <div className="flex flex-col gap-[2px] bg-ink p-[2px] lg:flex-row">
+              <div className="flex-1 bg-paper p-6 sm:p-8">
+                <Eyebrow dot="bg-pop-yellow">La collecte en direct</Eyebrow>
+                {liveCampaign.collected > 0 ? (
+                  <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
+                    Déjà
+                    <CountUp
+                      value={liveCampaign.collected}
+                      suffix=" €"
+                      className="font-sans text-lg font-black italic text-ink"
+                    />
+                    réunis auprès de
+                    <CountUp
+                      value={liveCampaign.contributors}
+                      className="font-sans text-lg font-black italic text-ink"
+                    />
+                    contributeur·rices.
+                  </p>
+                ) : (
+                  <p className="mt-3 max-w-md text-[15px] leading-relaxed text-ink/70">
+                    Campagne tout juste lancée — soyez les premier·ères à
+                    contribuer.
+                  </p>
+                )}
+                <Gauge
+                  className="mt-6"
+                  value={liveCampaign.gauge.value}
+                  max={liveCampaign.gauge.max}
+                  markers={liveCampaign.gauge.markers}
+                />
+              </div>
+              <div className="flex flex-col justify-center bg-ink p-6 text-paper sm:p-8 lg:w-64">
+                <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
+                  Objectif
+                </p>
+                <p className="mt-2 font-sans text-4xl font-black italic">
+                  {formatInt(liveCampaign.goal)}&nbsp;€
+                </p>
+              </div>
+            </div>
           </Reveal>
-          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-4">
-            {content.contreparties.map((p, i) => {
-              // Paliers de don : les 4 accents de marque, jamais le cycle pop
-              // (R2/R3 — README, chantier 1, point 3).
-              const accentBg = BG[ACCENTS[i % 4]];
-              return (
-                <Reveal key={p.tier.id} delay={(i % 4) * 90} className="h-full">
-                  <div className="relative flex h-full flex-col bg-paper">
-                    <div aria-hidden="true" className={`h-2 ${accentBg}`} />
-                    {p.populaire && (
-                      <span className="bg-ink px-3 py-1.5 text-center font-sans text-[10px] font-extrabold uppercase tracking-[.08em] text-pop-yellow">
-                        Le plus choisi en 2024
+        </Container>
+      </section>
+
+      {/* Corps en deux colonnes (maquette) : récit à gauche, contreparties
+          empilées à droite. La colonne des paliers est première dans le DOM —
+          sur mobile elle suit directement la jauge, comme avant. */}
+      <section className="border-b-2 border-ink bg-paper">
+        <Container className="py-16 sm:py-20">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+            {/* Colonne contreparties */}
+            <aside id="paliers" className="lg:col-start-2 lg:row-start-1">
+              <Reveal>
+                <Eyebrow dot="bg-pop-pink">Les paliers</Eyebrow>
+                <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+                  Choisissez votre contrepartie
+                </h2>
+                <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
+                  Les contreparties de notre campagne 2024, de retour pour la
+                  souscription de lancement. Contributions directes, sans
+                  intermédiaire — 100&nbsp;% pour la maison. Et bien sûr, notre
+                  reconnaissance éternelle est comprise dans tous les paliers.
+                </p>
+              </Reveal>
+              <FramedGrid className="mt-8 grid-cols-1">
+                {content.contreparties.map((p, i) => {
+                  // Paliers de don : les 4 accents de marque, jamais le cycle pop
+                  // (R2/R3 — README, chantier 1, point 3).
+                  const accentBg = BG[ACCENTS[i % 4]];
+                  return (
+                    <Reveal key={p.tier.id} className="h-full">
+                      <div className="relative flex h-full flex-col bg-paper">
+                        <div aria-hidden="true" className={`h-2 ${accentBg}`} />
+                        {p.populaire && (
+                          <span className="bg-ink px-3 py-1.5 text-center font-sans text-[10px] font-extrabold uppercase tracking-[.08em] text-pop-yellow">
+                            Le plus choisi en 2024
+                          </span>
+                        )}
+                        <div className="flex flex-1 flex-col p-6">
+                          <span className="font-sans text-4xl font-black italic text-ink">
+                            {p.tier.amount}&nbsp;€
+                          </span>
+                          <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
+                            {p.tier.title}
+                          </span>
+                          <ul className="mt-4 flex-1 space-y-2 text-sm text-ink/70">
+                            {p.items.map((item) => (
+                              <li key={item} className="flex gap-2.5">
+                                <span
+                                  className={`mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
+                                />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+                            {p.soutiens2024} soutiens en 2024
+                          </p>
+                          {enabled ? (
+                            <form
+                              action={createDonationCheckout}
+                              className="contents"
+                            >
+                              <input type="hidden" name="tierId" value={p.tier.id} />
+                              <SubmitButton
+                                tone="dark"
+                                pendingLabel="Redirection…"
+                                className={`mt-3 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
+                              >
+                                Contribuer
+                              </SubmitButton>
+                            </form>
+                          ) : (
+                            <div className="mt-3 flex flex-col items-start gap-1.5">
+                              <Button
+                                type="button"
+                                variant="solid"
+                                disabled
+                                aria-disabled="true"
+                                className="px-4 py-2.5 text-sm tracking-[.03em]"
+                              >
+                                Contribuer
+                              </Button>
+                              <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
+                                {OPENING_MICROCOPY}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Reveal>
+                  );
+                })}
+              </FramedGrid>
+              {/* Grands paliers : cartes inversées */}
+              <FramedGrid className="mt-[2px] grid-cols-1">
+                {content.mecenes.map((p) => (
+                  <Reveal key={p.tier.id} className="h-full">
+                    <div className="relative flex h-full flex-col overflow-hidden bg-ink p-8 text-paper">
+                      <div className="absolute inset-x-0 top-0 grid h-1.5 grid-cols-4" aria-hidden="true">
+                        {ACCENTS.map((a) => (
+                          <div key={a} className={BG[a]} />
+                        ))}
+                      </div>
+                      <span className="font-sans text-5xl font-black italic text-paper">
+                        {p.tier.amount.toLocaleString("fr-FR")}&nbsp;€
                       </span>
-                    )}
-                    <div className="flex flex-1 flex-col p-6">
-                      <span className="font-sans text-4xl font-black italic text-ink">
-                        {p.tier.amount}&nbsp;€
-                      </span>
-                      <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
+                      <span className="mt-1 font-sans text-lg font-extrabold uppercase tracking-[.02em] text-paper/90">
                         {p.tier.title}
                       </span>
-                      <ul className="mt-4 flex-1 space-y-2 text-sm text-ink/70">
-                        {p.items.map((item) => (
-                          <li key={item} className="flex gap-2.5">
-                            <span
-                              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
-                            />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+                      <p className="mt-3 flex-1 text-sm leading-relaxed text-paper/80">{p.desc}</p>
+                      <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60">
                         {p.soutiens2024} soutiens en 2024
                       </p>
                       {enabled ? (
-                        <form
-                          action={createDonationCheckout}
-                          className="contents"
-                        >
+                        <form action={createDonationCheckout}>
                           <input type="hidden" name="tierId" value={p.tier.id} />
+                          {/* Piège R12 : ce bouton était un <button type="button"> nu — dans
+                              un <form>, il ne soumettrait jamais sans ce passage en "submit"
+                              (`SubmitButton` le pose toujours). */}
                           <SubmitButton
-                            tone="dark"
+                            tone="light"
                             pendingLabel="Redirection…"
-                            className={`mt-3 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
+                            className={`mt-3 inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                           >
                             Contribuer
                           </SubmitButton>
                         </form>
                       ) : (
                         <div className="mt-3 flex flex-col items-start gap-1.5">
-                          <Button
+                          <button
                             type="button"
-                            variant="solid"
                             disabled
                             aria-disabled="true"
-                            className="px-4 py-2.5 text-sm tracking-[.03em]"
+                            className="inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             Contribuer
-                          </Button>
-                          <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
+                          </button>
+                          <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/60">
                             {OPENING_MICROCOPY}
                           </p>
                         </div>
                       )}
                     </div>
+                  </Reveal>
+                ))}
+              </FramedGrid>
+            </aside>
+
+            {/* Colonne récit : pourquoi donner */}
+            <div className="flex flex-col gap-14 lg:col-start-1 lg:row-start-1">
+              {/* Rétrospective 2024 — la preuve sociale en tête de récit
+                  (l'emplacement « messages de soutien » de la maquette :
+                  aucun verbatim n'existe, les faits 2024 tiennent ce rôle). */}
+              <div>
+                <Reveal>
+                  <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
+                  <h2 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink">
+                    {content.herosTitre}
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
+                    {content.herosIntro}
+                  </p>
+                </Reveal>
+                <FramedGrid className="mt-8 sm:grid-cols-2">
+                  {CAMPAIGN_2024.stats.map((s, i) => (
+                    <Reveal key={s.label} delay={(i % 2) * 120} className="h-full">
+                      <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
+                        <CountUp
+                          value={s.value}
+                          suffix={s.suffix}
+                          className="font-sans text-4xl font-black italic text-ink"
+                        />
+                        <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
+                      </div>
+                    </Reveal>
+                  ))}
+                </FramedGrid>
+                <Reveal delay={200} className="mt-8">
+                  <div className="border-2 border-ink bg-paper p-6">
+                    <Gauge
+                      value={CAMPAIGN_2024.gauge.value}
+                      max={CAMPAIGN_2024.gauge.max}
+                      markers={CAMPAIGN_2024.gauge.markers}
+                    />
                   </div>
                 </Reveal>
-              );
-            })}
-          </FramedGrid>
-          {/* Grands paliers : cartes inversées */}
-          <FramedGrid className="mt-[2px] md:grid-cols-2">
-            {content.mecenes.map((p, i) => (
-              <Reveal key={p.tier.id} delay={i * 120} className="h-full">
-                <div className="relative flex h-full flex-col overflow-hidden bg-ink p-8 text-paper">
-                  <div className="absolute inset-x-0 top-0 grid h-1.5 grid-cols-4" aria-hidden="true">
-                    {ACCENTS.map((a) => (
-                      <div key={a} className={BG[a]} />
-                    ))}
-                  </div>
-                  <span className="font-sans text-5xl font-black italic text-paper">
-                    {p.tier.amount.toLocaleString("fr-FR")}&nbsp;€
-                  </span>
-                  <span className="mt-1 font-sans text-lg font-extrabold uppercase tracking-[.02em] text-paper/90">
-                    {p.tier.title}
-                  </span>
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-paper/80">{p.desc}</p>
-                  <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60">
-                    {p.soutiens2024} soutiens en 2024
-                  </p>
-                  {enabled ? (
-                    <form action={createDonationCheckout}>
-                      <input type="hidden" name="tierId" value={p.tier.id} />
-                      {/* Piège R12 : ce bouton était un <button type="button"> nu — dans
-                          un <form>, il ne soumettrait jamais sans ce passage en "submit"
-                          (`SubmitButton` le pose toujours). */}
-                      <SubmitButton
-                        tone="light"
-                        pendingLabel="Redirection…"
-                        className={`mt-3 inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
-                      >
-                        Contribuer
-                      </SubmitButton>
-                    </form>
-                  ) : (
-                    <div className="mt-3 flex flex-col items-start gap-1.5">
-                      <button
-                        type="button"
-                        disabled
-                        aria-disabled="true"
-                        className="inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Contribuer
-                      </button>
-                      <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/60">
-                        {OPENING_MICROCOPY}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </Reveal>
-            ))}
-          </FramedGrid>
-        </Container>
-      </section>
+              </div>
 
-      {/* Rétrospective 2024 — preuve sociale, redescendue en 3e section
-          derrière l'ask 2026 et les paliers (README, chantier 1, point 1). */}
-      <section className="border-b-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
-            <h2 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              {content.herosTitre}
-            </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
-              {content.herosIntro}
-            </p>
-          </Reveal>
-          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-4">
-            {CAMPAIGN_2024.stats.map((s, i) => (
-              <Reveal key={s.label} delay={i * 120} className="h-full">
-                <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
-                  <CountUp
-                    value={s.value}
-                    suffix={s.suffix}
-                    className="font-sans text-4xl font-black italic text-ink sm:text-5xl"
-                  />
-                  <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
-                </div>
-              </Reveal>
-            ))}
-          </FramedGrid>
-          <Reveal delay={200} className="mt-12">
-            <div className="border-2 border-ink bg-paper p-6">
-              <Gauge
-                value={CAMPAIGN_2024.gauge.value}
-                max={CAMPAIGN_2024.gauge.max}
-                markers={CAMPAIGN_2024.gauge.markers}
-              />
-            </div>
-          </Reveal>
-        </Container>
-      </section>
-
-      {/* Les chantiers : où va votre argent */}
-      <section className="border-b-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <Eyebrow dot="bg-pop-orange">Où va votre argent</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
-              Cinq chantiers pour la suite
-            </h2>
-          </Reveal>
-          <FramedGrid className="mt-10 md:grid-cols-2 lg:grid-cols-6">
-            {content.chantiers.map((c, i) => (
-              <Reveal
-                key={c.titre}
-                delay={i * 100}
-                className={`h-full ${i < 3 ? "lg:col-span-2" : "lg:col-span-3"}`}
-              >
-                <div className="flex h-full flex-col bg-paper p-6">
-                  <span className={`font-sans text-3xl font-black italic ${TEXT[c.accent]}`}>
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <h3 className="mt-2 font-sans text-xl font-black italic text-ink">{c.titre}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink/70">{c.desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </FramedGrid>
-        </Container>
-      </section>
-
-      {/* Et après : les perspectives des deux maisons — la suite */}
-      <section className="border-b-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <Eyebrow dot="bg-pop-teal">Et après</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
-              Des projets, on en a plein
-            </h2>
-          </Reveal>
-          <FramedGrid className="mt-10 md:grid-cols-2">
-            {MAISONS.map((m, i) => (
-              <Reveal key={m.nom} delay={i * 120} className="h-full">
-                <div className="flex h-full flex-col bg-paper">
-                  <div aria-hidden="true" className={`h-2 ${BG[m.accent]}`} />
-                  <div className="flex flex-1 flex-col p-7">
-                    <h3 className={`font-sans text-2xl font-black italic ${TEXT[m.accent]}`}>
-                      {m.nom}
-                    </h3>
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/70">{m.desc}</p>
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      {m.chips.map((chip) => (
-                        <span
-                          key={chip}
-                          className="border border-ink px-3 py-1 font-sans text-xs font-bold uppercase tracking-[.03em] text-ink"
-                        >
-                          {chip}
+              {/* Les chantiers : où va votre argent */}
+              <div>
+                <Reveal>
+                  <Eyebrow dot="bg-pop-orange">Où va votre argent</Eyebrow>
+                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+                    Cinq chantiers pour la suite
+                  </h2>
+                </Reveal>
+                <FramedGrid className="mt-8 grid-cols-1">
+                  {content.chantiers.map((c, i) => (
+                    <Reveal key={c.titre} className="h-full">
+                      <div className="flex h-full gap-5 bg-paper p-6">
+                        <span className={`font-sans text-3xl font-black italic ${TEXT[c.accent]}`}>
+                          {String(i + 1).padStart(2, "0")}
                         </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </FramedGrid>
+                        <div>
+                          <h3 className="font-sans text-xl font-black italic text-ink">{c.titre}</h3>
+                          <p className="mt-2 text-sm leading-relaxed text-ink/70">{c.desc}</p>
+                        </div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </FramedGrid>
+              </div>
+
+              {/* Et après : les perspectives des deux maisons — la suite */}
+              <div>
+                <Reveal>
+                  <Eyebrow dot="bg-pop-teal">Et après</Eyebrow>
+                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+                    Des projets, on en a plein
+                  </h2>
+                </Reveal>
+                <FramedGrid className="mt-8 grid-cols-1">
+                  {MAISONS.map((m) => (
+                    <Reveal key={m.nom} className="h-full">
+                      <div className="flex h-full flex-col bg-paper">
+                        <div aria-hidden="true" className={`h-2 ${BG[m.accent]}`} />
+                        <div className="flex flex-1 flex-col p-7">
+                          <h3 className={`font-sans text-2xl font-black italic ${TEXT[m.accent]}`}>
+                            {m.nom}
+                          </h3>
+                          <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/70">{m.desc}</p>
+                          <div className="mt-5 flex flex-wrap gap-2">
+                            {m.chips.map((chip) => (
+                              <span
+                                key={chip}
+                                className="border border-ink px-3 py-1 font-sans text-xs font-bold uppercase tracking-[.03em] text-ink"
+                              >
+                                {chip}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </FramedGrid>
+              </div>
+            </div>
+          </div>
         </Container>
       </section>
 
