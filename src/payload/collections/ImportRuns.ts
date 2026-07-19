@@ -22,6 +22,7 @@ export const ImportRuns: CollectionConfig = {
     plural: 'Imports routeur',
   },
   admin: {
+    group: 'Boutique',
     defaultColumns: ['createdAt', 'nbLignes', 'nbMatchees'],
     description:
       "Historique des imports mensuels du fichier stock routeur — un " +
