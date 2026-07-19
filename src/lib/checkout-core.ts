@@ -224,24 +224,6 @@ export function validateCheckoutLines(
   return { ok: true, lines, subtotalCents, manifestOnly };
 }
 
-/* ------------------------------ méthode de port (snapshot Order) ------------------------------ */
-
-export type ShippingMethodLabel = "standard" | "reduit" | "offert";
-
-/**
- * Étiquette de méthode de port à snapshoter sur la commande (`Orders.ts:shippingMethod`)
- * — dérivée des mêmes règles que `computeShipping` (`shipping-core.ts`), dans
- * l'ordre où ce module les applique (coupon gratuit prime sur « manifeste »).
- */
-export function resolveShippingMethod(opts: {
-  manifestOnly: boolean;
-  freeShippingCoupon: boolean;
-}): ShippingMethodLabel {
-  if (opts.freeShippingCoupon) return "offert";
-  if (opts.manifestOnly) return "reduit";
-  return "standard";
-}
-
 /* ------------------------------ encodage compact des lignes (metadata Stripe) ------------------------------ */
 
 const LINE_SEP = ";";

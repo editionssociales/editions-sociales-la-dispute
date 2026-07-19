@@ -27,11 +27,13 @@ describe("computeCartQuote — aucun code promo", () => {
       shippingCents: 450,
       totalCents: 2450,
     });
+    expect(quote.shippingMethod).toBe("standard");
   });
 
-  it("panier « manifeste » : port réduit forfaitaire", () => {
+  it("panier « manifeste » : port réduit forfaitaire, méthode « réduit »", () => {
     const quote = computeCartQuote(input({ subtotalCents: 2000, manifestOnly: true }));
     expect(quote.shipping).toEqual({ ok: true, costCents: MANIFEST_SHIPPING_COST_CENTS });
+    expect(quote.shippingMethod).toBe("reduit");
   });
 });
 
@@ -57,24 +59,27 @@ describe("computeCartQuote — code promo fixed_cart", () => {
 describe("computeCartQuote — code promo free_shipping", () => {
   const promoEval: PromoEvalResult = { ok: true, type: "free_shipping" };
 
-  it("port gratuit si le sous-total atteint le plancher", () => {
+  it("port gratuit si le sous-total atteint le plancher → méthode « offert »", () => {
     const quote = computeCartQuote(input({ subtotalCents: FREE_SHIPPING_MIN_CART_CENTS, promoEval }));
     expect(quote.freeShippingCoupon).toBe(true);
     expect(quote.shipping).toEqual({ ok: true, costCents: 0 });
     expect(quote.totals.totalCents).toBe(FREE_SHIPPING_MIN_CART_CENTS);
+    expect(quote.shippingMethod).toBe("offert");
   });
 
-  it("sous le plancher : le coupon est reconnu mais le port reste payant (grille standard)", () => {
+  it("sous le plancher : le coupon est reconnu, le port reste payant (grille standard) et l'étiquette redevient « standard » — LA correction (l'ancien resolveShippingMethod aurait dit « offert »)", () => {
     const quote = computeCartQuote(input({ subtotalCents: 2000, promoEval }));
     expect(quote.freeShippingCoupon).toBe(true);
     expect(quote.shipping).toEqual({ ok: true, costCents: 450 });
+    expect(quote.shippingMethod).toBe("standard");
   });
 
-  it("prime toujours sur la règle « manifeste » (même ordre que shipping-core)", () => {
+  it("prime toujours sur la règle « manifeste » (même ordre que shipping-core) → méthode « offert »", () => {
     const quote = computeCartQuote(
       input({ subtotalCents: FREE_SHIPPING_MIN_CART_CENTS, manifestOnly: true, promoEval }),
     );
     expect(quote.shipping).toEqual({ ok: true, costCents: 0 });
+    expect(quote.shippingMethod).toBe("offert");
   });
 });
 

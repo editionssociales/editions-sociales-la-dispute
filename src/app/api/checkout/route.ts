@@ -2,12 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
-import {
-  encodeCheckoutLines,
-  parseCheckoutRequest,
-  resolveShippingMethod,
-  validateCheckoutLines,
-} from "@/lib/checkout-core";
+import { encodeCheckoutLines, parseCheckoutRequest, validateCheckoutLines } from "@/lib/checkout-core";
 import { computeCartQuote } from "@/lib/cart-quote";
 import { evaluatePromoCode } from "@/lib/promo-core";
 
@@ -62,7 +57,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const { shipping, totals, freeShippingCoupon } = computeCartQuote({
+  const { shipping, totals, shippingMethod } = computeCartQuote({
     subtotalCents: validation.subtotalCents,
     zone: parsed.zone,
     manifestOnly: validation.manifestOnly,
@@ -71,11 +66,6 @@ export async function POST(req: Request): Promise<Response> {
   if (!shipping.ok) {
     return Response.json({ error: shipping.message, reason: "shipping" }, { status: 422 });
   }
-
-  const shippingMethod = resolveShippingMethod({
-    manifestOnly: validation.manifestOnly,
-    freeShippingCoupon,
-  });
 
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ?? `https://${(await headers()).get("host")}`;

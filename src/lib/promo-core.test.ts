@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { evaluatePromoCode, normalizePromoCode, type PromoCodeLike } from "./promo-core";
+import { evaluatePromoCode, isPromoExpired, normalizePromoCode, type PromoCodeLike } from "./promo-core";
 
 describe("normalizePromoCode", () => {
   it("met en majuscules", () => {
@@ -26,6 +26,24 @@ const fixedCart = (over: Partial<PromoCodeLike> = {}): PromoCodeLike => ({
   expiresAt: null,
   active: true,
   ...over,
+});
+
+describe("isPromoExpired", () => {
+  it("expiresAt absent → jamais expiré", () => {
+    expect(isPromoExpired(undefined, NOW)).toBe(false);
+  });
+
+  it("expiresAt null → jamais expiré", () => {
+    expect(isPromoExpired(null, NOW)).toBe(false);
+  });
+
+  it("expire aujourd'hui (jour inclusif) → pas encore expiré", () => {
+    expect(isPromoExpired("2026-07-12", NOW)).toBe(false);
+  });
+
+  it("expiré hier → expiré", () => {
+    expect(isPromoExpired("2026-07-11", NOW)).toBe(true);
+  });
 });
 
 describe("evaluatePromoCode", () => {

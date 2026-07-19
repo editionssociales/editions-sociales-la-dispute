@@ -1,4 +1,5 @@
 import type { WorkOrdersData } from './data.ts'
+import { isPromoExpired } from '../../../lib/promo-core.ts'
 
 /**
  * Cœur pur du tableau de bord `/admin` (design v3 — home = zones A « File du
@@ -157,10 +158,7 @@ export function expiredActivePromos<T extends { active?: boolean | null; expires
   promos: T[],
   now: Date,
 ): T[] {
-  const today = now.toISOString().slice(0, 10)
-  return promos.filter(
-    (p) => p.active === true && typeof p.expiresAt === 'string' && p.expiresAt.slice(0, 10) < today,
-  )
+  return promos.filter((p) => p.active === true && isPromoExpired(p.expiresAt, now))
 }
 
 /* ────────────────────────── Observabilité (3.12) ────────────────────────── */

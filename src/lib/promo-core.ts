@@ -44,6 +44,15 @@ function toCents(euros: number): number {
 }
 
 /**
+ * LE prédicat d'expiration jour-INCLUSIF (un code expirant le 13/07 vaut
+ * toute la journée du 13/07, décision produit 17/07) — consommé par
+ * `evaluatePromoCode` ET par le dashboard (`expiredActivePromos`).
+ */
+export function isPromoExpired(expiresAt: string | null | undefined, now: Date): boolean {
+  return typeof expiresAt === "string" && expiresAt.slice(0, 10) < now.toISOString().slice(0, 10);
+}
+
+/**
  * Évalue un code promo contre le sous-total TTC du panier (en CENTIMES,
  * AVANT remise — le panier minimum d'un code se lit sur la valeur brute, pas
  * déjà réduite par lui-même). `now` est injectable pour les tests
@@ -70,7 +79,7 @@ export function evaluatePromoCode(
   if (!promo.active) {
     return { ok: false, reason: "inactive", message: "Ce code promo n’est plus actif." };
   }
-  if (promo.expiresAt && promo.expiresAt.slice(0, 10) < now.toISOString().slice(0, 10)) {
+  if (isPromoExpired(promo.expiresAt, now)) {
     return { ok: false, reason: "expired", message: "Ce code promo a expiré." };
   }
   if (promo.minCart != null && cartTotalCents < toCents(promo.minCart)) {

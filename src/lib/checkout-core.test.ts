@@ -3,7 +3,6 @@ import {
   decodeCheckoutLines,
   encodeCheckoutLines,
   parseCheckoutRequest,
-  resolveShippingMethod,
   validateCheckoutLine,
   validateCheckoutLines,
   type CheckoutBookLookup,
@@ -235,18 +234,6 @@ describe("validateCheckoutLines", () => {
     const result = validateCheckoutLines([{ id: 1, qty: 1 }, { id: 2, qty: 1 }], books, NOW);
     expect(result.ok).toBe(false);
     expect(!result.ok && result.refusals.map((r) => r.id)).toEqual([1, 2]);
-  });
-});
-
-describe("resolveShippingMethod", () => {
-  it("coupon gratuit prime sur manifeste", () => {
-    expect(resolveShippingMethod({ manifestOnly: true, freeShippingCoupon: true })).toBe("offert");
-  });
-  it("manifeste sans coupon → réduit", () => {
-    expect(resolveShippingMethod({ manifestOnly: true, freeShippingCoupon: false })).toBe("reduit");
-  });
-  it("ni l'un ni l'autre → standard", () => {
-    expect(resolveShippingMethod({ manifestOnly: false, freeShippingCoupon: false })).toBe("standard");
   });
 });
 
