@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/confidentialite" },
 };
 
-const H3_CLASS = "mt-6 font-sans text-lg font-black italic text-black";
+const H3_CLASS = "mt-6 font-sans text-lg font-black italic text-ink";
 
 export default async function ConfidentialitePage() {
   // Global `pages-legales` : onglet rempli = corps entier (chapeau compris)
@@ -22,7 +22,7 @@ export default async function ConfidentialitePage() {
   const { confidentialite } = await getPagesLegales();
   return (
     <>
-      <Container className="bg-white pb-16 pt-10 sm:pb-20 sm:pt-14">
+      <Container className="bg-paper pb-16 pt-10 sm:pb-20 sm:pt-14">
         <Breadcrumb
           trail={[{ label: "Accueil", href: "/" }, { label: "Confidentialité" }]}
         />
@@ -31,7 +31,7 @@ export default async function ConfidentialitePage() {
             <Eyebrow>
               Données personnelles
             </Eyebrow>
-            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
               Politique de confidentialité
             </h1>
             {!confidentialite && (

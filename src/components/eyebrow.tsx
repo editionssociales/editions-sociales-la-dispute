@@ -8,9 +8,9 @@ import type { ReactNode } from "react";
  * `className` (contrat des primitives partagées — la recette ne bouge qu'ici).
  */
 
-const PLAIN = "font-sans text-xs font-bold uppercase tracking-[.22em] text-black/70";
+const PLAIN = "font-sans text-xs font-bold uppercase tracking-[.22em] text-ink/70";
 const DOTTED =
-  "flex items-center gap-2 font-sans text-xs font-extrabold uppercase tracking-[.22em] text-black";
+  "flex items-center gap-2 font-sans text-xs font-extrabold uppercase tracking-[.22em] text-ink";
 
 export function Eyebrow({
   dot,

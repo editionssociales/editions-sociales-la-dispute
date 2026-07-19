@@ -54,21 +54,21 @@ export default async function MerciPage({
   const donation = await lookupDonation(sessionId);
 
   return (
-    <section className="bg-white">
+    <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
         <Eyebrow>Souscription 2026</Eyebrow>
         {donation ? (
           <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               {donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
             </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-black/70">
+            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
               {donation.pending ? (
                 "Votre paiement est en cours de confirmation — vous recevrez un reçu par email dès qu'il sera validé, sans action de votre part."
               ) : (
                 <>
                   Votre don de{" "}
-                  <strong className="font-bold text-black">
+                  <strong className="font-bold text-ink">
                     {donation.amount.toLocaleString("fr-FR")}&nbsp;€
                   </strong>{" "}
                   — {donation.tierTitle} — a bien été enregistré. Un reçu vous a été
@@ -79,10 +79,10 @@ export default async function MerciPage({
           </>
         ) : (
           <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               Merci pour votre soutien !
             </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-black/70">
+            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
               Votre contribution a bien été prise en compte. Si le paiement a
               abouti, un reçu vous a été envoyé par email.
             </p>

@@ -1,20 +1,21 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
-import { FOCUS_RING } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /**
  * Bouton CTA — recette couleur/bordure/hover/focus partagée par les
  * clusters de CTA du site. Le padding, le tracking et la taille de texte
  * varient d'un appelant à l'autre : ils passent par `className`, pas par
- * cette recette.
+ * cette recette. L'anneau de focus dépend du fond AU REPOS de chaque variante
+ * (R5) : SOLID démarre sur ink → anneau sombre (pop-yellow) ; OUTLINE démarre
+ * sur paper → anneau clair (ink).
  */
 
 const BASE =
-  "inline-flex items-center justify-center font-sans font-bold uppercase transition-colors motion-reduce:transition-none border-2 border-black " +
-  FOCUS_RING;
+  "inline-flex items-center justify-center font-sans font-bold uppercase transition-colors motion-reduce:transition-none border-2 border-ink";
 
-const SOLID = "bg-black text-white hover:bg-white hover:text-black";
-const OUTLINE = "bg-white text-black hover:bg-black hover:text-white";
+const SOLID = `bg-ink text-paper hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`;
+const OUTLINE = `bg-paper text-ink hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`;
 
 type ButtonOwnProps = {
   href?: string;

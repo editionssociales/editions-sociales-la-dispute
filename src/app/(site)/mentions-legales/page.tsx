@@ -16,11 +16,11 @@ export const metadata: Metadata = {
 /** Ligne d'identité (libellé + valeur), certaines encore en placeholder client. */
 function IdentityRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 border-t-2 border-black bg-white px-4 py-3 first:border-t-0 sm:flex-row sm:items-baseline sm:gap-3">
-      <dt className="w-56 shrink-0 font-sans text-xs font-bold uppercase tracking-[.06em] text-black/50">
+    <div className="flex flex-col gap-1 border-t-2 border-ink bg-paper px-4 py-3 first:border-t-0 sm:flex-row sm:items-baseline sm:gap-3">
+      <dt className="w-56 shrink-0 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/50">
         {label}
       </dt>
-      <dd className="text-sm text-black">{value}</dd>
+      <dd className="text-sm text-ink">{value}</dd>
     </div>
   );
 }
@@ -33,7 +33,7 @@ export default async function MentionsLegalesPage() {
   const { mentionsLegales } = await getPagesLegales();
   return (
     <>
-      <Container className="bg-white pb-16 pt-10 sm:pb-20 sm:pt-14">
+      <Container className="bg-paper pb-16 pt-10 sm:pb-20 sm:pt-14">
         <Breadcrumb
           trail={[{ label: "Accueil", href: "/" }, { label: "Mentions légales" }]}
         />
@@ -42,7 +42,7 @@ export default async function MentionsLegalesPage() {
             <Eyebrow>
               Éditeur, hébergement, propriété
             </Eyebrow>
-            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
               Mentions légales
             </h1>
             {!mentionsLegales && (
@@ -62,7 +62,7 @@ export default async function MentionsLegalesPage() {
         <>
           {/* Éditeur du site */}
           <LegalSection title="Éditeur du site">
-            <dl className="mt-6 border-2 border-black">
+            <dl className="mt-6 border-2 border-ink">
               <IdentityRow label="Raison sociale" value="[À COMPLÉTER : raison sociale]" />
               <IdentityRow
                 label="Forme juridique"

@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { LEGAL_LINK } from "@/components/legal-section";
-import { FOCUS_RING } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { MESSAGE_MAX_LENGTH, NAME_MAX_LENGTH, SUBJECT_MAX_LENGTH } from "@/lib/contact-form";
 import { CONTACT_INITIAL_STATE, sendContactMessage } from "@/app/(site)/contact/actions";
 
@@ -15,9 +15,9 @@ import { CONTACT_INITIAL_STATE, sendContactMessage } from "@/app/(site)/contact/
  */
 
 const FIELD_CLASS =
-  "border-2 border-black bg-white px-3 py-2 font-sans text-sm text-black placeholder:text-black/40 outline-none " +
-  FOCUS_RING;
-const LABEL_CLASS = "font-sans text-xs font-bold uppercase tracking-[.06em] text-black";
+  "border-2 border-ink bg-paper px-3 py-2 font-sans text-sm text-ink placeholder:text-ink/40 outline-none " +
+  FOCUS_RING_LIGHT;
+const LABEL_CLASS = "font-sans text-xs font-bold uppercase tracking-[.06em] text-ink";
 
 export function ContactForm() {
   const [state, formAction, isPending] = useActionState(sendContactMessage, CONTACT_INITIAL_STATE);
@@ -106,16 +106,16 @@ export function ContactForm() {
         type="submit"
         disabled={isPending}
         aria-busy={isPending}
-        className={`inline-flex w-fit items-center justify-center border-2 border-black bg-black px-6 py-3 font-sans text-sm font-bold uppercase tracking-[.03em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white ${FOCUS_RING}`}
+        className={`inline-flex w-fit items-center justify-center border-2 border-ink bg-ink px-6 py-3 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`}
       >
         {isPending ? "Envoi…" : "Envoyer"}
       </button>
 
-      <p role="status" aria-live="polite" className={`text-sm leading-snug empty:hidden ${state.status === "error" ? "text-brick" : "text-black/70"}`}>
+      <p role="status" aria-live="polite" className={`text-sm leading-snug empty:hidden ${state.status === "error" ? "text-brick" : "text-ink/70"}`}>
         {state.status !== "idle" ? state.message : ""}
       </p>
 
-      <p className="text-[11px] leading-snug text-black/50">
+      <p className="text-[11px] leading-snug text-ink/50">
         Votre message est transmis à notre boîte de contact via notre
         prestataire Brevo (sous-traitant), qui reçoit également votre adresse
         email pour permettre une réponse.{" "}

@@ -6,6 +6,7 @@ import { NouveautesCarousel, type NouveauteBook } from "@/components/nouveautes-
 import { getActiveHighlight } from "@/lib/highlight";
 import { getNewReleases } from "@/lib/catalogue";
 import { EDITIONS } from "@/lib/editions";
+import { FOCUS_RING_DARK_OUTER } from "@/lib/ui";
 import type { Book, Cover, EditionSlug } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -51,7 +52,7 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="bg-white pb-[clamp(38px,6vw,76px)]">
+    <div className="bg-paper pb-[clamp(38px,6vw,76px)]">
       <div className="pt-[clamp(28px,4.5vw,52px)]">
         <NouveautesCarousel books={books} />
       </div>
@@ -68,17 +69,17 @@ export default async function HomePage() {
             <div
               className={`flex min-w-0 flex-col justify-center gap-1.5 px-6 py-6 sm:px-7 ${(HIGHLIGHT_STYLES[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_STYLES["pop-pink"]).block}`}
             >
-              <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-black">
+              <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-ink">
                 {highlight.titre}
               </p>
               {highlight.texte && (
-                <p className="mt-0.5 max-w-[56ch] text-sm text-black/70">{highlight.texte}</p>
+                <p className="mt-0.5 max-w-[56ch] text-sm text-ink/70">{highlight.texte}</p>
               )}
             </div>
             {highlight.lien && (
               <Link
                 href={highlight.lien}
-                className={`flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-black px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-white transition-colors hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow motion-reduce:transition-none ${(HIGHLIGHT_STYLES[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_STYLES["pop-pink"]).ctaHover}`}
+                className={`flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-ink px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-paper transition-colors hover:text-black motion-reduce:transition-none ${FOCUS_RING_DARK_OUTER} ${(HIGHLIGHT_STYLES[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_STYLES["pop-pink"]).ctaHover}`}
               >
                 {highlight.lienLibelle?.trim() || "En savoir plus"}{" "}
                 <span aria-hidden="true">→</span>

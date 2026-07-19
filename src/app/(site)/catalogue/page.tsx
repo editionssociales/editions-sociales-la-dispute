@@ -34,11 +34,11 @@ async function CatalogueBody({
   const hrefFor = (p: number) => catalogueHref({ ...filters, page: p });
 
   return (
-    <Container className="bg-white py-12">
+    <Container className="bg-paper py-12">
       <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
 
       <div className="mt-3.5 max-w-2xl">
-        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
           {isUpcoming ? "Les livres à paraître" : "Le catalogue par thèmes"}
         </h1>
       </div>
@@ -51,12 +51,12 @@ async function CatalogueBody({
         />
       </div>
 
-      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-black pt-[18px]">
-        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-black">
+      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
+        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
           {total} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
         {totalPages > 1 && (
-          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/70">
+          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-ink/70">
             Page {page} sur {totalPages}
           </span>
         )}

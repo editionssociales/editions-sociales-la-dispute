@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { LEGAL_LINK } from "@/components/legal-section";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import {
   NEWSLETTER_INITIAL_STATE,
   subscribeToNewsletter,
@@ -40,7 +41,7 @@ export function NewsletterForm() {
 
   return (
     <>
-      <form action={formAction} className="mt-1 flex border-2 border-black">
+      <form action={formAction} className="mt-1 flex border-2 border-ink">
         <label htmlFor="footer-newsletter-email" className="sr-only">
           Adresse e-mail
         </label>
@@ -50,7 +51,7 @@ export function NewsletterForm() {
           type="email"
           required
           placeholder="vous@exemple.fr"
-          className="min-w-0 flex-1 bg-white px-3 py-2 text-sm text-black placeholder:text-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
+          className={`min-w-0 flex-1 bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 ${FOCUS_RING_LIGHT}`}
         />
 
         {/* Honeypot — champ additif, masqué visuellement ET des lecteurs d'écran ; un bot qui remplit tous les champs qu'il trouve s'y fait piéger. Doit rester vide. */}
@@ -68,7 +69,7 @@ export function NewsletterForm() {
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
-          className="shrink-0 border-l-2 border-black bg-black px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
+          className={`shrink-0 border-l-2 border-ink bg-ink px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`}
         >
           {isPending ? "Envoi…" : "S'abonner"}
         </button>
@@ -79,14 +80,14 @@ export function NewsletterForm() {
         role="status"
         aria-live="polite"
         className={`mt-1 text-xs leading-snug empty:hidden ${
-          state.status === "error" ? "text-brick" : "text-black/70"
+          state.status === "error" ? "text-brick" : "text-ink/70"
         }`}
       >
         {state.status !== "idle" ? state.message : ""}
       </p>
 
       {/* Mention RGPD — additive. */}
-      <p className="text-[11px] leading-snug text-black/70">
+      <p className="text-[11px] leading-snug text-ink/70">
         Votre email est utilisé uniquement pour vous adresser cette lettre
         d&apos;information, via notre prestataire Brevo (sous-traitant).{" "}
         <Link href="/mentions-legales" className={LEGAL_LINK}>

@@ -16,7 +16,7 @@ import { CAMPAIGN_2024 } from "@/lib/campaign";
 import { coverAspectRatio } from "@/lib/cover";
 import type { Accent } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
-import { FOCUS_RING } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
 import { FREE_AMOUNT } from "@/lib/donation-tiers";
 import { getCampaign2026 } from "@/lib/donations";
@@ -25,7 +25,7 @@ import { createDonationCheckout } from "./actions";
 
 /**
  * Grammaire brutaliste (voir AGENTS.md) : quadrillage noir 2px
- * (`grid gap-[2px] bg-black p-[2px]`, cellules `bg-white`), Effra en
+ * (`grid gap-[2px] bg-ink p-[2px]`, cellules `bg-paper`), Effra en
  * italique gras pour les titres, libellés en majuscules. Les quatre aplats
  * « pop » codent ici les paliers et étiquettes (pas les sections de nav).
  */
@@ -217,14 +217,14 @@ export default async function SouscriptionPage() {
       {/* Ouverture (fond clair) : ce que la souscription de 2024 a déjà
           permis — stats + jauge. Fond clair pour préserver l'alternance de
           couleurs des sections suivantes. */}
-      <section className="border-b-2 border-black bg-white">
+      <section className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-24">
           <Reveal>
             <Eyebrow dot="bg-pop-teal">Nous soutenir</Eyebrow>
-            <h1 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+            <h1 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               {content.herosTitre}
             </h1>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
               {content.herosIntro}
             </p>
           </Reveal>
@@ -235,15 +235,15 @@ export default async function SouscriptionPage() {
                   <CountUp
                     value={s.value}
                     suffix={s.suffix}
-                    className="font-sans text-4xl font-black italic text-black sm:text-5xl"
+                    className="font-sans text-4xl font-black italic text-ink sm:text-5xl"
                   />
-                  <p className="mt-1 text-sm font-semibold text-black">{s.label}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
                 </div>
               </Reveal>
             ))}
           </FramedGrid>
           <Reveal delay={200} className="mt-12">
-            <div className="border-2 border-black bg-white p-6">
+            <div className="border-2 border-ink bg-paper p-6">
               <Gauge
                 value={CAMPAIGN_2024.gauge.value}
                 max={CAMPAIGN_2024.gauge.max}
@@ -299,30 +299,30 @@ export default async function SouscriptionPage() {
           dans `lib/donation-tiers.ts`/`lib/donations.ts`). Fenêtre de
           fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
       {campaign2026 && (
-        <section className="border-b-2 border-black bg-white">
+        <section className="border-b-2 border-ink bg-paper">
           <Container className="py-16 sm:py-20">
             <Reveal>
               <Eyebrow dot="bg-pop-orange">Souscription 2026</Eyebrow>
-              <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
+              <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
                 La collecte en direct
               </h2>
               {campaign2026.collected > 0 ? (
-                <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-black/70">
+                <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
                   Déjà
                   <CountUp
                     value={campaign2026.collected}
                     suffix=" €"
-                    className="font-sans text-lg font-black italic text-black"
+                    className="font-sans text-lg font-black italic text-ink"
                   />
                   réunis auprès de
                   <CountUp
                     value={campaign2026.contributors}
-                    className="font-sans text-lg font-black italic text-black"
+                    className="font-sans text-lg font-black italic text-ink"
                   />
                   contributeur·rices. La jauge se met à jour en quelques minutes après un don.
                 </p>
               ) : (
-                <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
+                <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
                   Campagne tout juste lancée — soyez les premier·ères à
                   contribuer. La jauge se met à jour en quelques minutes après
                   un don.
@@ -330,7 +330,7 @@ export default async function SouscriptionPage() {
               )}
             </Reveal>
             <Reveal delay={120} className="mt-10">
-              <div className="border-2 border-black bg-white p-6">
+              <div className="border-2 border-ink bg-paper p-6">
                 <Gauge
                   value={campaign2026.gauge.value}
                   max={campaign2026.gauge.max}
@@ -343,14 +343,14 @@ export default async function SouscriptionPage() {
       )}
 
       {/* Contreparties */}
-      <section id="paliers" className="border-b-2 border-black bg-white">
+      <section id="paliers" className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
           <Reveal>
             <Eyebrow dot="bg-pop-pink">Les paliers</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
               Choisissez votre contrepartie
             </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
               Les contreparties de notre campagne 2024, de retour pour la
               souscription de lancement. Contributions directes, sans
               intermédiaire — 100&nbsp;% pour la maison. Et bien sûr, notre
@@ -362,21 +362,21 @@ export default async function SouscriptionPage() {
               const pop = POP_BG[i % 4];
               return (
                 <Reveal key={p.tier.id} delay={(i % 4) * 90} className="h-full">
-                  <div className="relative flex h-full flex-col bg-white">
+                  <div className="relative flex h-full flex-col bg-paper">
                     <div aria-hidden="true" className={`h-2 ${pop}`} />
                     {p.populaire && (
-                      <span className="bg-black px-3 py-1.5 text-center font-sans text-[10px] font-extrabold uppercase tracking-[.08em] text-pop-yellow">
+                      <span className="bg-ink px-3 py-1.5 text-center font-sans text-[10px] font-extrabold uppercase tracking-[.08em] text-pop-yellow">
                         Le plus choisi en 2024
                       </span>
                     )}
                     <div className="flex flex-1 flex-col p-6">
-                      <span className="font-sans text-4xl font-black italic text-black">
+                      <span className="font-sans text-4xl font-black italic text-ink">
                         {p.tier.amount}&nbsp;€
                       </span>
-                      <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-black">
+                      <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
                         {p.tier.title}
                       </span>
-                      <ul className="mt-4 flex-1 space-y-2 text-sm text-black/70">
+                      <ul className="mt-4 flex-1 space-y-2 text-sm text-ink/70">
                         {p.items.map((item) => (
                           <li key={item} className="flex gap-2.5">
                             <span
@@ -386,7 +386,7 @@ export default async function SouscriptionPage() {
                           </li>
                         ))}
                       </ul>
-                      <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-black/50">
+                      <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/50">
                         {p.soutiens2024} soutiens en 2024
                       </p>
                       {enabled ? (
@@ -421,20 +421,20 @@ export default async function SouscriptionPage() {
           <FramedGrid className="mt-[2px] md:grid-cols-2">
             {content.mecenes.map((p, i) => (
               <Reveal key={p.tier.id} delay={i * 120} className="h-full">
-                <div className="relative flex h-full flex-col overflow-hidden bg-black p-8 text-white">
+                <div className="relative flex h-full flex-col overflow-hidden bg-ink p-8 text-paper">
                   <div className="absolute inset-x-0 top-0 grid h-1.5 grid-cols-4" aria-hidden="true">
                     {POP_BG.map((c) => (
                       <div key={c} className={c} />
                     ))}
                   </div>
-                  <span className="font-sans text-5xl font-black italic text-white">
+                  <span className="font-sans text-5xl font-black italic text-paper">
                     {p.tier.amount.toLocaleString("fr-FR")}&nbsp;€
                   </span>
-                  <span className="mt-1 font-sans text-lg font-extrabold uppercase tracking-[.02em] text-white/90">
+                  <span className="mt-1 font-sans text-lg font-extrabold uppercase tracking-[.02em] text-paper/90">
                     {p.tier.title}
                   </span>
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-white/80">{p.desc}</p>
-                  <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-white/60">
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-paper/80">{p.desc}</p>
+                  <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60">
                     {p.soutiens2024} soutiens en 2024
                   </p>
                   {enabled ? (
@@ -444,7 +444,7 @@ export default async function SouscriptionPage() {
                           un <form>, il ne soumettrait jamais sans ce passage en "submit". */}
                       <button
                         type="submit"
-                        className="mt-3 self-start border-2 border-white bg-white px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+                        className="mt-3 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
                       >
                         Contribuer
                       </button>
@@ -452,7 +452,7 @@ export default async function SouscriptionPage() {
                   ) : (
                     <button
                       type="button"
-                      className="mt-3 self-start border-2 border-white bg-white px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+                      className="mt-3 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
                     >
                       Contribuer
                     </button>
@@ -465,11 +465,11 @@ export default async function SouscriptionPage() {
       </section>
 
       {/* Les chantiers : où va votre argent */}
-      <section className="border-b-2 border-black bg-white">
+      <section className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
           <Reveal>
             <Eyebrow dot="bg-pop-orange">Où va votre argent</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
               Cinq chantiers pour la suite
             </h2>
           </Reveal>
@@ -480,12 +480,12 @@ export default async function SouscriptionPage() {
                 delay={i * 100}
                 className={`h-full ${i < 3 ? "lg:col-span-2" : "lg:col-span-3"}`}
               >
-                <div className="flex h-full flex-col bg-white p-6">
+                <div className="flex h-full flex-col bg-paper p-6">
                   <span className={`font-sans text-3xl font-black italic ${TEXT[c.accent]}`}>
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <h3 className="mt-2 font-sans text-xl font-black italic text-black">{c.titre}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-black/70">{c.desc}</p>
+                  <h3 className="mt-2 font-sans text-xl font-black italic text-ink">{c.titre}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink/70">{c.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -494,29 +494,29 @@ export default async function SouscriptionPage() {
       </section>
 
       {/* Et après : les perspectives des deux maisons — la suite */}
-      <section className="border-b-2 border-black bg-white">
+      <section className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
           <Reveal>
             <Eyebrow dot="bg-pop-teal">Et après</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
               Des projets, on en a plein
             </h2>
           </Reveal>
           <FramedGrid className="mt-10 md:grid-cols-2">
             {MAISONS.map((m, i) => (
               <Reveal key={m.nom} delay={i * 120} className="h-full">
-                <div className="flex h-full flex-col bg-white">
+                <div className="flex h-full flex-col bg-paper">
                   <div aria-hidden="true" className={`h-2 ${BG[m.accent]}`} />
                   <div className="flex flex-1 flex-col p-7">
                     <h3 className={`font-sans text-2xl font-black italic ${TEXT[m.accent]}`}>
                       {m.nom}
                     </h3>
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-black/70">{m.desc}</p>
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/70">{m.desc}</p>
                     <div className="mt-5 flex flex-wrap gap-2">
                       {m.chips.map((chip) => (
                         <span
                           key={chip}
-                          className="border border-black px-3 py-1 font-sans text-xs font-bold uppercase tracking-[.03em] text-black"
+                          className="border border-ink px-3 py-1 font-sans text-xs font-bold uppercase tracking-[.03em] text-ink"
                         >
                           {chip}
                         </span>
@@ -532,21 +532,21 @@ export default async function SouscriptionPage() {
 
       {/* Aperçu du catalogue */}
       {newReleases.length > 0 && (
-        <section className="border-b-2 border-black bg-white">
+        <section className="border-b-2 border-ink bg-paper">
           <Container className="py-16">
             <Reveal>
               <div className="mb-8 flex items-end justify-between">
                 <div>
-                  <h2 className="font-sans text-2xl font-black italic text-black">
+                  <h2 className="font-sans text-2xl font-black italic text-ink">
                     En attendant, le catalogue vous attend
                   </h2>
-                  <p className="mt-1 text-black/70">
+                  <p className="mt-1 text-ink/70">
                     Dernières parutions des deux fonds réunis.
                   </p>
                 </div>
                 <Link
                   href="/catalogue"
-                  className="shrink-0 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black hover:underline"
+                  className={`shrink-0 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink hover:underline ${FOCUS_RING_LIGHT}`}
                 >
                   Tout voir →
                 </Link>
@@ -558,19 +558,19 @@ export default async function SouscriptionPage() {
       )}
 
       {/* FAQ */}
-      <section className="bg-white">
+      <section className="bg-paper">
         <Container className="max-w-3xl py-16 sm:py-20">
           <Reveal>
             <Eyebrow dot="bg-pop-yellow">FAQ</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-black">
+            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
               Questions fréquentes
             </h2>
           </Reveal>
-          <div className="mt-8 divide-y-2 divide-black border-2 border-black">
+          <div className="mt-8 divide-y-2 divide-ink border-2 border-ink">
             {content.faq.map((item, i) => (
               <Reveal key={item.q} delay={i * 80}>
-                <details className="group bg-white">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-sans font-bold text-black [&::-webkit-details-marker]:hidden">
+                <details className="group bg-paper">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-sans font-bold text-ink [&::-webkit-details-marker]:hidden">
                     {item.q}
                     <span
                       className="shrink-0 font-sans text-xl leading-none text-pop-orange transition-transform group-open:rotate-45"
@@ -579,7 +579,7 @@ export default async function SouscriptionPage() {
                       +
                     </span>
                   </summary>
-                  <p className="px-5 pb-5 text-black/70">{item.a}</p>
+                  <p className="px-5 pb-5 text-ink/70">{item.a}</p>
                 </details>
               </Reveal>
             ))}
@@ -599,7 +599,7 @@ export default async function SouscriptionPage() {
             <h2 className="font-sans text-2xl font-black italic sm:text-3xl">
               Prêt·e à écrire la suite avec nous&nbsp;?
             </h2>
-            <p className="mt-2 text-white/75">
+            <p className="mt-2 text-paper/75">
               En 2024, vous étiez 958. Cette fois, chaque contribution va
               intégralement à la maison.
             </p>
@@ -623,18 +623,18 @@ export default async function SouscriptionPage() {
                   inputMode="numeric"
                   placeholder="Montant en €"
                   required
-                  className={`w-36 border-2 border-white bg-black px-4 py-3.5 font-sans text-sm font-semibold text-white placeholder:text-white/50 ${FOCUS_RING}`}
+                  className={`w-36 border-2 border-paper bg-ink px-4 py-3.5 font-sans text-sm font-semibold text-paper placeholder:text-paper/50 ${FOCUS_RING_DARK}`}
                 />
                 <button
                   type="submit"
-                  className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+                  className="shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
                 >
                   Contribuer
                 </button>
               </form>
               <a
                 href="#paliers"
-                className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+                className="shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
               >
                 Choisir un palier
               </a>
@@ -642,7 +642,7 @@ export default async function SouscriptionPage() {
           ) : (
             <a
               href="#paliers"
-              className="shrink-0 border-2 border-white bg-white px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white"
+              className="shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
             >
               Choisir un palier
             </a>

@@ -14,7 +14,7 @@ import {
   withoutFilter,
   type FilterField,
 } from "@/lib/browse";
-import { FOCUS_RING, invertingCell } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
 import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
 
@@ -38,8 +38,8 @@ const SORTS = [
  * qui transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
  * par-dessus (recette « grille encadrée », voir AGENTS.md).
  */
-const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-black";
-const FIELD_CLASS = `bg-white px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_RING}`;
+const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-ink";
+const FIELD_CLASS = `bg-paper px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_RING_LIGHT}`;
 const SELECT_CLASS = `${FIELD_CLASS} cursor-pointer`;
 
 /** Étiquette cliquable (thème, maison) — cellule inversante à l'état actif. */
@@ -57,7 +57,7 @@ function Tag({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${FOCUS_RING} ${invertingCell(active)}`}
+      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
     >
       {children}
     </button>
@@ -150,7 +150,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
             </Tag>
           ))}
 
-        <label className="flex items-center bg-white px-3.5">
+        <label className="flex items-center bg-paper px-3.5">
           <span className="sr-only">Rechercher</span>
           <input
             type="search"
@@ -161,7 +161,7 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
               setQuery(e.target.value);
               setFilter("q", e.target.value);
             }}
-            className={`w-full min-w-[190px] bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-black/40 ${CELL_TEXT} ${FOCUS_RING}`}
+            className={`w-full min-w-[190px] bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-ink/40 ${CELL_TEXT} ${FOCUS_RING_LIGHT}`}
           />
         </label>
 

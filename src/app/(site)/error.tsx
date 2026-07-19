@@ -21,11 +21,11 @@ export default function SiteError({
   unstable_retry: () => void;
 }) {
   return (
-    <Container className="bg-white py-24 text-center sm:py-32">
-      <h1 className="font-sans text-3xl font-black italic text-black sm:text-4xl">
+    <Container className="bg-paper py-24 text-center sm:py-32">
+      <h1 className="font-sans text-3xl font-black italic text-ink sm:text-4xl">
         Une erreur est survenue
       </h1>
-      <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-black/70">
+      <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink/70">
         La page n&apos;a pas pu s&apos;afficher. Réessayez, ou revenez à
         l&apos;accueil.
       </p>

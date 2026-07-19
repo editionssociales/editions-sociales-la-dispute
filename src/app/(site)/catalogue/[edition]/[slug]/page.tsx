@@ -12,6 +12,7 @@ import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { ACCENT_BG } from "@/lib/accents";
+import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
 export async function generateMetadata({
   params,
@@ -35,11 +36,11 @@ export async function generateMetadata({
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   if (value == null || value === "") return null;
   return (
-    <div className="flex flex-col gap-1 bg-white px-3.5 py-3">
-      <dt className="font-sans text-[10px] font-bold uppercase tracking-[.08em] text-black/50">
+    <div className="flex flex-col gap-1 bg-paper px-3.5 py-3">
+      <dt className="font-sans text-[10px] font-bold uppercase tracking-[.08em] text-ink/50">
         {label}
       </dt>
-      <dd className="font-sans text-sm font-bold text-black">{value}</dd>
+      <dd className="font-sans text-sm font-bold text-ink">{value}</dd>
     </div>
   );
 }
@@ -122,18 +123,18 @@ export default async function BookPage({
   const bookJsonLdScript = JSON.stringify(bookJsonLd).replace(/</g, "\\u003c");
 
   return (
-    <Container className="bg-white py-12">
+    <Container className="bg-paper py-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: bookJsonLdScript }}
       />
       <nav
         aria-label="Fil d'ariane"
-        className="mb-8 font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60"
+        className="mb-8 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60"
       >
         <Link
           href="/"
-          className="transition-colors motion-reduce:transition-none hover:text-black"
+          className="transition-colors motion-reduce:transition-none hover:text-ink"
         >
           Accueil
         </Link>
@@ -142,7 +143,7 @@ export default async function BookPage({
         </span>
         <Link
           href="/catalogue"
-          className="transition-colors motion-reduce:transition-none hover:text-black"
+          className="transition-colors motion-reduce:transition-none hover:text-ink"
         >
           Catalogue
         </Link>
@@ -151,7 +152,7 @@ export default async function BookPage({
         </span>
         <Link
           href={`/catalogue/${edition}`}
-          className="transition-colors motion-reduce:transition-none hover:text-black"
+          className="transition-colors motion-reduce:transition-none hover:text-ink"
         >
           {editionInfo.name}
         </Link>
@@ -162,7 +163,7 @@ export default async function BookPage({
           {/* Largeur fixée par la colonne ; la hauteur suit le ratio réel de
               la couverture — jamais recadrée, jamais de bande. Couverture
               encadrée d'un contour noir 2px, comme les vignettes du catalogue. */}
-          <div className="relative w-full overflow-hidden border-2 border-black bg-paper-2">
+          <div className="relative w-full overflow-hidden border-2 border-ink bg-paper-2">
             <BookCover
               cover={book.cover}
               title={book.title}
@@ -176,7 +177,7 @@ export default async function BookPage({
           </div>
 
           <div className="mt-6">
-            <p className="mb-2 font-sans text-xs font-bold uppercase tracking-[.08em] text-black">
+            <p className="mb-2 font-sans text-xs font-bold uppercase tracking-[.08em] text-ink">
               Acheter
             </p>
             <BuyLinksList book={book} />
@@ -196,7 +197,7 @@ export default async function BookPage({
                   href={book.tocUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center bg-white px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]"
+                  className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                 >
                   Table des matières
                 </a>
@@ -206,7 +207,7 @@ export default async function BookPage({
                   href={book.excerptUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center bg-white px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]"
+                  className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                 >
                   Extrait choisi
                 </a>
@@ -220,19 +221,19 @@ export default async function BookPage({
             {editionInfo.name}
           </Eyebrow>
           {book.collection && <CollectionTag collection={book.collection} className="mb-3" />}
-          <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-black">
+          <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink">
             {book.title}
           </h1>
           <div className={`mt-4 h-1 w-16 ${accentBg}`} aria-hidden="true" />
           {book.authors.length > 0 && (
-            <p className="mt-4 font-sans text-lg font-bold text-black/80">
+            <p className="mt-4 font-sans text-lg font-bold text-ink/80">
               {book.authors.map((a) => a.name).join(", ")}
             </p>
           )}
 
           {book.presentation && (
             <section className="mt-8">
-              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-black">
+              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
                   aria-hidden="true"
@@ -248,7 +249,7 @@ export default async function BookPage({
 
           {book.furtherReading && (
             <section className="mt-8">
-              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-black">
+              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
                   aria-hidden="true"

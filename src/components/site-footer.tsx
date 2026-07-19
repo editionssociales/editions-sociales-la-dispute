@@ -2,11 +2,12 @@ import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { NAV_HOUSES } from "@/lib/nav";
+import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
 /**
  * Pied de page brutaliste — même recette de quadrillage noir 2px que la
- * navbar (`grid gap-[2px] bg-black p-[2px]`, cellules enfant `bg-white`) :
+ * navbar (`grid gap-[2px] bg-ink p-[2px]`, cellules enfant `bg-paper`) :
  * gauche « Adresse » / « Mentions légales » empilées, cellule centrale vide,
  * droite « S'abonner à la newsletter » / « Diffusion-Distribution » empilées.
  *
@@ -22,19 +23,20 @@ import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core"
  * (footer uniquement — jamais dans le header, décision documentée).
  */
 
-const CELL_CLASS = "flex flex-col gap-3 bg-white p-6 font-sans sm:p-7";
+const CELL_CLASS = "flex flex-col gap-3 bg-paper p-6 font-sans sm:p-7";
 const HEADING_CLASS =
-  "text-xs font-extrabold uppercase tracking-[.08em] text-black";
-const BODY_CLASS = "text-sm leading-relaxed text-black/70";
+  "text-xs font-extrabold uppercase tracking-[.08em] text-ink";
+const BODY_CLASS = "text-sm leading-relaxed text-ink/70";
 const LINK_CLASS =
-  "inline-flex w-fit font-bold text-black underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-black hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
+  "inline-flex w-fit font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper " +
+  FOCUS_RING_LIGHT_OUTER;
 
 function AdresseCell({ className = "", adresse }: { className?: string; adresse: string }) {
   return (
     <div className={`${CELL_CLASS} ${className}`}>
       <p className={HEADING_CLASS}>Adresse</p>
-      <p className="text-base font-black italic uppercase leading-tight text-black">
-        Les Éditions sociales <span className="not-italic text-black/40">×</span>{" "}
+      <p className="text-base font-black italic uppercase leading-tight text-ink">
+        Les Éditions sociales <span className="not-italic text-ink/40">×</span>{" "}
         La Dispute
       </p>
       <p className={BODY_CLASS}>{adresse}</p>
@@ -93,7 +95,7 @@ function MentionsCell({ className = "", year }: { className?: string; year: numb
           CGV &amp; dons
         </Link>
       </div>
-      <p className="mt-auto text-xs text-black/70">
+      <p className="mt-auto text-xs text-ink/70">
         © {year} Les Éditions sociales × La Dispute
       </p>
     </div>
@@ -155,7 +157,7 @@ export function SiteFooter({ footer }: { footer: ReglagesSiteContent["footer"] }
   const reseaux = footer.reseauxSociaux;
 
   return (
-    <footer className="bg-black">
+    <footer className="bg-ink">
       {/* Mobile (< lg) : cellules empilées pleine largeur ; la cellule
           centrale vide n'a pas de contenu, elle est masquée — la cellule
           « Suivez-nous » n'apparaît que si des réseaux sont saisis. */}
@@ -181,7 +183,7 @@ export function SiteFooter({ footer }: { footer: ReglagesSiteContent["footer"] }
         ) : (
           <div
             aria-hidden="true"
-            className="col-start-2 row-span-2 row-start-1 bg-white"
+            className="col-start-2 row-span-2 row-start-1 bg-paper"
           />
         )}
         <NewsletterCell className="col-start-3 row-start-1" />

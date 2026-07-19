@@ -7,14 +7,14 @@ import { Button } from "./button";
 export function BuyLinksList({ book }: { book: Book }) {
   if (book.status === "upcoming") {
     return (
-      <p className="text-sm text-black/60">
+      <p className="text-sm text-ink/60">
         À paraître{book.publishedAt ? ` le ${formatDateFr(book.publishedAt)}` : ""}.
       </p>
     );
   }
   if (book.status === "unavailable") {
     return (
-      <p className="text-sm text-black/60">
+      <p className="text-sm text-ink/60">
         Indisponible à la vente en ligne pour le moment.
       </p>
     );
@@ -29,7 +29,7 @@ export function BuyLinksList({ book }: { book: Book }) {
       <div className="flex flex-wrap items-center gap-3">
         <AddToCartButton id={book.id} />
         {book.price != null && (
-          <span className="font-sans text-sm font-bold text-black">{formatPrice(book.price)}</span>
+          <span className="font-sans text-sm font-bold text-ink">{formatPrice(book.price)}</span>
         )}
       </div>
     );

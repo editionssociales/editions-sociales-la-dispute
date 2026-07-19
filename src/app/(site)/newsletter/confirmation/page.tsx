@@ -18,13 +18,13 @@ export const metadata: Metadata = {
 
 export default function NewsletterConfirmationPage() {
   return (
-    <section className="bg-white">
+    <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
         <Eyebrow>Newsletter</Eyebrow>
-        <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+        <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
           Inscription confirmée
         </h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-black/70">
+        <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
           Votre adresse email est confirmée : vous recevrez désormais nos
           actualités (parutions, rencontres, souscriptions) — une fois par
           mois. Vous pourrez vous désinscrire à tout moment depuis n&apos;importe

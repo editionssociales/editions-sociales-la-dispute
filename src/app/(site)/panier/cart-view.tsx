@@ -8,7 +8,7 @@ import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { BookCover } from "@/lib/cover";
 import { formatPrice } from "@/lib/format";
-import { FOCUS_RING } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import {
   computeCartTotals,
   MAX_LINE_QTY,
@@ -39,8 +39,8 @@ const ZONES: { value: ShippingZone; label: string }[] = [
 ];
 
 const FIELD_CLASS =
-  "border-2 border-black bg-white px-3 py-2 font-sans text-sm font-bold text-black outline-none " +
-  FOCUS_RING;
+  "border-2 border-ink bg-paper px-3 py-2 font-sans text-sm font-bold text-ink outline-none " +
+  FOCUS_RING_LIGHT;
 
 function euros(cents: number): string {
   return formatPrice(cents / 100) ?? "—";
@@ -48,11 +48,11 @@ function euros(cents: number): string {
 
 function EmptyCart() {
   return (
-    <div className="flex flex-col items-center gap-7 border-2 border-black bg-white px-6 py-16 text-center">
+    <div className="flex flex-col items-center gap-7 border-2 border-ink bg-paper px-6 py-16 text-center">
       <ShelfSpines />
       <div className="max-w-md">
-        <p className="font-sans text-lg font-black italic text-black">Votre panier est vide.</p>
-        <p className="mt-2 font-sans text-sm text-black/60">
+        <p className="font-sans text-lg font-black italic text-ink">Votre panier est vide.</p>
+        <p className="mt-2 font-sans text-sm text-ink/60">
           Parcourez le catalogue pour y ajouter des livres.
         </p>
       </div>
@@ -75,11 +75,11 @@ function QuantityStepper({
         onClick={() => onChange(qty - 1)}
         disabled={qty <= 1}
         aria-label="Retirer un exemplaire"
-        className={`flex h-11 w-11 items-center justify-center border-2 border-black font-sans font-bold text-black hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black ${FOCUS_RING}`}
+        className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`}
       >
         −
       </button>
-      <span className="w-6 text-center font-sans text-sm font-bold text-black" aria-live="polite">
+      <span className="w-6 text-center font-sans text-sm font-bold text-ink" aria-live="polite">
         {qty}
       </span>
       <button
@@ -87,7 +87,7 @@ function QuantityStepper({
         onClick={() => onChange(qty + 1)}
         disabled={qty >= MAX_LINE_QTY}
         aria-label="Ajouter un exemplaire"
-        className={`flex h-11 w-11 items-center justify-center border-2 border-black font-sans font-bold text-black hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black ${FOCUS_RING}`}
+        className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`}
       >
         +
       </button>
@@ -106,7 +106,7 @@ function CartLineRow({
 }) {
   return (
     <Fragment>
-      <div className="flex items-center justify-center bg-white p-2">
+      <div className="flex items-center justify-center bg-paper p-2">
         <Link href={line.href} className="block w-14 shrink-0">
           <BookCover
             cover={line.cover}
@@ -118,8 +118,11 @@ function CartLineRow({
           />
         </Link>
       </div>
-      <div className={`flex flex-col justify-center gap-2 bg-white p-3 ${line.purchasable ? "" : "opacity-60"}`}>
-        <Link href={line.href} className="font-sans text-sm font-bold text-black hover:underline">
+      <div className={`flex flex-col justify-center gap-2 bg-paper p-3 ${line.purchasable ? "" : "opacity-60"}`}>
+        <Link
+          href={line.href}
+          className={`font-sans text-sm font-bold text-ink hover:underline ${FOCUS_RING_LIGHT}`}
+        >
           {line.title}
         </Link>
         {!line.purchasable && (
@@ -132,16 +135,16 @@ function CartLineRow({
           <button
             type="button"
             onClick={onRemove}
-            className={`font-sans text-xs font-bold uppercase tracking-[.04em] text-black/60 underline hover:text-black ${FOCUS_RING}`}
+            className={`font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/60 underline hover:text-ink ${FOCUS_RING_LIGHT}`}
           >
             Retirer
           </button>
         </div>
       </div>
-      <div className="flex items-center justify-end bg-white p-3 font-sans text-sm text-black">
+      <div className="flex items-center justify-end bg-paper p-3 font-sans text-sm text-ink">
         {line.unitPriceCents != null ? euros(line.unitPriceCents) : "—"}
       </div>
-      <div className="flex items-center justify-end bg-white p-3 font-sans text-sm font-bold text-black">
+      <div className="flex items-center justify-end bg-paper p-3 font-sans text-sm font-bold text-ink">
         {line.purchasable ? euros(line.lineTotalCents) : "—"}
       </div>
     </Fragment>
@@ -282,7 +285,7 @@ export function CartView() {
   }
 
   if (!ready) {
-    return <p className="py-16 text-center font-sans text-sm text-black/50">Chargement du panier…</p>;
+    return <p className="py-16 text-center font-sans text-sm text-ink/50">Chargement du panier…</p>;
   }
   if (state.lines.length === 0) {
     return <EmptyCart />;
@@ -311,7 +314,7 @@ export function CartView() {
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
           <label className="flex flex-col gap-1">
-            <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60">
+            <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
               Livraison
             </span>
             <select
@@ -329,7 +332,7 @@ export function CartView() {
 
           <div className="flex flex-col gap-2">
             <label className="flex flex-col gap-1">
-              <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60">
+              <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
                 Code promo
               </span>
               <div className="flex flex-wrap gap-2">
@@ -347,7 +350,7 @@ export function CartView() {
                     }
                   }}
                   placeholder="AGREG2027"
-                  className={`${FIELD_CLASS} min-w-[160px] flex-1 uppercase placeholder:normal-case placeholder:text-black/40`}
+                  className={`${FIELD_CLASS} min-w-[160px] flex-1 uppercase placeholder:normal-case placeholder:text-ink/40`}
                 />
                 <Button
                   variant="outline"
@@ -375,35 +378,35 @@ export function CartView() {
         </div>
 
         <FramedGrid as="dl" className="h-fit grid-cols-2">
-          <dt className="bg-white px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60">
+          <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
             Sous-total
           </dt>
-          <dd className="bg-white px-3.5 py-2.5 text-right font-sans text-sm font-bold text-black">
+          <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
             {euros(totals.subtotalCents)}
           </dd>
 
           {totals.discountCents > 0 && (
             <>
-              <dt className="bg-white px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60">
+              <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
                 Remise
               </dt>
-              <dd className="bg-white px-3.5 py-2.5 text-right font-sans text-sm font-bold text-black">
+              <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
                 −{euros(totals.discountCents)}
               </dd>
             </>
           )}
 
-          <dt className="bg-white px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60">
+          <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
             Port ({zone})
           </dt>
-          <dd className="bg-white px-3.5 py-2.5 text-right font-sans text-sm font-bold text-black">
+          <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
             {shipping.ok ? euros(shipping.costCents) : "—"}
           </dd>
 
-          <dt className="bg-white px-3.5 py-2.5 font-sans text-sm font-black uppercase tracking-[.04em] text-black">
+          <dt className="bg-paper px-3.5 py-2.5 font-sans text-sm font-black uppercase tracking-[.04em] text-ink">
             Total TTC
           </dt>
-          <dd className="bg-white px-3.5 py-2.5 text-right font-sans text-lg font-black text-black">
+          <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-lg font-black text-ink">
             {totals.totalCents != null ? euros(totals.totalCents) : "—"}
           </dd>
         </FramedGrid>
@@ -418,7 +421,7 @@ export function CartView() {
         !freeShippingCoupon &&
         summary.subtotalCents > 0 &&
         summary.subtotalCents < FREE_SHIPPING_MIN_CART_CENTS && (
-          <p className="mt-4 font-sans text-xs text-black/50">
+          <p className="mt-4 font-sans text-xs text-ink/50">
             Livraison offerte dès {euros(FREE_SHIPPING_MIN_CART_CENTS)} d’achat avec un code éligible.
           </p>
         )}
@@ -429,7 +432,7 @@ export function CartView() {
           onClick={handleCheckout}
           disabled={checkoutPending || !shipping.ok || !hasPurchasableLine}
           aria-disabled={checkoutPending || !shipping.ok || !hasPurchasableLine}
-          className={`inline-flex items-center justify-center border-2 border-black bg-black px-8 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.05em] text-white transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white ${FOCUS_RING}`}
+          className={`inline-flex items-center justify-center border-2 border-ink bg-ink px-8 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.05em] text-paper transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`}
         >
           {checkoutPending ? "Redirection…" : "Commander"}
         </button>
