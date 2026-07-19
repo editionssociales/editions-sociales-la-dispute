@@ -5,6 +5,7 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import { deriveSlugFromLabel } from '../lib/slug-field.ts'
 
 /**
  * Libellés thématiques du catalogue (slug Payload `libelles`). Transversaux
@@ -38,21 +39,35 @@ export const BookLabels: CollectionConfig = {
   },
   fields: [
     {
-      name: 'name',
-      type: 'text',
-      required: true,
-      label: 'Nom',
-    },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      unique: true,
-      index: true,
-      label: 'Slug',
-      admin: {
-        description: 'Identifiant d’URL (`?libelle=…`). Minuscules, tirets, sans accents.',
-      },
+      type: 'row',
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+          required: true,
+          label: 'Nom',
+          admin: { width: '65%' },
+        },
+        {
+          name: 'slug',
+          type: 'text',
+          required: true,
+          unique: true,
+          index: true,
+          label: 'Slug',
+          hooks: {
+            beforeValidate: [deriveSlugFromLabel('name')],
+          },
+          admin: {
+            width: '35%',
+            description:
+              'Identifiant d’URL (`?libelle=…`) — prérempli depuis le nom.',
+            components: {
+              Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
+            },
+          },
+        },
+      ],
     },
   ],
 }

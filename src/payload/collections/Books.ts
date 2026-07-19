@@ -3,7 +3,6 @@ import type {
   CollectionBeforeChangeHook,
   CollectionBeforeValidateHook,
   CollectionConfig,
-  FieldHook,
   TextFieldValidation,
   UploadFieldSingleValidation,
 } from 'payload'
@@ -20,7 +19,7 @@ import {
   type BookMediaKind,
 } from '../lib/cover-alt.ts'
 import { trimIsbn, validateIsbnValue } from '../lib/isbn.ts'
-import { slugify } from '../lib/slugify.ts'
+import { deriveSlugFromLabel } from '../lib/slug-field.ts'
 import { importStockHandler } from '../lib/stock-import.ts'
 
 /**
@@ -139,32 +138,6 @@ const trimIsbnField: CollectionBeforeValidateHook = ({ data, req }) => {
   return data
 }
 
-/**
- * Slug : normalise la saisie, ou dérive du titre si vide (création / API).
- * Sur un update partiel sans `slug` dans le payload, on conserve l'existant.
- */
-const deriveSlugFromTitle: FieldHook = ({
-  value,
-  data,
-  siblingData,
-  operation,
-  originalDoc,
-}) => {
-  if (typeof value === 'string' && value.trim()) {
-    return slugify(value)
-  }
-  if (operation === 'update' && value === undefined) {
-    return typeof originalDoc?.slug === 'string' ? originalDoc.slug : value
-  }
-  const title =
-    (typeof siblingData?.title === 'string' && siblingData.title) ||
-    (typeof data?.title === 'string' && data.title) ||
-    (typeof originalDoc?.title === 'string' && originalDoc.title) ||
-    ''
-  if (title.trim()) return slugify(title)
-  return value
-}
-
 export const Books: CollectionConfig = {
   slug: 'books',
   labels: {
@@ -256,14 +229,14 @@ export const Books: CollectionConfig = {
                   index: true,
                   label: 'Slug',
                   hooks: {
-                    beforeValidate: [deriveSlugFromTitle],
+                    beforeValidate: [deriveSlugFromLabel('title')],
                   },
                   admin: {
                     width: '35%',
                     description:
                       'Prérempli depuis le titre — ne pas modifier après publication',
                     components: {
-                      Field: '/payload/admin/books/SlugFromTitleField.tsx#SlugFromTitleField',
+                      Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
                     },
                   },
                 },

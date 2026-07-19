@@ -301,10 +301,38 @@ export async function Dashboard({ payload, user }: ServerProps) {
         </h2>
         <section className={styles.panel} aria-labelledby="t-raccourcis">
           <div className={styles.shortcutLinks}>
+            {/* Création = formulaire natif Payload (`/collections/{slug}/create`
+                puis `/{id}`) — même modèle pour tous les objets créables du menu. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
             <a className={styles.shortcutLink} href="/admin/collections/books/create">
               + Nouveau livre
             </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
+            <a className={styles.shortcutLink} href="/admin/collections/authors/create">
+              + Nouvel·le auteur·rice
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
+            <a className={styles.shortcutLink} href="/admin/collections/libelles/create">
+              + Nouveau libellé
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
+            <a className={styles.shortcutLink} href="/admin/collections/highlight/create">
+              + Nouvelle mise en avant
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
+            <a className={styles.shortcutLink} href="/admin/collections/promo-codes/create">
+              + Nouveau code promo
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
+            <a className={styles.shortcutLink} href="/admin/collections/media/create">
+              + Nouveau média
+            </a>
+            {admin && (
+              // eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office
+              <a className={styles.shortcutLink} href="/admin/collections/users/create">
+                + Nouvel·le utilisateur·rice
+              </a>
+            )}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
             <a className={styles.shortcutLink} href="/admin/collections/books">
               Catalogue
