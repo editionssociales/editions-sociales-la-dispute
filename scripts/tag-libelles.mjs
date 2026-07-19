@@ -538,6 +538,7 @@ async function main() {
   await client.query('BEGIN')
   try {
     let inserts = 0
+    let versionInserts = 0
     for (const p of plan) {
       const { rows: existing } = await client.query(
         `SELECT libelles_id FROM payload.books_rels
@@ -557,9 +558,41 @@ async function main() {
         inserts++
         have.add(lid)
       }
+
+      // Books a `versions.drafts` : l'admin lit la version `latest`
+      // (`_books_v_rels`), pas `books_rels`. On aligne les deux.
+      const { rows: versions } = await client.query(
+        `SELECT id FROM payload._books_v WHERE parent_id = $1 AND latest = true LIMIT 1`,
+        [p.id],
+      )
+      const versionId = versions[0]?.id
+      if (!versionId) continue
+
+      const { rows: vExisting } = await client.query(
+        `SELECT libelles_id FROM payload._books_v_rels
+         WHERE parent_id = $1 AND path = 'libelles' AND libelles_id IS NOT NULL`,
+        [versionId],
+      )
+      const vHave = new Set(vExisting.map((r) => r.libelles_id))
+      let vOrder = vExisting.length
+      // Tous les libellés finaux (existants + ajoutés), pas seulement added —
+      // pour rattraper un décalage books ↔ version.
+      for (const slug of p.after) {
+        const lid = idBySlug[slug]
+        if (!lid || vHave.has(lid)) continue
+        await client.query(
+          `INSERT INTO payload._books_v_rels ("order", parent_id, path, libelles_id)
+           VALUES ($1, $2, 'libelles', $3)`,
+          [vOrder++, versionId, lid],
+        )
+        versionInserts++
+        vHave.add(lid)
+      }
     }
     await client.query('COMMIT')
-    console.log(`\n[apply] ${inserts} relations ajoutées sur ${plan.length} livres.`)
+    console.log(
+      `\n[apply] ${inserts} rels books + ${versionInserts} rels versions sur ${plan.length} livres.`,
+    )
   } catch (e) {
     await client.query('ROLLBACK')
     throw e
