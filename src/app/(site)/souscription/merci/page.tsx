@@ -4,6 +4,7 @@ import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 import { CAMPAIGN_KEY, DONATION_TIERS } from "@/lib/donation-tiers";
+import { ACCENT_BG } from "@/lib/accents";
 
 /**
  * Page de retour après un don Stripe Checkout (`success_url` posée par
@@ -52,51 +53,66 @@ export default async function MerciPage({
 }) {
   const { session_id: sessionId } = await searchParams;
   const donation = await lookupDonation(sessionId);
+  // Issue sémantique (R3) : paiement confirmé (ou aucune info de session à
+  // relire, cas générique optimiste) = bottle ; confirmation Stripe encore en
+  // cours = ocher. `/souscription/erreur` (brick) reste une page distincte,
+  // ce parcours-ci n'aboutit jamais à un échec.
+  const tone = donation?.pending ? "ocher" : "bottle";
 
   return (
-    <section className="bg-paper">
-      <Container className="max-w-2xl py-20 sm:py-28">
-        {donation ? (
-          <PageHero
-            eyebrow="Souscription 2026"
-            tone="system"
-            title={donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
-            intro={
-              donation.pending ? (
-                "Votre paiement est en cours de confirmation — vous recevrez un reçu par email dès qu'il sera validé, sans action de votre part."
-              ) : (
-                <>
-                  Votre don de{" "}
-                  <strong className="font-bold text-ink">
-                    {donation.amount.toLocaleString("fr-FR")}&nbsp;€
-                  </strong>{" "}
-                  — {donation.tierTitle} — a bien été enregistré. Un reçu vous a été
-                  envoyé par email.
-                </>
-              )
-            }
-          />
-        ) : (
-          <PageHero
-            eyebrow="Souscription 2026"
-            tone="system"
-            title="Merci pour votre soutien !"
-            intro="Votre contribution a bien été prise en compte. Si le paiement a abouti, un reçu vous a été envoyé par email."
-          />
-        )}
-        <div className="mt-8 flex flex-wrap gap-4">
-          <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">
-            Découvrir le catalogue
-          </Button>
-          <Button
-            href="/souscription"
-            variant="outline"
-            className="px-6 py-3 text-sm tracking-[.03em]"
+    <>
+      <div aria-hidden="true" className={`h-1.5 ${ACCENT_BG[tone]}`} />
+      <section className="bg-paper">
+        <Container className="max-w-2xl py-20 sm:py-28">
+          <div
+            className={`mb-6 flex h-14 w-14 items-center justify-center border-2 border-ink ${ACCENT_BG[tone]}`}
           >
-            Retour à la souscription
-          </Button>
-        </div>
-      </Container>
-    </section>
+            <span aria-hidden="true" className="font-sans text-2xl font-black text-paper">
+              ✓
+            </span>
+          </div>
+          {donation ? (
+            <PageHero
+              eyebrow="Souscription 2026"
+              tone="system"
+              title={donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
+              intro={
+                donation.pending ? (
+                  "Votre paiement est en cours de confirmation — vous recevrez un reçu par email dès qu'il sera validé, sans action de votre part."
+                ) : (
+                  <>
+                    Votre don de{" "}
+                    <strong className="font-bold text-ink">
+                      {donation.amount.toLocaleString("fr-FR")}&nbsp;€
+                    </strong>{" "}
+                    — {donation.tierTitle} — a bien été enregistré. Un reçu vous a été
+                    envoyé par email.
+                  </>
+                )
+              }
+            />
+          ) : (
+            <PageHero
+              eyebrow="Souscription 2026"
+              tone="system"
+              title="Merci pour votre soutien !"
+              intro="Votre contribution a bien été prise en compte. Si le paiement a abouti, un reçu vous a été envoyé par email."
+            />
+          )}
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">
+              Découvrir le catalogue
+            </Button>
+            <Button
+              href="/souscription"
+              variant="outline"
+              className="px-6 py-3 text-sm tracking-[.03em]"
+            >
+              Retour à la souscription
+            </Button>
+          </div>
+        </Container>
+      </section>
+    </>
   );
 }

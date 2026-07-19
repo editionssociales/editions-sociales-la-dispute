@@ -5,20 +5,21 @@ import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
+import { SubmitButton } from "@/components/submit-button";
 import { ShelfCover } from "@/components/shelf-cover";
 import { ShelfLock } from "@/components/shelf-lock";
+import { BookCover, coverAspectRatio } from "@/lib/cover";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
 import { Eyebrow } from "@/components/eyebrow";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
 import { CAMPAIGN_2024 } from "@/lib/campaign";
-import { coverAspectRatio } from "@/lib/cover";
 import type { Accent } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
-import { FREE_AMOUNT } from "@/lib/donation-tiers";
+import { FREE_AMOUNT, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { getCampaign2026 } from "@/lib/donations";
 import { getPageSouscription } from "@/lib/site-content";
 import { createDonationCheckout } from "./actions";
@@ -26,10 +27,17 @@ import { createDonationCheckout } from "./actions";
 /**
  * Grammaire brutaliste (voir AGENTS.md) : quadrillage noir 2px
  * (`grid gap-[2px] bg-ink p-[2px]`, cellules `bg-paper`), Effra en
- * italique gras pour les titres, libellés en majuscules. Les quatre aplats
- * « pop » codent ici les paliers et étiquettes (pas les sections de nav).
+ * italique gras pour les titres, libellés en majuscules. Les paliers de don
+ * (R2/R3) sont codés par les 4 accents de marque (navy/bottle/ocher/brick,
+ * `ACCENTS`/`BG`) — jamais par la palette pop, réservée à la navigation et au
+ * statut. `POP_BG` ne reste ici que pour les tuiles de stats 2024 et le
+ * repère de faits du héros : décoration ponctuelle hors du périmètre arbitré
+ * de ce chantier (README, chantier 1, point 3).
  */
 const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
+
+/** Microcopie honnête (R7) : le paiement n'ouvre qu'à cette date, jamais un CTA muet. */
+const OPENING_MICROCOPY = "Ouverture le 15 août";
 
 export const metadata: Metadata = {
   title: "Souscription",
@@ -51,9 +59,12 @@ export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Po
 /* /admin (global `page-souscription`, spec « éditeur de contenus ») : */
 /* lus via `getPageSouscription` — bloc vide = contenu par défaut de   */
 /* `lib/site-content-core.ts` (l'ex-contenu en dur de cette page,      */
-/* extrait verbatim, iso-rendu). Montant et intitulé des paliers       */
-/* restent dérivés de DONATION_TIERS (la table qui pilote Stripe) : la */
-/* présentation est éditable, jamais le paiement.                      */
+/* extrait verbatim, iso-rendu). `herosTitre`/`herosIntro` décrivent   */
+/* désormais la RÉTROSPECTIVE 2024 (3e section, preuve sociale) — le   */
+/* pitch 2026 du héros (1re section) est éditorial figé, pas dans le   */
+/* CMS. Montant et intitulé des paliers restent dérivés de             */
+/* DONATION_TIERS (la table qui pilote Stripe) : la présentation est   */
+/* éditable, jamais le paiement.                                       */
 /* ------------------------------------------------------------------ */
 
 // Perspectives éditoriales des deux maisons (reprises de la campagne).
@@ -99,6 +110,11 @@ const SHELF_GAP = 6; // = gap-1.5 entre les dos
  * Voir --bh dans .book3d-inner (globals.css).
  */
 const BOOK_HOVER_H = 320;
+
+/** Nombre de couvertures dans le repli mobile (grille 2×4, R7 — l'étagère 3D
+ *  ne peut pas disparaître sous `lg` sur une page dont le trafic de campagne
+ *  sera majoritairement mobile). */
+const MOBILE_SHELF_COUNT = 8;
 
 /**
  * Étagère du héro : chaque dos dessiné porte une parution récente réelle. Au
@@ -193,9 +209,100 @@ function HeroShelf({ books }: { books: Book[] }) {
   );
 }
 
+/**
+ * Repli mobile de l'étagère (sous `lg`, où `HeroShelf` est masquée) : une
+ * grille 2×4 de vraies couvertures cliquables plutôt qu'un simple texte —
+ * l'atout le plus travaillé de la page ne peut pas disparaître pour la
+ * majorité du trafic de la campagne. Toujours via `BookCover` : jamais
+ * recadrée (`src/components/CLAUDE.md`), donc pas de grille à hauteur de
+ * cellule forcée.
+ */
+function MobileShelf({ books }: { books: Book[] }) {
+  const items = books.slice(0, MOBILE_SHELF_COUNT);
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-10 grid grid-cols-4 items-start gap-[2px] bg-paper/15 p-[2px] lg:hidden">
+      {items.map((book) => (
+        <Link
+          key={book.id}
+          href={`/catalogue/${book.edition}/${book.slug}`}
+          className={`group relative block bg-paper-2 ${FOCUS_RING_DARK}`}
+        >
+          <span className="sr-only">
+            {book.title}
+            {book.authors[0] ? `, ${book.authors[0].name}` : ""}
+          </span>
+          <BookCover
+            cover={book.cover}
+            title={book.title}
+            alt=""
+            fit="width"
+            sizes="25vw"
+            className="block h-auto w-full transition-opacity group-hover:opacity-90 group-focus-within:opacity-90 motion-reduce:transition-none"
+          />
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Formulaire « montant libre » — rendu deux fois (héros, CTA final) avec le
+ * même comportement (R7) : avant ouverture, CTA réellement `disabled` +
+ * microcopie « Ouverture le 15 août » (jamais un bouton mort qui a l'air
+ * cliquable) ; une fois ouvert, `SubmitButton` (`useFormStatus`) distingue
+ * l'état pendant la redirection Stripe de l'état bloqué.
+ */
+function FreeAmountForm({ enabled, idSuffix }: { enabled: boolean; idSuffix: string }) {
+  if (!enabled) {
+    return (
+      <div className="flex flex-col items-start gap-1.5">
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="inline-flex shrink-0 items-center gap-2 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Contribuer
+        </button>
+        <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/60">
+          {OPENING_MICROCOPY}
+        </p>
+      </div>
+    );
+  }
+  const inputId = `amount-${idSuffix}`;
+  return (
+    <form action={createDonationCheckout} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <label htmlFor={inputId} className="sr-only">
+        Montant libre, en euros
+      </label>
+      <input
+        id={inputId}
+        name="amount"
+        type="number"
+        min={FREE_AMOUNT.min}
+        max={FREE_AMOUNT.max}
+        step={1}
+        inputMode="numeric"
+        placeholder="Montant en €"
+        required
+        className={`w-36 border-2 border-paper bg-ink px-4 py-3.5 font-sans text-sm font-semibold text-paper placeholder:text-paper/50 ${FOCUS_RING_DARK}`}
+      />
+      <SubmitButton
+        tone="light"
+        pendingLabel="Redirection…"
+        className={`inline-flex shrink-0 items-center gap-2 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+      >
+        Contribuer
+      </SubmitButton>
+    </form>
+  );
+}
+
 export default async function SouscriptionPage() {
   // Interrupteur de la phase dons (E1) : tant que `STRIPE_SECRET_KEY` est
-  // absente, la page reste en iso-rendu (boutons inertes, comme aujourd'hui).
+  // absente, la page reste en iso-rendu (CTA honnêtement désactivés, R7).
   const enabled = donationsEnabled();
   // `getCampaign2026()` ne fait aucun appel réseau tant que `donationsEnabled()`
   // est faux (elle jette avant tout fetch, absorbée en `null` — `lib/donations.ts`) :
@@ -211,19 +318,109 @@ export default async function SouscriptionPage() {
   const shelfBooks = releases
     .filter((b) => b.cover && b.edition)
     .slice(0, SPINES.length);
+  // Jauge 2026 TOUJOURS visible (point le plus urgent du site, README
+  // chantier 1) : avant l'ouverture des dons (pas de clé Stripe → `null`),
+  // ou juste après le lancement (0 collecté), la jauge affiche honnêtement
+  // une campagne à 0 plutôt que de disparaître.
+  const liveCampaign = campaign2026 ?? deriveCampaign2026({ collected: 0, contributors: 0 });
 
   return (
     <>
-      {/* Ouverture (fond clair) : ce que la souscription de 2024 a déjà
-          permis — stats + jauge. Fond clair pour préserver l'alternance de
-          couleurs des sections suivantes. */}
-      <section className="border-b-2 border-ink bg-paper">
+      {/* Héros — l'ask 2026 au-dessus de la ligne de flottaison : pitch,
+          CTA immédiats, jauge vivante toujours visible. La rétrospective
+          2024 (preuve sociale) redescend en 3e section. */}
+      <section className="bg-ink text-paper">
         <Container className="py-16 sm:py-24">
+          <div className="grid items-end gap-12 lg:grid-cols-[1fr_auto]">
+            <div>
+              <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
+                Souscription 2026 — campagne de lancement
+              </p>
+              <h1 className="mt-4 max-w-3xl font-sans text-4xl font-black italic leading-[0.98] text-paper sm:text-5xl">
+                Tenir une édition marxiste{" "}
+                <span className="text-pop-yellow">et indépendante</span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-paper/85">
+                Deux catalogues marxistes et critiques, une seule petite équipe
+                d&apos;éditrices, et un principe : rester indépendants face à la
+                poignée de groupes capitalistes qui accaparent l&apos;édition, la
+                diffusion et les médias. Sans mécène ni actionnaire, nous vivons
+                de la vente de nos livres — et, pour tenir, de cette souscription.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-paper/80">
+                {[
+                  `${totalBooks} titres au catalogue`,
+                  "Le plus grand fonds marxiste en français",
+                  "Sans mécène ni actionnaire",
+                ].map((label, i) => (
+                  <span key={label} className="flex items-center gap-2">
+                    <span className={`h-2 w-2 ${POP_BG[i % 4]}`} />
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              {/* CTA immédiat : montant libre, avant même le choix d'un palier. */}
+              <div className="mt-8">
+                <FreeAmountForm enabled={enabled} idSuffix="hero" />
+              </div>
+
+              {/* Jauge 2026 vivante — n'affiche que ce qu'une campagne en cours
+                  peut honnêtement montrer (collecté net + contributeurs),
+                  jamais les 4 tuiles `stats` du gabarit 2024 rétrospectif
+                  (piège documenté dans `lib/donation-tiers.ts`/`lib/donations.ts`).
+                  Fenêtre de fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
+              <Reveal delay={120} className="mt-8 max-w-xl">
+                <div className="border-2 border-paper/30 bg-ink p-6">
+                  <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
+                    La collecte en direct
+                  </p>
+                  {liveCampaign.collected > 0 ? (
+                    <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-paper/85">
+                      Déjà
+                      <CountUp
+                        value={liveCampaign.collected}
+                        suffix=" €"
+                        className="font-sans text-lg font-black italic text-paper"
+                      />
+                      réunis auprès de
+                      <CountUp
+                        value={liveCampaign.contributors}
+                        className="font-sans text-lg font-black italic text-paper"
+                      />
+                      contributeur·rices.
+                    </p>
+                  ) : (
+                    <p className="mt-3 max-w-md text-[15px] leading-relaxed text-paper/85">
+                      Campagne tout juste lancée — soyez les premier·ères à
+                      contribuer.
+                    </p>
+                  )}
+                  <Gauge
+                    tone="dark"
+                    className="mt-5"
+                    value={liveCampaign.gauge.value}
+                    max={liveCampaign.gauge.max}
+                    markers={liveCampaign.gauge.markers}
+                  />
+                </div>
+              </Reveal>
+            </div>
+            <HeroShelf books={shelfBooks} />
+          </div>
+          <MobileShelf books={shelfBooks} />
+        </Container>
+      </section>
+
+      {/* Rétrospective 2024 — preuve sociale, redescendue derrière l'ask
+          2026 (README, chantier 1, point 1). */}
+      <section className="border-b-2 border-ink bg-paper">
+        <Container className="py-16 sm:py-20">
           <Reveal>
-            <Eyebrow dot="bg-pop-teal">Nous soutenir</Eyebrow>
-            <h1 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+            <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
+            <h2 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               {content.herosTitre}
-            </h1>
+            </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
               {content.herosIntro}
             </p>
@@ -254,94 +451,6 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
-      {/* Souscription de lancement — le projet en bref (fusion « qui nous
-          sommes ») et l'étagère de nos parutions. Fond sombre : l'étagère 3D
-          et sa typo claire y sont pensées. */}
-      <section className="bg-ink text-paper">
-        <Container className="py-16 sm:py-24">
-          <div className="grid items-end gap-12 lg:grid-cols-[1fr_auto]">
-            <div>
-              <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
-                Souscription de lancement
-              </p>
-              <h2 className="mt-4 max-w-3xl font-sans text-3xl font-black italic leading-[1.02] sm:text-5xl">
-                Tenir une édition marxiste{" "}
-                <span className="text-pop-yellow">et indépendante</span>
-              </h2>
-              <p className="mt-6 max-w-2xl text-paper/85">
-                Deux catalogues marxistes et critiques, une seule petite équipe
-                d&apos;éditrices, et un principe : rester indépendants face à la
-                poignée de groupes capitalistes qui accaparent l&apos;édition, la
-                diffusion et les médias. Sans mécène ni actionnaire, nous vivons
-                de la vente de nos livres — et, pour tenir, de cette souscription.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-paper/80">
-                {[
-                  `${totalBooks} titres au catalogue`,
-                  "Le plus grand fonds marxiste en français",
-                  "Sans mécène ni actionnaire",
-                ].map((label, i) => (
-                  <span key={label} className="flex items-center gap-2">
-                    <span className={`h-2 w-2 ${POP_BG[i % 4]}`} />
-                    {label}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <HeroShelf books={shelfBooks} />
-          </div>
-        </Container>
-      </section>
-
-      {/* Jauge 2026 vivante — n'affiche que ce qu'une campagne en cours peut
-          honnêtement montrer (collecté net + contributeurs), jamais les 4
-          tuiles `stats` du gabarit 2024 rétrospectif ci-dessus (piège documenté
-          dans `lib/donation-tiers.ts`/`lib/donations.ts`). Fenêtre de
-          fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
-      {campaign2026 && (
-        <section className="border-b-2 border-ink bg-paper">
-          <Container className="py-16 sm:py-20">
-            <Reveal>
-              <Eyebrow dot="bg-pop-orange">Souscription 2026</Eyebrow>
-              <h2 className="mt-3 font-sans text-3xl font-black italic text-ink sm:text-4xl">
-                La collecte en direct
-              </h2>
-              {campaign2026.collected > 0 ? (
-                <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
-                  Déjà
-                  <CountUp
-                    value={campaign2026.collected}
-                    suffix=" €"
-                    className="font-sans text-lg font-black italic text-ink"
-                  />
-                  réunis auprès de
-                  <CountUp
-                    value={campaign2026.contributors}
-                    className="font-sans text-lg font-black italic text-ink"
-                  />
-                  contributeur·rices. La jauge se met à jour en quelques minutes après un don.
-                </p>
-              ) : (
-                <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
-                  Campagne tout juste lancée — soyez les premier·ères à
-                  contribuer. La jauge se met à jour en quelques minutes après
-                  un don.
-                </p>
-              )}
-            </Reveal>
-            <Reveal delay={120} className="mt-10">
-              <div className="border-2 border-ink bg-paper p-6">
-                <Gauge
-                  value={campaign2026.gauge.value}
-                  max={campaign2026.gauge.max}
-                  markers={campaign2026.gauge.markers}
-                />
-              </div>
-            </Reveal>
-          </Container>
-        </section>
-      )}
-
       {/* Contreparties */}
       <section id="paliers" className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
@@ -359,11 +468,13 @@ export default async function SouscriptionPage() {
           </Reveal>
           <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-4">
             {content.contreparties.map((p, i) => {
-              const pop = POP_BG[i % 4];
+              // Paliers de don : les 4 accents de marque, jamais le cycle pop
+              // (R2/R3 — README, chantier 1, point 3).
+              const accentBg = BG[ACCENTS[i % 4]];
               return (
                 <Reveal key={p.tier.id} delay={(i % 4) * 90} className="h-full">
                   <div className="relative flex h-full flex-col bg-paper">
-                    <div aria-hidden="true" className={`h-2 ${pop}`} />
+                    <div aria-hidden="true" className={`h-2 ${accentBg}`} />
                     {p.populaire && (
                       <span className="bg-ink px-3 py-1.5 text-center font-sans text-[10px] font-extrabold uppercase tracking-[.08em] text-pop-yellow">
                         Le plus choisi en 2024
@@ -380,7 +491,7 @@ export default async function SouscriptionPage() {
                         {p.items.map((item) => (
                           <li key={item} className="flex gap-2.5">
                             <span
-                              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45 ${pop}`}
+                              className={`mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
                             />
                             {item}
                           </li>
@@ -395,21 +506,29 @@ export default async function SouscriptionPage() {
                           className="contents"
                         >
                           <input type="hidden" name="tierId" value={p.tier.id} />
+                          <SubmitButton
+                            tone="dark"
+                            pendingLabel="Redirection…"
+                            className={`mt-3 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
+                          >
+                            Contribuer
+                          </SubmitButton>
+                        </form>
+                      ) : (
+                        <div className="mt-3 flex flex-col items-start gap-1.5">
                           <Button
-                            type="submit"
+                            type="button"
                             variant="solid"
-                            className="mt-3 px-4 py-2.5 text-sm tracking-[.03em]"
+                            disabled
+                            aria-disabled="true"
+                            className="px-4 py-2.5 text-sm tracking-[.03em]"
                           >
                             Contribuer
                           </Button>
-                        </form>
-                      ) : (
-                        <Button
-                          variant="solid"
-                          className="mt-3 px-4 py-2.5 text-sm tracking-[.03em]"
-                        >
-                          Contribuer
-                        </Button>
+                          <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
+                            {OPENING_MICROCOPY}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -423,8 +542,8 @@ export default async function SouscriptionPage() {
               <Reveal key={p.tier.id} delay={i * 120} className="h-full">
                 <div className="relative flex h-full flex-col overflow-hidden bg-ink p-8 text-paper">
                   <div className="absolute inset-x-0 top-0 grid h-1.5 grid-cols-4" aria-hidden="true">
-                    {POP_BG.map((c) => (
-                      <div key={c} className={c} />
+                    {ACCENTS.map((a) => (
+                      <div key={a} className={BG[a]} />
                     ))}
                   </div>
                   <span className="font-sans text-5xl font-black italic text-paper">
@@ -441,21 +560,30 @@ export default async function SouscriptionPage() {
                     <form action={createDonationCheckout}>
                       <input type="hidden" name="tierId" value={p.tier.id} />
                       {/* Piège R12 : ce bouton était un <button type="button"> nu — dans
-                          un <form>, il ne soumettrait jamais sans ce passage en "submit". */}
+                          un <form>, il ne soumettrait jamais sans ce passage en "submit"
+                          (`SubmitButton` le pose toujours). */}
+                      <SubmitButton
+                        tone="light"
+                        pendingLabel="Redirection…"
+                        className={`mt-3 inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+                      >
+                        Contribuer
+                      </SubmitButton>
+                    </form>
+                  ) : (
+                    <div className="mt-3 flex flex-col items-start gap-1.5">
                       <button
-                        type="submit"
-                        className="mt-3 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        className="inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         Contribuer
                       </button>
-                    </form>
-                  ) : (
-                    <button
-                      type="button"
-                      className="mt-3 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
-                    >
-                      Contribuer
-                    </button>
+                      <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/60">
+                        {OPENING_MICROCOPY}
+                      </p>
+                    </div>
                   )}
                 </div>
               </Reveal>
@@ -604,49 +732,15 @@ export default async function SouscriptionPage() {
               intégralement à la maison.
             </p>
           </div>
-          {enabled ? (
-            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <form
-                action={createDonationCheckout}
-                className="flex items-center gap-3"
-              >
-                <label htmlFor="cta-amount" className="sr-only">
-                  Montant libre, en euros
-                </label>
-                <input
-                  id="cta-amount"
-                  name="amount"
-                  type="number"
-                  min={FREE_AMOUNT.min}
-                  max={FREE_AMOUNT.max}
-                  step={1}
-                  inputMode="numeric"
-                  placeholder="Montant en €"
-                  required
-                  className={`w-36 border-2 border-paper bg-ink px-4 py-3.5 font-sans text-sm font-semibold text-paper placeholder:text-paper/50 ${FOCUS_RING_DARK}`}
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
-                >
-                  Contribuer
-                </button>
-              </form>
-              <a
-                href="#paliers"
-                className="shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
-              >
-                Choisir un palier
-              </a>
-            </div>
-          ) : (
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <FreeAmountForm enabled={enabled} idSuffix="final" />
             <a
               href="#paliers"
-              className="shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper"
+              className={`shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
             >
               Choisir un palier
             </a>
-          )}
+          </div>
         </Container>
       </section>
     </>

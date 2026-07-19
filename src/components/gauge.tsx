@@ -13,17 +13,24 @@ type Marker = { value: number; label: string; reached: boolean };
  * Coquille de rendu : toute l'arithmétique de campagne (valeur, max, paliers
  * atteints) est dérivée en amont par `lib/campaign` ; la jauge ne fait que
  * peindre des positions et jouer l'effet de révélation.
+ *
+ * `tone` recolore le seul texte (la barre porte déjà ses propres teintes
+ * fixes, lisibles sur les deux fonds) : `"light"` (défaut, texte ink) pour
+ * une jauge posée sur paper ; `"dark"` (texte paper) pour une jauge posée sur
+ * ink — héros de `/souscription`.
  */
 export function Gauge({
   value,
   max,
   markers,
   className = "",
+  tone = "light",
 }: {
   value: number;
   max: number;
   markers: Marker[];
   className?: string;
+  tone?: "light" | "dark";
 }) {
   const [ref, filled] = useInView<HTMLDivElement>({ threshold: 0.4 });
   const pct = Math.min((value / max) * 100, 100);
@@ -50,7 +57,9 @@ export function Gauge({
           />
         ))}
       </div>
-      <div className="relative mt-2 h-10 text-xs text-ink-soft">
+      <div
+        className={`relative mt-2 h-10 text-xs ${tone === "dark" ? "text-paper/70" : "text-ink-soft"}`}
+      >
         {markers.map((m) => {
           const left = (m.value / max) * 100;
           return (
@@ -59,7 +68,7 @@ export function Gauge({
               className={`absolute top-0 ${left > 90 ? "-translate-x-full text-right" : "-translate-x-1/2 text-center"}`}
               style={{ left: `${left}%` }}
             >
-              <span className="font-semibold text-ink">
+              <span className={`font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
                 {formatInt(m.value)}&nbsp;€{m.reached && " ✓"}
               </span>
               <br />
