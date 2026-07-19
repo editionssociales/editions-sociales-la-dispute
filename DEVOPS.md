@@ -60,11 +60,17 @@ Branches distantes résiduelles à nettoyer : `feat/catalogue-couverture-seule`,
 | Champ | Valeur |
 |---|---|
 | Plateforme | **Vercel** (imposé : OVH mutualisé ne peut pas exécuter Node — cf. `LEGACY-STACK.md` §0) |
-| Projet | `editions-sociales-la-dispute` (`.vercel/project.json`) |
-| Team | `solidz` — **provisoire**, prestataire |
-| URL beta | `https://editions-sociales-la-dispute.vercel.app` |
-| Intégration Git | **active** (`vercel[bot]`, depuis le 2026-07-02) : `main` → Production, branche → Preview |
+| Projet | `editions-sociales-la-dispute` (`prj_A5GU0DpjwpzJEK4nbhTFmK4ToBP5`) |
+| Team | **LDES** (`team_1xHVCSjDQnrhRVC139r0pODZ`, compte client `administrer-7372`) — accès API via `VERCEL_PAT` de `site/.env` |
+| URL beta | `https://editions-sociales-la-dispute-mu.vercel.app` |
+| Intégration Git | **active** (`vercel[bot]`) : `main` → Production, branche → Preview |
 | Variables d'env prod | posées à la main (non auditables depuis le dépôt) |
+
+> Note (2026-07-19) : l'ancien **projet homonyme de la team solidz**
+> (`prj_Mi6jIFHz…`, git-lié au repo perso `yourimerad/…`) doublait les builds de
+> `main` en échec et squattait le domaine nu `editions-sociales-la-dispute.vercel.app`
+> (figé au 2026-07-11) — **supprimé le 2026-07-19**. `site/.vercel/project.json`
+> pointe encore dessus : relinker (`vercel link`) avant tout usage du CLI local.
 
 ### 1.3 Base de référence (vérifiée sur `main`, commit `012fe02`)
 
