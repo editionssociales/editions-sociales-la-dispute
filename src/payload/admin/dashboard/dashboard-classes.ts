@@ -2,11 +2,11 @@ import type { PanelState } from './derive.ts'
 import styles from './dashboard.module.css'
 
 /**
- * Classes CSS partagées entre `Dashboard.tsx` (`beforeDashboard`) et
- * `DashboardFooter.tsx` (`afterDashboard`) — même vocabulaire de
- * pastilles/badges/bandeau des deux côtés de la grille native Payload. Le
- * CSS-module vit ICI, jamais dans `derive.ts` (cœur pur, zéro I/O, zéro
- * import de styles).
+ * Classes CSS partagées entre `Dashboard.tsx` (`beforeDashboard`, home) et
+ * `../health/HealthPage.tsx` (vue dédiée `/admin/sante`, issue #27) — même
+ * vocabulaire de pastilles/badges/bandeau des deux côtés de la grille native
+ * Payload. Le CSS-module vit ICI, jamais dans `derive.ts` (cœur pur, zéro
+ * I/O, zéro import de styles).
  */
 
 /** Pastille ronde (dot) d'un état — panels, lignes de tableau, bandeau. */

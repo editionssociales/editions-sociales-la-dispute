@@ -20,7 +20,7 @@ export const PagesLegales: GlobalConfig = {
     interface: 'PagesLegales',
   },
   admin: {
-    group: 'Contenus du site',
+    group: 'Site',
     description:
       'Texte des trois pages légales. Un onglet vide laisse la page servie avec son texte par défaut (placeholders [À COMPLÉTER…] inclus).',
   },

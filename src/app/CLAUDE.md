@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Surface App Router en deux groupes étanches, sans root layout parent : **`(site)/`** — routes publiques fines (lisent `src/lib`, composent `src/components`) ; **`(payload)/`** — `/admin` + API (générés).
+Surface App Router en deux groupes étanches, sans root layout parent : **`(site)/`** — routes publiques fines (lisent `src/lib`, composent `src/components`) ; **`(payload)/`** — `/admin` + API (générés, à une exception : `custom.scss`, seul point d'entrée CSS manuel de l'admin).
 
 ## Ownership
 

@@ -34,16 +34,53 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
-      // Dashboard v2 (`_specs/dashboard-admin/design-v2.md`) : bandeau d'état
-      // + panneaux 3.2→3.10 + codes promo expirés AVANT la grille native
-      // `CollectionCards` (3.11, rendue par Payload entre les deux slots) ;
-      // observabilité + configuration (3.12/3.13, rôle admin) APRÈS. Ces
-      // composants absorbent les anciens StockImportPanel/StockLowWidget.
+      // Dashboard v3 (issue #23) : bandeau d'état + zone A « File du jour »
+      // + zone B « Alertes » (conditionnelle) + zone C « Raccourcis », rendu
+      // AVANT la grille native `CollectionCards` (rendue par Payload juste
+      // après ce slot — masquée en CSS depuis la nav groupée, issue #25,
+      // `custom.scss`).
+      // Observabilité (Sentry) + configuration & accès (ex-3.12/3.13, rôle
+      // admin STRICT) : sorties de la home vers la vue dédiée `sante`
+      // ci-dessous (issue #27, `HealthPage.tsx` — `DashboardFooter`
+      // supprimé, plus de slot `afterDashboard`).
       beforeDashboard: ['/payload/admin/dashboard/Dashboard.tsx#Dashboard'],
-      afterDashboard: ['/payload/admin/dashboard/DashboardFooter.tsx#DashboardFooter'],
+      // Vue admin `/admin/sante` (issue #27) : observabilité + configuration
+      // & accès, rôle admin strict (redirect interne vers `/admin` sinon —
+      // `HealthPage.tsx`). Lien de découverte : `afterNavLinks` ci-dessous.
+      // Vue admin `/admin/nouveau-livre` (issue #26) : création guidée d'une
+      // fiche livre en brouillon, rôle admin OU editor (redirect interne vers
+      // `/admin` sinon — `NewBookView.tsx`). Accès depuis la liste Livres
+      // (chips, `BooksFilterChips.tsx`) et la home (`Dashboard.tsx`, zone C).
+      views: {
+        sante: {
+          Component: '/payload/admin/health/HealthPage.tsx#HealthPage',
+          meta: { title: 'Santé' },
+          path: '/sante',
+        },
+        nouveauLivre: {
+          Component: '/payload/admin/books/NewBookView.tsx#NewBookView',
+          meta: { title: 'Nouveau livre' },
+          path: '/nouveau-livre',
+        },
+      },
+      afterNavLinks: ['/payload/admin/health/HealthNavLink.tsx#HealthNavLink'],
     },
   },
-  collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes, ImportRuns],
+  // Ordre = ordre des groupes dans la nav admin (issue #25) : Quotidien
+  // (Books, Orders, Media) → Catalogue (Authors, BookCollections, Highlight)
+  // → Boutique (PromoCodes, ImportRuns) → Site (Users, cf. les globals
+  // ci-dessous pour la suite du groupe « Site »).
+  collections: [
+    Books,
+    Orders,
+    Media,
+    Authors,
+    BookCollections,
+    Highlight,
+    PromoCodes,
+    ImportRuns,
+    Users,
+  ],
   globals: [ReglagesBoutique, PagesLegales, ReglagesSite, PageAPropos, PageSouscription],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
