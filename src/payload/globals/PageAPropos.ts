@@ -19,7 +19,7 @@ export const PageAPropos: GlobalConfig = {
     interface: 'PageAPropos',
   },
   admin: {
-    group: 'Contenus du site',
+    group: 'Site',
     description:
       'Textes de la page /a-propos. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.',
   },

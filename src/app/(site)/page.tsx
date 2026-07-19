@@ -17,6 +17,19 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
+/**
+ * Couleurs du bandeau de mise en avant (`Highlight.couleur`) → classes
+ * littérales (contrat Tailwind : le JIT ne compile pas le dynamique). Le CTA
+ * suit désormais la recette canonique `<Button>` (R4, inversion ink↔paper) —
+ * la couleur éditée ne pilote plus que l'aplat du bloc texte.
+ */
+const HIGHLIGHT_BLOCK: Record<string, string> = {
+  "pop-pink": "bg-pop-pink",
+  "pop-teal": "bg-pop-teal",
+  "pop-orange": "bg-pop-orange",
+  "pop-yellow": "bg-pop-yellow",
+};
+
 /** Un livre est éligible au carrousel s'il a une couverture et une fiche d'origine (édition connue). */
 function readyForCarousel(
   book: Book,
@@ -45,11 +58,16 @@ export default async function HomePage() {
 
       {/* Mise en avant ponctuelle (E6bis, engagement C32) : rien n'est rendu
           quand `highlight` est absent (inactif ou hors dates) — page
-          strictement iso à l'état actuel, aucun wrapper laissé derrière. */}
+          strictement iso à l'état actuel, aucun wrapper laissé derrière.
+          L'ex-bandeau souscription codé en dur vit désormais ici : c'est une
+          entrée de la collection (semée par la migration
+          `highlight_couleur_cta`), soumise à « une campagne à la fois ». */}
       {highlight && (
         <Container className="mt-[clamp(30px,4.5vw,60px)]">
           <FramedGrid className="grid-cols-1 sm:grid-cols-[1fr_auto]">
-            <div className="flex min-w-0 flex-col justify-center gap-1.5 bg-pop-pink px-6 py-6 sm:px-7">
+            <div
+              className={`flex min-w-0 flex-col justify-center gap-1.5 px-6 py-6 sm:px-7 ${HIGHLIGHT_BLOCK[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_BLOCK["pop-pink"]}`}
+            >
               <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-ink">
                 {highlight.titre}
               </p>
@@ -62,32 +80,13 @@ export default async function HomePage() {
                 href={highlight.lien}
                 className="flex-none gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em]"
               >
-                En savoir plus <span aria-hidden="true">→</span>
+                {highlight.lienLibelle?.trim() || "En savoir plus"}{" "}
+                <span aria-hidden="true">→</span>
               </Button>
             )}
           </FramedGrid>
         </Container>
       )}
-
-      <Container className="mt-[clamp(30px,4.5vw,60px)]">
-        <FramedGrid className="grid-cols-1 sm:grid-cols-[1fr_auto]">
-          <div className="flex min-w-0 flex-col justify-center gap-1.5 bg-pop-yellow px-6 py-6 sm:px-7">
-            <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-ink">
-              La souscription est ouverte
-            </p>
-            <p className="mt-0.5 max-w-[56ch] text-sm text-ink/70">
-              Soutenez les Éditions sociales et La Dispute — chaque
-              souscription finance les prochains titres.
-            </p>
-          </div>
-          <Button
-            href="/souscription"
-            className="flex-none gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em]"
-          >
-            Souscrire <span aria-hidden="true">→</span>
-          </Button>
-        </FramedGrid>
-      </Container>
     </div>
   );
 }

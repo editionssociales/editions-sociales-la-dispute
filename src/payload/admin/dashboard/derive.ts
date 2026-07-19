@@ -1,10 +1,12 @@
-import type { DonationsData, WorkOrdersData } from './data.ts'
+import type { WorkOrdersData } from './data.ts'
 
 /**
- * Cœur pur du tableau de bord `/admin` (design v2, `_specs/dashboard-admin/`)
- * — dérivations sans I/O, testées dans `derive.test.ts`. Les lectures Payload/
- * Stripe/Sentry vivent dans `data.ts`, le rendu (et son CSS-module) dans
- * `Dashboard.tsx`/`DashboardFooter.tsx`/`dashboard-classes.ts`.
+ * Cœur pur du tableau de bord `/admin` (design v3 — home = zones A « File du
+ * jour » / B « Alertes » / C « Raccourcis », issue #23) — dérivations sans
+ * I/O, testées dans `derive.test.ts`. Les lectures Payload/Stripe/Sentry
+ * vivent dans `data.ts`, le rendu (et son CSS-module) dans `Dashboard.tsx`,
+ * `../health/HealthPage.tsx` (vue admin-only `/admin/sante`, issue #27) et
+ * `dashboard-classes.ts`.
  *
  * Principe non négociable du design : jamais de vert ni de zéro « par
  * défaut » — un signal non calculable est `na` (gris, « diagnostic
@@ -85,12 +87,7 @@ export function stockSignal(stocks: number[]): PanelState {
   return 'ok'
 }
 
-/* ────────────────────────── Ventes du mois (3.5) ────────────────────────── */
-
-/** Somme des `totalTTC` (euros) — le CA affiché est BRUT, remboursements non déduits (décision ouverte, design v2 §6). */
-export function sumSalesTTC(orders: { totalTTC: number }[]): number {
-  return orders.reduce((sum, o) => sum + (Number.isFinite(o.totalTTC) ? o.totalTTC : 0), 0)
-}
+/* ────────────────────────── Raccourci « Ventes du mois » (zone C) ────────────────────────── */
 
 /**
  * Bornes UTC du mois civil courant **à l'heure de Paris** (les `paidAt` sont
@@ -184,82 +181,26 @@ export function sentrySignal(errorEvents: number | null): PanelState {
   return errorEvents > 0 ? 'alert' : 'ok'
 }
 
-/* ────────────────────────── Dons (3.6, repris du design v1 §3.2) ────────────────────────── */
-
-/** Ouverture de la campagne de dons 2026 — enjeu daté du design (15/08). */
-export const CAMPAIGN_LAUNCH_2026 = '2026-08-15'
-
-export interface DonationSignalInput {
-  /** `STRIPE_SECRET_KEY` valide posée (sinon la jauge est inconstructible). */
-  enabled: boolean
-  /** Préfixe de la clé — `test` en production à l'approche du 15/08 = alerte (design v1 §3.2). */
-  mode: 'live' | 'test' | 'absent'
-  /** La jauge a-t-elle pu être calculée ? (`getCampaign2026()` renvoie `null` sur toute erreur.) */
-  gaugeAvailable: boolean
-  /** Horodatage ISO du don le plus récent connu, s'il y en a un. */
-  lastDonationAt: string | null
-  /** Nombre de remboursements sur les 7 derniers jours. */
-  refunds7d: number
-  now: Date
-}
-
-/**
- * Feu du panneau dons, règles du design v1 §3.2 (repris à l'identique par le
- * v2 §3.6) : alerte si clé absente, remboursement récent, ou mode test à
- * moins de 7 jours de l'ouverture (15/08) ; attention si aucun don depuis
- * 48 h en période de campagne ; gris si la jauge n'est pas calculable.
- */
-export function donationsSignal(input: DonationSignalInput): PanelState {
-  if (!input.enabled || input.mode === 'absent') return 'alert'
-  const launch = Date.parse(`${CAMPAIGN_LAUNCH_2026}T00:00:00+02:00`)
-  const nowMs = input.now.getTime()
-  if (input.mode === 'test' && launch - nowMs < 7 * DAY_MS) return 'alert'
-  if (input.refunds7d > 0) return 'alert'
-  if (!input.gaugeAvailable) return 'na'
-  const campaignOpen = nowMs >= launch
-  if (campaignOpen) {
-    if (!input.lastDonationAt) return 'warn'
-    const last = Date.parse(input.lastDonationAt)
-    if (Number.isNaN(last) || nowMs - last > 48 * HOUR_MS) return 'warn'
-  }
-  return 'ok'
-}
-
-/**
- * État du signal Dons (bandeau 3.1, dot du panneau 3.6) : état de base
- * `donationsSignal`, PUIS rétrogradé de `ok` à `na` si les listes dérivées
- * (derniers dons, remboursements 7 j) sont illisibles — un « OK » serait un
- * vert par défaut trompeur ; une alerte/attention réelle reste prioritaire.
- */
-export function donsState(donations: DonationsData, now: Date): PanelState {
-  const base = donationsSignal({
-    enabled: donations.mode !== 'absent',
-    mode: donations.mode,
-    gaugeAvailable: donations.gauge !== null,
-    lastDonationAt: donations.lastDonationAt,
-    refunds7d: donations.refunds7d ?? 0,
-    now,
-  })
-  const partial =
-    donations.mode !== 'absent' && (donations.recent === null || donations.refunds7d === null)
-  return partial && base === 'ok' ? 'na' : base
-}
-
 /* ────────────────────────── Bandeau d'état (3.1) ────────────────────────── */
 
 export interface BannerItem {
   /** Identifiant stable du signal (ancre `#panneau-…`). */
-  key: 'commandes' | 'stock' | 'dons' | 'import' | 'diagnostic'
+  key: 'commandes' | 'stock' | 'import'
   label: string
   state: PanelState
-  /** Ancre vers le panneau — absente si le lecteur n'a pas accès au panneau (rôle). */
+  /**
+   * Ancre vers le panneau correspondant — `null` si le lecteur n'a pas accès
+   * au panneau (rôle) OU si le panneau ne sera pas rendu (zone B « Alertes »
+   * conditionnelle, design v3 §23) : jamais un lien mort.
+   */
   anchor: string | null
 }
 
 /**
  * Le bandeau n'existe que s'il a quelque chose à dire : masqué intégralement
- * quand TOUTES les pastilles sont vertes (design v2 §3.1) — un gris (signal
- * non calculable) le maintient visible, jamais requalifié en vert.
+ * quand TOUTES les pastilles sont vertes (design v2 §3.1, repris v3) — un
+ * gris (signal non calculable) le maintient visible, jamais requalifié en
+ * vert.
  */
 export function bannerHidden(items: BannerItem[]): boolean {
   return items.every((item) => item.state === 'ok')
