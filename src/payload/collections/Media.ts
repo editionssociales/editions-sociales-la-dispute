@@ -53,6 +53,11 @@ export const Media: CollectionConfig = {
       name: 'alt',
       type: 'text',
       label: 'Texte alternatif',
+      admin: {
+        readOnly: true,
+        description:
+          'Rempli automatiquement à la sauvegarde du livre (couverture, table des matières ou extrait — titre + auteur·rice·s). Non modifiable à la main.',
+      },
     },
     {
       name: 'sourceUrl',

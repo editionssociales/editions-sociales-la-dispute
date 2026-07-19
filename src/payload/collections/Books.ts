@@ -1,9 +1,11 @@
 import type {
+  CollectionAfterChangeHook,
   CollectionBeforeChangeHook,
   CollectionBeforeValidateHook,
   CollectionConfig,
-  RelationshipFieldSingleValidation,
+  FieldHook,
   TextFieldValidation,
+  UploadFieldSingleValidation,
 } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
@@ -11,7 +13,14 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import {
+  authorIdsFromDoc,
+  buildBookMediaAlt,
+  mediaIdFromDoc,
+  type BookMediaKind,
+} from '../lib/cover-alt.ts'
 import { trimIsbn, validateIsbnValue } from '../lib/isbn.ts'
+import { slugify } from '../lib/slugify.ts'
 import { importStockHandler } from '../lib/stock-import.ts'
 
 /**
@@ -37,7 +46,7 @@ const setContentTouched: CollectionBeforeChangeHook = ({ data, req, operation })
  * pas au niveau du champ (`required`) car les imports de migration tolèrent
  * un média manquant (listé au rapport, cf. plan section E3/risque 11).
  */
-const validateCover: RelationshipFieldSingleValidation = (value, { operation, req }) => {
+const validateCover: UploadFieldSingleValidation = (value, { operation, req }) => {
   if (req.context?.migration) {
     return true
   }
@@ -49,6 +58,66 @@ const validateCover: RelationshipFieldSingleValidation = (value, { operation, re
     return 'La couverture est obligatoire pour une nouvelle fiche.'
   }
   return true
+}
+
+const BOOK_MEDIA_ALT_FIELDS = [
+  'cover',
+  'tablePdf',
+  'extraitPdf',
+] as const satisfies readonly BookMediaKind[]
+
+/**
+ * Pose `media.alt` (couverture, table des matières, extrait) depuis titre +
+ * auteur·rice·s à chaque sauvegarde humaine. Le front calcule déjà un alt
+ * équivalent pour les images ; ce champ CMS sert l'accessibilité et la
+ * cohérence back-office.
+ */
+const syncBookMediaAlts: CollectionAfterChangeHook = async ({ doc, req }) => {
+  if (req.context?.migration) return doc
+  if (typeof doc.title !== 'string' || !doc.title.trim()) return doc
+
+  const targets: { id: number; kind: BookMediaKind }[] = []
+  for (const kind of BOOK_MEDIA_ALT_FIELDS) {
+    const id = mediaIdFromDoc(doc[kind])
+    if (id != null) targets.push({ id, kind })
+  }
+  if (targets.length === 0) return doc
+
+  const authorIds = authorIdsFromDoc(doc.authors)
+  let authorNames: string[] = []
+  if (authorIds.length > 0) {
+    const { docs: authors } = await req.payload.find({
+      collection: 'authors',
+      depth: 0,
+      limit: authorIds.length,
+      pagination: false,
+      where: { id: { in: authorIds } },
+      req,
+    })
+    const byId = new Map(authors.map((a) => [a.id, a.name]))
+    authorNames = authorIds.map((id) => byId.get(id) ?? '').filter(Boolean)
+  }
+
+  for (const { id, kind } of targets) {
+    const alt = buildBookMediaAlt(kind, doc.title, authorNames)
+    const media = await req.payload.findByID({
+      collection: 'media',
+      id,
+      depth: 0,
+      req,
+    })
+    if (media.alt === alt) continue
+
+    await req.payload.update({
+      collection: 'media',
+      id,
+      data: { alt },
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+      req,
+    })
+  }
+  return doc
 }
 
 /** ISBN optionnel ; format contrôlé hors import de migration (données héritées). */
@@ -68,6 +137,32 @@ const trimIsbnField: CollectionBeforeValidateHook = ({ data, req }) => {
     return { ...data, isbn: trimIsbn(data.isbn) }
   }
   return data
+}
+
+/**
+ * Slug : normalise la saisie, ou dérive du titre si vide (création / API).
+ * Sur un update partiel sans `slug` dans le payload, on conserve l'existant.
+ */
+const deriveSlugFromTitle: FieldHook = ({
+  value,
+  data,
+  siblingData,
+  operation,
+  originalDoc,
+}) => {
+  if (typeof value === 'string' && value.trim()) {
+    return slugify(value)
+  }
+  if (operation === 'update' && value === undefined) {
+    return typeof originalDoc?.slug === 'string' ? originalDoc.slug : value
+  }
+  const title =
+    (typeof siblingData?.title === 'string' && siblingData.title) ||
+    (typeof data?.title === 'string' && data.title) ||
+    (typeof originalDoc?.title === 'string' && originalDoc.title) ||
+    ''
+  if (title.trim()) return slugify(title)
+  return value
 }
 
 export const Books: CollectionConfig = {
@@ -109,7 +204,7 @@ export const Books: CollectionConfig = {
   hooks: {
     beforeValidate: [trimIsbnField],
     beforeChange: [setContentTouched],
-    afterChange: [revalidateCatalogueAfterChange],
+    afterChange: [syncBookMediaAlts, revalidateCatalogueAfterChange],
     afterDelete: [revalidateCatalogueAfterDelete],
   },
   // `POST /api/books/import-stock` — import stock routeur mensuel (multipart,
@@ -145,67 +240,124 @@ export const Books: CollectionConfig = {
           label: 'Édition',
           fields: [
             {
-              name: 'title',
-              type: 'text',
-              required: true,
-              label: 'Titre',
-            },
-            {
-              name: 'slug',
-              type: 'text',
-              required: true,
-              index: true,
-              label: 'Slug',
-              admin: {
-                description: "Identifiant d'URL — ne pas modifier après publication",
-              },
-            },
-            {
-              name: 'edition',
-              type: 'select',
-              index: true,
-              label: 'Maison',
-              options: [
-                { value: 'editions-sociales', label: 'Éditions sociales' },
-                { value: 'la-dispute', label: 'La Dispute' },
+              type: 'row',
+              fields: [
+                {
+                  name: 'title',
+                  type: 'text',
+                  required: true,
+                  label: 'Titre',
+                  admin: { width: '65%' },
+                },
+                {
+                  name: 'slug',
+                  type: 'text',
+                  required: true,
+                  index: true,
+                  label: 'Slug',
+                  hooks: {
+                    beforeValidate: [deriveSlugFromTitle],
+                  },
+                  admin: {
+                    width: '35%',
+                    description:
+                      'Prérempli depuis le titre — ne pas modifier après publication',
+                    components: {
+                      Field: '/payload/admin/books/SlugFromTitleField.tsx#SlugFromTitleField',
+                    },
+                  },
+                },
               ],
             },
             {
-              name: 'authors',
-              type: 'relationship',
-              relationTo: 'authors',
-              hasMany: true,
-              label: 'Auteur·rice·s',
+              type: 'row',
+              fields: [
+                {
+                  name: 'edition',
+                  type: 'select',
+                  index: true,
+                  label: 'Maison',
+                  options: [
+                    { value: 'editions-sociales', label: 'Éditions sociales' },
+                    { value: 'la-dispute', label: 'La Dispute' },
+                  ],
+                  admin: { width: '33%' },
+                },
+                {
+                  name: 'authors',
+                  type: 'relationship',
+                  relationTo: 'authors',
+                  hasMany: true,
+                  label: 'Auteur·rice·s',
+                  admin: { width: '34%' },
+                },
+                {
+                  name: 'libelles',
+                  type: 'relationship',
+                  relationTo: 'libelles',
+                  hasMany: true,
+                  label: 'Libellés',
+                  admin: {
+                    width: '33%',
+                    description:
+                      'Thèmes du catalogue (plusieurs possibles). Liste gérée sous Catalogue → Libellés.',
+                  },
+                },
+              ],
             },
             {
-              name: 'libelles',
-              type: 'relationship',
-              relationTo: 'libelles',
-              hasMany: true,
-              label: 'Libellés',
-              admin: {
-                description:
-                  'Thèmes du catalogue (plusieurs possibles). Liste gérée sous Catalogue → Libellés.',
-              },
-            },
-            {
-              name: 'cover',
-              type: 'relationship',
-              relationTo: 'media',
-              label: 'Couverture',
-              validate: validateCover,
-            },
-            {
-              name: 'tablePdf',
-              type: 'relationship',
-              relationTo: 'media',
-              label: 'Table des matières (PDF)',
-            },
-            {
-              name: 'extraitPdf',
-              type: 'relationship',
-              relationTo: 'media',
-              label: 'Extrait (PDF)',
+              type: 'row',
+              fields: [
+                {
+                  name: 'cover',
+                  type: 'upload',
+                  relationTo: 'media',
+                  label: 'Couverture',
+                  displayPreview: true,
+                  filterOptions: {
+                    mimeType: { contains: 'image' },
+                  },
+                  validate: validateCover,
+                  admin: {
+                    width: '34%',
+                    className: 'book-upload-only',
+                    description:
+                      'Téléversez une image (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.',
+                  },
+                },
+                {
+                  name: 'tablePdf',
+                  type: 'upload',
+                  relationTo: 'media',
+                  label: 'Table des matières (PDF)',
+                  displayPreview: true,
+                  filterOptions: {
+                    mimeType: { contains: 'pdf' },
+                  },
+                  admin: {
+                    width: '33%',
+                    className: 'book-upload-only',
+                    description:
+                      'Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.',
+                  },
+                },
+                {
+                  name: 'extraitPdf',
+                  type: 'upload',
+                  relationTo: 'media',
+                  label: 'Extrait (PDF)',
+                  displayPreview: true,
+                  filterOptions: {
+                    mimeType: { contains: 'pdf' },
+                  },
+                  admin: {
+                    width: '33%',
+                    className: 'book-upload-only',
+                    description:
+                      'Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.',
+                  },
+                },
+              ],
             },
             {
               name: 'presentation',
@@ -215,7 +367,7 @@ export const Books: CollectionConfig = {
               admin: {
                 disableListColumn: true,
                 description:
-                  'Tant que « Contenu réédité » (onglet Technique) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.',
+                  'À la première sauvegarde humaine, ce texte Lexical remplace le HTML WordPress d’origine sur le site.',
               },
             },
             {
@@ -227,38 +379,47 @@ export const Books: CollectionConfig = {
               },
             },
             {
-              name: 'dateParution',
-              type: 'date',
-              required: true,
-              label: 'Date de parution',
-              admin: {
-                date: {
-                  pickerAppearance: 'dayOnly',
-                  displayFormat: 'dd/MM/yyyy',
+              type: 'row',
+              fields: [
+                {
+                  name: 'dateParution',
+                  type: 'date',
+                  required: true,
+                  label: 'Date de parution',
+                  admin: {
+                    width: '25%',
+                    date: {
+                      pickerAppearance: 'dayOnly',
+                      displayFormat: 'dd/MM/yyyy',
+                    },
+                  },
                 },
-              },
-            },
-            {
-              name: 'aParaitre',
-              type: 'checkbox',
-              defaultValue: false,
-              label: 'À paraître (informatif)',
-            },
-            {
-              name: 'isbn',
-              type: 'text',
-              label: 'ISBN',
-              validate: validateIsbn,
-              admin: {
-                placeholder: '978-2-35367-036-9',
-                description:
-                  'ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.',
-              },
-            },
-            {
-              name: 'pages',
-              type: 'number',
-              label: 'Pages',
+                {
+                  name: 'aParaitre',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  label: 'À paraître (informatif)',
+                  admin: { width: '20%' },
+                },
+                {
+                  name: 'isbn',
+                  type: 'text',
+                  label: 'ISBN',
+                  validate: validateIsbn,
+                  admin: {
+                    width: '35%',
+                    placeholder: '978-2-35367-036-9',
+                    description:
+                      'ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.',
+                  },
+                },
+                {
+                  name: 'pages',
+                  type: 'number',
+                  label: 'Pages',
+                  admin: { width: '20%' },
+                },
+              ],
             },
           ],
         },
@@ -268,24 +429,31 @@ export const Books: CollectionConfig = {
           label: 'Commerce',
           fields: [
             {
-              name: 'prix',
-              type: 'number',
-              min: 0,
-              label: 'Prix (€)',
-              admin: {
-                description:
-                  'Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au checkout.',
-              },
-            },
-            {
-              name: 'origin',
-              type: 'select',
-              required: true,
-              defaultValue: 'catalogue',
-              label: 'Origine',
-              options: [
-                { value: 'catalogue', label: 'Catalogue' },
-                { value: 'boutique', label: 'Boutique' },
+              type: 'row',
+              fields: [
+                {
+                  name: 'prix',
+                  type: 'number',
+                  min: 0,
+                  label: 'Prix (€)',
+                  admin: {
+                    width: '25%',
+                    description:
+                      'Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au checkout.',
+                  },
+                },
+                {
+                  name: 'origin',
+                  type: 'select',
+                  required: true,
+                  defaultValue: 'catalogue',
+                  label: 'Origine',
+                  options: [
+                    { value: 'catalogue', label: 'Catalogue' },
+                    { value: 'boutique', label: 'Boutique' },
+                  ],
+                  admin: { width: '25%' },
+                },
               ],
             },
             {
@@ -294,19 +462,27 @@ export const Books: CollectionConfig = {
               label: "Liens d'achat",
               fields: [
                 {
-                  name: 'boutiqueUrl',
-                  type: 'text',
-                  label: 'Boutique',
-                },
-                {
-                  name: 'parislibrairies',
-                  type: 'text',
-                  label: 'Paris Librairies',
-                },
-                {
-                  name: 'lalibrairie',
-                  type: 'text',
-                  label: 'La Librairie',
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'boutiqueUrl',
+                      type: 'text',
+                      label: 'Boutique',
+                      admin: { width: '34%' },
+                    },
+                    {
+                      name: 'parislibrairies',
+                      type: 'text',
+                      label: 'Paris Librairies',
+                      admin: { width: '33%' },
+                    },
+                    {
+                      name: 'lalibrairie',
+                      type: 'text',
+                      label: 'La Librairie',
+                      admin: { width: '33%' },
+                    },
+                  ],
                 },
               ],
             },
@@ -319,165 +495,169 @@ export const Books: CollectionConfig = {
               },
               fields: [
                 {
-                  name: 'sellable',
-                  type: 'checkbox',
-                  defaultValue: true,
-                  label: 'Vendable nativement',
-                  admin: {
-                    description:
-                      'Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.',
-                  },
-                },
-                {
-                  name: 'stock',
-                  type: 'number',
-                  min: 0,
-                  label: 'Stock',
-                  admin: {
-                    description:
-                      'Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.',
-                  },
-                },
-                {
-                  name: 'stockSuivi',
-                  type: 'select',
-                  defaultValue: 'manuel',
-                  label: 'Suivi du stock',
-                  options: [
-                    { value: 'routeur', label: 'Routeur (import mensuel)' },
-                    { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
-                  ],
-                  admin: {
-                    description:
-                      "Posé automatiquement à « routeur » par l'import mensuel ; « manuel » (défaut) sinon.",
-                  },
-                },
-                {
-                  name: 'reducedShippingFlag',
-                  type: 'checkbox',
-                  defaultValue: false,
-                  label: 'Port réduit (« manifeste »)',
-                  admin: {
-                    description:
-                      "Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.",
-                  },
-                },
-                {
-                  name: 'stockUpdatedAt',
-                  type: 'date',
-                  label: 'Stock mis à jour le',
-                  admin: {
-                    readOnly: true,
-                    description:
-                      "Posé automatiquement par l'import stock routeur mensuel " +
-                      '(`POST /api/books/import-stock`) — jamais saisi à la main.',
-                  },
-                },
-              ],
-            },
-          ],
-        },
-        // Onglet technique — legacy WordPress, parachutes de parité, clés de
-        // migration. Reste visible pour tous les rôles (pas d'access par
-        // champ), juste relégué en dernière position (choix acté issue #24).
-        {
-          label: 'Technique',
-          fields: [
-            {
-              name: 'contentTouched',
-              type: 'checkbox',
-              defaultValue: false,
-              label: 'Contenu réédité',
-              access: { read: ({ req }) => Boolean(req.user) },
-              admin: {
-                readOnly: true,
-                disableListColumn: true,
-                description:
-                  'Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.',
-              },
-            },
-            {
-              name: 'wpSource',
-              type: 'group',
-              label: 'Source WordPress',
-              access: { read: ({ req }) => Boolean(req.user) },
-              admin: {
-                readOnly: true,
-                description:
-                  "Clé d'upsert de la migration — vide pour les fiches nées dans Payload.",
-              },
-              fields: [
-                {
-                  name: 'site',
-                  type: 'select',
-                  label: 'Site',
-                  options: [
-                    { value: 'editions-sociales', label: 'Éditions sociales' },
-                    { value: 'la-dispute', label: 'La Dispute' },
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'sellable',
+                      type: 'checkbox',
+                      defaultValue: true,
+                      label: 'Vendable nativement',
+                      admin: {
+                        width: '50%',
+                        description:
+                          'Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.',
+                      },
+                    },
+                    {
+                      name: 'reducedShippingFlag',
+                      type: 'checkbox',
+                      defaultValue: false,
+                      label: 'Port réduit (« manifeste »)',
+                      admin: {
+                        width: '50%',
+                        description:
+                          "Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.",
+                      },
+                    },
                   ],
                 },
                 {
-                  name: 'wpId',
-                  type: 'number',
-                  label: 'ID WordPress',
-                },
-                {
-                  name: 'wpSlug',
-                  type: 'text',
-                  label: 'Slug WordPress',
-                },
-                {
-                  name: 'wpDate',
-                  type: 'date',
-                  label: 'Date WordPress',
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'stock',
+                      type: 'number',
+                      min: 0,
+                      label: 'Stock',
+                      admin: {
+                        width: '20%',
+                        description:
+                          'Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.',
+                      },
+                    },
+                    {
+                      name: 'stockSuivi',
+                      type: 'select',
+                      defaultValue: 'manuel',
+                      label: 'Suivi du stock',
+                      options: [
+                        { value: 'routeur', label: 'Routeur (import mensuel)' },
+                        { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
+                      ],
+                      admin: {
+                        width: '40%',
+                        description:
+                          "Posé automatiquement à « routeur » par l'import mensuel ; « manuel » (défaut) sinon.",
+                      },
+                    },
+                    {
+                      name: 'stockUpdatedAt',
+                      type: 'date',
+                      label: 'Stock mis à jour le',
+                      admin: {
+                        width: '40%',
+                        readOnly: true,
+                        description:
+                          "Posé automatiquement par l'import stock routeur mensuel " +
+                          '(`POST /api/books/import-stock`) — jamais saisi à la main.',
+                      },
+                    },
+                  ],
                 },
               ],
-            },
-            {
-              name: 'coverFallbackUrl',
-              type: 'text',
-              access: { read: ({ req }) => Boolean(req.user) },
-              admin: {
-                hidden: true,
-                description:
-                  'URL OVH de repli si le rapatriement du média a échoué (risque 11 du plan).',
-              },
-            },
-            {
-              name: 'sortDate',
-              type: 'date',
-              required: true,
-              defaultValue: () => new Date().toISOString(),
-              admin: {
-                hidden: true,
-                description: "Clé de tri du port — parité avec l'ordre WordPress",
-              },
-            },
-            {
-              name: 'presentationLegacyHtml',
-              type: 'textarea',
-              // Champ interne (parachute de parité) : jamais servi brut aux
-              // anonymes via l'API REST publique de Payload — le front le
-              // consommera via la Local API (overrideAccess) puis
-              // sanitizeCms (E4).
-              access: { read: ({ req }) => Boolean(req.user) },
-              admin: {
-                hidden: true,
-                disableListColumn: true,
-              },
-            },
-            {
-              name: 'plusLoinLegacyHtml',
-              type: 'textarea',
-              access: { read: ({ req }) => Boolean(req.user) },
-              admin: {
-                hidden: true,
-                disableListColumn: true,
-              },
             },
           ],
         },
       ],
+    },
+    // Champs internes (migration / parachute de parité) — hors UI admin.
+    // Ancien onglet Technique (issue #24) retiré : plus de surface éditoriale.
+    {
+      name: 'contentTouched',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Contenu réédité',
+      access: { read: ({ req }) => Boolean(req.user) },
+      admin: {
+        hidden: true,
+        readOnly: true,
+        disableListColumn: true,
+      },
+    },
+    {
+      name: 'wpSource',
+      type: 'group',
+      label: 'Source WordPress',
+      access: { read: ({ req }) => Boolean(req.user) },
+      admin: {
+        hidden: true,
+        readOnly: true,
+      },
+      fields: [
+        {
+          name: 'site',
+          type: 'select',
+          label: 'Site',
+          options: [
+            { value: 'editions-sociales', label: 'Éditions sociales' },
+            { value: 'la-dispute', label: 'La Dispute' },
+          ],
+        },
+        {
+          name: 'wpId',
+          type: 'number',
+          label: 'ID WordPress',
+        },
+        {
+          name: 'wpSlug',
+          type: 'text',
+          label: 'Slug WordPress',
+        },
+        {
+          name: 'wpDate',
+          type: 'date',
+          label: 'Date WordPress',
+        },
+      ],
+    },
+    {
+      name: 'coverFallbackUrl',
+      type: 'text',
+      access: { read: ({ req }) => Boolean(req.user) },
+      admin: {
+        hidden: true,
+      },
+    },
+    {
+      name: 'sortDate',
+      type: 'date',
+      required: true,
+      defaultValue: () => new Date().toISOString(),
+      admin: {
+        hidden: true,
+      },
+    },
+    {
+      name: 'presentationLegacyHtml',
+      type: 'textarea',
+      // Champ interne (parachute de parité) : jamais servi brut aux
+      // anonymes via l'API REST publique de Payload — le front le
+      // consommera via la Local API (overrideAccess) puis
+      // sanitizeCms (E4).
+      access: { read: ({ req }) => Boolean(req.user) },
+      admin: {
+        hidden: true,
+        disableListColumn: true,
+      },
+    },
+    {
+      name: 'plusLoinLegacyHtml',
+      type: 'textarea',
+      access: { read: ({ req }) => Boolean(req.user) },
+      admin: {
+        hidden: true,
+        disableListColumn: true,
+      },
     },
   ],
 }
