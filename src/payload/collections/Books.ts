@@ -577,7 +577,13 @@ export const Books: CollectionConfig = {
       type: 'checkbox',
       defaultValue: false,
       label: 'Contenu réédité',
-      access: { read: ({ req }) => Boolean(req.user) },
+      // Lisible par TOUS : la lecture publique du front passe par
+      // `PUBLIC_BOOKS_READ` (`overrideAccess: false`, contrat anti-brouillon)
+      // — un champ réservé aux connectés y devient `undefined`, et le
+      // parachute `renderHtml(legacy, lexical, contentTouched)` basculait
+      // silencieusement sur le Lexical pour tout le monde (constat live,
+      // audit 2026-07-19). Reste hors UI admin.
+      access: { read: () => true },
       admin: {
         hidden: true,
         readOnly: true,
@@ -640,11 +646,15 @@ export const Books: CollectionConfig = {
     {
       name: 'presentationLegacyHtml',
       type: 'textarea',
-      // Champ interne (parachute de parité) : jamais servi brut aux
-      // anonymes via l'API REST publique de Payload — le front le
-      // consommera via la Local API (overrideAccess) puis
-      // sanitizeCms (E4).
-      access: { read: ({ req }) => Boolean(req.user) },
+      // Champ parachute : lisible par TOUS. L'hypothèse d'origine (« le
+      // front le consommera via la Local API avec overrideAccess ») était
+      // fausse : la lecture publique (`PUBLIC_BOOKS_READ`) garde
+      // `overrideAccess: false` pour le contrat anti-brouillon, donc un
+      // champ réservé aux connectés était invisible du rendu — le site
+      // servait le Lexical partout, parachute mort (constat live, audit
+      // 2026-07-19). Exposer le HTML brut via l'API publique est sans
+      // enjeu : même contenu que la page, sanitisé au rendu (sanitizeCms).
+      access: { read: () => true },
       admin: {
         hidden: true,
         disableListColumn: true,
@@ -653,7 +663,8 @@ export const Books: CollectionConfig = {
     {
       name: 'plusLoinLegacyHtml',
       type: 'textarea',
-      access: { read: ({ req }) => Boolean(req.user) },
+      // Lisible par TOUS — même raison que `presentationLegacyHtml`.
+      access: { read: () => true },
       admin: {
         hidden: true,
         disableListColumn: true,
