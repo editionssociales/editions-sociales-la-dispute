@@ -69,7 +69,7 @@ export const Highlight: CollectionConfig = {
         { value: 'pop-yellow', label: 'Jaune' },
       ],
       admin: {
-        description: 'Couleur de fond du bandeau (le texte reste noir par-dessus).',
+        description: "Couleur d'accent du bandeau (liseré à gauche du bloc). Ignorée pour la campagne souscription (lien vers /souscription), qui garde son identité sombre propre.",
       },
     },
     {

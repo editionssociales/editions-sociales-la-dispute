@@ -11,6 +11,7 @@ import {
   type NavSectionId,
 } from "@/lib/nav";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { NAV_ACCENT_BG } from "./nav-accent";
 import { CartNavCell } from "./cart/cart-badge";
 
 /**
@@ -42,12 +43,6 @@ import { CartNavCell } from "./cart/cart-badge";
  * contents` les rend transparentes à la grille CSS (aucun changement visuel).
  */
 
-const NAV_ACCENT_CLASS: Record<NavSectionId, string> = {
-  catalogue: "bg-pop-pink",
-  geme: "bg-pop-teal",
-  "a-paraitre": "bg-pop-orange",
-  agenda: "bg-pop-yellow",
-};
 const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
   catalogue: "bg-paper hover:bg-pop-pink",
   geme: "bg-paper hover:bg-pop-teal",
@@ -102,7 +97,7 @@ function navCellClass(section: NavSectionId, active: boolean, compact: boolean) 
   // la hauteur suit la rangée (py-0), seule la taille de texte varie au scroll.
   const lg = compact ? "lg:min-h-0 lg:py-0 lg:text-[12px]" : "lg:min-h-0 lg:py-0 lg:text-[14px]";
   return `flex min-h-11 items-center justify-center px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-black ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg} ${
-    active ? NAV_ACCENT_CLASS[section] : NAV_HOVER_CLASS[section]
+    active ? NAV_ACCENT_BG[section] : NAV_HOVER_CLASS[section]
   }`;
 }
 
