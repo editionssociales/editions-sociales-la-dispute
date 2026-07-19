@@ -322,42 +322,47 @@ export default async function BookPage({
             </section>
           )}
 
-          {sameLibelle.length > 0 && (
-            <section className="mt-10 border-t-2 border-ink pt-8">
-              <h2 className="mb-4 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
-                  aria-hidden="true"
-                />
-                Même libellé
-              </h2>
-              <FramedGrid className="grid-cols-2 sm:grid-cols-4">
-                {sameLibelle.map((related) => (
-                  <Link
-                    key={related.id}
-                    href={`/catalogue/${related.edition}/${related.slug}`}
-                    className={`group flex flex-col bg-paper p-3 ${FOCUS_RING_LIGHT_OUTER}`}
-                  >
-                    <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2">
-                      <BookCover
-                        cover={related.cover}
-                        title={related.title}
-                        alt={`Couverture de « ${related.title} »`}
-                        fit="width"
-                        sizes="200px"
-                        className="block h-auto w-full"
-                        fallbackClassName="p-3"
-                      />
-                    </span>
-                    <p className="mt-2 font-sans text-xs font-bold leading-snug text-ink line-clamp-2 group-hover:underline">
-                      {related.title}
-                    </p>
-                  </Link>
-                ))}
-              </FramedGrid>
-            </section>
-          )}
         </article>
+
+        {/* Bandeau pleine largeur SOUS les deux colonnes (order-3) : sur
+            mobile, il passait avant la couverture et le bloc d'achat quand il
+            vivait dans l'article — la couverture se retrouvait enterrée en
+            bas de page. L'ordre mobile devient : article → achat → liés. */}
+        {sameLibelle.length > 0 && (
+          <section className="order-3 border-t-2 border-ink pt-8 lg:col-span-2">
+            <h2 className="mb-4 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
+              <span
+                className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
+                aria-hidden="true"
+              />
+              Même libellé
+            </h2>
+            <FramedGrid className="grid-cols-2 sm:grid-cols-4">
+              {sameLibelle.map((related) => (
+                <Link
+                  key={related.id}
+                  href={`/catalogue/${related.edition}/${related.slug}`}
+                  className={`group flex flex-col bg-paper p-3 ${FOCUS_RING_LIGHT_OUTER}`}
+                >
+                  <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2">
+                    <BookCover
+                      cover={related.cover}
+                      title={related.title}
+                      alt={`Couverture de « ${related.title} »`}
+                      fit="width"
+                      sizes="200px"
+                      className="block h-auto w-full"
+                      fallbackClassName="p-3"
+                    />
+                  </span>
+                  <p className="mt-2 font-sans text-xs font-bold leading-snug text-ink line-clamp-2 group-hover:underline">
+                    {related.title}
+                  </p>
+                </Link>
+              ))}
+            </FramedGrid>
+          </section>
+        )}
       </div>
     </Container>
   );
