@@ -580,19 +580,7 @@ export default async function SouscriptionPage() {
 
             {/* Colonne contreparties */}
             <aside id="paliers">
-              <Reveal>
-                <Eyebrow dot="bg-pop-pink">Les paliers</Eyebrow>
-                <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
-                  Choisissez votre contrepartie
-                </h2>
-                <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-                  Les contreparties de notre campagne 2024, de retour pour la
-                  souscription de lancement. Contributions directes, sans
-                  intermédiaire — 100&nbsp;% pour la maison. Et bien sûr, notre
-                  reconnaissance éternelle est comprise dans tous les paliers.
-                </p>
-              </Reveal>
-              <FramedGrid className="mt-8 grid-cols-1">
+              <FramedGrid className="grid-cols-1">
                 {content.contreparties.map((p, i) => {
                   // Paliers de don : les 4 accents de marque, jamais le cycle pop
                   // (R2/R3 — README, chantier 1, point 3).
