@@ -32,7 +32,8 @@ export const createBookDraftHandler: PayloadHandler = async (req) => {
 
   let rawBody: unknown
   try {
-    rawBody = await req.json()
+    // `req.json` est optionnel sur PayloadRequest (absent hors requête HTTP réelle).
+    rawBody = await req.json?.()
   } catch {
     return Response.json({ error: 'Corps de requête invalide (JSON attendu).' }, { status: 400 })
   }

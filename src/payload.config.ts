@@ -34,11 +34,11 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
-      // Dashboard v3 (home = zones A/B/C, issue #23) : bandeau d'état +
-      // panneaux 3.2→3.10 + codes promo expirés AVANT la grille native
-      // `CollectionCards` (3.11, rendue par Payload juste après ce slot —
-      // masquée en CSS depuis la nav groupée, issue #25, `custom.scss`). Ce
-      // composant absorbe les anciens StockImportPanel/StockLowWidget.
+      // Dashboard v3 (issue #23) : bandeau d'état + zone A « File du jour »
+      // + zone B « Alertes » (conditionnelle) + zone C « Raccourcis », rendu
+      // AVANT la grille native `CollectionCards` (rendue par Payload juste
+      // après ce slot — masquée en CSS depuis la nav groupée, issue #25,
+      // `custom.scss`).
       // Observabilité (Sentry) + configuration & accès (ex-3.12/3.13, rôle
       // admin STRICT) : sorties de la home vers la vue dédiée `sante`
       // ci-dessous (issue #27, `HealthPage.tsx` — `DashboardFooter`

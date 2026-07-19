@@ -114,7 +114,17 @@ function activeMaison(search: string): MaisonChip | null {
 }
 
 export function BooksFilterChips({ seuil }: BooksFilterChipsProps) {
-  const search = useSearchParams().toString()
+  // `URLSearchParams.toString()` percent-encode les crochets (`[` → `%5B`) :
+  // décodage obligatoire avant les `includes` sur crochets littéraux de
+  // `activeEtat`/`activeMaison` (garde : une URL forgée avec un `%` orphelin
+  // ferait planter `decodeURIComponent` — on retombe sur la chaîne brute).
+  const rawSearch = useSearchParams().toString()
+  let search: string
+  try {
+    search = decodeURIComponent(rawSearch)
+  } catch {
+    search = rawSearch
+  }
   const etat = activeEtat(search)
   const maison = activeMaison(search)
 
@@ -130,7 +140,7 @@ export function BooksFilterChips({ seuil }: BooksFilterChipsProps) {
               <a
                 key={chip.key}
                 href={href}
-                aria-pressed={active}
+                aria-current={active ? 'true' : undefined}
                 className={active ? `${styles.chip} ${styles.chipActive}` : styles.chip}
               >
                 {label}
@@ -150,7 +160,7 @@ export function BooksFilterChips({ seuil }: BooksFilterChipsProps) {
               <a
                 key={chip.key}
                 href={href}
-                aria-pressed={active}
+                aria-current={active ? 'true' : undefined}
                 className={active ? `${styles.chip} ${styles.chipActive}` : styles.chip}
               >
                 {chip.label}

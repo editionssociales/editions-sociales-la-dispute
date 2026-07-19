@@ -104,7 +104,9 @@ describe('parseBookDraftRequest', () => {
   })
 
   it('prix/stock absents → value sans ces clés (undefined)', () => {
-    const { prix: _prix, stock: _stock, ...minimal } = validBody
+    const minimal: Record<string, unknown> = { ...validBody }
+    delete minimal.prix
+    delete minimal.stock
     const parsed = parseBookDraftRequest(minimal)
     expect(parsed).toEqual({
       ok: true,
