@@ -299,6 +299,27 @@
   font-size: 13.5px;
   font-weight: 600;
   background: var(--theme-elevation-50, #f1efe9);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Même format que « + Nouveau livre » (liste Livres, `books-filter-chips`). */
+.createButton {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--theme-success-500, #1e7d46);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--theme-success-600, #1e7d46);
+  background: var(--theme-success-100, #e3f1e9);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.createButton:hover {
+  background: var(--theme-success-200, #cfe6da);
 }
 
 .shortcutHeading {

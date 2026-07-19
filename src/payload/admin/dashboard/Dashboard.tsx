@@ -302,35 +302,35 @@ export async function Dashboard({ payload, user }: ServerProps) {
         <section className={styles.panel} aria-labelledby="t-raccourcis">
           <div className={styles.shortcutLinks}>
             {/* Création = formulaire natif Payload (`/collections/{slug}/create`
-                puis `/{id}`) — même modèle pour tous les objets créables du menu. */}
+                puis `/{id}`) — boutons au format « + Nouveau livre ». */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/books/create">
+            <a className={styles.createButton} href="/admin/collections/books/create">
               + Nouveau livre
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/authors/create">
-              + Nouvel·le auteur·rice
+            <a className={styles.createButton} href="/admin/collections/authors/create">
+              + Nouvel auteur
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/libelles/create">
+            <a className={styles.createButton} href="/admin/collections/libelles/create">
               + Nouveau libellé
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/highlight/create">
+            <a className={styles.createButton} href="/admin/collections/highlight/create">
               + Nouvelle mise en avant
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/promo-codes/create">
+            <a className={styles.createButton} href="/admin/collections/promo-codes/create">
               + Nouveau code promo
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/media/create">
+            <a className={styles.createButton} href="/admin/collections/media/create">
               + Nouveau média
             </a>
             {admin && (
               // eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office
-              <a className={styles.shortcutLink} href="/admin/collections/users/create">
-                + Nouvel·le utilisateur·rice
+              <a className={styles.createButton} href="/admin/collections/users/create">
+                + Nouvel utilisateur
               </a>
             )}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
