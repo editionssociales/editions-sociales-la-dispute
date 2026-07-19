@@ -80,6 +80,13 @@ export const NAV_HOUSES: NavHouse[] = [
 ];
 
 /**
+ * Entrée « Accueil » : source unique du href/libellé, consommée par la
+ * cellule dédiée du header. Ce n'est pas une section pop (`NAV_SECTIONS`) —
+ * l'état actif se lit simplement sur `pathname === "/"`.
+ */
+export const NAV_HOME: NavHouse = { label: "Accueil", href: "/" };
+
+/**
  * Entrée « Boutique » (chantier 3 §1) : source unique du href, consommée par
  * le footer et par le lien contextuel de `/catalogue` — elle n'a pas de
  * cellule dédiée dans le quadrillage du header (ce n'est pas une section de
