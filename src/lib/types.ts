@@ -105,6 +105,11 @@ export interface BookFilters {
   upcoming?: boolean;
 }
 
-export type BookSort = "recent" | "ancien" | "titre";
+/**
+ * LA liste des tris — le type en dérive, les validations serveur/client et
+ * le `<select>` la consomment.
+ */
+export const BOOK_SORTS = ["recent", "ancien", "titre"] as const;
+export type BookSort = (typeof BOOK_SORTS)[number];
 
 export const PAGE_SIZE = 24;

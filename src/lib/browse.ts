@@ -1,6 +1,6 @@
 import { EDITION_LIST, isEditionSlug } from "./editions";
 import { parseBookFilters, serializeBookFilters } from "./parse-filters";
-import { PAGE_SIZE, type Book, type BookFilters, type BookSort, type Facet } from "./types";
+import { BOOK_SORTS, PAGE_SIZE, type Book, type BookFilters, type BookSort, type Facet } from "./types";
 
 /**
  * Algèbre de navigation du catalogue — filtres ↔ URL ↔ pagination, en un seul
@@ -93,8 +93,6 @@ export function readFilters(params: URLSearchParams): BookFilters {
 
 export type FilterField = "edition" | "libelle" | "author" | "q" | "sort" | "upcoming";
 
-const SORTS: BookSort[] = ["recent", "ancien", "titre"];
-
 /**
  * Pose (ou retire, si la valeur est vide) un filtre et revient à la page 1 —
  * toute modification de filtre repart de la première page.
@@ -115,7 +113,7 @@ export function withFilter(filters: BookFilters, field: FilterField, value: stri
       next.q = value || undefined;
       break;
     case "sort":
-      next.sort = SORTS.includes(value as BookSort) ? (value as BookSort) : undefined;
+      next.sort = BOOK_SORTS.includes(value as BookSort) ? (value as BookSort) : undefined;
       break;
     case "upcoming":
       next.upcoming = value === "1" ? true : undefined;
