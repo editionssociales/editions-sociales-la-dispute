@@ -88,17 +88,24 @@ export default async function CgvPage() {
                   à compter de la réception de votre commande pour exercer
                   votre droit de rétractation, sans avoir à justifier de
                   motifs ni à payer de pénalités autres que les frais de
-                  retour. [À COMPLÉTER : modalités pratiques d&apos;exercice
-                  du droit de rétractation — formulaire type, adresse de
-                  retour, prise en charge des frais de retour].
+                  retour.{" "}
+                  <span className="italic text-ocher-text">
+                    [À COMPLÉTER : modalités pratiques d&apos;exercice du
+                    droit de rétractation — formulaire type, adresse de
+                    retour, prise en charge des frais de retour]
+                  </span>
+                  .
                 </p>
                 <p className={LEGAL_BODY}>
                   <span className="font-bold">Livraison.</span> Les
                   commandes sont expédiées en France métropolitaine, en
                   Belgique et en Suisse ; les frais de port sont calculés
-                  selon le montant du panier et affichés avant paiement.
-                  [À COMPLÉTER : transporteur(s) retenu(s) et délais de
-                  livraison indicatifs].
+                  selon le montant du panier et affichés avant paiement.{" "}
+                  <span className="italic text-ocher-text">
+                    [À COMPLÉTER : transporteur(s) retenu(s) et délais de
+                    livraison indicatifs]
+                  </span>
+                  .
                 </p>
                 <p className={LEGAL_BODY}>
                   <span className="font-bold">Médiation de la consommation.</span>{" "}
@@ -106,8 +113,12 @@ export default async function CgvPage() {
                   la consommation, tout consommateur a le droit de recourir
                   gratuitement à un médiateur de la consommation en vue de
                   la résolution amiable d&apos;un litige. Le médiateur
-                  compétent est [À COMPLÉTER : nom, adresse postale et site
-                  du médiateur de la consommation].
+                  compétent est{" "}
+                  <span className="italic text-ocher-text">
+                    [À COMPLÉTER : nom, adresse postale et site du médiateur
+                    de la consommation]
+                  </span>
+                  .
                 </p>
           </LegalSection>
         </>

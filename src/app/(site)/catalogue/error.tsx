@@ -28,8 +28,17 @@ export default function CatalogueError({
 }) {
   return (
     <Container className="bg-paper py-24 text-center sm:py-32">
-      <h1 className="font-sans text-3xl font-black italic text-ink sm:text-4xl">
-        Le catalogue est momentanément indisponible
+      {/* Même signature que error.tsx et not-found.tsx (5.3) : carré brick +
+          barre paper, point d'exclamation minimal. */}
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center border-2 border-ink bg-brick"
+      >
+        <span className="h-7 w-2 bg-paper" />
+      </div>
+
+      <h1 className="mt-6 font-sans text-3xl font-black italic text-ink sm:text-4xl">
+        <span className="sr-only">Erreur — </span>Le catalogue est momentanément indisponible
       </h1>
       <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink/70">
         La collecte du catalogue a échoué — probablement une source

@@ -91,7 +91,7 @@ export default async function ConfidentialitePage() {
               d&apos;accès, de rectification, d&apos;effacement, de limitation
               et d&apos;opposition sur les données vous concernant. Pour
               exercer ces droits, contactez{" "}
-              <span className="italic">[À COMPLÉTER : email de contact]</span>.
+              <span className="italic text-ocher-text">[À COMPLÉTER : email de contact]</span>.
             </p>
             <p className={LEGAL_BODY}>
               Vous disposez également du droit d&apos;introduire une

@@ -12,14 +12,21 @@ export const metadata: Metadata = {
   alternates: { canonical: "/mentions-legales" },
 };
 
-/** Ligne d'identité (libellé + valeur), certaines encore en placeholder client. */
+/**
+ * Ligne d'identité (libellé + valeur), certaines encore en placeholder
+ * client — distinguées visuellement (`italic text-ocher-text`, R6/5.2) pour
+ * que l'inachevé se voie comme un état, pas comme une donnée réelle.
+ */
 function IdentityRow({ label, value }: { label: string; value: string }) {
+  const isPlaceholder = value.startsWith("[À COMPLÉTER");
   return (
     <div className="flex flex-col gap-1 border-t-2 border-ink bg-paper px-4 py-3 first:border-t-0 sm:flex-row sm:items-baseline sm:gap-3">
       <dt className="w-56 shrink-0 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
         {label}
       </dt>
-      <dd className="text-sm text-ink">{value}</dd>
+      <dd className={isPlaceholder ? "text-sm italic text-ocher-text" : "text-sm text-ink"}>
+        {value}
+      </dd>
     </div>
   );
 }
@@ -84,7 +91,7 @@ export default async function MentionsLegalesPage() {
           <LegalSection title="Hébergement">
             <p className={LEGAL_BODY}>
               Le site est hébergé par Vercel Inc.,{" "}
-              <span className="italic">
+              <span className="italic text-ocher-text">
                 [ADRESSE LÉGALE VERCEL — vérifier sur vercel.com/legal au moment
                 de la rédaction]
               </span>
@@ -101,7 +108,7 @@ export default async function MentionsLegalesPage() {
           <LegalSection title="Contact">
             <p className={LEGAL_BODY}>
               Pour toute question relative au site ou à son contenu :{" "}
-              <span className="italic">[À COMPLÉTER : email de contact]</span>.
+              <span className="italic text-ocher-text">[À COMPLÉTER : email de contact]</span>.
             </p>
           </LegalSection>
 
