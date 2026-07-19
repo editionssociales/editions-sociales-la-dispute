@@ -30,18 +30,19 @@ import { CartNavCell } from "./cart/cart-badge";
  * par `useCompactOnScroll`, ~200ms) — comportement scroll inchangé, mais
  * cantonné au desktop.
  *
- * Desktop (lg+) : 5 colonnes × 2 rangées — maisons | « Nous soutenir » |
- * nav 2×2 | panier. L'Accueil n'est plus une colonne : c'est un petit carré
- * icône centré sur la séparation ink entre les deux cellules maisons.
- * Mobile : 2 rangées — [LD | Accueil icône | ES | « Nous soutenir » | panier
- * icône] puis [Catalogue | Agenda]. La Geme et À paraître n'ont pas de
- * cellule téléphone (elles restent accessibles par la mosaïque de libellés de
- * /catalogue et la mosaïque pop du pied de page) — le quadrillage tient au
- * premier paint sans pousser le contenu hors écran.
+ * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » |
+ * nav 2×2. Dans le bloc maisons, « Les Éditions sociales » (plus long) fixe
+ * la largeur ; la rangée du dessus aligne « La Dispute » puis deux carrés
+ * icône (Accueil, Panier) dans l'espace restant. Mobile : 2 rangées —
+ * [LD | Accueil icône | ES | « Nous soutenir » | panier icône] puis
+ * [Catalogue | Agenda]. La Geme et À paraître n'ont pas de cellule téléphone
+ * (elles restent accessibles par la mosaïque de libellés de /catalogue et la
+ * mosaïque pop du pied de page) — le quadrillage tient au premier paint sans
+ * pousser le contenu hors écran.
  *
- * La cellule « Panier » (desktop et mobile) et le carré « Accueil » (entre
- * LD/ES) sont permanents. `useSearchParams` (états Geme / À paraître) est
- * confiné derrière `<Suspense>` — sans ça, le layout racine dynamiserait
+ * Les carrés Accueil / Panier (desktop dans le bloc maisons ; mobile en
+ * rangée haute) sont permanents. `useSearchParams` (états Geme / À paraître)
+ * est confiné derrière `<Suspense>` — sans ça, le layout racine dynamiserait
  * tout le site.
  *
  * Sections et maisons viennent du modèle de données `lib/nav` (label, href,
@@ -50,7 +51,7 @@ import { CartNavCell } from "./cart/cart-badge";
  * parité avec le footer pour une annonce cohérente en lecteur d'écran ;
  * `display: contents` les rend transparentes à la grille CSS (aucun
  * changement visuel), sauf le groupe maisons desktop qui reste un vrai
- * item de grille (pour ancrer le carré Accueil sur la séparation).
+ * item de grille (sous-grille Dispute + carrés / ES).
  */
 
 const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
@@ -90,11 +91,16 @@ const SECTION_PLACEMENT: Record<NavSectionId, string> = {
 
 /**
  * Grille desktop, littérale (jamais de gabarit assemblé par concaténation,
- * même contrat que `maisonCellClass` ci-dessous) — 5 colonnes, « Panier » en
- * dernière ; Accueil est le carré sur la séparation des maisons (col 1).
+ * même contrat que `maisonCellClass` ci-dessous) — 4 colonnes ; Accueil et
+ * Panier sont des carrés dans le bloc maisons (col 1), pas des colonnes
+ * dédiées.
  */
 const DESKTOP_GRID =
-  "hidden grid-cols-[1.3fr_1fr_0.9fr_0.9fr_0.7fr] grid-rows-2 gap-[2px] p-[2px] lg:grid";
+  "hidden grid-cols-[1.6fr_1fr_0.9fr_0.9fr] grid-rows-2 gap-[2px] p-[2px] lg:grid";
+
+/** Carré icône calé sur la hauteur de la rangée « La Dispute ». */
+const ICON_SQUARE =
+  "aspect-square h-full min-h-11 w-auto shrink-0 self-stretch";
 
 // transition-all : la couleur (survol/actif) ET la taille (padding/police, au
 // compactage) s'animent sur la même durée.
@@ -162,10 +168,10 @@ function HomeGlyph() {
 }
 
 /**
- * Carré « Accueil » (icône seule) — entre LD et ES. Hover ink↔paper (identité
- * de marque, pas une section pop R2) ; actif = ink plein + `aria-current`.
- * `placement` fixe la taille / la position (flex mobile, absolute desktop sur
- * la séparation des maisons).
+ * Carré « Accueil » (icône seule) — desktop : à la suite de « La Dispute » ;
+ * mobile : entre les monogrammes LD/ES. Hover ink↔paper (identité de marque,
+ * pas une section pop R2) ; actif = ink plein + `aria-current`. `placement`
+ * fixe la taille (carré sur la rangée, ou taille fixe mobile).
  */
 function HomeNavCell({ placement, active }: { placement: string; active: boolean }) {
   const tone = active
@@ -176,7 +182,7 @@ function HomeNavCell({ placement, active }: { placement: string; active: boolean
       href={NAV_HOME.href}
       aria-label={NAV_HOME.label}
       aria-current={active ? "page" : undefined}
-      className={`flex items-center justify-center border-2 border-ink ${tone} ${CELL_TRANSITION} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${placement}`}
+      className={`flex items-center justify-center ${tone} ${CELL_TRANSITION} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${placement}`}
     >
       <HomeGlyph />
     </Link>
@@ -328,14 +334,14 @@ function SiteHeaderChrome({
             fixes sous lg (compact par défaut, chantier 3 §3), cibles ≥ 44px (R7). */}
         <div className="flex flex-col gap-[2px] p-[2px] lg:hidden">
           <ul className="flex items-stretch gap-[2px]">
-            {/* LD | Accueil | ES — Accueil est le carré sur la séparation. */}
+            {/* LD | Accueil | ES | Soutenir | Panier */}
             <li className="contents">
               <MaisonMonogramLink href={NAV_HOUSES[0].href} label={NAV_HOUSES[0].label} />
             </li>
             <li className="contents">
               <HomeNavCell
                 active={homeActive}
-                placement="h-11 w-11 shrink-0 self-center"
+                placement="h-11 w-11 shrink-0 self-stretch"
               />
             </li>
             <li className="contents">
@@ -365,20 +371,24 @@ function SiteHeaderChrome({
           </ul>
         </div>
 
-        {/* Desktop (lg+) : maisons (+ Accueil sur la séparation) | « Nous soutenir » | nav 2×2 | panier. */}
+        {/* Desktop (lg+) : maisons (Dispute + carrés Accueil/Panier / ES) |
+            « Nous soutenir » | nav 2×2. */}
         <ul className={DESKTOP_GRID}>
-          {/* Groupe maisons : vrai item de grille (pas `contents`) pour ancrer
-              le carré Accueil au centre de la séparation ink 2px. */}
-          <li className="relative col-start-1 row-span-2 row-start-1 grid grid-rows-2 gap-[2px]">
-            {NAV_HOUSES.map((house) => (
-              <Link key={house.href} href={house.href} className={maisonCellClass(compact)}>
-                {house.label}
-              </Link>
-            ))}
-            <HomeNavCell
-              active={homeActive}
-              placement="absolute left-1/2 top-1/2 z-10 h-11 w-11 -translate-x-1/2 -translate-y-1/2"
-            />
+          {/* Groupe maisons : vrai item de grille (pas `contents`) — sous-grille
+              3×2 : Dispute | Accueil | Panier sur la 1ʳᵉ rangée, ES en pleine
+              largeur en dessous (« Les Éditions sociales » dicte la largeur). */}
+          <li className="col-start-1 row-span-2 row-start-1 grid grid-cols-[1fr_auto_auto] grid-rows-2 gap-[2px]">
+            <Link href={NAV_HOUSES[0].href} className={maisonCellClass(compact)}>
+              {NAV_HOUSES[0].label}
+            </Link>
+            <HomeNavCell active={homeActive} placement={ICON_SQUARE} />
+            <CartNavCell compact={compact} icon placement={ICON_SQUARE} />
+            <Link
+              href={NAV_HOUSES[1].href}
+              className={`col-span-3 ${maisonCellClass(compact)}`}
+            >
+              {NAV_HOUSES[1].label}
+            </Link>
           </li>
 
           {/* Cellule centrale (vide dans la maquette) : CTA « Nous soutenir ». */}
@@ -397,10 +407,6 @@ function SiteHeaderChrome({
               </Link>
             </li>
           ))}
-
-          <li className="contents">
-            <CartNavCell compact={compact} placement="col-start-5 row-span-2 row-start-1" />
-          </li>
         </ul>
       </nav>
     </header>
