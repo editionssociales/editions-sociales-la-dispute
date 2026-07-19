@@ -36,7 +36,11 @@ export default async function BoutiquePage() {
       </div>
 
       <div className="mt-4">
-        <BookGrid books={books} />
+        <BookGrid
+          books={books}
+          emptyTitle="La boutique ouvre bientôt."
+          emptyHint="Les premiers articles arrivent — en attendant, tout le catalogue des deux maisons est à parcourir."
+        />
       </div>
     </Container>
   );

@@ -5,6 +5,10 @@ import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
 
+// Même recette de sous-titre légal que `confidentialite/page.tsx` : de vrais
+// <h3> (navigation par titres des lecteurs d'écran), pas des spans gras.
+const H3_CLASS = "mt-6 font-sans text-lg font-black italic text-ink";
+
 export const metadata: Metadata = {
   title: "Conditions générales & conditions de don",
   description:
@@ -73,16 +77,16 @@ export default async function CgvPage() {
                   livre est de 5,5 %, et le prix du livre est unique en
                   France (loi n° 81-766 du 10 août 1981).
                 </p>
+                <h3 className={H3_CLASS}>Commande et paiement</h3>
                 <p className={LEGAL_BODY}>
-                  <span className="font-bold">Commande et paiement.</span> Le
-                  paiement s&apos;effectue en ligne par carte bancaire via
+                  Le paiement s&apos;effectue en ligne par carte bancaire via
                   Stripe, prestataire de paiement sécurisé. La commande
                   n&apos;est considérée comme définitive qu&apos;à réception
                   de la confirmation de paiement, qui fait office d&apos;accusé
                   de réception envoyé par email.
                 </p>
+                <h3 className={H3_CLASS}>Droit de rétractation</h3>
                 <p className={LEGAL_BODY}>
-                  <span className="font-bold">Droit de rétractation.</span>{" "}
                   Conformément aux articles L. 221-18 et suivants du code de
                   la consommation, vous disposez d&apos;un délai de 14 jours
                   à compter de la réception de votre commande pour exercer
@@ -96,9 +100,9 @@ export default async function CgvPage() {
                   </span>
                   .
                 </p>
+                <h3 className={H3_CLASS}>Livraison</h3>
                 <p className={LEGAL_BODY}>
-                  <span className="font-bold">Livraison.</span> Les
-                  commandes sont expédiées en France métropolitaine, en
+                  Les commandes sont expédiées en France métropolitaine, en
                   Belgique et en Suisse ; les frais de port sont calculés
                   selon le montant du panier et affichés avant paiement.{" "}
                   <span className="italic text-ocher-text">
@@ -107,8 +111,8 @@ export default async function CgvPage() {
                   </span>
                   .
                 </p>
+                <h3 className={H3_CLASS}>Médiation de la consommation</h3>
                 <p className={LEGAL_BODY}>
-                  <span className="font-bold">Médiation de la consommation.</span>{" "}
                   Conformément aux articles L. 616-1 et R. 616-1 du code de
                   la consommation, tout consommateur a le droit de recourir
                   gratuitement à un médiateur de la consommation en vue de

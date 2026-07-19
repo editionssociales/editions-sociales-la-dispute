@@ -101,9 +101,9 @@ const REGLAGES_SITE_DEFAUT: ReglagesSiteContent = {
     reseauxSociaux: [],
   },
   seo: {
-    titre: "Les Éditions sociales x La Dispute",
+    titre: "Les Éditions sociales × La Dispute",
     description:
-      "Les Éditions sociales x La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
+      "Les Éditions sociales × La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
   },
 };
 

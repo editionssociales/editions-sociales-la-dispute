@@ -17,9 +17,11 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import type { Book, Cover, EditionSlug } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Accueil",
+  // Titre absolu : la vitrine porte le nom du site seul — jamais
+  // « Accueil — … » (onglet et snippet Google plus lisibles).
+  title: { absolute: "Les Éditions sociales × La Dispute" },
   description:
-    "Les Éditions sociales x La Dispute : dernières parutions, catalogue unifié des deux maisons et souscription de lancement.",
+    "Les Éditions sociales × La Dispute : dernières parutions, catalogue unifié des deux maisons et souscription de lancement.",
   alternates: { canonical: "/" },
 };
 

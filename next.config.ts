@@ -211,6 +211,25 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: ROOT_DIR,
   },
+  // Pas de fingerprinting gratuit de la stack (Next + Payload s'annoncent
+  // sinon dans `x-powered-by`).
+  poweredByHeader: false,
+  // Durcissement minimal, sûr pour front ET back-office : pas de sniffing
+  // MIME, pas d'embarquement en iframe tiers (anti-clickjacking, /admin
+  // compris), referrer réduit hors origine. Une CSP complète reste hors
+  // périmètre (inline scripts Next/Payload à inventorier d'abord).
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
   images: {
     // Couvertures affichées ≤ ~400px CSS : inutile de générer 1920/2048/3840w
     // (srcset gonflé, LCP/catalogue). 1080 couvre retina 2× sur une fiche 300–400px.

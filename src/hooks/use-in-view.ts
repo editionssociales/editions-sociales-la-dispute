@@ -22,17 +22,37 @@ export function useInView<T extends Element = HTMLDivElement>({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Fail-open : sans IntersectionObserver (navigateur exotique), ou si ses
+    // callbacks ne sont jamais délivrés (onglet gelé, rendus headless type
+    // Googlebot qui ne produisent pas de frames), le contenu ne doit JAMAIS
+    // rester masqué — révélation forcée après un délai de grâce.
+    // Fonction nommée (pas un `setState` nu) — même faux positif
+    // `react-hooks/set-state-in-effect` que `newsletter-form.tsx` : la
+    // visibilité forcée est un événement externe au rendu (temps/inexistence
+    // de l'API), jamais dérivable pendant le rendu.
+    function forceReveal() {
+      setInView(true);
+    }
+    if (typeof IntersectionObserver === "undefined") {
+      forceReveal();
+      return;
+    }
+    const fallback = window.setTimeout(forceReveal, 2000);
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setInView(true);
+          window.clearTimeout(fallback);
           io.disconnect();
         }
       },
       { threshold, rootMargin },
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      window.clearTimeout(fallback);
+      io.disconnect();
+    };
   }, [threshold, rootMargin]);
 
   return [ref, inView];

@@ -56,7 +56,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     id: "geme",
-    label: "La Geme",
+    label: "La GEME",
     href: "/catalogue/editions-sociales?libelle=geme",
     isActive: (p, search) => p.startsWith("/catalogue/editions-sociales") && isGemeFilter(search),
   },

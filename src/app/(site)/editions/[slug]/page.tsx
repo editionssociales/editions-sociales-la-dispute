@@ -26,7 +26,9 @@ export async function generateMetadata({
   const { slug } = await params;
   if (!isEditionSlug(slug)) return {};
   return {
-    title: EDITIONS[slug].name,
+    // Titre absolu : évite « Les Éditions sociales — Les Éditions sociales ×
+    // La Dispute » (redondance quand la maison porte le nom du site).
+    title: { absolute: `${EDITIONS[slug].name} — maison d'édition` },
     description: EDITIONS[slug].description,
     alternates: { canonical: `/editions/${slug}` },
   };

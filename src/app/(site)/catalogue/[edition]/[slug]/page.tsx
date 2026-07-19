@@ -24,12 +24,22 @@ export async function generateMetadata({
   if (!isEditionSlug(edition)) return {};
   const book = await getBook(edition, slug);
   if (!book) return {};
+  const description =
+    cmsExcerpt(book.presentation, 160) || `${book.title} — ${EDITIONS[edition].name}`;
   return {
     title: book.title,
-    description:
-      cmsExcerpt(book.presentation, 160) ||
-      `${book.title} — ${EDITIONS[edition].name}`,
+    description,
     alternates: { canonical: `/catalogue/${edition}/${slug}` },
+    // Carte de partage : la couverture en visuel (URL absolue via
+    // `metadataBase`), type `book` + carte large — title/description/url
+    // suivent les champs ci-dessus (résolution Next).
+    openGraph: {
+      type: "book",
+      ...(book.cover?.url ? { images: [{ url: book.cover.url }] } : {}),
+    },
+    twitter: {
+      card: book.cover?.url ? "summary_large_image" : "summary",
+    },
   };
 }
 
@@ -149,7 +159,16 @@ export default async function BookPage({
     ...(book.pages != null ? { numberOfPages: book.pages } : {}),
     ...(book.publishedAt != null ? { datePublished: book.publishedAt } : {}),
     publisher: { "@type": "Organization", name: editionInfo.name },
-    ...(book.cover?.url ? { image: book.cover.url } : {}),
+    // URL absolue exigée par schema.org (le chemin `/api/media/...` relatif
+    // n'est pas exploitable hors du document).
+    ...(book.cover?.url
+      ? {
+          image: new URL(
+            book.cover.url,
+            process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr",
+          ).toString(),
+        }
+      : {}),
     ...(descriptionLd ? { description: descriptionLd } : {}),
     ...(canOffer
       ? {

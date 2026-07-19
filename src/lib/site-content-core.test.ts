@@ -132,9 +132,9 @@ describe("mergeReglagesSite — global vide ⇒ layout et footer actuels, verbat
       "Vente directe et distribution indépendante — sans mécène ni actionnaire.",
     );
     expect(merged.footer.reseauxSociaux).toEqual([]);
-    expect(merged.seo.titre).toBe("Les Éditions sociales x La Dispute");
+    expect(merged.seo.titre).toBe("Les Éditions sociales × La Dispute");
     expect(merged.seo.description).toBe(
-      "Les Éditions sociales x La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
+      "Les Éditions sociales × La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
     );
   });
 

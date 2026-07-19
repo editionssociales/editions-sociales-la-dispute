@@ -26,7 +26,9 @@ export async function generateMetadata({
   const { edition } = await params;
   if (!isEditionSlug(edition)) return {};
   return {
-    title: EDITIONS[edition].name,
+    // « Catalogue <maison> » : évite « Les Éditions sociales — Les Éditions
+    // sociales × La Dispute » (redondance quand la maison porte le nom du site).
+    title: `Catalogue ${EDITIONS[edition].name}`,
     // Sans query string : les vues filtrées/paginées canonicalisent vers la
     // vue de base (E2 du plan).
     alternates: { canonical: `/catalogue/${edition}` },

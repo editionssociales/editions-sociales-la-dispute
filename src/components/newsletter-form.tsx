@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { LEGAL_LINK } from "@/components/legal-section";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
@@ -24,6 +24,9 @@ export function NewsletterForm() {
   const [state, formAction, isPending] = useActionState(subscribeToNewsletter, NEWSLETTER_INITIAL_STATE);
   const [renderedAt, setRenderedAt] = useState<number | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  // Le formulaire est rendu deux fois par page (variantes mobile/desktop du
+  // footer) : id réactif unique par instance, jamais d'id dupliqué dans le DOM.
+  const emailId = useId();
 
   useEffect(() => {
     // Enveloppé dans une fonction nommée (plutôt qu'un `setState` nu en tête
@@ -56,17 +59,17 @@ export function NewsletterForm() {
   return (
     <>
       <form ref={formRef} action={formAction} className="mt-1 flex border-2 border-ink">
-        <label htmlFor="footer-newsletter-email" className="sr-only">
+        <label htmlFor={emailId} className="sr-only">
           Adresse e-mail
         </label>
         <input
-          id="footer-newsletter-email"
+          id={emailId}
           name="email"
           type="email"
           required
           placeholder="vous@exemple.fr"
           aria-invalid={emailInvalid ? true : undefined}
-          aria-describedby={emailInvalid ? "newsletter-status" : undefined}
+          aria-describedby={emailInvalid ? `${emailId}-status` : undefined}
           className={`min-w-0 flex-1 bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 ${FOCUS_RING_LIGHT}`}
         />
 
@@ -94,7 +97,7 @@ export function NewsletterForm() {
       {/* Zone de message d'état — additive. */}
       {state.status !== "idle" && (
         <div
-          id="newsletter-status"
+          id={`${emailId}-status`}
           role="status"
           aria-live="polite"
           className={`mt-1 border-2 bg-paper-2 px-3 py-2 font-sans text-xs font-bold leading-snug text-ink ${

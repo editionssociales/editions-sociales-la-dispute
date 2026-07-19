@@ -90,17 +90,15 @@ export default async function MentionsLegalesPage() {
           {/* Hébergement */}
           <LegalSection title="Hébergement">
             <p className={LEGAL_BODY}>
-              Le site est hébergé par Vercel Inc.,{" "}
-              <span className="italic text-ocher-text">
-                [ADRESSE LÉGALE VERCEL — vérifier sur vercel.com/legal au moment
-                de la rédaction]
-              </span>
-              .
+              Le site est hébergé par Vercel Inc., 440 N Barranca Avenue #4133,
+              Covina, CA 91723, États-Unis.
             </p>
             <p className={LEGAL_BODY}>
-              Pendant la période de transition, certains médias (images de
-              couverture, documents PDF) restent servis par OVH SAS, 2 rue
-              Kellermann, 59100 Roubaix.
+              Les médias (images de couverture, documents PDF) sont stockés sur
+              l&apos;infrastructure de Vercel Inc. La base de données du
+              catalogue et des commandes est hébergée par Neon Inc. dans un
+              centre de données situé dans l&apos;Union européenne (Francfort,
+              Allemagne).
             </p>
           </LegalSection>
 

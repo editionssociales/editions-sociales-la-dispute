@@ -76,11 +76,13 @@ export default async function ConfidentialitePage() {
 
             <h3 className={H3_CLASS}>Achat en ligne</h3>
             <p className={LEGAL_BODY}>
-              La vente de nos livres est opérée sur la boutique
-              boutique.editionssociales.fr, propulsée par WooCommerce. Les
-              données liées à une commande (identité, adresse, paiement) sont
-              traitées selon la politique de confidentialité propre à cette
-              boutique, consultable sur ce site.
+              La vente de nos livres est opérée directement sur ce site. Le
+              paiement est traité par Stripe, prestataire de paiement
+              sécurisé : vos données bancaires sont saisies sur les pages de
+              Stripe et ne transitent jamais par nos serveurs. Les données
+              liées à une commande (identité, adresse de livraison, articles)
+              sont conservées le temps nécessaire au traitement, au suivi et
+              aux obligations comptables.
             </p>
           </LegalSection>
 

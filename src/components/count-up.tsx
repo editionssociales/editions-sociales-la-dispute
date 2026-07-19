@@ -17,7 +17,9 @@ export function CountUp({
   className?: string;
 }) {
   const [ref, inView] = useInView<HTMLSpanElement>({ threshold: 0.4 });
-  const [display, setDisplay] = useState(0);
+  // SSR = valeur finale (bots/no-JS lisent le vrai nombre, jamais « 0 ») ;
+  // l'animation 0 → valeur ne s'exécute que côté client, à l'entrée en vue.
+  const [display, setDisplay] = useState(value);
 
   useEffect(() => {
     if (!inView) return;

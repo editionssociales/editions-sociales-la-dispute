@@ -30,6 +30,18 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s — ${seo.titre}`,
     },
     description: seo.description,
+    // Cartes de partage (réseaux sociaux, messageries) : défauts hérités par
+    // toutes les pages — les fiches livre ajoutent leur couverture en
+    // `og:image`. `og:title`/`og:description` suivent title/description de
+    // chaque page (résolution Next), `og:url` suit le canonical.
+    openGraph: {
+      type: "website",
+      siteName: seo.titre,
+      locale: "fr_FR",
+    },
+    twitter: {
+      card: "summary",
+    },
   };
 }
 

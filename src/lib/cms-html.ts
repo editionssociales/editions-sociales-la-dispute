@@ -112,5 +112,10 @@ export function cmsExcerpt(html: string, max = 200): string {
     .replace(/&nbsp;/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+  if (text.length <= max) return text;
+  // Coupe au dernier espace avant `max` : jamais un mot tronqué en plein
+  // milieu dans un snippet (meta description, JSON-LD).
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
