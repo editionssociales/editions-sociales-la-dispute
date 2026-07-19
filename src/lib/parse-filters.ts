@@ -1,4 +1,5 @@
 import { isEditionSlug } from "./editions";
+import { resolveLibelleSlug } from "./libelles";
 import type { BookFilters, BookSort } from "./types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -14,9 +15,12 @@ export function parseBookFilters(sp: SearchParams): BookFilters {
   const edition = one("edition");
   const sort = one("sort");
   const page = Number(one("page"));
+  // `libelle` est le paramètre canonique ; `collection` reste accepté pour
+  // les bookmarks / redirects WP (`/collection/:slug` → `?collection=`).
+  const libelle = resolveLibelleSlug(one("libelle") || one("collection"));
   return {
     edition: edition && isEditionSlug(edition) ? edition : undefined,
-    collection: one("collection") || undefined,
+    libelle,
     author: one("author") || undefined,
     q: one("q") || undefined,
     sort: SORTS.includes(sort as BookSort) ? (sort as BookSort) : undefined,
@@ -28,13 +32,13 @@ export function parseBookFilters(sp: SearchParams): BookFilters {
 /**
  * Sérialise des filtres de catalogue en paramètres d'URL — inverse de
  * `parseBookFilters`. Centralise la reconstruction des query strings
- * (pagination, cellules du menu thèmes, chips) pour que chaque filtre,
+ * (pagination, cellules du menu libellés, chips) pour que chaque filtre,
  * `upcoming` compris, soit toujours encodé de la même façon.
  */
 export function serializeBookFilters(filters: BookFilters): URLSearchParams {
   const entries: [string, string][] = [];
   if (filters.edition) entries.push(["edition", filters.edition]);
-  if (filters.collection) entries.push(["collection", filters.collection]);
+  if (filters.libelle) entries.push(["libelle", filters.libelle]);
   if (filters.author) entries.push(["author", filters.author]);
   if (filters.q) entries.push(["q", filters.q]);
   if (filters.sort) entries.push(["sort", filters.sort]);

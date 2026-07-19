@@ -21,8 +21,8 @@ describe("activeSections", () => {
     expect(a.geme).toBe(false);
   });
 
-  it("allume La Geme seulement avec collection=geme", () => {
-    const a = activeSections("/catalogue/editions-sociales", search("collection=geme"));
+  it("allume La Geme seulement avec libelle=geme", () => {
+    const a = activeSections("/catalogue/editions-sociales", search("libelle=geme"));
     expect(a.geme).toBe(true);
     expect(a.catalogue).toBe(false);
   });

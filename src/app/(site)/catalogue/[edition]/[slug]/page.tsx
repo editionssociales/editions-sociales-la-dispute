@@ -5,7 +5,7 @@ import { getAllBookParams, getBook, getBooks } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { CollectionTag } from "@/components/collection-tag";
+import { LibelleTag } from "@/components/libelle-tag";
 import { BuyLinksList } from "@/components/buy-links";
 import { FramedGrid } from "@/components/framed-grid";
 import { Eyebrow } from "@/components/eyebrow";
@@ -35,7 +35,7 @@ export async function generateMetadata({
 
 /**
  * Métadonnée du livre en cellule de la grille encadrée noir/blanc. Avec
- * `href`, la cellule entière devient cliquable (collection → catalogue de
+ * `href`, la cellule entière devient cliquable (libellé → catalogue de
  * l'édition filtré sur ce thème) : la valeur se souligne au survol/focus
  * pour signaler le lien sans changer la recette visuelle des autres cellules.
  */
@@ -130,10 +130,11 @@ export default async function BookPage({
   const canOffer =
     book.price != null && (book.status === "available" || book.status === "external");
 
-  // Bouclage éditorial en pied de fiche : jusqu'à 4 autres titres de la même
-  // collection (le livre courant exclu). Aucun résultat → pas de section.
-  const sameCollection = book.collection
-    ? (await getBooks({ edition, collection: book.collection.slug }))
+  // Bouclage éditorial en pied de fiche : jusqu'à 4 autres titres partageant
+  // le premier libellé (le livre courant exclu). Aucun résultat → pas de section.
+  const primaryLibelle = book.libelles[0] ?? null;
+  const sameLibelle = primaryLibelle
+    ? (await getBooks({ edition, libelle: primaryLibelle.slug }))
         .filter((b) => b.id !== book.id)
         .slice(0, 4)
     : [];
@@ -210,15 +211,14 @@ export default async function BookPage({
           </div>
 
           <FramedGrid as="dl" className="mt-6 grid-cols-2">
-            <Info
-              label="Collection"
-              value={book.collection?.name}
-              href={
-                book.collection
-                  ? `/catalogue/${edition}?collection=${book.collection.slug}`
-                  : undefined
-              }
-            />
+            {book.libelles.map((libelle) => (
+              <Info
+                key={libelle.slug}
+                label="Libellé"
+                value={libelle.name}
+                href={`/catalogue/${edition}?libelle=${libelle.slug}`}
+              />
+            ))}
             <Info label="Parution" value={formatDateFr(book.publishedAt)} />
             <Info label="Pages" value={book.pages ? `${book.pages} p.` : null} />
             <Info label="ISBN" value={book.isbn} />
@@ -254,7 +254,13 @@ export default async function BookPage({
           <Eyebrow variant="sm" className="mb-2">
             {editionInfo.name}
           </Eyebrow>
-          {book.collection && <CollectionTag collection={book.collection} className="mb-3" />}
+          {book.libelles.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {book.libelles.map((libelle) => (
+                <LibelleTag key={libelle.slug} libelle={libelle} />
+              ))}
+            </div>
+          )}
           <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
             {book.title}
           </h1>
@@ -297,17 +303,17 @@ export default async function BookPage({
             </section>
           )}
 
-          {sameCollection.length > 0 && (
+          {sameLibelle.length > 0 && (
             <section className="mt-10 border-t-2 border-ink pt-8">
               <h2 className="mb-4 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
                   aria-hidden="true"
                 />
-                Même collection
+                Même libellé
               </h2>
               <FramedGrid className="grid-cols-2 sm:grid-cols-4">
-                {sameCollection.map((related) => (
+                {sameLibelle.map((related) => (
                   <Link
                     key={related.id}
                     href={`/catalogue/${related.edition}/${related.slug}`}

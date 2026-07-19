@@ -23,7 +23,7 @@ const BOOKS: Book[] = [
     slug: "capital",
     title: "Le Capital",
     authors: [],
-    collection: null,
+    libelles: [],
     isbn: null,
     price: 20,
     pages: null,

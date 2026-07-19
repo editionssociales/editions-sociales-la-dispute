@@ -53,6 +53,18 @@ Quelques règles pour cette fiche :
   que la fiche disparaisse. Le stock est rempli automatiquement chaque mois
   par l'import du routeur (voir plus bas) sauf si vous avez choisi le suivi
   « Manuel » pour ce titre.
+- **Les libellés** (onglet Édition de la fiche) : thèmes du catalogue
+  (Introduction, Travail & salariat, Genre & sexualités…). Un livre peut en
+  porter **plusieurs**. Ce n'est plus une « collection » éditoriale unique
+  par maison.
+
+## Gérer les libellés du catalogue
+
+Menu de gauche → groupe **Catalogue** → **Libellés**. C'est la liste des
+thèmes affichés en filtres sur `/catalogue`. Une première série d'une
+vingtaine de libellés majeurs est déjà en place ; vous pouvez en ajouter,
+renommer ou retirer. Le **slug** sert dans l'URL (`?libelle=…`) — ne le
+changez pas à la légère une fois publié.
 
 ## Éditer les contenus du site
 

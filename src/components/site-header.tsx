@@ -35,7 +35,7 @@ import { CartNavCell } from "./cart/cart-badge";
  * icône centré sur la séparation ink entre les deux cellules maisons.
  * Mobile : 2 rangées — [LD | Accueil icône | ES | « Nous soutenir » | panier
  * icône] puis [Catalogue | Agenda]. La Geme et À paraître n'ont pas de
- * cellule téléphone (elles restent accessibles par la mosaïque de thèmes de
+ * cellule téléphone (elles restent accessibles par la mosaïque de libellés de
  * /catalogue et la mosaïque pop du pied de page) — le quadrillage tient au
  * premier paint sans pousser le contenu hors écran.
  *
@@ -425,7 +425,7 @@ function SiteHeaderInner() {
  * effet) — `URLSearchParams` est un `NavSearch` valide (méthode `get`).
  * Élimine le flash de couleur active (rose → teal) que produisait
  * `search=null` en fallback avant l'hydratation de `useSearchParams`, sur un
- * lien profond (ex. `/catalogue/editions-sociales?collection=geme`) : sans
+ * lien profond (ex. `/catalogue/editions-sociales?libelle=geme`) : sans
  * cette lecture précoce, la cellule « Catalogue » s'allumait d'abord avant
  * de basculer sur « La Geme » une fois `SiteHeaderInner` monté.
  */

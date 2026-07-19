@@ -25,7 +25,7 @@ export interface RawBook {
   title: string;
   /** Auteurs en forme d'affichage (`Prénom Nom`). */
   authors: Term[];
-  collection: Term | null;
+  libelles: Term[];
   isbn: string | null;
   /** Prix en euros — déjà parsé par l'adaptateur. */
   price: number | null;

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseBookFilters } from "./parse-filters";
+import { parseBookFilters, serializeBookFilters } from "./parse-filters";
 
 describe("parseBookFilters", () => {
   it("valide et convertit des searchParams simples", () => {
     expect(
       parseBookFilters({
         edition: "la-dispute",
-        collection: "le-genre-du-monde",
+        libelle: "genre-sexualites",
         author: "vygotski-lev",
         q: "travail",
         sort: "ancien",
@@ -15,7 +15,7 @@ describe("parseBookFilters", () => {
       }),
     ).toEqual({
       edition: "la-dispute",
-      collection: "le-genre-du-monde",
+      libelle: "genre-sexualites",
       author: "vygotski-lev",
       q: "travail",
       sort: "ancien",
@@ -24,13 +24,18 @@ describe("parseBookFilters", () => {
     });
   });
 
-  // La branche écrite pour la forme searchParams de Next (`?collection=a&collection=b`
+  it("mappe l'ancien paramètre collection vers le libellé correspondant", () => {
+    expect(parseBookFilters({ collection: "le-genre-du-monde" }).libelle).toBe("genre-sexualites");
+    expect(parseBookFilters({ collection: "geme" }).libelle).toBe("geme");
+  });
+
+  // La branche écrite pour la forme searchParams de Next (`?libelle=a&libelle=b`
   // arrive en tableau) : premier gagnant, aligné sur `readFilters` (browse.ts).
   it("prend la première valeur d'un paramètre répété (forme tableau de Next)", () => {
     expect(
       parseBookFilters({
         edition: ["editions-sociales", "la-dispute"],
-        collection: ["a", "b"],
+        libelle: ["geme", "histoire"],
         author: ["x", "y"],
         q: ["marx", "engels"],
         sort: ["recent", "titre"],
@@ -39,7 +44,7 @@ describe("parseBookFilters", () => {
       }),
     ).toEqual({
       edition: "editions-sociales",
-      collection: "a",
+      libelle: "geme",
       author: "x",
       q: "marx",
       sort: "recent",
@@ -53,12 +58,16 @@ describe("parseBookFilters", () => {
       parseBookFilters({ edition: "gallimard", sort: "prix", page: "0", upcoming: "yes" }),
     ).toEqual({
       edition: undefined,
-      collection: undefined,
+      libelle: undefined,
       author: undefined,
       q: undefined,
       sort: undefined,
       page: undefined,
       upcoming: undefined,
     });
+  });
+
+  it("sérialise en ?libelle= (jamais ?collection=)", () => {
+    expect(serializeBookFilters({ libelle: "geme" }).toString()).toBe("libelle=geme");
   });
 });

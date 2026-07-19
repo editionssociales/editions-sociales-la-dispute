@@ -194,9 +194,9 @@ function HeroShelf({ books }: { books: Book[] }) {
                     {book.authors.map((a) => a.name).join(", ")}
                   </span>
                 )}
-                {book.collection && (
+                {book.libelles.length > 0 && (
                   <span className="mt-0.5 block text-xs tracking-wide text-paper/50">
-                    {book.collection.name}
+                    {book.libelles.map((l) => l.name).join(" · ")}
                   </span>
                 )}
               </span>

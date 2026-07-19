@@ -36,7 +36,7 @@ export async function generateMetadata({
 export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
 /**
- * Poids visuel d'une cellule de la mosaïque de thèmes selon son nombre de
+ * Poids visuel d'une cellule de la mosaïque de libellés selon son nombre de
  * titres — grille brutaliste (quadrillage noir 2px), cellule active inversée
  * en noir/blanc comme les étiquettes de CatalogueFilters ci-dessous.
  */
@@ -56,7 +56,7 @@ function themeTier(count: number) {
   return THEME_TIERS.find((t) => count >= t.min) ?? THEME_TIERS[THEME_TIERS.length - 1];
 }
 
-/** Cellule de la mosaïque de thèmes — inversion noir/blanc à l'état actif. */
+/** Cellule de la mosaïque de libellés — inversion noir/blanc à l'état actif. */
 function ThemeCell({
   href,
   active,
@@ -109,9 +109,9 @@ async function EditionCatalogueBody({
   // conservé), même logique que « Tout effacer » côté filtres.
   const resetHref = catalogueHref({ sort: filters.sort }, basePath);
 
-  const themeItems: { name: string; slug: string | null; count: number }[] = [
+  const libelleItems: { name: string; slug: string | null; count: number }[] = [
     { name: "Tous les livres", slug: null, count: facets.total },
-    ...facets.collections,
+    ...facets.libelles,
   ];
 
   return (
@@ -128,14 +128,14 @@ async function EditionCatalogueBody({
 
       <FramedGrid
         as="nav"
-        aria-label={`Thèmes du catalogue ${info.name}`}
+        aria-label={`Libellés du catalogue ${info.name}`}
         className="mt-6 grid-flow-row-dense auto-rows-[clamp(62px,7vw,92px)] grid-cols-2 sm:mt-7 lg:grid-cols-6"
       >
-        {themeItems.map((item) => {
+        {libelleItems.map((item) => {
           const tier = themeTier(item.count);
-          const active = (item.slug ?? undefined) === filters.collection;
+          const active = (item.slug ?? undefined) === filters.libelle;
           const href = catalogueHref(
-            { ...filters, edition: undefined, collection: item.slug ?? undefined, page: undefined },
+            { ...filters, edition: undefined, libelle: item.slug ?? undefined, page: undefined },
             basePath,
           );
           return (
@@ -154,10 +154,10 @@ async function EditionCatalogueBody({
 
       <div className="mt-6">
         <CatalogueFilters
-          collections={facets.collections}
+          libelles={facets.libelles}
           authors={facets.authors}
           lockedEdition={edition}
-          hideCollections
+          hideLibelles
         />
       </div>
 

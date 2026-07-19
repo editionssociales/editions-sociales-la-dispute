@@ -28,7 +28,7 @@ function mapDoc(doc: FakeDoc): RawBook {
     slug: doc.slug,
     title: `mappé:${doc.slug}`,
     authors: [],
-    collection: null,
+    libelles: [],
     isbn: null,
     price: null,
     pages: null,

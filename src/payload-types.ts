@@ -71,7 +71,7 @@ export interface Config {
     orders: Order;
     media: Media;
     authors: Author;
-    collections: Collection;
+    libelles: Libelle;
     highlight: Highlight;
     'promo-codes': PromoCode;
     'import-runs': ImportRun;
@@ -87,7 +87,7 @@ export interface Config {
     orders: OrdersSelect<false> | OrdersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
-    collections: CollectionsSelect<false> | CollectionsSelect<true>;
+    libelles: LibellesSelect<false> | LibellesSelect<true>;
     highlight: HighlightSelect<false> | HighlightSelect<true>;
     'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
     'import-runs': ImportRunsSelect<false> | ImportRunsSelect<true>;
@@ -156,7 +156,10 @@ export interface Book {
   slug: string;
   edition?: ('editions-sociales' | 'la-dispute') | null;
   authors?: (number | Author)[] | null;
-  collection?: (number | null) | Collection;
+  /**
+   * Thèmes du catalogue (plusieurs possibles). Liste gérée sous Catalogue → Libellés.
+   */
+  libelles?: (number | Libelle)[] | null;
   cover?: (number | null) | Media;
   tablePdf?: (number | null) | Media;
   extraitPdf?: (number | null) | Media;
@@ -289,14 +292,18 @@ export interface Author {
   createdAt: string;
 }
 /**
+ * Thèmes majeurs du catalogue (introduction, travail, genre…). Un livre peut porter plusieurs libellés.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "collections".
+ * via the `definition` "libelles".
  */
-export interface Collection {
+export interface Libelle {
   id: number;
   name: string;
+  /**
+   * Identifiant d’URL (`?libelle=…`). Minuscules, tirets, sans accents.
+   */
   slug: string;
-  edition: 'editions-sociales' | 'la-dispute';
   updatedAt: string;
   createdAt: string;
 }
@@ -430,7 +437,7 @@ export interface Highlight {
    */
   texte?: string | null;
   /**
-   * Couleur de fond du bandeau (le texte reste noir par-dessus).
+   * Couleur d'accent du bandeau (liseré à gauche du bloc). Ignorée pour la campagne souscription (lien vers /souscription), qui garde son identité sombre propre.
    */
   couleur?: ('pop-pink' | 'pop-teal' | 'pop-orange' | 'pop-yellow') | null;
   /**
@@ -549,8 +556,8 @@ export interface PayloadLockedDocument {
         value: number | Author;
       } | null)
     | ({
-        relationTo: 'collections';
-        value: number | Collection;
+        relationTo: 'libelles';
+        value: number | Libelle;
       } | null)
     | ({
         relationTo: 'highlight';
@@ -619,7 +626,7 @@ export interface BooksSelect<T extends boolean = true> {
   slug?: T;
   edition?: T;
   authors?: T;
-  collection?: T;
+  libelles?: T;
   cover?: T;
   tablePdf?: T;
   extraitPdf?: T;
@@ -745,12 +752,11 @@ export interface AuthorsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "collections_select".
+ * via the `definition` "libelles_select".
  */
-export interface CollectionsSelect<T extends boolean = true> {
+export interface LibellesSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
-  edition?: T;
   updatedAt?: T;
   createdAt?: T;
 }
