@@ -7,14 +7,14 @@ import { Button } from "./button";
 export function BuyLinksList({ book }: { book: Book }) {
   if (book.status === "upcoming") {
     return (
-      <p className="text-sm text-ink/60">
+      <p className="text-sm text-muted">
         À paraître{book.publishedAt ? ` le ${formatDateFr(book.publishedAt)}` : ""}.
       </p>
     );
   }
   if (book.status === "unavailable") {
     return (
-      <p className="text-sm text-ink/60">
+      <p className="text-sm text-muted">
         Indisponible à la vente en ligne pour le moment.
       </p>
     );

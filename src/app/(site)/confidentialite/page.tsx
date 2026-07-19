@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
-import { Reveal } from "@/components/reveal";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY, LEGAL_LINK } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
 
@@ -22,27 +21,18 @@ export default async function ConfidentialitePage() {
   const { confidentialite } = await getPagesLegales();
   return (
     <>
-      <Container className="bg-paper pb-16 pt-10 sm:pb-20 sm:pt-14">
+      <Container className="bg-paper py-12 sm:py-16">
         <Breadcrumb
           trail={[{ label: "Accueil", href: "/" }, { label: "Confidentialité" }]}
         />
-        <Reveal>
-          <div className="mt-6 max-w-3xl">
-            <Eyebrow>
-              Données personnelles
-            </Eyebrow>
-            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-              Politique de confidentialité
-            </h1>
-            {!confidentialite && (
-              <p className={LEGAL_BODY}>
-                Cette page décrit les traitements de données personnelles
-                effectivement en place sur ce site, conformément au règlement
-                (UE) 2016/679 (RGPD) et à la loi Informatique et Libertés.
-              </p>
-            )}
-          </div>
-        </Reveal>
+        <PageHero
+          eyebrow="Données personnelles"
+          title="Politique de confidentialité"
+          intro={
+            !confidentialite &&
+            "Cette page décrit les traitements de données personnelles effectivement en place sur ce site, conformément au règlement (UE) 2016/679 (RGPD) et à la loi Informatique et Libertés."
+          }
+        />
       </Container>
 
       {confidentialite ? (

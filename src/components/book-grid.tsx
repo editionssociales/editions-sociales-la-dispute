@@ -9,7 +9,7 @@ export function BookGrid({ books }: { books: Book[] }) {
         <p className="font-sans text-lg font-black italic text-ink">
           Aucun livre ne correspond à votre recherche.
         </p>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Élargissez vos filtres pour explorer les deux catalogues.
         </p>
       </div>

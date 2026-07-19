@@ -52,7 +52,7 @@ function EmptyCart() {
       <ShelfSpines />
       <div className="max-w-md">
         <p className="font-sans text-lg font-black italic text-ink">Votre panier est vide.</p>
-        <p className="mt-2 font-sans text-sm text-ink/60">
+        <p className="mt-2 font-sans text-sm text-muted">
           Parcourez le catalogue pour y ajouter des livres.
         </p>
       </div>
@@ -135,7 +135,7 @@ function CartLineRow({
           <button
             type="button"
             onClick={onRemove}
-            className={`font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/60 underline hover:text-ink ${FOCUS_RING_LIGHT}`}
+            className={`font-sans text-xs font-bold uppercase tracking-[.04em] text-muted underline hover:text-ink ${FOCUS_RING_LIGHT}`}
           >
             Retirer
           </button>
@@ -285,7 +285,7 @@ export function CartView() {
   }
 
   if (!ready) {
-    return <p className="py-16 text-center font-sans text-sm text-ink/50">Chargement du panier…</p>;
+    return <p className="py-16 text-center font-sans text-sm text-muted">Chargement du panier…</p>;
   }
   if (state.lines.length === 0) {
     return <EmptyCart />;
@@ -314,7 +314,7 @@ export function CartView() {
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
           <label className="flex flex-col gap-1">
-            <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
+            <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
               Livraison
             </span>
             <select
@@ -332,7 +332,7 @@ export function CartView() {
 
           <div className="flex flex-col gap-2">
             <label className="flex flex-col gap-1">
-              <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
+              <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
                 Code promo
               </span>
               <div className="flex flex-wrap gap-2">
@@ -378,7 +378,7 @@ export function CartView() {
         </div>
 
         <FramedGrid as="dl" className="h-fit grid-cols-2">
-          <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
+          <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
             Sous-total
           </dt>
           <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
@@ -387,7 +387,7 @@ export function CartView() {
 
           {totals.discountCents > 0 && (
             <>
-              <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
+              <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
                 Remise
               </dt>
               <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
@@ -396,7 +396,7 @@ export function CartView() {
             </>
           )}
 
-          <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60">
+          <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
             Port ({zone})
           </dt>
           <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
@@ -421,7 +421,7 @@ export function CartView() {
         !freeShippingCoupon &&
         summary.subtotalCents > 0 &&
         summary.subtotalCents < FREE_SHIPPING_MIN_CART_CENTS && (
-          <p className="mt-4 font-sans text-xs text-ink/50">
+          <p className="mt-4 font-sans text-xs text-muted">
             Livraison offerte dès {euros(FREE_SHIPPING_MIN_CART_CENTS)} d’achat avec un code éligible.
           </p>
         )}

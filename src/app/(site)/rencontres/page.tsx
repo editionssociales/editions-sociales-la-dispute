@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
 import { Reveal } from "@/components/reveal";
+import { Button } from "@/components/button";
 import { Eyebrow } from "@/components/eyebrow";
-import { FOCUS_RING_DARK_OUTER, FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 export const metadata: Metadata = {
   title: "Rencontres",
@@ -25,10 +24,10 @@ export default function RencontresPage() {
   return (
     <>
       {/* Héro */}
-      <Container className="bg-paper pb-16 pt-10 sm:pb-24 sm:pt-14">
+      <Container className="bg-paper py-16 sm:py-20">
         <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Rencontres" }]} />
         <Reveal>
-          <div className="mt-6 max-w-3xl">
+          <div className="max-w-3xl">
             <span className="inline-flex border-2 border-ink bg-pop-yellow px-3 py-1 font-sans text-xs font-extrabold uppercase tracking-[.08em] text-black">
               Agenda
             </span>
@@ -74,7 +73,7 @@ export default function RencontresPage() {
                       </span>
                     </div>
                     <div className="flex flex-1 items-center border-l-2 border-ink px-4 py-3">
-                      <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/60">
+                      <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
                         Lieu à préciser
                       </span>
                     </div>
@@ -109,18 +108,20 @@ export default function RencontresPage() {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-3">
-            <Link
+            <Button
               href="/catalogue"
-              className={`border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT_OUTER}`}
+              variant="outline"
+              className="px-7 py-3.5 text-sm tracking-[.04em]"
             >
               Découvrir le catalogue
-            </Link>
-            <Link
+            </Button>
+            <Button
               href="/souscription"
-              className={`border-2 border-paper px-7 py-3.5 font-sans text-sm font-bold uppercase tracking-[.04em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK_OUTER}`}
+              variant="outline"
+              className="px-7 py-3.5 text-sm tracking-[.04em]"
             >
               Soutenir la souscription
-            </Link>
+            </Button>
           </div>
         </Container>
       </section>

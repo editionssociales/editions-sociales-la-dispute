@@ -8,14 +8,16 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * varient d'un appelant à l'autre : ils passent par `className`, pas par
  * cette recette. L'anneau de focus dépend du fond AU REPOS de chaque variante
  * (R5) : SOLID démarre sur ink → anneau sombre (pop-yellow) ; OUTLINE démarre
- * sur paper → anneau clair (ink).
+ * sur paper → anneau clair (ink). État `disabled` (R7) : opacité réduite,
+ * curseur bloqué, hover neutralisé (n'a de prise que sur le `<button>` rendu
+ * sans `href` — un lien ne peut pas être `disabled` en HTML).
  */
 
 const BASE =
-  "inline-flex items-center justify-center font-sans font-bold uppercase transition-colors motion-reduce:transition-none border-2 border-ink";
+  "inline-flex items-center justify-center font-sans font-bold uppercase transition-colors motion-reduce:transition-none border-2 border-ink disabled:cursor-not-allowed disabled:opacity-40";
 
-const SOLID = `bg-ink text-paper hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`;
-const OUTLINE = `bg-paper text-ink hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`;
+const SOLID = `bg-ink text-paper hover:bg-paper hover:text-ink disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`;
+const OUTLINE = `bg-paper text-ink hover:bg-ink hover:text-paper disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`;
 
 type ButtonOwnProps = {
   href?: string;

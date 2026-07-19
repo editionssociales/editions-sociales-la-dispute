@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { Button } from "@/components/button";
+import { FOCUS_RING_LIGHT } from "@/lib/ui";
 import { useCart } from "./cart-context";
 
 /**
@@ -24,7 +25,10 @@ export function AddToCartButton({
   const { addToCart } = useCart();
   const [justAdded, setJustAdded] = useState(false);
 
-  function handleClick(e: MouseEvent<HTMLButtonElement>) {
+  // `Button` peut rendre un `<a>` ou un `<button>` selon `href` — ici toujours
+  // un `<button>` (aucun `href` transmis), mais son type d'`onClick` accepte
+  // les deux pour rester générique.
+  function handleClick(e: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) {
     // `book-card.tsx` enveloppe la couverture (et ce bouton) dans un `<Link>`
     // vers la fiche — ne jamais laisser le clic naviguer en plus d'ajouter.
     e.preventDefault();
@@ -50,12 +54,11 @@ export function AddToCartButton({
   }
 
   return (
-    <button
-      type="button"
+    <Button
       onClick={handleClick}
-      className={`inline-flex items-center justify-center border-2 border-ink bg-ink px-5 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black ${FOCUS_RING_DARK} ${className ?? ""}`}
+      className={`px-5 py-2.5 text-sm tracking-[.03em] ${className ?? ""}`}
     >
       {justAdded ? "Ajouté au panier" : "Ajouter au panier"}
-    </button>
+    </Button>
   );
 }

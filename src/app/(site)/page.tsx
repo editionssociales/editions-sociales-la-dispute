@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
+import { Button } from "@/components/button";
 import { NouveautesCarousel, type NouveauteBook } from "@/components/nouveautes-carousel";
 import { getActiveHighlight } from "@/lib/highlight";
 import { getNewReleases } from "@/lib/catalogue";
 import { EDITIONS } from "@/lib/editions";
-import { FOCUS_RING_DARK_OUTER } from "@/lib/ui";
 import type { Book, Cover, EditionSlug } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -20,15 +19,15 @@ export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Po
 
 /**
  * Couleurs du bandeau de mise en avant (`Highlight.couleur`) → classes
- * littérales (contrat Tailwind : le JIT ne compile pas le dynamique). Le
- * hover du CTA bascule sur jaune quand le fond est orange — sinon le bouton
- * survolé se fondrait dans le bandeau.
+ * littérales (contrat Tailwind : le JIT ne compile pas le dynamique). Le CTA
+ * suit désormais la recette canonique `<Button>` (R4, inversion ink↔paper) —
+ * la couleur éditée ne pilote plus que l'aplat du bloc texte.
  */
-const HIGHLIGHT_STYLES: Record<string, { block: string; ctaHover: string }> = {
-  "pop-pink": { block: "bg-pop-pink", ctaHover: "hover:bg-pop-orange" },
-  "pop-teal": { block: "bg-pop-teal", ctaHover: "hover:bg-pop-orange" },
-  "pop-orange": { block: "bg-pop-orange", ctaHover: "hover:bg-pop-yellow" },
-  "pop-yellow": { block: "bg-pop-yellow", ctaHover: "hover:bg-pop-orange" },
+const HIGHLIGHT_BLOCK: Record<string, string> = {
+  "pop-pink": "bg-pop-pink",
+  "pop-teal": "bg-pop-teal",
+  "pop-orange": "bg-pop-orange",
+  "pop-yellow": "bg-pop-yellow",
 };
 
 /** Un livre est éligible au carrousel s'il a une couverture et une fiche d'origine (édition connue). */
@@ -67,7 +66,7 @@ export default async function HomePage() {
         <Container className="mt-[clamp(30px,4.5vw,60px)]">
           <FramedGrid className="grid-cols-1 sm:grid-cols-[1fr_auto]">
             <div
-              className={`flex min-w-0 flex-col justify-center gap-1.5 px-6 py-6 sm:px-7 ${(HIGHLIGHT_STYLES[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_STYLES["pop-pink"]).block}`}
+              className={`flex min-w-0 flex-col justify-center gap-1.5 px-6 py-6 sm:px-7 ${HIGHLIGHT_BLOCK[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_BLOCK["pop-pink"]}`}
             >
               <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-ink">
                 {highlight.titre}
@@ -77,13 +76,13 @@ export default async function HomePage() {
               )}
             </div>
             {highlight.lien && (
-              <Link
+              <Button
                 href={highlight.lien}
-                className={`flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-ink px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-paper transition-colors hover:text-black motion-reduce:transition-none ${FOCUS_RING_DARK_OUTER} ${(HIGHLIGHT_STYLES[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_STYLES["pop-pink"]).ctaHover}`}
+                className="flex-none gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em]"
               >
                 {highlight.lienLibelle?.trim() || "En savoir plus"}{" "}
                 <span aria-hidden="true">→</span>
-              </Link>
+              </Button>
             )}
           </FramedGrid>
         </Container>

@@ -9,6 +9,7 @@ import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageHero } from "@/components/page-hero";
 import { FramedGrid } from "@/components/framed-grid";
 import { parseBookFilters } from "@/lib/parse-filters";
 import { catalogueHref } from "@/lib/browse";
@@ -111,7 +112,7 @@ async function EditionCatalogueBody({
   ];
 
   return (
-    <Container className="bg-paper py-12">
+    <Container className="bg-paper py-12 sm:py-16">
       <Breadcrumb
         trail={[
           { label: "Accueil", href: "/" },
@@ -120,12 +121,7 @@ async function EditionCatalogueBody({
         ]}
       />
 
-      <div className="mt-3.5 max-w-2xl">
-        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-          {info.name}
-        </h1>
-        <p className="mt-3.5 text-[15px] leading-relaxed text-ink/70">{info.tagline}</p>
-      </div>
+      <PageHero title={info.name} intro={info.tagline} className="max-w-2xl" />
 
       <FramedGrid
         as="nav"

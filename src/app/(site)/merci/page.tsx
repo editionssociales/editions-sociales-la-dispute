@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
-import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirmation";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 
@@ -58,15 +58,14 @@ export default async function MerciPage({
   return (
     <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
-        <Eyebrow>Commande</Eyebrow>
         {order && <ClearCartOnConfirmation />}
         {order ? (
-          <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              {order.pending ? "Paiement en cours de confirmation" : "Merci pour votre commande !"}
-            </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-              {order.pending ? (
+          <PageHero
+            eyebrow="Commande"
+            tone="system"
+            title={order.pending ? "Paiement en cours de confirmation" : "Merci pour votre commande !"}
+            intro={
+              order.pending ? (
                 "Votre paiement est en cours de confirmation — vous recevrez un email dès qu'il sera validé, sans action de votre part."
               ) : (
                 <>
@@ -84,19 +83,16 @@ export default async function MerciPage({
                   ) : null}
                   .
                 </>
-              )}
-            </p>
-          </>
+              )
+            }
+          />
         ) : (
-          <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              Merci pour votre commande !
-            </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-              Votre commande a bien été prise en compte. Si le paiement a
-              abouti, un email de confirmation vous a été envoyé.
-            </p>
-          </>
+          <PageHero
+            eyebrow="Commande"
+            tone="system"
+            title="Merci pour votre commande !"
+            intro="Votre commande a bien été prise en compte. Si le paiement a abouti, un email de confirmation vous a été envoyé."
+          />
         )}
         <div className="mt-8 flex flex-wrap gap-4">
           <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">

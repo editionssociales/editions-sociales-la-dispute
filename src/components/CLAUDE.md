@@ -36,10 +36,12 @@ données ni le routage.
 
 - **Primitive partagée** : composant plat, sans `"use client"`, utilisable aussi
   bien dans un arbre serveur que client — `FramedGrid` (recette de la grille
-  encadrée, hairline noir), `Breadcrumb` (fil d'ariane ; sa dernière miette est
-  toujours du texte, jamais un lien — une page qui a besoin d'un dernier maillon
-  cliquable garde son fil inline plutôt que d'utiliser ce composant), `Button`
-  (recette CTA couleur/bordure/hover/focus).
+  encadrée, hairline noir), `Breadcrumb` (fil d'ariane ; porte sa propre marge
+  `mb-6`, `tone="light"|"dark"` selon le fond de la page, et
+  `currentIsPage={false}` pour les fiches produit dont le fil s'arrête à la
+  collection — la dernière miette redevient alors un lien), `Button` (recette
+  CTA couleur/bordure/hover/focus, états `disabled` inclus), `PageHero`
+  (en-tête de page : eyebrow/titre/chapeau, échelle fermée par `tone`).
 
 ## Decisions
 
