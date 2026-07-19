@@ -30,7 +30,11 @@ import { CartNavCell } from "./cart/cart-badge";
  * cantonné au desktop.
  *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » | nav 2×2.
- * Mobile : empilé — 2 maisons pleine largeur, nav 2×2, puis « Nous soutenir ».
+ * Mobile : 2 rangées seulement — [monogrammes maisons | « Nous soutenir » |
+ * panier icône] puis [Catalogue | Agenda]. La Geme et À paraître n'ont pas de
+ * cellule téléphone (elles restent accessibles par la mosaïque de thèmes de
+ * /catalogue et la mosaïque pop du pied de page) — le quadrillage tient au
+ * premier paint sans pousser le contenu hors écran.
  *
  * La 5e cellule « Panier » (desktop et mobile, plan §4 étape 6) est
  * permanente. `useSearchParams` (états Geme / À paraître) est confiné derrière
@@ -49,6 +53,26 @@ const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
   "a-paraitre": "bg-paper hover:bg-pop-orange",
   agenda: "bg-paper hover:bg-pop-yellow",
 };
+
+/**
+ * Monogrammes maisons de la rangée mobile — carrés sur l'accent de la maison
+ * (R3 : navy = Éditions sociales, brick = La Dispute), inversion accent↔paper
+ * au survol. Clefs = hrefs de `NAV_HOUSES` (source unique), classes littérales
+ * (contrat JIT) ; le nom complet reste porté par l'`aria-label`.
+ */
+const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string }> = {
+  "/editions/la-dispute": {
+    sigle: "LD",
+    cellClass: "bg-brick text-paper hover:bg-paper hover:text-brick",
+  },
+  "/editions/editions-sociales": {
+    sigle: "ES",
+    cellClass: "bg-navy text-paper hover:bg-paper hover:text-navy",
+  },
+};
+
+/** Sections gardées dans le quadrillage téléphone (cf. docstring du fichier). */
+const MOBILE_SECTION_IDS: NavSectionId[] = ["catalogue", "agenda"];
 
 /** Placement en grille desktop (littéral : le JIT ne compile pas `col-start-${n}`). */
 const HOUSE_ROW = ["row-start-1", "row-start-2"];
@@ -159,10 +183,13 @@ function SoutenirCell({ compact, placement }: { compact: boolean; placement: str
           compact ? "lg:scale-100 lg:opacity-100" : "lg:scale-110 lg:opacity-0"
         }`}
       >
-        <span className="whitespace-nowrap leading-none text-[clamp(20px,2vw,28px)]">
+        {/* Plancher fluide sous ~445px : la cellule mobile partage désormais sa
+            rangée avec les monogrammes et le panier — le libellé doit tenir
+            dans ~140px à 320px de large. À lg, plafonds inchangés. */}
+        <span className="whitespace-nowrap leading-none text-[clamp(15px,4.5vw,28px)]">
           Nous soutenir
         </span>
-        <span className="flex-none leading-none text-[clamp(22px,2.2vw,30px)]">→</span>
+        <span className="flex-none leading-none text-[clamp(17px,5vw,30px)]">→</span>
       </span>
 
       {/* Flèche du calque déployé : ancrée au coin bas-droit de la cellule, contre le
@@ -234,35 +261,48 @@ function SiteHeaderChrome({
   return (
     <header className="sticky top-0 z-50">
       <nav aria-label="Navigation principale" className="bg-ink">
-        {/* Mobile (< lg) : maisons pleine largeur, nav 2×2, panier, puis « Nous
-            soutenir » — chaque cellule est un <li> (`display: contents`, R7/lecteur
-            d'écran) ; le placement en grille reste porté par le <Link> lui-même. */}
-        <ul className="grid grid-cols-2 gap-[2px] p-[2px] lg:hidden">
-          {NAV_HOUSES.map((house) => (
-            <li key={house.href} className="contents">
-              <Link href={house.href} className={`col-span-2 ${maisonCellClass(compact)}`}>
-                {house.label}
-              </Link>
+        {/* Mobile (< lg) : 2 rangées — chaque cellule est un <li>
+            (`display: contents`, parité lecteur d'écran) ; les tailles restent
+            fixes sous lg (compact par défaut, chantier 3 §3), cibles ≥ 44px (R7). */}
+        <div className="flex flex-col gap-[2px] p-[2px] lg:hidden">
+          <ul className="flex items-stretch gap-[2px]">
+            {NAV_HOUSES.map((house) => {
+              const m = MAISON_MONOGRAM[house.href];
+              return (
+                <li key={house.href} className="contents">
+                  <Link
+                    href={house.href}
+                    aria-label={house.label}
+                    className={`flex min-h-11 w-14 items-center justify-center font-sans text-[15px] font-black italic uppercase leading-none ${m?.cellClass ?? "bg-paper text-ink hover:bg-ink hover:text-paper"} ${CELL_TRANSITION} ${FOCUS_RING_DARK}`}
+                  >
+                    <span aria-hidden="true">{m?.sigle ?? house.label.slice(0, 2)}</span>
+                  </Link>
+                </li>
+              );
+            })}
+            <li className="contents">
+              <SoutenirCell compact={compact} placement="min-w-0 flex-1 py-3" />
             </li>
-          ))}
-          {NAV_SECTIONS.map((section) => (
-            <li key={section.id} className="contents">
-              <Link
-                href={section.href}
-                aria-current={active[section.id] ? "page" : undefined}
-                className={navCellClass(section.id, active[section.id], compact)}
-              >
-                {section.label}
-              </Link>
+            <li className="contents">
+              <CartNavCell compact={compact} icon placement="w-14" />
             </li>
-          ))}
-          <li className="contents">
-            <CartNavCell compact={compact} placement="col-span-2" />
-          </li>
-          <li className="contents">
-            <SoutenirCell compact={compact} placement="col-span-2 py-4" />
-          </li>
-        </ul>
+          </ul>
+          <ul className="grid grid-cols-2 gap-[2px]">
+            {NAV_SECTIONS.filter((section) => MOBILE_SECTION_IDS.includes(section.id)).map(
+              (section) => (
+                <li key={section.id} className="contents">
+                  <Link
+                    href={section.href}
+                    aria-current={active[section.id] ? "page" : undefined}
+                    className={navCellClass(section.id, active[section.id], compact)}
+                  >
+                    {section.label}
+                  </Link>
+                </li>
+              ),
+            )}
+          </ul>
+        </div>
 
         {/* Desktop (lg+) : maisons | « Nous soutenir » | nav 2×2 | panier. */}
         <ul className={DESKTOP_GRID}>
