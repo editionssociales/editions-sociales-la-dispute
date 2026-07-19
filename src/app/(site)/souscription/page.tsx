@@ -31,8 +31,8 @@ import { createDonationCheckout } from "./actions";
  * (R2/R3) sont codés par les 4 accents de marque (navy/bottle/ocher/brick,
  * `ACCENTS`/`BG`) — jamais par la palette pop, réservée à la navigation et au
  * statut. `POP_BG` ne reste ici que pour les tuiles de stats 2024 et le
- * repère de faits du héros : décoration ponctuelle hors du périmètre arbitré
- * de ce chantier (README, chantier 1, point 3).
+ * repère de faits du bloc d'ask : décoration ponctuelle hors du périmètre
+ * arbitré de ce chantier (README, chantier 1, point 3).
  */
 const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
 
@@ -40,9 +40,9 @@ const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
 const OPENING_MICROCOPY = "Ouverture le 15 août";
 
 /**
- * Vidéo de campagne — le bloc pleine largeur sous le héros de la maquette
- * 2026-07. Aucune vidéo livrée à ce jour (E10) : renseigner ici l'URL d'embed
- * à réception ; le bloc reste masqué tant que `null`.
+ * Vidéo de campagne — le bloc pleine largeur de la maquette 2026-07. Aucune
+ * vidéo livrée à ce jour (E10) : renseigner ici l'URL d'embed à réception ;
+ * le bloc reste masqué tant que `null`.
  */
 const CAMPAIGN_VIDEO_URL: string | null = null;
 
@@ -62,25 +62,27 @@ export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Po
 /* Faits + dérivations (collecte, paliers atteints, % de l'objectif,   */
 /* plafond de jauge, tuiles de stats) : voir lib/campaign.             */
 /*                                                                     */
-/* Disposition (maquette « essai page souscription », 2026-07) :       */
-/* héros-bandeau (pitch 2026 + CTA montant libre + étagère), vidéo     */
-/* pleine largeur (masquée tant que CAMPAIGN_VIDEO_URL est null),      */
-/* jauge « collecte en direct » + objectif pleine largeur, puis corps  */
-/* en deux colonnes — récit à gauche (rétrospective 2024 en preuve     */
-/* sociale, chantiers, perspectives), contreparties empilées à droite  */
-/* (`#paliers`, premières dans le DOM : sur mobile elles suivent la    */
-/* jauge). Catalogue, FAQ et CTA final restent en pleine largeur.      */
+/* Disposition (maquette « essai page souscription », itération        */
+/* 2026-07) : la page OUVRE sur la jauge « collecte en direct » +      */
+/* objectif, pleine largeur ; slot vidéo (masqué tant que              */
+/* CAMPAIGN_VIDEO_URL est null) ; puis corps en deux colonnes — à      */
+/* gauche l'ask 2026 (pitch + CTA montant libre + étagère, bloc ink en */
+/* tête de récit) suivi de la rétrospective 2024, des chantiers et des */
+/* perspectives ; contreparties empilées à droite (`#paliers`). Le     */
+/* récit précède les paliers dans le DOM : sur mobile, h1 et pitch     */
+/* restent au-dessus des cartes. Catalogue, FAQ et CTA final restent   */
+/* en pleine largeur.                                                  */
 /*                                                                     */
 /* Héros, chantiers, contreparties, mécènes et FAQ sont éditables dans */
 /* /admin (global `page-souscription`, spec « éditeur de contenus ») : */
 /* lus via `getPageSouscription` — bloc vide = contenu par défaut de   */
 /* `lib/site-content-core.ts` (l'ex-contenu en dur de cette page,      */
 /* extrait verbatim). `herosTitre`/`herosIntro` décrivent la           */
-/* RÉTROSPECTIVE 2024 (tête de la colonne récit, preuve sociale) — le  */
-/* pitch 2026 du héros (1re section) est éditorial figé, pas dans le   */
-/* CMS. Montant et intitulé des paliers restent dérivés de             */
-/* DONATION_TIERS (la table qui pilote Stripe) : la présentation est   */
-/* éditable, jamais le paiement.                                       */
+/* RÉTROSPECTIVE 2024 (2e bloc de la colonne récit, preuve sociale) —  */
+/* le pitch 2026 de l'ask est éditorial figé, pas dans le CMS.         */
+/* Montant et intitulé des paliers restent dérivés de DONATION_TIERS   */
+/* (la table qui pilote Stripe) : la présentation est éditable, jamais */
+/* le paiement.                                                        */
 /* ------------------------------------------------------------------ */
 
 // Perspectives éditoriales des deux maisons (reprises de la campagne).
@@ -104,7 +106,7 @@ const MAISONS: {
   },
 ];
 
-// Étagère du héro : dimensions en pixels des dos de livres dessinés.
+// Étagère de l'ask : dimensions en pixels des dos de livres dessinés.
 const SPINES: { h: number; w: number }[] = [
   { h: 88, w: 24 },
   { h: 120, w: 32 },
@@ -133,12 +135,16 @@ const BOOK_HOVER_H = 320;
 const MOBILE_SHELF_COUNT = 8;
 
 /**
- * Étagère du héro : chaque dos dessiné porte une parution récente réelle. Au
+ * Étagère de l'ask : chaque dos dessiné porte une parution récente réelle. Au
  * survol ou au focus clavier, le livre sort du rayon en 3D : il pivote sur
  * l'arête de sa reliure (bord droit du dos) pour présenter sa couverture,
  * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
  * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
- * apparaissent en typo nue sous la barre de l'étagère. CSS pur, aucun JS client.
+ * apparaissent en typo nue sous la barre de l'étagère. CSS pur, aucun JS
+ * client. Depuis l'itération maquette 2026-07, l'étagère vit DANS le bloc ink
+ * de l'ask (colonne récit) : la couverture dépliée peut recouvrir
+ * temporairement le texte au-dessus — même comportement que dans l'ex-héros,
+ * où elle glissait vers la colonne de texte.
  */
 function HeroShelf({ books }: { books: Book[] }) {
   // Décalage de chaque dos par rapport au bord gauche de l'étagère, pour
@@ -242,9 +248,9 @@ function MobileShelf({ books }: { books: Book[] }) {
         <Link
           key={book.id}
           href={`/catalogue/${book.edition}/${book.slug}`}
-          // Anneau EXTÉRIEUR (R5) : posé sur le fond ink du héros, pas sur la
-          // couverture elle-même — pop-yellow y contraste, et l'anneau ne
-          // recouvre jamais l'image.
+          // Anneau EXTÉRIEUR (R5) : posé sur le fond ink du bloc d'ask, pas
+          // sur la couverture elle-même — pop-yellow y contraste, et l'anneau
+          // ne recouvre jamais l'image.
           className={`group relative block bg-paper-2 ${FOCUS_RING_DARK_OUTER}`}
         >
           <span className="sr-only">
@@ -266,8 +272,8 @@ function MobileShelf({ books }: { books: Book[] }) {
 }
 
 /**
- * Formulaire « montant libre » — rendu deux fois (héros, CTA final) avec le
- * même comportement (R7) : avant ouverture, CTA réellement `disabled` +
+ * Formulaire « montant libre » — rendu deux fois (bloc d'ask, CTA final) avec
+ * le même comportement (R7) : avant ouverture, CTA réellement `disabled` +
  * microcopie « Ouverture le 15 août » (jamais un bouton mort qui a l'air
  * cliquable) ; une fois ouvert, `SubmitButton` (`useFormStatus`) distingue
  * l'état pendant la redirection Stripe de l'état bloqué.
@@ -333,7 +339,7 @@ export default async function SouscriptionPage() {
     getPageSouscription(),
   ]);
   const newReleases = releases.slice(0, 4);
-  // L'étagère du héro porte de vraies parutions : couverture + fiche interne requises.
+  // L'étagère de l'ask porte de vraies parutions : couverture + fiche interne requises.
   const shelfBooks = releases
     .filter((b) => b.cover && b.edition)
     .slice(0, SPINES.length);
@@ -345,77 +351,11 @@ export default async function SouscriptionPage() {
 
   return (
     <>
-      {/* Héros-bandeau — l'ask 2026 au-dessus de la ligne de flottaison :
-          pitch, CTA montant libre immédiat, étagère. La jauge vit désormais
-          dans sa propre section pleine largeur, juste en dessous. */}
-      <section className="bg-ink text-paper">
-        <Container className="py-16 sm:py-20">
-          <div className="grid items-end gap-12 lg:grid-cols-[1fr_auto]">
-            <div>
-              <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
-                Souscription 2026 — campagne de lancement
-              </p>
-              <h1 className="mt-4 max-w-3xl font-sans text-4xl font-black italic leading-[0.98] text-paper sm:text-5xl">
-                Tenir une édition marxiste{" "}
-                <span className="text-pop-yellow">et indépendante</span>
-              </h1>
-              <p className="mt-6 max-w-2xl text-paper/85">
-                Deux catalogues marxistes et critiques, une seule petite équipe
-                d&apos;éditrices, et un principe : rester indépendants face à la
-                poignée de groupes capitalistes qui accaparent l&apos;édition, la
-                diffusion et les médias. Sans mécène ni actionnaire, nous vivons
-                de la vente de nos livres — et, pour tenir, de cette souscription.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-paper/80">
-                {[
-                  `${totalBooks} titres au catalogue`,
-                  "Le plus grand fonds marxiste en français",
-                  "Sans mécène ni actionnaire",
-                ].map((label, i) => (
-                  <span key={label} className="flex items-center gap-2">
-                    <span className={`h-2 w-2 ${POP_BG[i % 4]}`} />
-                    {label}
-                  </span>
-                ))}
-              </div>
-
-              {/* CTA immédiat : montant libre, avant même le choix d'un palier. */}
-              <div className="mt-8">
-                <FreeAmountForm enabled={enabled} idSuffix="hero" />
-              </div>
-            </div>
-            <HeroShelf books={shelfBooks} />
-          </div>
-          <MobileShelf books={shelfBooks} />
-        </Container>
-      </section>
-
-      {/* Vidéo de campagne — le bloc pleine largeur de la maquette ; absent
-          tant qu'aucune vidéo n'est livrée (E10). */}
-      {CAMPAIGN_VIDEO_URL && (
-        <section className="border-b-2 border-ink bg-paper">
-          <Container className="py-12 sm:py-16">
-            <Reveal>
-              <div className="border-2 border-ink bg-ink">
-                <iframe
-                  src={CAMPAIGN_VIDEO_URL}
-                  title="La vidéo de la souscription"
-                  className="aspect-video w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
-              </div>
-            </Reveal>
-          </Container>
-        </section>
-      )}
-
-      {/* La collecte en direct — jauge 2026 vivante + objectif, pleine
-          largeur (maquette : barre + « OBJECTIF 50 000 € »). N'affiche que ce
-          qu'une campagne en cours peut honnêtement montrer (collecté net +
-          contributeurs), jamais les 4 tuiles `stats` du gabarit 2024
+      {/* La collecte en direct OUVRE la page — jauge 2026 vivante + objectif,
+          pleine largeur (maquette : barre + « OBJECTIF 50 000 € » ; le point
+          le plus urgent du site passe littéralement en premier). N'affiche
+          que ce qu'une campagne en cours peut honnêtement montrer (collecté
+          net + contributeurs), jamais les 4 tuiles `stats` du gabarit 2024
           rétrospectif (piège documenté dans `lib/donation-tiers.ts`/
           `lib/donations.ts`). Fenêtre de fraîcheur ~1–3 min, voir
           `src/app/CLAUDE.md`. */}
@@ -466,14 +406,180 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
-      {/* Corps en deux colonnes (maquette) : récit à gauche, contreparties
-          empilées à droite. La colonne des paliers est première dans le DOM —
-          sur mobile elle suit directement la jauge, comme avant. */}
+      {/* Vidéo de campagne — le bloc pleine largeur de la maquette ; absent
+          tant qu'aucune vidéo n'est livrée (E10). */}
+      {CAMPAIGN_VIDEO_URL && (
+        <section className="border-b-2 border-ink bg-paper">
+          <Container className="py-12 sm:py-16">
+            <Reveal>
+              <div className="border-2 border-ink bg-ink">
+                <iframe
+                  src={CAMPAIGN_VIDEO_URL}
+                  title="La vidéo de la souscription"
+                  className="aspect-video w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+            </Reveal>
+          </Container>
+        </section>
+      )}
+
+      {/* Corps en deux colonnes (maquette) : récit à gauche — ouvert par
+          l'ask 2026 —, contreparties empilées à droite. Le récit est premier
+          dans le DOM : sur mobile, h1, pitch et CTA restent au-dessus des
+          cartes de paliers. */}
       <section className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+            {/* Colonne récit : l'ask, la preuve, la suite */}
+            <div className="flex flex-col gap-14">
+              {/* L'ask 2026 — l'ex-héros intégré en tête de récit : pitch,
+                  CTA montant libre immédiat, étagère (3D en lg+, grille de
+                  couvertures en dessous). Éditorial figé, pas dans le CMS. */}
+              <div className="bg-ink p-7 text-paper sm:p-9">
+                <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
+                  Souscription 2026 — campagne de lancement
+                </p>
+                <h1 className="mt-4 font-sans text-4xl font-black italic leading-[0.98] text-paper">
+                  Tenir une édition marxiste{" "}
+                  <span className="text-pop-yellow">et indépendante</span>
+                </h1>
+                <p className="mt-6 text-paper/85">
+                  Deux catalogues marxistes et critiques, une seule petite équipe
+                  d&apos;éditrices, et un principe : rester indépendants face à la
+                  poignée de groupes capitalistes qui accaparent l&apos;édition, la
+                  diffusion et les médias. Sans mécène ni actionnaire, nous vivons
+                  de la vente de nos livres — et, pour tenir, de cette souscription.
+                </p>
+                <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-paper/80">
+                  {[
+                    `${totalBooks} titres au catalogue`,
+                    "Le plus grand fonds marxiste en français",
+                    "Sans mécène ni actionnaire",
+                  ].map((label, i) => (
+                    <span key={label} className="flex items-center gap-2">
+                      <span className={`h-2 w-2 ${POP_BG[i % 4]}`} />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                {/* CTA immédiat : montant libre, avant même le choix d'un palier. */}
+                <div className="mt-8">
+                  <FreeAmountForm enabled={enabled} idSuffix="hero" />
+                </div>
+
+                <div className="mt-14">
+                  <HeroShelf books={shelfBooks} />
+                </div>
+                <MobileShelf books={shelfBooks} />
+              </div>
+
+              {/* Rétrospective 2024 — la preuve sociale
+                  (l'emplacement « messages de soutien » de la maquette :
+                  aucun verbatim n'existe, les faits 2024 tiennent ce rôle). */}
+              <div>
+                <Reveal>
+                  <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
+                  <h2 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink">
+                    {content.herosTitre}
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
+                    {content.herosIntro}
+                  </p>
+                </Reveal>
+                <FramedGrid className="mt-8 sm:grid-cols-2">
+                  {CAMPAIGN_2024.stats.map((s, i) => (
+                    <Reveal key={s.label} delay={(i % 2) * 120} className="h-full">
+                      <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
+                        <CountUp
+                          value={s.value}
+                          suffix={s.suffix}
+                          className="font-sans text-4xl font-black italic text-ink"
+                        />
+                        <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
+                      </div>
+                    </Reveal>
+                  ))}
+                </FramedGrid>
+                <Reveal delay={200} className="mt-8">
+                  <div className="border-2 border-ink bg-paper p-6">
+                    <Gauge
+                      value={CAMPAIGN_2024.gauge.value}
+                      max={CAMPAIGN_2024.gauge.max}
+                      markers={CAMPAIGN_2024.gauge.markers}
+                    />
+                  </div>
+                </Reveal>
+              </div>
+
+              {/* Les chantiers : où va votre argent */}
+              <div>
+                <Reveal>
+                  <Eyebrow dot="bg-pop-orange">Où va votre argent</Eyebrow>
+                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+                    Cinq chantiers pour la suite
+                  </h2>
+                </Reveal>
+                <FramedGrid className="mt-8 grid-cols-1">
+                  {content.chantiers.map((c, i) => (
+                    <Reveal key={c.titre} className="h-full">
+                      <div className="flex h-full gap-5 bg-paper p-6">
+                        <span className={`font-sans text-3xl font-black italic ${TEXT[c.accent]}`}>
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <div>
+                          <h3 className="font-sans text-xl font-black italic text-ink">{c.titre}</h3>
+                          <p className="mt-2 text-sm leading-relaxed text-ink/70">{c.desc}</p>
+                        </div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </FramedGrid>
+              </div>
+
+              {/* Et après : les perspectives des deux maisons — la suite */}
+              <div>
+                <Reveal>
+                  <Eyebrow dot="bg-pop-teal">Et après</Eyebrow>
+                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+                    Des projets, on en a plein
+                  </h2>
+                </Reveal>
+                <FramedGrid className="mt-8 grid-cols-1">
+                  {MAISONS.map((m) => (
+                    <Reveal key={m.nom} className="h-full">
+                      <div className="flex h-full flex-col bg-paper">
+                        <div aria-hidden="true" className={`h-2 ${BG[m.accent]}`} />
+                        <div className="flex flex-1 flex-col p-7">
+                          <h3 className={`font-sans text-2xl font-black italic ${TEXT[m.accent]}`}>
+                            {m.nom}
+                          </h3>
+                          <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/70">{m.desc}</p>
+                          <div className="mt-5 flex flex-wrap gap-2">
+                            {m.chips.map((chip) => (
+                              <span
+                                key={chip}
+                                className="border border-ink px-3 py-1 font-sans text-xs font-bold uppercase tracking-[.03em] text-ink"
+                              >
+                                {chip}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </FramedGrid>
+              </div>
+            </div>
+
             {/* Colonne contreparties */}
-            <aside id="paliers" className="lg:col-start-2 lg:row-start-1">
+            <aside id="paliers">
               <Reveal>
                 <Eyebrow dot="bg-pop-pink">Les paliers</Eyebrow>
                 <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
@@ -610,107 +716,6 @@ export default async function SouscriptionPage() {
                 ))}
               </FramedGrid>
             </aside>
-
-            {/* Colonne récit : pourquoi donner */}
-            <div className="flex flex-col gap-14 lg:col-start-1 lg:row-start-1">
-              {/* Rétrospective 2024 — la preuve sociale en tête de récit
-                  (l'emplacement « messages de soutien » de la maquette :
-                  aucun verbatim n'existe, les faits 2024 tiennent ce rôle). */}
-              <div>
-                <Reveal>
-                  <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
-                  <h2 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink">
-                    {content.herosTitre}
-                  </h2>
-                  <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
-                    {content.herosIntro}
-                  </p>
-                </Reveal>
-                <FramedGrid className="mt-8 sm:grid-cols-2">
-                  {CAMPAIGN_2024.stats.map((s, i) => (
-                    <Reveal key={s.label} delay={(i % 2) * 120} className="h-full">
-                      <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
-                        <CountUp
-                          value={s.value}
-                          suffix={s.suffix}
-                          className="font-sans text-4xl font-black italic text-ink"
-                        />
-                        <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
-                      </div>
-                    </Reveal>
-                  ))}
-                </FramedGrid>
-                <Reveal delay={200} className="mt-8">
-                  <div className="border-2 border-ink bg-paper p-6">
-                    <Gauge
-                      value={CAMPAIGN_2024.gauge.value}
-                      max={CAMPAIGN_2024.gauge.max}
-                      markers={CAMPAIGN_2024.gauge.markers}
-                    />
-                  </div>
-                </Reveal>
-              </div>
-
-              {/* Les chantiers : où va votre argent */}
-              <div>
-                <Reveal>
-                  <Eyebrow dot="bg-pop-orange">Où va votre argent</Eyebrow>
-                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
-                    Cinq chantiers pour la suite
-                  </h2>
-                </Reveal>
-                <FramedGrid className="mt-8 grid-cols-1">
-                  {content.chantiers.map((c, i) => (
-                    <Reveal key={c.titre} className="h-full">
-                      <div className="flex h-full gap-5 bg-paper p-6">
-                        <span className={`font-sans text-3xl font-black italic ${TEXT[c.accent]}`}>
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
-                        <div>
-                          <h3 className="font-sans text-xl font-black italic text-ink">{c.titre}</h3>
-                          <p className="mt-2 text-sm leading-relaxed text-ink/70">{c.desc}</p>
-                        </div>
-                      </div>
-                    </Reveal>
-                  ))}
-                </FramedGrid>
-              </div>
-
-              {/* Et après : les perspectives des deux maisons — la suite */}
-              <div>
-                <Reveal>
-                  <Eyebrow dot="bg-pop-teal">Et après</Eyebrow>
-                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
-                    Des projets, on en a plein
-                  </h2>
-                </Reveal>
-                <FramedGrid className="mt-8 grid-cols-1">
-                  {MAISONS.map((m) => (
-                    <Reveal key={m.nom} className="h-full">
-                      <div className="flex h-full flex-col bg-paper">
-                        <div aria-hidden="true" className={`h-2 ${BG[m.accent]}`} />
-                        <div className="flex flex-1 flex-col p-7">
-                          <h3 className={`font-sans text-2xl font-black italic ${TEXT[m.accent]}`}>
-                            {m.nom}
-                          </h3>
-                          <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/70">{m.desc}</p>
-                          <div className="mt-5 flex flex-wrap gap-2">
-                            {m.chips.map((chip) => (
-                              <span
-                                key={chip}
-                                className="border border-ink px-3 py-1 font-sans text-xs font-bold uppercase tracking-[.03em] text-ink"
-                              >
-                                {chip}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </Reveal>
-                  ))}
-                </FramedGrid>
-              </div>
-            </div>
           </div>
         </Container>
       </section>
