@@ -1,7 +1,9 @@
 import type {
   CollectionBeforeChangeHook,
+  CollectionBeforeValidateHook,
   CollectionConfig,
   RelationshipFieldSingleValidation,
+  TextFieldValidation,
 } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
@@ -9,6 +11,7 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import { trimIsbn, validateIsbnValue } from '../lib/isbn.ts'
 import { importStockHandler } from '../lib/stock-import.ts'
 
 /**
@@ -48,6 +51,25 @@ const validateCover: RelationshipFieldSingleValidation = (value, { operation, re
   return true
 }
 
+/** ISBN optionnel ; format contrôlé hors import de migration (données héritées). */
+const validateIsbn: TextFieldValidation = (value, { req }) => {
+  if (req.context?.migration) {
+    return true
+  }
+  return validateIsbnValue(value)
+}
+
+/** Espaces de bord retirés avant validation — saisie « 978-… » tolère le copier-coller. */
+const trimIsbnField: CollectionBeforeValidateHook = ({ data, req }) => {
+  if (req.context?.migration) {
+    return data
+  }
+  if (typeof data?.isbn === 'string') {
+    return { ...data, isbn: trimIsbn(data.isbn) }
+  }
+  return data
+}
+
 export const Books: CollectionConfig = {
   slug: 'books',
   labels: {
@@ -85,6 +107,7 @@ export const Books: CollectionConfig = {
     delete: isAdmin,
   },
   hooks: {
+    beforeValidate: [trimIsbnField],
     beforeChange: [setContentTouched],
     afterChange: [revalidateCatalogueAfterChange],
     afterDelete: [revalidateCatalogueAfterDelete],
@@ -225,6 +248,12 @@ export const Books: CollectionConfig = {
               name: 'isbn',
               type: 'text',
               label: 'ISBN',
+              validate: validateIsbn,
+              admin: {
+                placeholder: '978-2-35367-036-9',
+                description:
+                  'ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.',
+              },
             },
             {
               name: 'pages',
