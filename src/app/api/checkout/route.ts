@@ -8,8 +8,7 @@ import {
   resolveShippingMethod,
   validateCheckoutLines,
 } from "@/lib/checkout-core";
-import { computeCartTotals } from "@/lib/cart-core";
-import { computeShipping } from "@/lib/shipping-core";
+import { computeCartQuote } from "@/lib/cart-quote";
 import { evaluatePromoCode } from "@/lib/promo-core";
 
 /**
@@ -18,9 +17,9 @@ import { evaluatePromoCode } from "@/lib/promo-core";
  * zone) depuis une relecture fraîche de Payload — le client n'envoie que des
  * `{id, qty}` + une zone + un code promo optionnel, jamais un prix ni un
  * total. Toute la logique de validation/calcul est pure et testée ailleurs
- * (`checkout-core.ts`, `promo-core.ts`, `shipping-core.ts`,
- * `cart-core.ts`) — cette route ne fait que la composition + l'appel Stripe,
- * même découpage que `souscription/actions.ts` (E1/phase dons).
+ * (`checkout-core.ts`, `promo-core.ts`, `cart-quote.ts` pour le devis
+ * port/remise/total) — cette route ne fait que la composition + l'appel
+ * Stripe, même découpage que `souscription/actions.ts` (E1/phase dons).
  *
  * Garde Stripe en PREMIER, avant même de lire le corps de la requête :
  * sans clé (`donationsEnabled()`), aucun encaissement possible — 503 propre
@@ -63,21 +62,16 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const freeShippingCoupon = promoEval?.ok === true && promoEval.type === "free_shipping";
-  const discountCents =
-    promoEval?.ok === true && promoEval.type === "fixed_cart" ? promoEval.discountCents : 0;
-
-  const shipping = computeShipping({
-    cartTotalCents: validation.subtotalCents,
+  const { shipping, totals, freeShippingCoupon } = computeCartQuote({
+    subtotalCents: validation.subtotalCents,
     zone: parsed.zone,
     manifestOnly: validation.manifestOnly,
-    freeShippingCoupon,
+    promoEval,
   });
   if (!shipping.ok) {
     return Response.json({ error: shipping.message, reason: "shipping" }, { status: 422 });
   }
 
-  const totals = computeCartTotals(validation.subtotalCents, discountCents, shipping.costCents);
   const shippingMethod = resolveShippingMethod({
     manifestOnly: validation.manifestOnly,
     freeShippingCoupon,
