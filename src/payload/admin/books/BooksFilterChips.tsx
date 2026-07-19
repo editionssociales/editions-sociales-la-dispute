@@ -170,7 +170,7 @@ export function BooksFilterChips({ seuil }: BooksFilterChipsProps) {
         </div>
 
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-        <a className={styles.newBookButton} href="/admin/nouveau-livre">
+        <a className={styles.newBookButton} href="/admin/collections/books/create">
           + Nouveau livre
         </a>
       </div>

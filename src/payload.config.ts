@@ -47,10 +47,10 @@ export default buildConfig({
       // Vue admin `/admin/sante` (issue #27) : observabilité + configuration
       // & accès, rôle admin strict (redirect interne vers `/admin` sinon —
       // `HealthPage.tsx`). Lien de découverte : `afterNavLinks` ci-dessous.
-      // Vue admin `/admin/nouveau-livre` (issue #26) : création guidée d'une
-      // fiche livre en brouillon, rôle admin OU editor (redirect interne vers
-      // `/admin` sinon — `NewBookView.tsx`). Accès depuis la liste Livres
-      // (chips, `BooksFilterChips.tsx`) et la home (`Dashboard.tsx`, zone C).
+      // Création livre : formulaire natif Payload
+      // (`/admin/collections/books/create` → puis `/{id}`), entrées liste/
+      // dashboard. `/admin/nouveau-livre` ne fait plus que rediriger
+      // (favoris).
       views: {
         sante: {
           Component: '/payload/admin/health/HealthPage.tsx#HealthPage',
