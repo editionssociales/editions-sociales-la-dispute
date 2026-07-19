@@ -206,9 +206,7 @@ export async function HealthPage(props: AdminViewServerProps) {
               Présence des variables seulement — jamais leur valeur. Si une variable manque, relayer le
               nom exact au développeur.
             </span>
-            <span className={styles.noteChip}>
-              page réservée au rôle admin · aucune pastille correspondante dans le bandeau de la home
-            </span>
+            <span className={styles.noteChip}>page réservée au rôle admin</span>
           </section>
 
           <DashboardLegend />

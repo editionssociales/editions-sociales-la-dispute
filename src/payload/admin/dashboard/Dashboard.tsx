@@ -1,48 +1,31 @@
 import type { ServerProps } from 'payload'
 
 import {
-  bannerHidden,
   commandesState as deriveCommandesState,
-  editionTag,
   fmtDateFr,
   fmtDateTimeFr,
   fmtEuros,
-  IMPORT_ALERT_DAYS,
-  importSignal,
   ORDER_ALERT_HOURS,
   ORDER_WARN_HOURS,
   orderLateness,
   parisMonthBounds,
-  pastilleText,
-  STOCK_SEUIL_FALLBACK,
-  stockRowState,
-  stockSignal,
-  worstState,
-  type BannerItem,
   type PanelState,
 } from './derive.ts'
-import { badgeClass, bannerStateClass, dotClass } from './dashboard-classes.ts'
-import { readExpiredPromos, readLastImportRun, readLowStock, readWorkOrders } from './data.ts'
+import { badgeClass, dotClass } from './dashboard-classes.ts'
+import { readExpiredPromos, readWorkOrders } from './data.ts'
 import styles from './dashboard.module.css'
 import { DashboardLegend } from './Legend.tsx'
-import { OrderExportForm } from './OrderExportForm.tsx'
 import { PromoDeactivateButton } from './PromoDeactivateButton.tsx'
-import { StockImportForm } from './StockImportForm.tsx'
 
 /**
- * Slot `beforeDashboard` du dashboard `/admin` v3 (home = 3 zones, issue
- * #23) : bandeau d'état (3.1) puis zone A « File du jour » (toujours
- * visible), zone B « Alertes » (rendue seulement si au moins une alerte),
- * zone C « Raccourcis » (toujours visible). La grille native
- * `CollectionCards` reste rendue par Payload SOUS ce composant (masquée en
- * CSS, `custom.scss` — nav groupée, issue #25) ; observabilité (Sentry) et
- * configuration & accès (3.12/3.13, ex-`DashboardFooter`) vivent désormais
- * dans la vue dédiée `/admin/sante`, rôle admin strict (issue #27,
- * `../health/HealthPage.tsx`) — plus aucun panneau admin-only sur la home.
+ * Slot `beforeDashboard` du dashboard `/admin` (home allégée) : zone A
+ * « File du jour », zone B « Alertes » (promos expirées seulement), zone C
+ * « Raccourcis ». Stock / import → `/admin/stock` ; observabilité →
+ * `/admin/sante` (admin). Export CSV sur la liste commandes. Plus de bandeau
+ * d'état. Grille native `CollectionCards` toujours masquée (`custom.scss`).
  *
- * RSC : lectures via `data.ts` (chaque lecteur dégrade en `na`, ce composant
- * ne plante jamais), dérivations pures via `derive.ts`, trois îlots client
- * seulement (upload d'import, désactivation promo, export).
+ * RSC : lectures via `data.ts`, dérivations pures via `derive.ts`, un îlot
+ * client (désactivation promo).
  */
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -56,79 +39,24 @@ const SHIPPING_LABELS: Record<string, string> = {
   offert: 'offert',
 }
 
-export async function Dashboard({ payload, user }: ServerProps) {
-  const admin = user?.role === 'admin'
+export async function Dashboard({ payload }: ServerProps) {
   const now = new Date()
 
-  const [workOrders, lowStock, importRun, expiredPromos] = await Promise.all([
+  const [workOrders, expiredPromos] = await Promise.all([
     readWorkOrders(payload),
-    readLowStock(payload),
-    readLastImportRun(payload),
     readExpiredPromos(payload, now),
   ])
 
-  /* ── Signaux (mêmes données que les panneaux — le bandeau n'a aucun fetch propre) ── */
-
   const commandesState: PanelState = deriveCommandesState(workOrders, now)
 
-  const stockState: PanelState =
-    lowStock.state === 'na' ? 'na' : stockSignal(lowStock.rows.map((row) => row.stock))
-
-  const importState: PanelState =
-    importRun.state === 'na' ? 'na' : importSignal(importRun.run?.createdAt ?? null, now)
-
-  /* ── Zone B « Alertes » — chaque sous-panneau ne rend que s'il a quelque chose à dire ── */
-
-  const stockPanel =
-    lowStock.state === 'ok' && (lowStock.rows.length > 0 || lowStock.seuilIllisible) ? lowStock : null
-  const importPanelVisible = admin && importState !== 'ok'
   const promosPanel =
     expiredPromos.state === 'ok' && expiredPromos.promos.length > 0 ? expiredPromos : null
-  const hasAlerts = stockPanel !== null || importPanelVisible || promosPanel !== null
-
-  /* ── Raccourci « Ventes du mois » (zone C) — lien seul, aucune lecture dédiée ── */
 
   const monthBounds = parisMonthBounds(now)
   const monthSalesHref = `/admin/collections/orders?where[or][0][and][0][paidAt][greater_than_equal]=${encodeURIComponent(monthBounds.start.toISOString())}&where[or][0][and][1][paidAt][less_than]=${encodeURIComponent(monthBounds.end.toISOString())}`
 
-  /* ── Bandeau (3.1) — 3 pastilles max, ancre seulement si le panneau ciblé sera bien rendu ── */
-
-  const bannerItems: BannerItem[] = [
-    { key: 'commandes', label: 'Commandes', state: commandesState, anchor: '#panneau-commandes' },
-    { key: 'stock', label: 'Stock', state: stockState, anchor: stockPanel ? '#panneau-stock' : null },
-  ]
-  if (admin) {
-    bannerItems.push({
-      key: 'import',
-      label: 'Import',
-      state: importState,
-      anchor: importPanelVisible ? '#panneau-import' : null,
-    })
-  }
-  const bannerWorst = worstState(bannerItems.map((item) => item.state))
-  const bannerClass = bannerStateClass(bannerWorst)
-
   return (
     <div className={styles.board}>
-      {/* ── 3.1 Bandeau d'état — masqué intégralement si tout est vert ── */}
-      {!bannerHidden(bannerItems) && (
-        <section className={`${styles.banner} ${bannerClass}`} aria-label="État du site">
-          <span className={styles.bannerTitle}>État du site</span>
-          <span className={styles.pastilles}>
-            {bannerItems.map((item) => (
-              <span key={item.key} className={styles.pastille}>
-                <span className={dotClass(item.state)} />
-                {item.anchor && item.state !== 'ok' ? (
-                  <a href={item.anchor}>{pastilleText(item)}</a>
-                ) : (
-                  pastilleText(item)
-                )}
-              </span>
-            ))}
-          </span>
-        </section>
-      )}
-
       {/* ── Zone A « File du jour » — toujours visible ── */}
       <div className={styles.zone} aria-label="File du jour">
         <h2 className={styles.zoneTitle}>File du jour</h2>
@@ -184,113 +112,25 @@ export async function Dashboard({ payload, user }: ServerProps) {
         </section>
       </div>
 
-      {/* ── Zone B « Alertes » — rendue seulement si au moins une alerte (décision #22) ── */}
-      {hasAlerts && (
+      {/* ── Zone B « Alertes » — promos seulement (stock → /admin/stock) ── */}
+      {promosPanel && (
         <div className={styles.zone} aria-label="Alertes">
           <h2 className={styles.zoneTitle}>Alertes</h2>
-
-          {stockPanel && (
-            <section className={styles.panel} id="panneau-stock" aria-labelledby="t-stock">
-              <h3 className={styles.panelTitle} id="t-stock">
-                <span className={dotClass(stockState)} /> Stock bas
-              </h3>
-              <div className={styles.bigRow}>
-                <span className={styles.big}>{stockPanel.rows.length}</span>
-                <span className={styles.target}>
-                  titre(s) sous le seuil (seuil actuel : <strong>{stockPanel.seuil}</strong>)
-                </span>
-              </div>
-              {stockPanel.seuilIllisible && (
-                <span className={styles.noteChip}>
-                  seuil non lisible (réglages boutique) — alerte basée sur le défaut{' '}
-                  {STOCK_SEUIL_FALLBACK}
-                </span>
-              )}
-              {stockPanel.rows.length > 0 && (
-                <table className={styles.dataTable}>
-                  <thead>
-                    <tr>
-                      <th>Titre</th>
-                      <th className={styles.right}>Stock</th>
-                      <th className={styles.right}>État</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stockPanel.rows.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <a href={`/admin/collections/books/${row.id}`}>{row.title}</a>{' '}
-                          <span className={styles.tag}>{editionTag(row.edition)}</span>
-                        </td>
-                        <td className={styles.right}>{row.stock}</td>
-                        <td className={styles.right}>
-                          <span className={badgeClass(stockRowState(row.stock))}>
-                            {row.stock <= 0 ? 'indisponible en ligne' : 'stock bas'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              <div className={styles.actions}>
-                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-                <a href="/admin/globals/reglages-boutique">Modifier le seuil (admin) →</a>
-              </div>
-            </section>
-          )}
-
-          {importPanelVisible && (
-            <section className={styles.panel} id="panneau-import" aria-labelledby="t-import">
-              <h3 className={styles.panelTitle} id="t-import">
-                <span className={dotClass(importState)} /> Import routeur (stock)
-              </h3>
-              {importRun.state === 'na' ? (
-                <span className={badgeClass('na')}>historique des imports indisponible</span>
-              ) : importRun.run === null ? (
-                <span className={badgeClass('na')}>Aucun import enregistré</span>
-              ) : (
-                <>
-                  <div className={styles.bigRow}>
-                    <span className={styles.big}>{importRun.run.nbMatchees}</span>
-                    <span className={styles.target}>
-                      lignes appariées / <strong>{importRun.run.nbLignes}</strong> traitées —
-                      dernier import le {fmtDateTimeFr(importRun.run.createdAt)}
-                    </span>
-                  </div>
-                  {importState === 'alert' && (
-                    <span className={badgeClass('alert')}>
-                      dernier import il y a plus de {IMPORT_ALERT_DAYS} jours
-                    </span>
-                  )}
-                  <div className={styles.actions}>
-                    <a href={`/api/import-runs/${importRun.run.id}/rapport`}>
-                      Télécharger le rapport des non-appariés
-                      {importRun.run.nonApparies !== null ? ` (${importRun.run.nonApparies})` : ''} →
-                    </a>
-                  </div>
-                </>
-              )}
-            </section>
-          )}
-
-          {promosPanel && (
-            <section className={styles.panel} aria-labelledby="t-promos">
-              <h3 className={styles.panelTitle} id="t-promos">
-                Codes promo expirés encore actifs
-              </h3>
-              <div className={styles.configList}>
-                {promosPanel.promos.map((promo) => (
-                  <div key={promo.id} className={styles.configRow}>
-                    <span className={dotClass('warn')} />
-                    <a href={`/admin/collections/promo-codes/${promo.id}`}>{promo.code}</a> — expiré
-                    le {fmtDateFr(promo.expiresAt)}, encore <span className={styles.tag}>actif</span>
-                    <PromoDeactivateButton id={promo.id} />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+          <section className={styles.panel} aria-labelledby="t-promos">
+            <h3 className={styles.panelTitle} id="t-promos">
+              Codes promo expirés encore actifs
+            </h3>
+            <div className={styles.configList}>
+              {promosPanel.promos.map((promo) => (
+                <div key={promo.id} className={styles.configRow}>
+                  <span className={dotClass('warn')} />
+                  <a href={`/admin/collections/promo-codes/${promo.id}`}>{promo.code}</a> — expiré le{' '}
+                  {fmtDateFr(promo.expiresAt)}, encore <span className={styles.tag}>actif</span>
+                  <PromoDeactivateButton id={promo.id} />
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       )}
 
@@ -301,15 +141,9 @@ export async function Dashboard({ payload, user }: ServerProps) {
         </h2>
         <section className={styles.panel} aria-labelledby="t-raccourcis">
           <div className={styles.shortcutLinks}>
-            {/* Création = formulaire natif Payload (`/collections/{slug}/create`
-                puis `/{id}`) — boutons au format « + Nouveau livre ». */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
             <a className={styles.createButton} href="/admin/collections/books/create">
               + Nouveau livre
-            </a>
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.createButton} href="/admin/collections/authors/create">
-              + Nouvel auteur
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
             <a className={styles.createButton} href="/admin/collections/libelles/create">
@@ -324,32 +158,14 @@ export async function Dashboard({ payload, user }: ServerProps) {
               + Nouveau code promo
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.createButton} href="/admin/collections/media/create">
-              + Nouveau média
+            <a className={styles.shortcutLink} href="/admin/collections/orders">
+              Commandes
             </a>
-            {admin && (
-              // eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office
-              <a className={styles.createButton} href="/admin/collections/users/create">
-                + Nouvel utilisateur
-              </a>
-            )}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/books">
-              Catalogue
+            <a className={styles.shortcutLink} href="/admin/stock">
+              Stock
             </a>
           </div>
-
-          <div>
-            <h4 className={styles.shortcutHeading}>Export compta / préparation</h4>
-            <OrderExportForm />
-          </div>
-
-          {admin && (
-            <div>
-              <h4 className={styles.shortcutHeading}>Import stock (routeur)</h4>
-              <StockImportForm />
-            </div>
-          )}
 
           <div className={styles.secondaryLinks}>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
@@ -361,12 +177,6 @@ export async function Dashboard({ payload, user }: ServerProps) {
               Dons (Stripe)
             </a>
           </div>
-
-          <span className={styles.kbdNote}>
-            {admin
-              ? 'Export : bornes vides = toutes les commandes · Import stock : geste sensible, écrase des données existantes (rôle admin).'
-              : 'Export : bornes vides = toutes les commandes.'}
-          </span>
         </section>
       </div>
 

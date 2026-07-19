@@ -122,7 +122,7 @@ describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut
   });
 });
 
-describe("mergeReglagesSite — global vide ⇒ layout et footer actuels, verbatim", () => {
+describe("mergeReglagesSite — pages-legales (pied/SEO) vide ⇒ layout et footer actuels", () => {
   it("global absent → textes par défaut exacts (contrat d'iso-rendu)", () => {
     const merged = mergeReglagesSite(null);
     expect(merged.footer.adresse).toBe(

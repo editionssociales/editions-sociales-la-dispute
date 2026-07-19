@@ -30,3 +30,11 @@
     display: none;
   }
 }
+
+/*
+ * Liste Livres : vignette couverture seule — `FileCell` Payload affiche
+ * thumbnail + filename (`file__filename`) ; on ne garde que l'aperçu.
+ */
+.collection-list--books .file__filename {
+  display: none;
+}

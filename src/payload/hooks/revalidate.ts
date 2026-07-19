@@ -119,22 +119,16 @@ export const revalidateHomeAfterDelete: CollectionAfterDeleteHook = ({ req }) =>
  * mais le contrat d'écriture Payload du repo reste uniforme).
  */
 
-/** Pages nourries par le global `pages-legales` — trois chemins littéraux. */
+/** Pages légales nourries par le global `pages-legales`. */
 const LEGAL_PATHS = ['/cgv', '/mentions-legales', '/confidentialite']
 
-/** Hook `pages-legales` : seules les trois pages légales lisent ce global. */
+/**
+ * Hook `pages-legales` (Pages) : pages légales + layout (pied de page /
+ * metadata — ex-`reglages-site`).
+ */
 export const revalidatePagesLegalesAfterChange: GlobalAfterChangeHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
   for (const path of LEGAL_PATHS) revalidatePath(path)
-}
-
-/**
- * Hook `reglages-site` : metadata par défaut + pied de page sont rendus par
- * le layout racine `(site)` — toutes les pages du site sont concernées, on
- * revalide le layout entier (`revalidatePath('/', 'layout')`).
- */
-export const revalidateSiteLayoutAfterChange: GlobalAfterChangeHook = ({ req }) => {
-  if (req.context?.disableRevalidate) return
   revalidatePath('/', 'layout')
 }
 

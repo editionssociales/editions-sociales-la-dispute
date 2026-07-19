@@ -24,9 +24,11 @@ import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BooksFilterChipsPanel as BooksFilterChipsPanel_6423322f3bdd549270b95d6fae592749 } from '../../../payload/admin/books/BooksFilterChipsPanel.tsx'
 import { OrderExportPanel as OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0 } from '../../../payload/admin/OrderExportPanel.tsx'
+import { StockNavLink as StockNavLink_6618fbe14a6645bc8a42a9773c06e167 } from '../../../payload/admin/stock/StockNavLink.tsx'
 import { HealthNavLink as HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e } from '../../../payload/admin/health/HealthNavLink.tsx'
 import { Dashboard as Dashboard_1d6cee6a65112732ba58d10371f7c560 } from '../../../payload/admin/dashboard/Dashboard.tsx'
 import { VercelBlobClientUploadHandler as VercelBlobClientUploadHandler_16c82c5e25f430251a3e3ba57219ff4e } from '@payloadcms/storage-vercel-blob/client'
+import { StockPage as StockPage_767018cc66748d279e5219e5dfb697f8 } from '../../../payload/admin/stock/StockPage.tsx'
 import { HealthPage as HealthPage_82e477bd89d566e187cf7c9b6b6fa343 } from '../../../payload/admin/health/HealthPage.tsx'
 import { NewBookView as NewBookView_0fd6440d15e71164b1992dad7c76cb95 } from '../../../payload/admin/books/NewBookView.tsx'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
@@ -58,9 +60,11 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "/payload/admin/books/BooksFilterChipsPanel.tsx#BooksFilterChipsPanel": BooksFilterChipsPanel_6423322f3bdd549270b95d6fae592749,
   "/payload/admin/OrderExportPanel.tsx#OrderExportPanel": OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0,
+  "/payload/admin/stock/StockNavLink.tsx#StockNavLink": StockNavLink_6618fbe14a6645bc8a42a9773c06e167,
   "/payload/admin/health/HealthNavLink.tsx#HealthNavLink": HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e,
   "/payload/admin/dashboard/Dashboard.tsx#Dashboard": Dashboard_1d6cee6a65112732ba58d10371f7c560,
   "@payloadcms/storage-vercel-blob/client#VercelBlobClientUploadHandler": VercelBlobClientUploadHandler_16c82c5e25f430251a3e3ba57219ff4e,
+  "/payload/admin/stock/StockPage.tsx#StockPage": StockPage_767018cc66748d279e5219e5dfb697f8,
   "/payload/admin/health/HealthPage.tsx#HealthPage": HealthPage_82e477bd89d566e187cf7c9b6b6fa343,
   "/payload/admin/books/NewBookView.tsx#NewBookView": NewBookView_0fd6440d15e71164b1992dad7c76cb95,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1

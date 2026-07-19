@@ -68,28 +68,31 @@ changez pas à la légère une fois publié.
 
 ## Éditer les contenus du site
 
-Menu de gauche → groupe **Contenus du site**. Chaque page listée là a un
-principe commun : **un champ laissé vide affiche le texte actuel du site**
-(rien ne casse si vous ne remplissez rien). Vous ne risquez donc jamais de
-« vider » une page par erreur.
+Menu de gauche → groupe **Site**. Chaque page listée là a un principe
+commun : **un champ laissé vide affiche le texte actuel du site** (rien ne
+casse si vous ne remplissez rien). Vous ne risquez donc jamais de « vider »
+une page par erreur.
 
-- **Réglages du site** : le texte du pied de page (adresse, diffusion), les
-  liens vers vos réseaux sociaux (ils n'apparaissent en pied de page — jamais
-  en haut de page — que si vous en avez saisi au moins un), et le titre/la
-  description par défaut utilisés par Google.
-- **Pages légales** : le texte des pages CGV & dons, Mentions légales et
-  Confidentialité, un onglet par page.
+- **Pages** : textes des pages CGV & dons, Mentions légales et
+  Confidentialité ; pied de page (adresse, diffusion) ; liens réseaux
+  sociaux (pied de page seulement — jamais en haut de page — s'il y en a au
+  moins un) ; titre et description par défaut utilisés par Google.
 - **Page À propos** : les textes du haut de page, la citation, la
   présentation des deux maisons, et des sections libres.
 - **Page Souscription** : les textes de la page de dons (chantiers,
   contreparties, mécènes, questions fréquentes). **Les montants ne se
   modifient pas ici** : ils sont calés sur les paliers de paiement définis
   ailleurs, vous ne touchez que le texte qui les accompagne.
+
 - **Mise en avant** (bandeau ponctuel sur l'accueil, menu **Mises en avant**) :
   donnez un titre, un texte court, des dates de début/fin, cochez « Actif ».
   Le bandeau n'apparaît sur l'accueil que si la case est cochée ET que la
   date du jour est dans la période choisie — pratique pour préparer une
   annonce à l'avance sans qu'elle sorte trop tôt.
+
+Le groupe **Réglages** regroupe les paramètres du back-office : comptes
+(**Utilisateur·rice·s**, admin seulement) et **Seuil stock** (alerte stock
+bas du tableau de bord / page Stock).
 
 ## Suivre les commandes et les remboursements
 

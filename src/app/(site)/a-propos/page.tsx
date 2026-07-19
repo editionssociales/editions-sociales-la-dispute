@@ -58,7 +58,7 @@ const COL_HEADING =
 
 export default async function AProposPage() {
   // Global `page-a-propos` (textes du bloc de présentation, citation,
-  // surcharge des deux maisons, sections libres) + `reglages-site` (liens
+  // surcharge des deux maisons, sections libres) + `pages-legales` (liens
   // réseaux sociaux, les mêmes que la cellule « Suivez-nous » du footer).
   // Global vide = les textes en dur d'`EDITION_LIST` et de
   // `site-content-core.ts`.
@@ -110,7 +110,7 @@ export default async function AProposPage() {
       </section>
 
       {/* Réseaux sociaux — mêmes liens que la cellule « Suivez-nous » du
-          footer (global `reglages-site`) ; aucune saisie = pas de section. */}
+          footer (global `pages-legales`) ; aucune saisie = pas de section. */}
       {reseaux.length > 0 && (
         <section className="border-t-2 border-ink">
           <Container className="py-12 sm:py-16">
