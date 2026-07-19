@@ -17,7 +17,7 @@ import { getNewReleases, countBooks } from "@/lib/catalogue";
 import { CAMPAIGN_2024 } from "@/lib/campaign";
 import type { Accent } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG, ACCENT_TEXT as TEXT } from "@/lib/accents";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_DARK_OUTER, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
 import { FREE_AMOUNT, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { getCampaign2026 } from "@/lib/donations";
@@ -226,7 +226,10 @@ function MobileShelf({ books }: { books: Book[] }) {
         <Link
           key={book.id}
           href={`/catalogue/${book.edition}/${book.slug}`}
-          className={`group relative block bg-paper-2 ${FOCUS_RING_DARK}`}
+          // Anneau EXTÉRIEUR (R5) : posé sur le fond ink du héros, pas sur la
+          // couverture elle-même — pop-yellow y contraste, et l'anneau ne
+          // recouvre jamais l'image.
+          className={`group relative block bg-paper-2 ${FOCUS_RING_DARK_OUTER}`}
         >
           <span className="sr-only">
             {book.title}
@@ -412,45 +415,6 @@ export default async function SouscriptionPage() {
         </Container>
       </section>
 
-      {/* Rétrospective 2024 — preuve sociale, redescendue derrière l'ask
-          2026 (README, chantier 1, point 1). */}
-      <section className="border-b-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
-            <h2 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              {content.herosTitre}
-            </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
-              {content.herosIntro}
-            </p>
-          </Reveal>
-          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-4">
-            {CAMPAIGN_2024.stats.map((s, i) => (
-              <Reveal key={s.label} delay={i * 120} className="h-full">
-                <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
-                  <CountUp
-                    value={s.value}
-                    suffix={s.suffix}
-                    className="font-sans text-4xl font-black italic text-ink sm:text-5xl"
-                  />
-                  <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
-                </div>
-              </Reveal>
-            ))}
-          </FramedGrid>
-          <Reveal delay={200} className="mt-12">
-            <div className="border-2 border-ink bg-paper p-6">
-              <Gauge
-                value={CAMPAIGN_2024.gauge.value}
-                max={CAMPAIGN_2024.gauge.max}
-                markers={CAMPAIGN_2024.gauge.markers}
-              />
-            </div>
-          </Reveal>
-        </Container>
-      </section>
-
       {/* Contreparties */}
       <section id="paliers" className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
@@ -589,6 +553,45 @@ export default async function SouscriptionPage() {
               </Reveal>
             ))}
           </FramedGrid>
+        </Container>
+      </section>
+
+      {/* Rétrospective 2024 — preuve sociale, redescendue en 3e section
+          derrière l'ask 2026 et les paliers (README, chantier 1, point 1). */}
+      <section className="border-b-2 border-ink bg-paper">
+        <Container className="py-16 sm:py-20">
+          <Reveal>
+            <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
+            <h2 className="mt-3 max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+              {content.herosTitre}
+            </h2>
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
+              {content.herosIntro}
+            </p>
+          </Reveal>
+          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-4">
+            {CAMPAIGN_2024.stats.map((s, i) => (
+              <Reveal key={s.label} delay={i * 120} className="h-full">
+                <div className={`flex h-full flex-col justify-center p-6 ${POP_BG[i % 4]}`}>
+                  <CountUp
+                    value={s.value}
+                    suffix={s.suffix}
+                    className="font-sans text-4xl font-black italic text-ink sm:text-5xl"
+                  />
+                  <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
+                </div>
+              </Reveal>
+            ))}
+          </FramedGrid>
+          <Reveal delay={200} className="mt-12">
+            <div className="border-2 border-ink bg-paper p-6">
+              <Gauge
+                value={CAMPAIGN_2024.gauge.value}
+                max={CAMPAIGN_2024.gauge.max}
+                markers={CAMPAIGN_2024.gauge.markers}
+              />
+            </div>
+          </Reveal>
         </Container>
       </section>
 
