@@ -10,7 +10,8 @@ import { parseStoredImportReport } from '../../lib/import-run-report-core.ts'
  * Local API Payload et API Sentry. Règle du chantier : chaque lecteur attrape
  * TOUT et dégrade en `{ state: 'na' }` — le RSC appelant ne plante jamais.
  * Les dérivations pures (états, seuils, bornes) vivent dans `derive.ts` ; le
- * rendu dans `Dashboard.tsx` / `DashboardFooter.tsx`.
+ * rendu dans `Dashboard.tsx` (home) et `../health/HealthPage.tsx` (vue
+ * admin-only `/admin/sante`, issue #27).
  *
  * NB requêtes commandes : `orders.status` est indexé (migration
  * `20260717_150000_orders_status_index`).
@@ -233,10 +234,11 @@ interface SentryApiIssue {
  * réseau de `src/lib` est fermé (catalogue-http/boutique/donations
  * uniquement, cf. `src/lib/CLAUDE.md`).
  *
- * `cache()` : le bandeau (`Dashboard`, beforeDashboard) et le panneau 3.12
- * (`DashboardFooter`, afterDashboard) lisent le même signal dans la même
- * requête — une seule exécution. Fraîcheur : `revalidate: 180` (spec §3.12,
- * fenêtre 120-300 s).
+ * `cache()` : mémoïsation par requête (défensive — un seul appelant
+ * aujourd'hui, `../health/HealthPage.tsx`, vue `/admin/sante`, issue #27 ;
+ * le bandeau de la home n'affiche pas de pastille Sentry, cf. `Dashboard.tsx`
+ * et cette même issue). Fraîcheur : `revalidate: 180` (spec §3.12, fenêtre
+ * 120-300 s).
  */
 export const readSentryIssues = cache(async (): Promise<SentryData> => {
   const org = process.env.SENTRY_ORG

@@ -34,14 +34,27 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
-      // Dashboard v2 (`_specs/dashboard-admin/design-v2.md`) : bandeau d'état
-      // + panneaux 3.2→3.10 + codes promo expirés AVANT la grille native
-      // `CollectionCards` (3.11, rendue par Payload entre les deux slots —
-      // masquée en CSS depuis la nav groupée, issue #25, `custom.scss`) ;
-      // observabilité + configuration (3.12/3.13, rôle admin) APRÈS. Ces
-      // composants absorbent les anciens StockImportPanel/StockLowWidget.
+      // Dashboard v3 (home = zones A/B/C, issue #23) : bandeau d'état +
+      // panneaux 3.2→3.10 + codes promo expirés AVANT la grille native
+      // `CollectionCards` (3.11, rendue par Payload juste après ce slot —
+      // masquée en CSS depuis la nav groupée, issue #25, `custom.scss`). Ce
+      // composant absorbe les anciens StockImportPanel/StockLowWidget.
+      // Observabilité (Sentry) + configuration & accès (ex-3.12/3.13, rôle
+      // admin STRICT) : sorties de la home vers la vue dédiée `sante`
+      // ci-dessous (issue #27, `HealthPage.tsx` — `DashboardFooter`
+      // supprimé, plus de slot `afterDashboard`).
       beforeDashboard: ['/payload/admin/dashboard/Dashboard.tsx#Dashboard'],
-      afterDashboard: ['/payload/admin/dashboard/DashboardFooter.tsx#DashboardFooter'],
+      // Vue admin `/admin/sante` (issue #27) : observabilité + configuration
+      // & accès, rôle admin strict (redirect interne vers `/admin` sinon —
+      // `HealthPage.tsx`). Lien de découverte : `afterNavLinks` ci-dessous.
+      views: {
+        sante: {
+          Component: '/payload/admin/health/HealthPage.tsx#HealthPage',
+          meta: { title: 'Santé' },
+          path: '/sante',
+        },
+      },
+      afterNavLinks: ['/payload/admin/health/HealthNavLink.tsx#HealthNavLink'],
     },
   },
   // Ordre = ordre des groupes dans la nav admin (issue #25) : Quotidien

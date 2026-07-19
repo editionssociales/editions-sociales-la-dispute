@@ -2,9 +2,10 @@ import styles from './dashboard.module.css'
 
 /**
  * Légende des 4 états du dashboard (design v2 — « jamais de vert par
- * défaut »). Rendue en pied de page : par `DashboardFooter` pour un admin
- * (sous 3.12/3.13), par `Dashboard` pour un editor (le footer lui rend
- * `null`) — une seule légende par lecteur, toujours en dernier.
+ * défaut »). Rendue en pied de page : inconditionnellement par `Dashboard`
+ * (home, tout rôle, depuis le lot A) et par `../health/HealthPage.tsx` (vue
+ * `/admin/sante`, admin seul, issue #27) — une seule légende par lecteur,
+ * toujours en dernier.
  */
 export function DashboardLegend() {
   return (

@@ -4,8 +4,9 @@ import type { WorkOrdersData } from './data.ts'
  * Cœur pur du tableau de bord `/admin` (design v3 — home = zones A « File du
  * jour » / B « Alertes » / C « Raccourcis », issue #23) — dérivations sans
  * I/O, testées dans `derive.test.ts`. Les lectures Payload/Stripe/Sentry
- * vivent dans `data.ts`, le rendu (et son CSS-module) dans
- * `Dashboard.tsx`/`DashboardFooter.tsx`/`dashboard-classes.ts`.
+ * vivent dans `data.ts`, le rendu (et son CSS-module) dans `Dashboard.tsx`,
+ * `../health/HealthPage.tsx` (vue admin-only `/admin/sante`, issue #27) et
+ * `dashboard-classes.ts`.
  *
  * Principe non négociable du design : jamais de vert ni de zéro « par
  * défaut » — un signal non calculable est `na` (gris, « diagnostic

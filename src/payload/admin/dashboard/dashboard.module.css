@@ -1,9 +1,10 @@
 /*
  * Dashboard /admin v3 (home = zones A/B/C, issue #23) — feuille de style
- * unique des deux slots (`Dashboard.tsx` / `DashboardFooter.tsx`) et des
- * îlots client. Couleurs : variables de thème Payload (clair/sombre suivis
- * automatiquement) avec les hex de la maquette en secours. Pas de Tailwind
- * ici : l'admin n'est pas compilé par le JIT du site.
+ * unique de `Dashboard.tsx` (home), `../health/HealthPage.tsx` (vue
+ * `/admin/sante`, issue #27) et des îlots client. Couleurs : variables de
+ * thème Payload (clair/sombre suivis automatiquement) avec les hex de la
+ * maquette en secours. Pas de Tailwind ici : l'admin n'est pas compilé par le
+ * JIT du site.
  */
 
 .board {

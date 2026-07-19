@@ -35,9 +35,10 @@ import { StockImportForm } from './StockImportForm.tsx'
  * visible), zone B « Alertes » (rendue seulement si au moins une alerte),
  * zone C « Raccourcis » (toujours visible). La grille native
  * `CollectionCards` reste rendue par Payload SOUS ce composant (masquée en
- * CSS, `custom.scss` — nav groupée, issue #25) ; 3.12/3.13
- * vivent toujours dans `DashboardFooter` (`afterDashboard`, admin seul,
- * inchangé par ce lot).
+ * CSS, `custom.scss` — nav groupée, issue #25) ; observabilité (Sentry) et
+ * configuration & accès (3.12/3.13, ex-`DashboardFooter`) vivent désormais
+ * dans la vue dédiée `/admin/sante`, rôle admin strict (issue #27,
+ * `../health/HealthPage.tsx`) — plus aucun panneau admin-only sur la home.
  *
  * RSC : lectures via `data.ts` (chaque lecteur dégrade en `na`, ce composant
  * ne plante jamais), dérivations pures via `derive.ts`, trois îlots client

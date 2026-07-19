@@ -5,11 +5,10 @@
  * #25 — navigation admin groupée : masque le widget natif `CollectionCards`
  * de la home (grille de cards + labels de groupe), devenu redondant avec la
  * nav groupée (Quotidien/Catalogue/Boutique/Site, `payload.config.ts`) et le
- * dashboard maison (`Dashboard.tsx`/`DashboardFooter.tsx`, beforeDashboard/
- * afterDashboard). Classes tirées de la source installée —
- * `@payloadcms/ui/dist/widgets/CollectionCards/index.js` (baseClass
- * `collections`) — jamais du contenu injecté par beforeDashboard/
- * afterDashboard, qui vit hors de ce widget.
+ * dashboard maison (`Dashboard.tsx`, slot `beforeDashboard`). Classes tirées
+ * de la source installée — `@payloadcms/ui/dist/widgets/CollectionCards/
+ * index.js` (baseClass `collections`) — jamais du contenu injecté par
+ * `beforeDashboard`, qui vit hors de ce widget.
  */
 .dashboard .collections {
   display: none;
