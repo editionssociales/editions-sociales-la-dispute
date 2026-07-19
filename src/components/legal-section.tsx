@@ -42,7 +42,7 @@ export function LegalCmsBody({ html }: { html: SafeHtml }) {
   return (
     <section className="border-t-2 border-black">
       <Container className="py-12 sm:py-16">
-        <div className="prose-book max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="prose-book max-w-[70ch]" dangerouslySetInnerHTML={{ __html: html }} />
       </Container>
     </section>
   );

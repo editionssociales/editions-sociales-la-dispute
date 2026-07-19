@@ -73,8 +73,9 @@ function QuantityStepper({
       <button
         type="button"
         onClick={() => onChange(qty - 1)}
+        disabled={qty <= 1}
         aria-label="Retirer un exemplaire"
-        className={`flex h-7 w-7 items-center justify-center border-2 border-black font-sans font-bold text-black hover:bg-black hover:text-white ${FOCUS_RING}`}
+        className={`flex h-11 w-11 items-center justify-center border-2 border-black font-sans font-bold text-black hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black ${FOCUS_RING}`}
       >
         −
       </button>
@@ -86,7 +87,7 @@ function QuantityStepper({
         onClick={() => onChange(qty + 1)}
         disabled={qty >= MAX_LINE_QTY}
         aria-label="Ajouter un exemplaire"
-        className={`flex h-7 w-7 items-center justify-center border-2 border-black font-sans font-bold text-black hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black ${FOCUS_RING}`}
+        className={`flex h-11 w-11 items-center justify-center border-2 border-black font-sans font-bold text-black hover:bg-black hover:text-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black ${FOCUS_RING}`}
       >
         +
       </button>
@@ -296,7 +297,7 @@ export function CartView() {
           peuvent être périmés — réessayez dans un instant.
         </p>
       )}
-      <FramedGrid className="grid-cols-[64px_1fr_auto_auto] items-stretch">
+      <FramedGrid className="grid-cols-[72px_1fr_auto_auto] items-stretch">
         {summary.lines.map((line) => (
           <CartLineRow
             key={line.id}

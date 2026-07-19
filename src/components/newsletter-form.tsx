@@ -22,7 +22,7 @@ import {
  * cf. `newsletter.ts`).
  */
 export function NewsletterForm() {
-  const [state, formAction] = useActionState(subscribeToNewsletter, NEWSLETTER_INITIAL_STATE);
+  const [state, formAction, isPending] = useActionState(subscribeToNewsletter, NEWSLETTER_INITIAL_STATE);
   const [renderedAt, setRenderedAt] = useState<number | null>(null);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function NewsletterForm() {
           type="email"
           required
           placeholder="vous@exemple.fr"
-          className="min-w-0 flex-1 bg-white px-3 py-2 text-sm text-black placeholder:text-black/40 focus-visible:outline-none"
+          className="min-w-0 flex-1 bg-white px-3 py-2 text-sm text-black placeholder:text-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
         />
 
         {/* Honeypot — champ additif, masqué visuellement ET des lecteurs d'écran ; un bot qui remplit tous les champs qu'il trouve s'y fait piéger. Doit rester vide. */}
@@ -66,9 +66,11 @@ export function NewsletterForm() {
 
         <button
           type="submit"
-          className="shrink-0 border-l-2 border-black bg-black px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
+          disabled={isPending}
+          aria-busy={isPending}
+          className="shrink-0 border-l-2 border-black bg-black px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
         >
-          S&apos;abonner
+          {isPending ? "Envoi…" : "S'abonner"}
         </button>
       </form>
 

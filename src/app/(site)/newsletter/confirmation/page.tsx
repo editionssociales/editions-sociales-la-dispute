@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
+import { Eyebrow } from "@/components/eyebrow";
 
 /**
  * Page de confirmation DOI (plan §5 étape 6) — cible de `redirectionUrl`
@@ -19,9 +20,7 @@ export default function NewsletterConfirmationPage() {
   return (
     <section className="bg-white">
       <Container className="max-w-2xl py-20 sm:py-28">
-        <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-black/50">
-          Newsletter
-        </p>
+        <Eyebrow>Newsletter</Eyebrow>
         <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
           Inscription confirmée
         </h1>
