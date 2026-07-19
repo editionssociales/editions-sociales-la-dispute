@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
 import { NewsletterForm } from "@/components/newsletter-form";
-import { NAV_HOUSES } from "@/lib/nav";
+import { NAV_BOUTIQUE, NAV_HOUSES, NAV_SECTIONS } from "@/lib/nav";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
@@ -21,15 +21,24 @@ import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core"
  * vide. Sans réseau social saisi, la cellule centrale reste la cellule vide
  * décorative d'origine ; sinon elle devient la cellule « Suivez-nous »
  * (footer uniquement — jamais dans le header, décision documentée).
+ *
+ * Plan du site (chantier 3 §2) : la cellule « Adresse » porte deux groupes de
+ * liens — « Explorer » (les deux maisons, la Boutique, l'Agenda — les hrefs
+ * viennent de `lib/nav`, source unique) et « Pratique » (à propos, panier,
+ * souscription, contact). Sous-titres en `text-muted` (token AA, R6).
  */
 
 const CELL_CLASS = "flex flex-col gap-3 bg-paper p-6 font-sans sm:p-7";
 const HEADING_CLASS =
   "text-xs font-extrabold uppercase tracking-[.08em] text-ink";
-const BODY_CLASS = "text-sm leading-relaxed text-ink/70";
+const GROUP_HEADING_CLASS =
+  "text-[10px] font-extrabold uppercase tracking-[.08em] text-muted";
+const BODY_CLASS = "text-sm leading-relaxed text-muted";
 const LINK_CLASS =
   "inline-flex w-fit font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper " +
   FOCUS_RING_LIGHT_OUTER;
+
+const AGENDA_HREF = NAV_SECTIONS.find((section) => section.id === "agenda")!.href;
 
 function AdresseCell({ className = "", adresse }: { className?: string; adresse: string }) {
   return (
@@ -40,8 +49,10 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
         La Dispute
       </p>
       <p className={BODY_CLASS}>{adresse}</p>
-      <nav aria-label="Liens utiles">
-        <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+
+      <nav aria-label="Explorer" className="mt-1">
+        <p className={GROUP_HEADING_CLASS}>Explorer</p>
+        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm">
           {NAV_HOUSES.map((house) => (
             <li key={house.href}>
               <Link href={house.href} className={LINK_CLASS}>
@@ -50,10 +61,21 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
             </li>
           ))}
           <li>
-            <Link href="/boutique" className={LINK_CLASS}>
-              Boutique
+            <Link href={NAV_BOUTIQUE.href} className={LINK_CLASS}>
+              {NAV_BOUTIQUE.label}
             </Link>
           </li>
+          <li>
+            <Link href={AGENDA_HREF} className={LINK_CLASS}>
+              Agenda
+            </Link>
+          </li>
+        </ul>
+      </nav>
+
+      <nav aria-label="Pratique" className="mt-1">
+        <p className={GROUP_HEADING_CLASS}>Pratique</p>
+        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <li>
             <Link href="/a-propos" className={LINK_CLASS}>
               À propos
@@ -95,7 +117,7 @@ function MentionsCell({ className = "", year }: { className?: string; year: numb
           CGV &amp; dons
         </Link>
       </div>
-      <p className="mt-auto text-xs text-ink/70">
+      <p className="mt-auto text-xs text-muted">
         © {year} Les Éditions sociales × La Dispute
       </p>
     </div>
