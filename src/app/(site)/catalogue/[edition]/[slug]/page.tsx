@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllBookParams, getBook } from "@/lib/catalogue";
+import { getAllBookParams, getBook, getBooks } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -12,7 +13,7 @@ import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { ACCENT_BG } from "@/lib/accents";
-import { FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_LIGHT, FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 export async function generateMetadata({
   params,
@@ -32,15 +33,48 @@ export async function generateMetadata({
   };
 }
 
-/** Métadonnée du livre en cellule de la grille encadrée noir/blanc. */
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
+/**
+ * Métadonnée du livre en cellule de la grille encadrée noir/blanc. Avec
+ * `href`, la cellule entière devient cliquable (collection → catalogue de
+ * l'édition filtré sur ce thème) : la valeur se souligne au survol/focus
+ * pour signaler le lien sans changer la recette visuelle des autres cellules.
+ */
+function Info({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: React.ReactNode;
+  href?: string;
+}) {
   if (value == null || value === "") return null;
+  const dt = (
+    <dt className="font-sans text-[10px] font-bold uppercase tracking-[.08em] text-muted">
+      {label}
+    </dt>
+  );
+  const dd = href ? (
+    <dd className="font-sans text-sm font-bold text-ink underline decoration-ink/30 underline-offset-2 group-hover:decoration-ink">
+      {value}
+    </dd>
+  ) : (
+    <dd className="font-sans text-sm font-bold text-ink">{value}</dd>
+  );
+  if (href) {
+    return (
+      <Link href={href} className={`group contents ${FOCUS_RING_LIGHT}`}>
+        <div className="flex flex-col gap-1 bg-paper px-3.5 py-3">
+          {dt}
+          {dd}
+        </div>
+      </Link>
+    );
+  }
   return (
     <div className="flex flex-col gap-1 bg-paper px-3.5 py-3">
-      <dt className="font-sans text-[10px] font-bold uppercase tracking-[.08em] text-muted">
-        {label}
-      </dt>
-      <dd className="font-sans text-sm font-bold text-ink">{value}</dd>
+      {dt}
+      {dd}
     </div>
   );
 }
@@ -96,6 +130,14 @@ export default async function BookPage({
   const canOffer =
     book.price != null && (book.status === "available" || book.status === "external");
 
+  // Bouclage éditorial en pied de fiche : jusqu'à 4 autres titres de la même
+  // collection (le livre courant exclu). Aucun résultat → pas de section.
+  const sameCollection = book.collection
+    ? (await getBooks({ edition, collection: book.collection.slug }))
+        .filter((b) => b.id !== book.id)
+        .slice(0, 4)
+    : [];
+
   const bookJsonLd: BookJsonLd = {
     "@context": "https://schema.org",
     "@type": "Book",
@@ -138,7 +180,12 @@ export default async function BookPage({
       />
 
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        {/* Mobile/tablette : le titre (article, order-1) précède l'achat
+            (order-2) — l'achat ne doit jamais s'afficher avant ce qu'on
+            achète. À partir de lg, la colonne fixe reprend sa place à gauche
+            et devient sticky. Couverture bornée à 300px CSS jusqu'à lg (le
+            `sizes="300px"` de BookCover reste vrai à tout moment). */}
+        <div className="order-2 mx-auto w-full max-w-[300px] lg:sticky lg:top-24 lg:order-1 lg:mx-0 lg:max-w-none lg:self-start">
           {/* Largeur fixée par la colonne ; la hauteur suit le ratio réel de
               la couverture — jamais recadrée, jamais de bande. Couverture
               encadrée d'un contour noir 2px, comme les vignettes du catalogue. */}
@@ -163,7 +210,15 @@ export default async function BookPage({
           </div>
 
           <FramedGrid as="dl" className="mt-6 grid-cols-2">
-            <Info label="Collection" value={book.collection?.name} />
+            <Info
+              label="Collection"
+              value={book.collection?.name}
+              href={
+                book.collection
+                  ? `/catalogue/${edition}?collection=${book.collection.slug}`
+                  : undefined
+              }
+            />
             <Info label="Parution" value={formatDateFr(book.publishedAt)} />
             <Info label="Pages" value={book.pages ? `${book.pages} p.` : null} />
             <Info label="ISBN" value={book.isbn} />
@@ -195,12 +250,12 @@ export default async function BookPage({
           )}
         </div>
 
-        <article>
+        <article className="order-1 lg:order-2">
           <Eyebrow variant="sm" className="mb-2">
             {editionInfo.name}
           </Eyebrow>
           {book.collection && <CollectionTag collection={book.collection} className="mb-3" />}
-          <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink">
+          <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
             {book.title}
           </h1>
           <div className={`mt-4 h-1 w-16 ${accentBg}`} aria-hidden="true" />
@@ -239,6 +294,42 @@ export default async function BookPage({
                 className="prose-book max-w-none"
                 dangerouslySetInnerHTML={{ __html: book.furtherReading }}
               />
+            </section>
+          )}
+
+          {sameCollection.length > 0 && (
+            <section className="mt-10 border-t-2 border-ink pt-8">
+              <h2 className="mb-4 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
+                  aria-hidden="true"
+                />
+                Même collection
+              </h2>
+              <FramedGrid className="grid-cols-2 sm:grid-cols-4">
+                {sameCollection.map((related) => (
+                  <Link
+                    key={related.id}
+                    href={`/catalogue/${related.edition}/${related.slug}`}
+                    className={`group flex flex-col bg-paper p-3 ${FOCUS_RING_LIGHT_OUTER}`}
+                  >
+                    <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2">
+                      <BookCover
+                        cover={related.cover}
+                        title={related.title}
+                        alt={`Couverture de « ${related.title} »`}
+                        fit="width"
+                        sizes="200px"
+                        className="block h-auto w-full"
+                        fallbackClassName="p-3"
+                      />
+                    </span>
+                    <p className="mt-2 font-sans text-xs font-bold leading-snug text-ink line-clamp-2 group-hover:underline">
+                      {related.title}
+                    </p>
+                  </Link>
+                ))}
+              </FramedGrid>
             </section>
           )}
         </article>

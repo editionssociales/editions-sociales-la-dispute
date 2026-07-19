@@ -1,17 +1,28 @@
 import type { Book } from "@/lib/types";
 import { BookCard } from "./book-card";
+import { Button } from "./button";
 import { FramedGrid } from "./framed-grid";
 
-export function BookGrid({ books }: { books: Book[] }) {
+export function BookGrid({
+  books,
+  resetHref = "/catalogue",
+}: {
+  books: Book[];
+  /** Sortie proposée en état « 0 résultat » — le catalogue complet par défaut. */
+  resetHref?: string;
+}) {
   if (books.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 border-2 border-ink bg-paper px-6 py-16 text-center">
+      <div className="flex flex-col items-center gap-4 border-2 border-ink bg-paper px-6 py-16 text-center">
         <p className="font-sans text-lg font-black italic text-ink">
           Aucun livre ne correspond à votre recherche.
         </p>
-        <p className="text-sm text-muted">
-          Élargissez vos filtres pour explorer les deux catalogues.
+        <p className="max-w-sm text-sm text-muted">
+          Élargissez vos filtres ou repartez du catalogue complet.
         </p>
+        <Button href={resetHref} className="px-5 py-2.5 text-sm tracking-[.03em]">
+          Voir tout le catalogue
+        </Button>
       </div>
     );
   }

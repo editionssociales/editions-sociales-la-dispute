@@ -59,6 +59,11 @@ export function BookCard({ book }: { book: Book }) {
 
   const meta = (
     <div className="mt-3 flex min-w-0 flex-col gap-0.5">
+      {book.collection && (
+        <p className="font-sans text-[10px] font-bold uppercase tracking-[.06em] text-ink-soft line-clamp-1">
+          {book.collection.name}
+        </p>
+      )}
       <p className="font-sans text-sm font-bold leading-snug text-ink line-clamp-2">
         {book.title}
       </p>

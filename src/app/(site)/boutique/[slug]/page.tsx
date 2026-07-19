@@ -61,7 +61,9 @@ export default async function BoutiqueBookPage({
       />
 
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        {/* Même règle que la fiche catalogue : titre avant achat sur mobile
+            (order), couverture jamais plus large que 300px CSS avant lg. */}
+        <div className="order-2 mx-auto w-full max-w-[300px] lg:sticky lg:top-24 lg:order-1 lg:mx-0 lg:max-w-none lg:self-start">
           <div className="relative w-full overflow-hidden border-2 border-ink bg-paper-2">
             <BookCover
               cover={book.cover}
@@ -131,9 +133,9 @@ export default async function BoutiqueBookPage({
           )}
         </div>
 
-        <article>
+        <article className="order-1 lg:order-2">
           <Eyebrow variant="sm" className="mb-2">Boutique</Eyebrow>
-          <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink">
+          <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
             {book.title}
           </h1>
           <div className="mt-4 h-1 w-16 bg-ink" aria-hidden="true" />

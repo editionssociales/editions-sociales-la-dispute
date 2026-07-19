@@ -105,6 +105,9 @@ async function EditionCatalogueBody({
 
   const hrefFor = (p: number) =>
     catalogueHref({ ...filters, edition: undefined, page: p }, basePath);
+  // Sortie de l'état « 0 résultat » : repart du catalogue de l'édition (tri
+  // conservé), même logique que « Tout effacer » côté filtres.
+  const resetHref = catalogueHref({ sort: filters.sort }, basePath);
 
   const themeItems: { name: string; slug: string | null; count: number }[] = [
     { name: "Tous les livres", slug: null, count: facets.total },
@@ -154,6 +157,7 @@ async function EditionCatalogueBody({
           collections={facets.collections}
           authors={facets.authors}
           lockedEdition={edition}
+          hideCollections
         />
       </div>
 
@@ -169,7 +173,7 @@ async function EditionCatalogueBody({
       </div>
 
       <div className="mt-4">
-        <BookGrid books={books} />
+        <BookGrid books={books} resetHref={resetHref} />
       </div>
 
       <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />

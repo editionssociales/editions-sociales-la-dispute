@@ -31,25 +31,23 @@ export function FilterChips({
     <FramedGrid flow="flex" className="mt-[2px] items-stretch">
       <span className="sr-only">Filtres actifs&nbsp;:</span>
       {chips.map((chip) => (
-        <span
+        <button
           key={chip.param}
-          className="inline-flex items-center gap-2 bg-paper py-1.5 pl-3 pr-1 text-[12px] font-bold uppercase tracking-[.03em] text-ink"
+          type="button"
+          onClick={() => onRemove(chip.param)}
+          aria-label={`Retirer le filtre ${chip.type} : ${chip.label}`}
+          className={`inline-flex min-h-11 items-center gap-2 bg-paper pl-3.5 pr-3 text-[12px] font-bold uppercase tracking-[.03em] text-ink transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${FOCUS_RING_LIGHT_OUTER}`}
         >
           {chip.label}
-          <button
-            type="button"
-            onClick={() => onRemove(chip.param)}
-            aria-label={`Retirer le filtre ${chip.type} : ${chip.label}`}
-            className={`grid h-6 w-6 place-items-center border border-ink text-sm leading-none text-ink transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${FOCUS_RING_LIGHT_OUTER}`}
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        </span>
+          <span aria-hidden="true" className="text-sm leading-none">
+            ×
+          </span>
+        </button>
       ))}
       <button
         type="button"
         onClick={onClearAll}
-        className={`bg-paper px-3 py-1.5 text-[12px] font-extrabold uppercase tracking-[.03em] text-ink underline decoration-2 underline-offset-4 transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${FOCUS_RING_LIGHT_OUTER}`}
+        className={`inline-flex min-h-11 items-center bg-paper px-3 text-[12px] font-extrabold uppercase tracking-[.03em] text-ink underline decoration-2 underline-offset-4 transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${FOCUS_RING_LIGHT_OUTER}`}
       >
         Tout effacer
       </button>
