@@ -26,9 +26,10 @@ export async function generateMetadata({
   const { edition } = await params;
   if (!isEditionSlug(edition)) return {};
   return {
-    // « Catalogue <maison> » : évite « Les Éditions sociales — Les Éditions
-    // sociales × La Dispute » (redondance quand la maison porte le nom du site).
-    title: `Catalogue ${EDITIONS[edition].name}`,
+    // Titre absolu « Catalogue <maison> » : avec le suffixe du template, le
+    // nom de la maison apparaîtrait deux fois (« Catalogue Les Éditions
+    // sociales — Les Éditions sociales × La Dispute »).
+    title: { absolute: `Catalogue ${EDITIONS[edition].name}` },
     // Sans query string : les vues filtrées/paginées canonicalisent vers la
     // vue de base (E2 du plan).
     alternates: { canonical: `/catalogue/${edition}` },

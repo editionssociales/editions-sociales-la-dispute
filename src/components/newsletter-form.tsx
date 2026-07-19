@@ -88,7 +88,7 @@ export function NewsletterForm() {
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
-          className={`shrink-0 border-l-2 border-ink bg-ink px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`}
+          className={`min-h-11 shrink-0 border-l-2 border-ink bg-ink px-4 py-2 text-xs font-extrabold uppercase tracking-[.06em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`}
         >
           {isPending ? "Envoi…" : "S'abonner"}
         </button>

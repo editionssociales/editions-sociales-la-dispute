@@ -30,18 +30,22 @@ export function SubmitButton({
   tone,
   className,
   pendingLabel = "Redirection…",
+  ariaLabel,
   children,
 }: {
   tone: "light" | "dark";
   /** Recette complète (fond/bordure/hover/anneau de focus) — pas de variante implicite ici. */
   className: string;
   pendingLabel?: string;
+  /** Nom accessible explicite quand le libellé visible est répété (ex. « Contribuer » × 10 paliers). */
+  ariaLabel?: string;
   children: ReactNode;
 }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
+      aria-label={ariaLabel}
       disabled={pending}
       aria-busy={pending}
       className={`${className} disabled:cursor-wait`}

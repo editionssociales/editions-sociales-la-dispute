@@ -38,7 +38,7 @@ export function Breadcrumb({
   const base = `mb-6 font-sans text-xs font-bold uppercase tracking-[.06em] ${t.base}`;
 
   return (
-    <nav aria-label="Fil d'ariane" className={className ? `${base} ${className}` : base}>
+    <nav aria-label="Fil d'Ariane" className={className ? `${base} ${className}` : base}>
       {trail.map((crumb, i) => {
         const isLast = i === trail.length - 1;
         const isLink = crumb.href && (!isLast || !currentIsPage);

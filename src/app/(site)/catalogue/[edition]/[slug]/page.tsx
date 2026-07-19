@@ -10,6 +10,7 @@ import { BuyLinksList } from "@/components/buy-links";
 import { FramedGrid } from "@/components/framed-grid";
 import { Eyebrow } from "@/components/eyebrow";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
+import { getReglagesSite } from "@/lib/site-content";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { ACCENT_BG } from "@/lib/accents";
@@ -32,9 +33,13 @@ export async function generateMetadata({
     alternates: { canonical: `/catalogue/${edition}/${slug}` },
     // Carte de partage : la couverture en visuel (URL absolue via
     // `metadataBase`), type `book` + carte large — title/description/url
-    // suivent les champs ci-dessus (résolution Next).
+    // suivent les champs ci-dessus (résolution Next). `openGraph` REMPLACE
+    // celui du layout (fusion superficielle par champ) : siteName/locale
+    // doivent être reposés ici, sinon ils disparaissent des fiches.
     openGraph: {
       type: "book",
+      siteName: (await getReglagesSite()).seo.titre,
+      locale: "fr_FR",
       ...(book.cover?.url ? { images: [{ url: book.cover.url }] } : {}),
     },
     twitter: {

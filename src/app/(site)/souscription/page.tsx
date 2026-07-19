@@ -635,6 +635,7 @@ export default async function SouscriptionPage() {
                               <SubmitButton
                                 tone="dark"
                                 pendingLabel="Redirection…"
+                                ariaLabel={`Contribuer ${p.tier.amount} € — ${p.tier.title}`}
                                 className={`mt-3 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
                               >
                                 Contribuer
@@ -691,6 +692,7 @@ export default async function SouscriptionPage() {
                           <SubmitButton
                             tone="light"
                             pendingLabel="Redirection…"
+                            ariaLabel={`Contribuer ${p.tier.amount.toLocaleString("fr-FR")} € — ${p.tier.title}`}
                             className={`mt-3 inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                           >
                             Contribuer
