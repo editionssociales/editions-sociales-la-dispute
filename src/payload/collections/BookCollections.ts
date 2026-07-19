@@ -19,6 +19,7 @@ export const BookCollections: CollectionConfig = {
     plural: 'Collections',
   },
   admin: {
+    group: 'Catalogue',
     useAsTitle: 'name',
   },
   access: {

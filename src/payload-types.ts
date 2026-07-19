@@ -67,15 +67,15 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    users: User;
+    books: Book;
+    orders: Order;
     media: Media;
     authors: Author;
     collections: Collection;
-    books: Book;
     highlight: Highlight;
-    orders: Order;
     'promo-codes': PromoCode;
     'import-runs': ImportRun;
+    users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -83,15 +83,15 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    users: UsersSelect<false> | UsersSelect<true>;
+    books: BooksSelect<false> | BooksSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     collections: CollectionsSelect<false> | CollectionsSelect<true>;
-    books: BooksSelect<false> | BooksSelect<true>;
     highlight: HighlightSelect<false> | HighlightSelect<true>;
-    orders: OrdersSelect<false> | OrdersSelect<true>;
     'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
     'import-runs': ImportRunsSelect<false> | ImportRunsSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -145,53 +145,119 @@ export interface UserAuthOperations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
+ * via the `definition` "books".
  */
-export interface User {
+export interface Book {
   id: number;
-  name: string;
-  role: 'admin' | 'editor';
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: number;
-  alt?: string | null;
+  title: string;
   /**
-   * Clé d'idempotence de la migration
+   * Identifiant d'URL — ne pas modifier après publication
    */
-  sourceUrl?: string | null;
+  slug: string;
+  edition?: ('editions-sociales' | 'la-dispute') | null;
+  authors?: (number | Author)[] | null;
+  collection?: (number | null) | Collection;
+  cover?: (number | null) | Media;
+  tablePdf?: (number | null) | Media;
+  extraitPdf?: (number | null) | Media;
+  /**
+   * Tant que « Contenu réédité » (onglet Technique) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.
+   */
+  presentation: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  plusLoin?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  dateParution: string;
+  aParaitre?: boolean | null;
+  isbn?: string | null;
+  pages?: number | null;
+  /**
+   * Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au checkout.
+   */
+  prix?: number | null;
+  origin: 'catalogue' | 'boutique';
+  buy?: {
+    boutiqueUrl?: string | null;
+    parislibrairies?: string | null;
+    lalibrairie?: string | null;
+  };
+  /**
+   * Vente en ligne native — pilote le panier et le checkout du site.
+   */
+  commerce?: {
+    /**
+     * Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.
+     */
+    sellable?: boolean | null;
+    /**
+     * Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.
+     */
+    stock?: number | null;
+    /**
+     * Posé automatiquement à « routeur » par l'import mensuel ; « manuel » (défaut) sinon.
+     */
+    stockSuivi?: ('routeur' | 'manuel') | null;
+    /**
+     * Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.
+     */
+    reducedShippingFlag?: boolean | null;
+    /**
+     * Posé automatiquement par l'import stock routeur mensuel (`POST /api/books/import-stock`) — jamais saisi à la main.
+     */
+    stockUpdatedAt?: string | null;
+  };
+  /**
+   * Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.
+   */
+  contentTouched?: boolean | null;
+  /**
+   * Clé d'upsert de la migration — vide pour les fiches nées dans Payload.
+   */
+  wpSource?: {
+    site?: ('editions-sociales' | 'la-dispute') | null;
+    wpId?: number | null;
+    wpSlug?: string | null;
+    wpDate?: string | null;
+  };
+  /**
+   * URL OVH de repli si le rapatriement du média a échoué (risque 11 du plan).
+   */
+  coverFallbackUrl?: string | null;
+  /**
+   * Clé de tri du port — parité avec l'ordre WordPress
+   */
+  sortDate: string;
+  presentationLegacyHtml?: string | null;
+  plusLoinLegacyHtml?: string | null;
   updatedAt: string;
   createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -236,145 +302,26 @@ export interface Collection {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "books".
+ * via the `definition` "media".
  */
-export interface Book {
+export interface Media {
   id: number;
-  title: string;
+  alt?: string | null;
   /**
-   * Identifiant d'URL — ne pas modifier après publication
+   * Clé d'idempotence de la migration
    */
-  slug: string;
-  edition?: ('editions-sociales' | 'la-dispute') | null;
-  origin: 'catalogue' | 'boutique';
-  /**
-   * Tant que « Contenu réédité » (barre latérale) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.
-   */
-  presentation: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  presentationLegacyHtml?: string | null;
-  plusLoin?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  plusLoinLegacyHtml?: string | null;
-  /**
-   * Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.
-   */
-  contentTouched?: boolean | null;
-  isbn?: string | null;
-  /**
-   * Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au checkout (pratique actuelle conservée, plan phase 4 étape 8).
-   */
-  prix?: number | null;
-  pages?: number | null;
-  dateParution: string;
-  /**
-   * Clé de tri du port — parité avec l'ordre WordPress
-   */
-  sortDate: string;
-  aParaitre?: boolean | null;
-  authors?: (number | Author)[] | null;
-  collection?: (number | null) | Collection;
-  cover?: (number | null) | Media;
-  /**
-   * URL OVH de repli si le rapatriement du média a échoué (risque 11 du plan).
-   */
-  coverFallbackUrl?: string | null;
-  tablePdf?: (number | null) | Media;
-  extraitPdf?: (number | null) | Media;
-  buy?: {
-    boutiqueUrl?: string | null;
-    parislibrairies?: string | null;
-    lalibrairie?: string | null;
-  };
-  /**
-   * Vente en ligne native — pilote le panier et le checkout du site.
-   */
-  commerce?: {
-    /**
-     * Tout ce qui est au catalogue est vendable par défaut (décision client du 13/07) — décocher pour retirer un titre de la vente en ligne. Un livre non vendable reste au catalogue (jamais retiré, cf. §Local Contracts). La disponibilité réelle reste gouvernée par le stock (0 = épuisé) et la date de parution (« à paraître » prime sur tout).
-     */
-    sellable?: boolean | null;
-    /**
-     * Champ unique pour tout ce qui se vend — livres ET produits boutique-seuls/goodies (même mécanique de décrément ensuite). Vide = pas de décompte saisi (disponible si vendable — même fallback que les goodies). Alimenté par l'import routeur mensuel (suivi « routeur ») ou saisi ici à la main (suivi « manuel », et possible aussi en suivi routeur — écrasé au prochain fichier si la fiche y figure). Le stock EST la disponibilité — pas de bascule « en stock/épuisé » séparée (décision client du 12/07) ; 0 signifie épuisé sans retirer la fiche du catalogue.
-     */
-    stock?: number | null;
-    /**
-     * Posé à « routeur » automatiquement par l'import mensuel dès qu'une fiche est appariée au fichier ; « manuel » (défaut) pour tout le reste — goodies ET livres non suivis par le routeur, traités pareil (décision client du 12/07). Une fiche « routeur » absente du fichier suivant est signalée par l'import (titre disparu du routeur) et garde ce mode tant que l'anomalie n'est pas résolue.
-     */
-    stockSuivi?: ('routeur' | 'manuel') | null;
-    /**
-     * Remplace l'ancienne règle « manifeste » au poids : un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit plutôt que la grille standard (décision client du 12/07, question ouverte n°2 du plan).
-     */
-    reducedShippingFlag?: boolean | null;
-    /**
-     * Posé automatiquement par l'import stock routeur mensuel (`POST /api/books/import-stock`) — jamais saisi à la main.
-     */
-    stockUpdatedAt?: string | null;
-  };
-  /**
-   * Clé d'upsert de la migration — vide pour les fiches nées dans Payload.
-   */
-  wpSource?: {
-    site?: ('editions-sociales' | 'la-dispute') | null;
-    wpId?: number | null;
-    wpSlug?: string | null;
-    wpDate?: string | null;
-  };
+  sourceUrl?: string | null;
   updatedAt: string;
   createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "highlight".
- */
-export interface Highlight {
-  id: number;
-  titre: string;
-  /**
-   * Une ou deux phrases — pas de mise en forme (bandeau, pas une fiche).
-   */
-  texte?: string | null;
-  /**
-   * URL absolue ou chemin du site (ex. /souscription) — facultatif.
-   */
-  lien?: string | null;
-  dateDebut: string;
-  dateFin: string;
-  /**
-   * Doit être coché ET la date courante comprise dans la période pour être visible.
-   */
-  actif?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * Commandes du commerce natif — créées par le webhook Stripe, suivies ici (statut de préparation/expédition uniquement).
@@ -470,6 +417,40 @@ export interface PromoCode {
   createdAt: string;
 }
 /**
+ * Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "highlight".
+ */
+export interface Highlight {
+  id: number;
+  titre: string;
+  /**
+   * Une ou deux phrases — pas de mise en forme (bandeau, pas une fiche).
+   */
+  texte?: string | null;
+  /**
+   * Couleur de fond du bandeau (le texte reste noir par-dessus).
+   */
+  couleur?: ('pop-pink' | 'pop-teal' | 'pop-orange' | 'pop-yellow') | null;
+  /**
+   * URL absolue ou chemin du site (ex. /souscription) — facultatif.
+   */
+  lien?: string | null;
+  /**
+   * Texte du bouton — utilisé seulement si un lien est renseigné.
+   */
+  lienLibelle?: string | null;
+  dateDebut: string;
+  dateFin: string;
+  /**
+   * Doit être coché ET la date courante comprise dans la période pour être visible.
+   */
+  actif?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Historique des imports mensuels du fichier stock routeur — un document par import réussi, créé automatiquement par l'import (jamais à la main). Le dernier run alimente le panneau « Import routeur » du tableau de bord.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -502,6 +483,33 @@ export interface ImportRun {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name: string;
+  role: 'admin' | 'editor';
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -525,8 +533,12 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'users';
-        value: number | User;
+        relationTo: 'books';
+        value: number | Book;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
       } | null)
     | ({
         relationTo: 'media';
@@ -541,16 +553,8 @@ export interface PayloadLockedDocument {
         value: number | Collection;
       } | null)
     | ({
-        relationTo: 'books';
-        value: number | Book;
-      } | null)
-    | ({
         relationTo: 'highlight';
         value: number | Highlight;
-      } | null)
-    | ({
-        relationTo: 'orders';
-        value: number | Order;
       } | null)
     | ({
         relationTo: 'promo-codes';
@@ -559,6 +563,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'import-runs';
         value: number | ImportRun;
+      } | null)
+    | ({
+        relationTo: 'users';
+        value: number | User;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -604,95 +612,25 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users_select".
- */
-export interface UsersSelect<T extends boolean = true> {
-  name?: T;
-  role?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-  sessions?:
-    | T
-    | {
-        id?: T;
-        createdAt?: T;
-        expiresAt?: T;
-      };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
- */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
-  sourceUrl?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "authors_select".
- */
-export interface AuthorsSelect<T extends boolean = true> {
-  name?: T;
-  slug?: T;
-  bio?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "collections_select".
- */
-export interface CollectionsSelect<T extends boolean = true> {
-  name?: T;
-  slug?: T;
-  edition?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "books_select".
  */
 export interface BooksSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   edition?: T;
-  origin?: T;
-  presentation?: T;
-  presentationLegacyHtml?: T;
-  plusLoin?: T;
-  plusLoinLegacyHtml?: T;
-  contentTouched?: T;
-  isbn?: T;
-  prix?: T;
-  pages?: T;
-  dateParution?: T;
-  sortDate?: T;
-  aParaitre?: T;
   authors?: T;
   collection?: T;
   cover?: T;
-  coverFallbackUrl?: T;
   tablePdf?: T;
   extraitPdf?: T;
+  presentation?: T;
+  plusLoin?: T;
+  dateParution?: T;
+  aParaitre?: T;
+  isbn?: T;
+  pages?: T;
+  prix?: T;
+  origin?: T;
   buy?:
     | T
     | {
@@ -709,6 +647,7 @@ export interface BooksSelect<T extends boolean = true> {
         reducedShippingFlag?: T;
         stockUpdatedAt?: T;
       };
+  contentTouched?: T;
   wpSource?:
     | T
     | {
@@ -717,23 +656,13 @@ export interface BooksSelect<T extends boolean = true> {
         wpSlug?: T;
         wpDate?: T;
       };
+  coverFallbackUrl?: T;
+  sortDate?: T;
+  presentationLegacyHtml?: T;
+  plusLoinLegacyHtml?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "highlight_select".
- */
-export interface HighlightSelect<T extends boolean = true> {
-  titre?: T;
-  texte?: T;
-  lien?: T;
-  dateDebut?: T;
-  dateFin?: T;
-  actif?: T;
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -786,6 +715,63 @@ export interface OrdersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  sourceUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors_select".
+ */
+export interface AuthorsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  bio?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "collections_select".
+ */
+export interface CollectionsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  edition?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "highlight_select".
+ */
+export interface HighlightSelect<T extends boolean = true> {
+  titre?: T;
+  texte?: T;
+  couleur?: T;
+  lien?: T;
+  lienLibelle?: T;
+  dateDebut?: T;
+  dateFin?: T;
+  actif?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "promo-codes_select".
  */
 export interface PromoCodesSelect<T extends boolean = true> {
@@ -808,6 +794,30 @@ export interface ImportRunsSelect<T extends boolean = true> {
   rapport?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users_select".
+ */
+export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

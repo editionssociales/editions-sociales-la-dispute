@@ -13,6 +13,7 @@ export const Authors: CollectionConfig = {
     plural: 'Auteur·rice·s',
   },
   admin: {
+    group: 'Catalogue',
     useAsTitle: 'name',
   },
   access: {

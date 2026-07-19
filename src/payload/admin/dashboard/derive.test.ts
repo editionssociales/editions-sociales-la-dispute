@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   bannerHidden,
-  CAMPAIGN_LAUNCH_2026,
   commandesState,
-  donationsSignal,
-  donsState,
   editionTag,
   expiredActivePromos,
   fmtDateFr,
@@ -23,12 +20,10 @@ import {
   STOCK_SEUIL_FALLBACK,
   stockRowState,
   stockSignal,
-  sumSalesTTC,
   worstState,
   type BannerItem,
-  type DonationSignalInput,
 } from './derive.ts'
-import type { DonationsData, WorkOrderRow, WorkOrdersData } from './data.ts'
+import type { WorkOrderRow, WorkOrdersData } from './data.ts'
 
 const HOUR_MS = 3_600_000
 const DAY_MS = 86_400_000
@@ -166,14 +161,7 @@ describe('stock bas', () => {
   })
 })
 
-/* ────────────────────────── Ventes du mois (3.5) ────────────────────────── */
-
-describe('sumSalesTTC', () => {
-  it('somme les totaux et ignore les montants non finis', () => {
-    expect(sumSalesTTC([{ totalTTC: 19 }, { totalTTC: 35.5 }, { totalTTC: Number.NaN }])).toBe(54.5)
-    expect(sumSalesTTC([])).toBe(0)
-  })
-})
+/* ────────────────────────── Raccourci « Ventes du mois » (zone C) ────────────────────────── */
 
 describe('parisMonthBounds — bornes UTC du mois civil de Paris', () => {
   it('janvier (UTC+1) : du 31/12 23:00 UTC au 31/01 23:00 UTC', () => {
@@ -306,140 +294,6 @@ describe('sentrySignal', () => {
   })
 })
 
-/* ────────────────────────── Dons (3.6) ────────────────────────── */
-
-function donationInput(overrides: Partial<DonationSignalInput>): DonationSignalInput {
-  return {
-    enabled: true,
-    mode: 'live',
-    gaugeAvailable: true,
-    lastDonationAt: null,
-    refunds7d: 0,
-    now: new Date('2026-07-13T12:00:00Z'),
-    ...overrides,
-  }
-}
-
-describe('donationsSignal', () => {
-  it('clé Stripe absente : alerte (« configuration des dons manquante »), jamais un 0 € trompeur', () => {
-    expect(donationsSignal(donationInput({ enabled: false, mode: 'absent' }))).toBe('alert')
-    expect(donationsSignal(donationInput({ enabled: false }))).toBe('alert')
-  })
-
-  it('mode test à moins de 7 jours du 15/08 : alerte', () => {
-    expect(
-      donationsSignal(donationInput({ mode: 'test', now: new Date('2026-08-10T12:00:00Z') })),
-    ).toBe('alert')
-  })
-
-  it('mode test à plus de 7 jours de l’ouverture : pas d’alerte', () => {
-    expect(
-      donationsSignal(donationInput({ mode: 'test', now: new Date('2026-08-01T12:00:00Z') })),
-    ).toBe('ok')
-  })
-
-  it('borne des 7 jours : à exactement 7 jours de l’ouverture, pas encore d’alerte (strict)', () => {
-    // Lancement 2026-08-15T00:00:00+02:00 — 7 jours avant : 2026-08-08T00:00:00+02:00.
-    expect(
-      donationsSignal(donationInput({ mode: 'test', now: new Date('2026-08-07T22:00:00Z') })),
-    ).toBe('ok')
-    expect(
-      donationsSignal(donationInput({ mode: 'test', now: new Date('2026-08-07T22:00:01Z') })),
-    ).toBe('alert')
-  })
-
-  it('remboursement récent : alerte', () => {
-    expect(donationsSignal(donationInput({ refunds7d: 1 }))).toBe('alert')
-  })
-
-  it('jauge non calculable : gris (l’alerte clé/remboursement prime, sinon jamais vert)', () => {
-    expect(donationsSignal(donationInput({ gaugeAvailable: false }))).toBe('na')
-    expect(donationsSignal(donationInput({ gaugeAvailable: false, refunds7d: 2 }))).toBe('alert')
-  })
-
-  it('campagne ouverte, aucun don depuis plus de 48 h : attention', () => {
-    const now = new Date('2026-08-20T12:00:00Z')
-    expect(donationsSignal(donationInput({ now, lastDonationAt: null }))).toBe('warn')
-    expect(
-      donationsSignal(donationInput({ now, lastDonationAt: '2026-08-17T12:00:00Z' })),
-    ).toBe('warn')
-    expect(donationsSignal(donationInput({ now, lastDonationAt: 'invalide' }))).toBe('warn')
-  })
-
-  it('campagne ouverte, don dans les 48 h : OK', () => {
-    const now = new Date('2026-08-20T12:00:00Z')
-    expect(
-      donationsSignal(donationInput({ now, lastDonationAt: '2026-08-19T12:00:00Z' })),
-    ).toBe('ok')
-  })
-
-  it('avant l’ouverture (15/08), l’absence de don n’est pas un signal', () => {
-    expect(donationsSignal(donationInput({ lastDonationAt: null }))).toBe('ok')
-    expect(Date.parse(`${CAMPAIGN_LAUNCH_2026}T00:00:00+02:00`)).toBeGreaterThan(
-      donationInput({}).now.getTime(),
-    )
-  })
-})
-
-const FAKE_GAUGE: DonationsData['gauge'] = {
-  collected: 100,
-  goal: 1000,
-  contributors: 5,
-  percentOfGoal: 10,
-  gauge: { value: 100, max: 1000, markers: [] },
-}
-
-function donationsData(overrides: Partial<DonationsData> = {}): DonationsData {
-  return {
-    mode: 'live',
-    gauge: FAKE_GAUGE,
-    recent: [],
-    refunds7d: 0,
-    lastDonationAt: null,
-    ...overrides,
-  }
-}
-
-describe('donsState — base donationsSignal, rétrogradée en gris si les listes dérivées sont illisibles', () => {
-  const now = new Date('2026-07-13T12:00:00Z') // avant l'ouverture de la campagne (15/08).
-
-  it('clé Stripe absente : alerte de base, jamais rétrogradée par les listes (mode absent exclut la rétrogradation)', () => {
-    expect(
-      donsState(donationsData({ mode: 'absent', gauge: null, recent: null, refunds7d: null }), now),
-    ).toBe('alert')
-  })
-
-  it('base OK, derniers dons illisibles (`recent: null`) : rétrogradé en gris — jamais un OK par défaut', () => {
-    expect(donsState(donationsData({ recent: null }), now)).toBe('na')
-  })
-
-  it('base OK, remboursements 7 j illisibles (`refunds7d: null`) : rétrogradé en gris', () => {
-    expect(donsState(donationsData({ refunds7d: null }), now)).toBe('na')
-  })
-
-  it('base OK, les deux listes lisibles : reste OK', () => {
-    expect(donsState(donationsData(), now)).toBe('ok')
-  })
-
-  it('jauge non calculable (base déjà grise) : reste grise', () => {
-    expect(donsState(donationsData({ gauge: null }), now)).toBe('na')
-  })
-
-  it('base attention (campagne ouverte, aucun don depuis 48 h) + listes illisibles : reste attention, jamais une fausse alerte grise', () => {
-    const campaignNow = new Date('2026-08-20T12:00:00Z')
-    expect(
-      donsState(
-        donationsData({ recent: null, refunds7d: null, lastDonationAt: null }),
-        campaignNow,
-      ),
-    ).toBe('warn')
-  })
-
-  it('base alerte (remboursement récent) + derniers dons illisibles : reste alerte, l’alerte réelle prime sur la rétrogradation', () => {
-    expect(donsState(donationsData({ refunds7d: 1, recent: null }), now)).toBe('alert')
-  })
-})
-
 /* ────────────────────────── Bandeau (3.1) ────────────────────────── */
 
 function item(state: BannerItem['state'], key: BannerItem['key'] = 'commandes'): BannerItem {
@@ -451,7 +305,7 @@ describe('bannerHidden — masqué si et seulement si tout est vert', () => {
     expect(bannerHidden([item('ok'), item('ok'), item('ok')])).toBe(true)
   })
 
-  it('un gris (diagnostic indisponible) maintient le bandeau visible', () => {
+  it('un gris (signal non calculable) maintient le bandeau visible', () => {
     expect(bannerHidden([item('ok'), item('na')])).toBe(false)
   })
 
@@ -472,9 +326,9 @@ describe('pastilleText', () => {
     expect(pastilleText({ key: 'stock', label: 'Stock', state: 'alert', anchor: null })).toBe(
       'Stock : en alerte',
     )
-    expect(
-      pastilleText({ key: 'diagnostic', label: 'Diagnostic technique', state: 'na', anchor: null }),
-    ).toBe('Diagnostic technique : indisponible')
+    expect(pastilleText({ key: 'stock', label: 'Stock', state: 'na', anchor: null })).toBe(
+      'Stock : indisponible',
+    )
   })
 
   it('cas particulier import : gris = « aucun import enregistré », pas « indisponible »', () => {
