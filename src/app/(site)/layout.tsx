@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 /**
- * Metadata par défaut éditables (global `reglages-site`, spec « éditeur de
+ * Metadata par défaut éditables (global `pages-legales`, spec « éditeur de
  * contenus ») : `generateMetadata` remplace l'export `metadata` statique —
  * mêmes valeurs tant que le global est vide (fallback dur,
  * `site-content-core.ts`), le suffixe des titres de pages (`template`)
@@ -48,7 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Textes du pied de page (global `reglages-site`) : descendus en props —
+  // Textes du pied de page (global `pages-legales`) : descendus en props —
   // `SiteFooter` reste un composant serveur de pure présentation.
   // `SiteHeader` confine `useSearchParams` derrière `<Suspense>` (piège
   // documenté : sans ça, le layout racine dynamiserait tout le site).

@@ -3,14 +3,14 @@ import type { GlobalConfig } from 'payload'
 import { isAdmin, isAdminOrEditor } from '../access.ts'
 
 /**
- * Réglages transverses du commerce natif (plan phase 4, §3) — un seul
- * document, pas d'historique de versions nécessaire pour un seuil.
+ * Seuil d'alerte stock (commerce natif, plan phase 4 §3) — un seul document,
+ * pas d'historique de versions. Nav : groupe « Réglages » (avec Users).
  */
 export const ReglagesBoutique: GlobalConfig = {
   slug: 'reglages-boutique',
-  label: 'Réglages boutique',
+  label: 'Seuil stock',
   admin: {
-    group: 'Boutique',
+    group: 'Réglages',
   },
   access: {
     read: isAdminOrEditor,

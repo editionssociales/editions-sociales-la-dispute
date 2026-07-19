@@ -16,7 +16,7 @@ import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core"
  * vide n'a pas de contenu, elle est masquée).
  *
  * Textes « Adresse »/« Diffusion » et liens réseaux sociaux : global
- * `reglages-site` (spec « éditeur de contenus »), descendus en props depuis
+ * `pages-legales` (spec « éditeur de contenus »), descendus en props depuis
  * le layout — défauts durs dans `site-content-core.ts`, iso-rendu à global
  * vide. Sans réseau social saisi, la cellule centrale reste la cellule vide
  * décorative d'origine ; sinon elle devient la cellule « Suivez-nous »

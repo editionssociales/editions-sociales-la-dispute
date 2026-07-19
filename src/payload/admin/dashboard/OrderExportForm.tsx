@@ -2,22 +2,23 @@
 
 import { useState } from 'react'
 
+import { defaultExportDateRange } from './derive.ts'
 import styles from './dashboard.module.css'
 
 /**
- * Îlot client d'export CSV des commandes — bornes de dates optionnelles
- * (`AAAA-MM-JJ`, vides = toutes les commandes) + deux profils RÉELS, colonnes
- * validées par le client le 13/07 (`plan/04-commerce.md`) : « préparation »
- * (statuts payée/préparée, décalque AOE) et « compta » (toutes commandes,
- * TVA 5,5 % ventilée). Liens `GET` directs — la session admin passe par le
- * cookie Payload, pas besoin de fetch+blob.
+ * Îlot client d'export CSV des commandes — bornes `AAAA-MM-JJ` préremplies
+ * (aujourd'hui Paris → un mois civil en arrière) + deux profils RÉELS,
+ * colonnes validées par le client le 13/07 (`plan/04-commerce.md`) :
+ * « préparation » (statuts payée/préparée) et « compta » (toutes commandes,
+ * TVA 5,5 % ventilée). Liens `GET` directs — cookie Payload.
  *
- * Partagé entre le panneau 3.10 du dashboard et `OrderExportPanel.tsx`
- * (slot `beforeListTable` de la liste des commandes) : un seul îlot export.
+ * Monté sur la liste des commandes (`OrderExportPanel.tsx`) — plus sur la
+ * home dashboard.
  */
 export function OrderExportForm() {
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const defaults = defaultExportDateRange(new Date())
+  const [from, setFrom] = useState(defaults.from)
+  const [to, setTo] = useState(defaults.to)
 
   function href(profile: 'preparation' | 'compta'): string {
     const params = new URLSearchParams()

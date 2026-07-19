@@ -2,12 +2,11 @@ import type { WorkOrdersData } from './data.ts'
 import { isPromoExpired } from '../../../lib/promo-core.ts'
 
 /**
- * Cœur pur du tableau de bord `/admin` (design v3 — home = zones A « File du
- * jour » / B « Alertes » / C « Raccourcis », issue #23) — dérivations sans
- * I/O, testées dans `derive.test.ts`. Les lectures Payload/Stripe/Sentry
- * vivent dans `data.ts`, le rendu (et son CSS-module) dans `Dashboard.tsx`,
- * `../health/HealthPage.tsx` (vue admin-only `/admin/sante`, issue #27) et
- * `dashboard-classes.ts`.
+ * Cœur pur du tableau de bord `/admin` (design v3 — home allégée : file du
+ * jour + alertes promo + raccourcis) — dérivations sans I/O, testées dans
+ * `derive.test.ts`. Les lectures Payload/Stripe/Sentry vivent dans `data.ts`,
+ * le rendu dans `Dashboard.tsx`, `../stock/StockPage.tsx` (`/admin/stock`),
+ * `../health/HealthPage.tsx` (`/admin/sante`, admin) et `dashboard-classes.ts`.
  *
  * Principe non négociable du design : jamais de vert ni de zéro « par
  * défaut » — un signal non calculable est `na` (gris, « diagnostic
@@ -120,6 +119,37 @@ export function parisMonthBounds(now: Date): { start: Date; end: Date; label: st
 function parisMonthStartUtc(year: number, month: number): Date {
   const offsetHours = month >= 4 && month <= 10 ? 2 : 1
   return new Date(Date.UTC(year, month - 1, 1, -offsetHours))
+}
+
+/* ────────────────────────── Export CSV (bornes de dates) ────────────────────────── */
+
+/** Date civile Paris au format `AAAA-MM-JJ` (valeur d'un `<input type="date">`). */
+export function parisDateYmd(now: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now)
+}
+
+/**
+ * Plage d'export par défaut : `to` = aujourd'hui (Paris), `from` = même jour
+ * un mois civil plus tôt (jour calé si le mois cible est plus court).
+ */
+export function defaultExportDateRange(now: Date): { from: string; to: string } {
+  const to = parisDateYmd(now)
+  const [y, m, d] = to.split('-').map(Number)
+  let year = y
+  let month = m - 1
+  if (month < 1) {
+    month = 12
+    year -= 1
+  }
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const day = Math.min(d, daysInMonth)
+  const from = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return { from, to }
 }
 
 /* ────────────────────────── Import routeur (3.7) ────────────────────────── */

@@ -46,11 +46,12 @@ export async function getPagesLegales(): Promise<PagesLegalesContent> {
   );
 }
 
+/** Pied de page + SEO — champs du global `pages-legales` (onglets Pied / Réseaux / Référencement). */
 export async function getReglagesSite(): Promise<ReglagesSiteContent> {
   return readGlobal(
-    "reglages-site",
+    "pages-legales",
     mergeReglagesSite,
-    "réglages du site servis avec leurs valeurs par défaut",
+    "pied de page et référencement servis avec leurs valeurs par défaut",
   );
 }
 

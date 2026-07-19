@@ -104,14 +104,12 @@ export interface Config {
   globals: {
     'reglages-boutique': ReglagesBoutique;
     'pages-legales': PagesLegales;
-    'reglages-site': ReglagesSite;
     'page-a-propos': PageAPropos;
     'page-souscription': PageSouscription;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
     'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
-    'reglages-site': ReglagesSiteSelect<false> | ReglagesSiteSelect<true>;
     'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
     'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
   };
@@ -272,6 +270,9 @@ export interface Author {
    * Forme « Prénom Nom »
    */
   name: string;
+  /**
+   * Prérempli depuis le nom — ne pas modifier après publication
+   */
   slug: string;
   bio?: {
     root: {
@@ -301,7 +302,7 @@ export interface Libelle {
   id: number;
   name: string;
   /**
-   * Identifiant d’URL (`?libelle=…`). Minuscules, tirets, sans accents.
+   * Identifiant d’URL (`?libelle=…`) — prérempli depuis le nom.
    */
   slug: string;
   updatedAt: string;
@@ -882,7 +883,7 @@ export interface ReglagesBoutique {
   createdAt?: string | null;
 }
 /**
- * Texte des trois pages légales. Un onglet vide laisse la page servie avec son texte par défaut (placeholders [À COMPLÉTER…] inclus).
+ * Pages légales, pied de page, réseaux sociaux et référencement. Un champ vide = texte actuel du site.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages-legales".
@@ -943,17 +944,6 @@ export interface PagesLegales {
     };
     [k: string]: unknown;
   } | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * Pied de page, réseaux sociaux et référencement par défaut. Un champ vide = le texte actuel du site.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "reglages-site".
- */
-export interface ReglagesSite {
-  id: number;
   footer?: {
     /**
      * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
@@ -1155,15 +1145,6 @@ export interface PagesLegalesSelect<T extends boolean = true> {
   cgv?: T;
   mentionsLegales?: T;
   confidentialite?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "reglages-site_select".
- */
-export interface ReglagesSiteSelect<T extends boolean = true> {
   footer?:
     | T
     | {

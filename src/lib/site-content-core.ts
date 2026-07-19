@@ -8,7 +8,6 @@ import type {
   PageAPropos,
   PageSouscription,
   PagesLegales,
-  ReglagesSite,
 } from "@/payload-types";
 
 /**
@@ -65,7 +64,7 @@ export function mergePagesLegales(
 }
 
 /* ------------------------------------------------------------------ */
-/* Réglages du site (lot 2)                                            */
+/* Pied de page + SEO (onglets du global `pages-legales`)               */
 /* ------------------------------------------------------------------ */
 
 /** Lien réseau social du pied de page — n'existe que si le client en saisit. */
@@ -113,9 +112,12 @@ function texteOuDefaut(saisi: string | null | undefined, defaut: string): string
   return propre ? propre : defaut;
 }
 
-/** Fusion du global `reglages-site` — champ par champ, vide = défaut dur. */
+/**
+ * Fusion pied de page + SEO depuis le global `pages-legales` — champ par
+ * champ, vide = défaut dur (ex-`reglages-site`).
+ */
 export function mergeReglagesSite(
-  global: ReglagesSite | null | undefined,
+  global: PagesLegales | null | undefined,
 ): ReglagesSiteContent {
   return {
     footer: {

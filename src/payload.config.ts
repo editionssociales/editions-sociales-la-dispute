@@ -22,7 +22,6 @@ import { PageAPropos } from './payload/globals/PageAPropos.ts'
 import { PageSouscription } from './payload/globals/PageSouscription.ts'
 import { PagesLegales } from './payload/globals/PagesLegales.ts'
 import { ReglagesBoutique } from './payload/globals/ReglagesBoutique.ts'
-import { ReglagesSite } from './payload/globals/ReglagesSite.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -34,24 +33,16 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
-      // Dashboard v3 (issue #23) : bandeau d'état + zone A « File du jour »
-      // + zone B « Alertes » (conditionnelle) + zone C « Raccourcis », rendu
-      // AVANT la grille native `CollectionCards` (rendue par Payload juste
-      // après ce slot — masquée en CSS depuis la nav groupée, issue #25,
-      // `custom.scss`).
-      // Observabilité (Sentry) + configuration & accès (ex-3.12/3.13, rôle
-      // admin STRICT) : sorties de la home vers la vue dédiée `sante`
-      // ci-dessous (issue #27, `HealthPage.tsx` — `DashboardFooter`
-      // supprimé, plus de slot `afterDashboard`).
+      // Home allégée : file du jour + alertes promo + raccourcis (plus de
+      // bandeau ni panneau stock). Stock → `views.stock` ; Santé →
+      // `views.sante`. Grille `CollectionCards` masquée (`custom.scss`).
       beforeDashboard: ['/payload/admin/dashboard/Dashboard.tsx#Dashboard'],
-      // Vue admin `/admin/sante` (issue #27) : observabilité + configuration
-      // & accès, rôle admin strict (redirect interne vers `/admin` sinon —
-      // `HealthPage.tsx`). Lien de découverte : `afterNavLinks` ci-dessous.
-      // Création livre : formulaire natif Payload
-      // (`/admin/collections/books/create` → puis `/{id}`), entrées liste/
-      // dashboard. `/admin/nouveau-livre` ne fait plus que rediriger
-      // (favoris).
       views: {
+        stock: {
+          Component: '/payload/admin/stock/StockPage.tsx#StockPage',
+          meta: { title: 'Stock' },
+          path: '/stock',
+        },
         sante: {
           Component: '/payload/admin/health/HealthPage.tsx#HealthPage',
           meta: { title: 'Santé' },
@@ -63,13 +54,16 @@ export default buildConfig({
           path: '/nouveau-livre',
         },
       },
-      afterNavLinks: ['/payload/admin/health/HealthNavLink.tsx#HealthNavLink'],
+      afterNavLinks: [
+        '/payload/admin/stock/StockNavLink.tsx#StockNavLink',
+        '/payload/admin/health/HealthNavLink.tsx#HealthNavLink',
+      ],
     },
   },
   // Ordre = ordre des groupes dans la nav admin (issue #25) : Quotidien
   // (Books, Orders, Media) → Catalogue (Authors, BookLabels, Highlight)
-  // → Boutique (PromoCodes, ImportRuns) → Site (Users, cf. les globals
-  // ci-dessous pour la suite du groupe « Site »).
+  // → Boutique (PromoCodes, ImportRuns) → Réglages (Users, seuil stock)
+  // → Site (Pages, À propos, Souscription — globals ci-dessous).
   collections: [
     Books,
     Orders,
@@ -81,7 +75,9 @@ export default buildConfig({
     ImportRuns,
     Users,
   ],
-  globals: [ReglagesBoutique, PagesLegales, ReglagesSite, PageAPropos, PageSouscription],
+  // Pages Site d'abord (groupe « Site »), puis seuil dans « Réglages »
+  // (créé par Users ci-dessus — le global y est rattaché).
+  globals: [PagesLegales, PageAPropos, PageSouscription, ReglagesBoutique],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({

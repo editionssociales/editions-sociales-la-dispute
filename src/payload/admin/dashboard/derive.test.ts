@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bannerHidden,
   commandesState,
+  defaultExportDateRange,
   editionTag,
   expiredActivePromos,
   fmtDateFr,
@@ -13,6 +14,7 @@ import {
   ORDER_ALERT_HOURS,
   ORDER_WARN_HOURS,
   orderLateness,
+  parisDateYmd,
   parisMonthBounds,
   pastilleText,
   sentryErrorEvents,
@@ -194,6 +196,27 @@ describe('parisMonthBounds — bornes UTC du mois civil de Paris', () => {
   it('un 31/10 23:30 UTC est déjà le 1ᵉʳ novembre à Paris (CET) : le mois retenu est novembre', () => {
     const { start } = parisMonthBounds(new Date('2026-10-31T23:30:00Z'))
     expect(start.toISOString()).toBe('2026-10-31T23:00:00.000Z')
+  })
+})
+
+describe('defaultExportDateRange — aujourd’hui Paris → un mois en arrière', () => {
+  it('plage simple (milieu de mois)', () => {
+    expect(defaultExportDateRange(new Date('2026-07-20T12:00:00Z'))).toEqual({
+      from: '2026-06-20',
+      to: '2026-07-20',
+    })
+  })
+
+  it('cale le jour si le mois cible est plus court (31 → 28/29)', () => {
+    expect(defaultExportDateRange(new Date('2026-03-31T12:00:00Z'))).toEqual({
+      from: '2026-02-28',
+      to: '2026-03-31',
+    })
+  })
+
+  it('parisDateYmd suit le fuseau Paris (soir UTC peut basculer de jour)', () => {
+    // 2026-07-19 22:30 UTC = 2026-07-20 00:30 à Paris (CEST)
+    expect(parisDateYmd(new Date('2026-07-19T22:30:00Z'))).toBe('2026-07-20')
   })
 })
 
