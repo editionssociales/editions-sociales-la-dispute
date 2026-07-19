@@ -97,7 +97,7 @@ export default function RencontresPage() {
       </section>
 
       {/* CTA : en attendant les premières dates */}
-      <section className="bg-black text-white">
+      <section className="bg-ink text-paper">
         <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="font-sans text-2xl font-black italic sm:text-3xl">

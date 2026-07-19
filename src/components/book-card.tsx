@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Book } from "@/lib/types";
 import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
+import { formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 
 export function BookCard({ book }: { book: Book }) {
@@ -37,6 +38,19 @@ export function BookCard({ book }: { book: Book }) {
       À paraître
     </span>
   );
+  // Statuts « autre libraire »/« indisponible » : même emplacement que le
+  // badge « À paraître » (mutuellement exclusifs, un seul rendu à la fois),
+  // sobres plutôt que pop — ce ne sont pas des accents de navigation (R2).
+  const externalBadge = book.status === "external" && (
+    <span className="absolute left-0 top-0 z-[1] border-b-2 border-r-2 border-ink bg-paper px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[.05em] text-muted">
+      Autre libraire
+    </span>
+  );
+  const unavailableBadge = book.status === "unavailable" && (
+    <span className="absolute left-0 top-0 z-[1] border-b-2 border-r-2 border-ink bg-paper px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[.05em] text-muted">
+      Indisponible
+    </span>
+  );
 
   // Panier natif (plan §4 étape 6) : petit chip superposé, en plus du lien
   // vers la fiche — seulement si le livre est disponible au panier.
@@ -50,6 +64,9 @@ export function BookCard({ book }: { book: Book }) {
       {authors ? (
         <p className="font-sans text-xs leading-snug text-ink-soft line-clamp-1">{authors}</p>
       ) : null}
+      {book.price != null && (
+        <p className="mt-0.5 font-sans text-sm font-black text-ink">{formatPrice(book.price)}</p>
+      )}
     </div>
   );
 
@@ -61,6 +78,8 @@ export function BookCard({ book }: { book: Book }) {
       >
         <span className="relative block w-full overflow-hidden border-2 border-black bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none">
           {upcomingBadge}
+          {externalBadge}
+          {unavailableBadge}
           {cover}
           {cartChip}
         </span>

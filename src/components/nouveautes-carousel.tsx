@@ -281,7 +281,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
                   l'image (aucune bande, jamais coupée). draggable=false : le
                   drag HTML5 natif entrerait en conflit avec le glissé du rail.
                   1re couverture : preload (LCP) — les suivantes restent lazy. */}
-              <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[0_14px_34px_rgba(23,20,15,0.16)] ring-1 ring-line">
+              <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[8px_8px_0_0_#17140f] ring-1 ring-ink">
                 <Cover
                   cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
                   alt={book.title}
@@ -345,9 +345,9 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
         className="mx-auto mt-[clamp(14px,2vw,26px)] min-h-[68px] max-w-[42ch] px-6 text-center"
       >
         {current.upcoming && (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ocher-text">
+          <span className="inline-flex border-b-2 border-r-2 border-ink bg-pop-orange px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
             À paraître
-          </p>
+          </span>
         )}
         <p className="mt-1 font-serif text-[clamp(19px,2vw,26px)] font-semibold leading-tight text-ink">
           {current.title}

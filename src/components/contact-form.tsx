@@ -20,7 +20,7 @@ const FIELD_CLASS =
 const LABEL_CLASS = "font-sans text-xs font-bold uppercase tracking-[.06em] text-black";
 
 export function ContactForm() {
-  const [state, formAction] = useActionState(sendContactMessage, CONTACT_INITIAL_STATE);
+  const [state, formAction, isPending] = useActionState(sendContactMessage, CONTACT_INITIAL_STATE);
   const [renderedAt, setRenderedAt] = useState<number | null>(null);
 
   useEffect(() => {
@@ -104,9 +104,11 @@ export function ContactForm() {
 
       <button
         type="submit"
-        className={`inline-flex w-fit items-center justify-center border-2 border-black bg-black px-6 py-3 font-sans text-sm font-bold uppercase tracking-[.03em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black ${FOCUS_RING}`}
+        disabled={isPending}
+        aria-busy={isPending}
+        className={`inline-flex w-fit items-center justify-center border-2 border-black bg-black px-6 py-3 font-sans text-sm font-bold uppercase tracking-[.03em] text-white transition-colors motion-reduce:transition-none hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white ${FOCUS_RING}`}
       >
-        Envoyer
+        {isPending ? "Envoi…" : "Envoyer"}
       </button>
 
       <p role="status" aria-live="polite" className={`text-sm leading-snug empty:hidden ${state.status === "error" ? "text-brick" : "text-black/70"}`}>

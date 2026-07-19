@@ -34,7 +34,7 @@ export default async function EditionsPage() {
           <Eyebrow>
             Deux maisons, une équipe
           </Eyebrow>
-          <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.96] text-black sm:text-5xl">
+          <h1 className="mt-2 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
             Nos collections
           </h1>
           <p className="mt-3.5 max-w-xl text-[15px] leading-relaxed text-black/70">

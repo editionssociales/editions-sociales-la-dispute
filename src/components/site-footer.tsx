@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { NAV_HOUSES } from "@/lib/nav";
 import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
 /**
@@ -39,6 +40,18 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
       <p className={BODY_CLASS}>{adresse}</p>
       <nav aria-label="Liens utiles">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          {NAV_HOUSES.map((house) => (
+            <li key={house.href}>
+              <Link href={house.href} className={LINK_CLASS}>
+                {house.label}
+              </Link>
+            </li>
+          ))}
+          <li>
+            <Link href="/boutique" className={LINK_CLASS}>
+              Boutique
+            </Link>
+          </li>
           <li>
             <Link href="/a-propos" className={LINK_CLASS}>
               À propos

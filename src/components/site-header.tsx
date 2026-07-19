@@ -126,7 +126,7 @@ function SoutenirCell({ compact, placement }: { compact: boolean; placement: str
           compact ? "scale-90 opacity-0" : "scale-100 opacity-100"
         }`}
       >
-        <span className="leading-[0.95] text-[clamp(30px,3.2vw,42px)]">Nous soutenir</span>
+        <span className="leading-[0.95] text-[clamp(22px,7vw,42px)]">Nous soutenir</span>
       </span>
 
       {/* Calque COMPACT : libellé 1 ligne + flèche alignés. Apparaît en rétrécissant au compactage. */}

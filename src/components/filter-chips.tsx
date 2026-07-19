@@ -39,7 +39,7 @@ export function FilterChips({
             type="button"
             onClick={() => onRemove(chip.param)}
             aria-label={`Retirer le filtre ${chip.type} : ${chip.label}`}
-            className="grid h-5 w-5 place-items-center border border-black text-sm leading-none text-black transition-colors hover:bg-black hover:text-white motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-2"
+            className="grid h-6 w-6 place-items-center border border-black text-sm leading-none text-black transition-colors hover:bg-black hover:text-white motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-2"
           >
             <span aria-hidden="true">×</span>
           </button>

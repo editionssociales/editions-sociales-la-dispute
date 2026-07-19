@@ -55,7 +55,7 @@ export function BuyLinksList({ book }: { book: Book }) {
         >
           {book.status === "available"
             ? `Acheter${book.price != null ? ` · ${formatPrice(book.price)}` : ""}`
-            : "Voir en librairie"}
+            : `Voir en librairie${book.price != null ? ` · ${formatPrice(book.price)}` : ""}`}
         </Button>
       )}
       {secondary.map((s) => (

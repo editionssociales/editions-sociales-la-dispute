@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
+import { Eyebrow } from "@/components/eyebrow";
 import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirmation";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 
@@ -57,9 +58,7 @@ export default async function MerciPage({
   return (
     <section className="bg-white">
       <Container className="max-w-2xl py-20 sm:py-28">
-        <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-black/50">
-          Commande
-        </p>
+        <Eyebrow>Commande</Eyebrow>
         {order && <ClearCartOnConfirmation />}
         {order ? (
           <>

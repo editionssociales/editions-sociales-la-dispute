@@ -298,7 +298,7 @@ export default async function SouscriptionPage() {
           tuiles `stats` du gabarit 2024 rétrospectif ci-dessus (piège documenté
           dans `lib/donation-tiers.ts`/`lib/donations.ts`). Fenêtre de
           fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
-      {campaign2026 && campaign2026.collected > 0 && (
+      {campaign2026 && (
         <section className="border-b-2 border-black bg-white">
           <Container className="py-16 sm:py-20">
             <Reveal>
@@ -306,20 +306,28 @@ export default async function SouscriptionPage() {
               <h2 className="mt-3 font-sans text-3xl font-black italic text-black sm:text-4xl">
                 La collecte en direct
               </h2>
-              <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-black/70">
-                Déjà
-                <CountUp
-                  value={campaign2026.collected}
-                  suffix=" €"
-                  className="font-sans text-lg font-black italic text-black"
-                />
-                réunis auprès de
-                <CountUp
-                  value={campaign2026.contributors}
-                  className="font-sans text-lg font-black italic text-black"
-                />
-                contributeur·rices. La jauge se met à jour en quelques minutes après un don.
-              </p>
+              {campaign2026.collected > 0 ? (
+                <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-black/70">
+                  Déjà
+                  <CountUp
+                    value={campaign2026.collected}
+                    suffix=" €"
+                    className="font-sans text-lg font-black italic text-black"
+                  />
+                  réunis auprès de
+                  <CountUp
+                    value={campaign2026.contributors}
+                    className="font-sans text-lg font-black italic text-black"
+                  />
+                  contributeur·rices. La jauge se met à jour en quelques minutes après un don.
+                </p>
+              ) : (
+                <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
+                  Campagne tout juste lancée — soyez les premier·ères à
+                  contribuer. La jauge se met à jour en quelques minutes après
+                  un don.
+                </p>
+              )}
             </Reveal>
             <Reveal delay={120} className="mt-10">
               <div className="border-2 border-black bg-white p-6">
@@ -580,7 +588,7 @@ export default async function SouscriptionPage() {
       </section>
 
       {/* CTA final */}
-      <section className="bg-black text-white">
+      <section className="bg-ink text-paper">
         <div className="grid grid-cols-4" aria-hidden="true">
           {POP_BG.map((c) => (
             <div key={c} className={`h-1.5 ${c}`} />
