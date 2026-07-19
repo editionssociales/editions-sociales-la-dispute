@@ -109,6 +109,18 @@ function resolveStandardShipping(cartTotalCents: number): ShippingResult {
 }
 
 /**
+ * LA règle « panier manifeste » (panier composé UNIQUEMENT d'articles
+ * `reducedShippingFlag`, cf. `ShippingRequest.manifestOnly` ci-dessus) —
+ * consommée par `resolveCartSummary` (`cart-core.ts`, sur les lignes
+ * `purchasable`) et `validateCheckoutLines` (`checkout-core.ts`, sur les
+ * lignes validées), qui la recalculaient chacune séparément. Un panier vide
+ * n'est jamais « manifeste » (rien à livrer en port réduit).
+ */
+export function isManifestOnly(items: readonly { reducedShippingFlag: boolean }[]): boolean {
+  return items.length > 0 && items.every((i) => i.reducedShippingFlag);
+}
+
+/**
  * Calcule le coût du port pour un panier, en centimes TTC — ou un refus
  * explicite (zone non vendue, panier au-delà de la grille).
  *

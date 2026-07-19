@@ -9,6 +9,7 @@
  * Codes promo V1 (décalque du coupon Woo réellement utilisé — décision
  * client, `PromoCodes.ts`) : seuls `fixed_cart` et `free_shipping`.
  */
+import { eurosToCents } from "./money";
 
 /**
  * Normalise un code promo saisi au back-office : majuscules, espaces de bord
@@ -37,11 +38,6 @@ export type PromoEvalResult =
   | { ok: true; type: "fixed_cart"; discountCents: number }
   | { ok: true; type: "free_shipping" }
   | { ok: false; reason: PromoRefusalReason; message: string };
-
-/** Euros → centimes entiers — même règle que `cart-core.ts:priceToCents` (jamais de flottant sur de l'argent). */
-function toCents(euros: number): number {
-  return Math.round(euros * 100);
-}
 
 /**
  * LE prédicat d'expiration jour-INCLUSIF (un code expirant le 13/07 vaut
@@ -82,7 +78,7 @@ export function evaluatePromoCode(
   if (isPromoExpired(promo.expiresAt, now)) {
     return { ok: false, reason: "expired", message: "Ce code promo a expiré." };
   }
-  if (promo.minCart != null && cartTotalCents < toCents(promo.minCart)) {
+  if (promo.minCart != null && cartTotalCents < eurosToCents(promo.minCart)) {
     return {
       ok: false,
       reason: "min-cart",
@@ -93,5 +89,5 @@ export function evaluatePromoCode(
   if (promo.type === "free_shipping") {
     return { ok: true, type: "free_shipping" };
   }
-  return { ok: true, type: "fixed_cart", discountCents: toCents(promo.amount ?? 0) };
+  return { ok: true, type: "fixed_cart", discountCents: eurosToCents(promo.amount ?? 0) };
 }

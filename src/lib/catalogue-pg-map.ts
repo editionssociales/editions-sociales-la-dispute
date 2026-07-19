@@ -1,5 +1,5 @@
 import { convertLexicalToHTML } from "@payloadcms/richtext-lexical/html";
-import type { Author, Book as PayloadBook, Libelle, Media } from "../payload-types";
+import type { Author, Book as PayloadBook, Libelle, Media } from "@/payload-types";
 import type { CommerceInfo, RawBook } from "./catalogue-source";
 import type { Cover, Term } from "./types";
 

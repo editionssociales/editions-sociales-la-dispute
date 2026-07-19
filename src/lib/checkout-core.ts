@@ -16,7 +16,9 @@
  * panier client) — même découpage pur/impur que `shipping-core.ts`/`cart-core.ts`.
  */
 import { MAX_LINE_QTY } from "./cart-core";
+import { eurosToCents } from "./money";
 import { assessSellability } from "./sellability";
+import { isManifestOnly } from "./shipping-core";
 
 /* ------------------------------ requête entrante ------------------------------ */
 
@@ -119,11 +121,6 @@ export interface ValidatedCheckoutLine {
   reducedShippingFlag: boolean;
 }
 
-/** Euros → centimes entiers, arrondi (même règle que `cart-core.ts:priceToCents`). */
-function priceToCents(price: number): number {
-  return Math.round(price * 100);
-}
-
 /**
  * Valide UNE ligne contre le livre fraîchement relu — jamais contre ce que le
  * client prétend. Ordre des règles : introuvable → verdict `assessSellability`
@@ -179,7 +176,7 @@ export function validateCheckoutLine(
       refusal: { id: input.id, reason: "no-price", message: `Prix non renseigné pour « ${book.title} ».` },
     };
   }
-  const unitPriceCents = priceToCents(book.priceEuros);
+  const unitPriceCents = eurosToCents(book.priceEuros);
   return {
     ok: true,
     line: {
@@ -220,7 +217,7 @@ export function validateCheckoutLines(
   if (refusals.length > 0) return { ok: false, refusals };
 
   const subtotalCents = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
-  const manifestOnly = lines.length > 0 && lines.every((l) => l.reducedShippingFlag);
+  const manifestOnly = isManifestOnly(lines);
   return { ok: true, lines, subtotalCents, manifestOnly };
 }
 

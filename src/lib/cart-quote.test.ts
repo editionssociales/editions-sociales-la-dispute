@@ -17,7 +17,7 @@ function input(overrides: Partial<CartQuoteInput> = {}): CartQuoteInput {
 describe("computeCartQuote — aucun code promo", () => {
   it("aucune remise, aucune livraison offerte, port standard", () => {
     const quote = computeCartQuote(input({ subtotalCents: 2000 }));
-    expect(quote.discountCents).toBe(0);
+    expect(quote.totals.discountCents).toBe(0);
     expect(quote.freeShippingCoupon).toBe(false);
     expect(quote.shipping).toEqual({ ok: true, costCents: 450 });
     expect(quote.totals).toEqual({
@@ -42,7 +42,7 @@ describe("computeCartQuote — code promo fixed_cart", () => {
 
   it("remise reportée sur discountCents et sur le total, port inchangé", () => {
     const quote = computeCartQuote(input({ subtotalCents: 2000, promoEval }));
-    expect(quote.discountCents).toBe(500);
+    expect(quote.totals.discountCents).toBe(500);
     expect(quote.freeShippingCoupon).toBe(false);
     expect(quote.totals.subtotalAfterDiscountCents).toBe(1500);
     expect(quote.totals.totalCents).toBe(1500 + 450);
@@ -87,7 +87,7 @@ describe("computeCartQuote — verdict promo refusé", () => {
   it("traité comme absence de code : aucune remise, aucune livraison offerte", () => {
     const refusal: PromoEvalResult = { ok: false, reason: "expired", message: "Ce code promo a expiré." };
     const quote = computeCartQuote(input({ subtotalCents: 2000, promoEval: refusal }));
-    expect(quote.discountCents).toBe(0);
+    expect(quote.totals.discountCents).toBe(0);
     expect(quote.freeShippingCoupon).toBe(false);
     expect(quote.shipping).toEqual({ ok: true, costCents: 450 });
   });

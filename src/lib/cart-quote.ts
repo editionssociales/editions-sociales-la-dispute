@@ -44,9 +44,7 @@ export interface CartQuoteInput {
 }
 
 export interface CartQuote {
-  /** Remise en centimes — 0 si aucun code `fixed_cart` valide n'est appliqué. */
-  discountCents: number;
-  /** `true` ssi un code `free_shipping` valide est appliqué — dérivé du même verdict que `discountCents`. */
+  /** `true` ssi un code `free_shipping` valide est appliqué — dérivé du même verdict que la remise `fixed_cart` (cf. `totals.discountCents`, la remise réellement appliquée). */
   freeShippingCoupon: boolean;
   shipping: ShippingResult;
   totals: CartTotals;
@@ -93,5 +91,5 @@ export function computeCartQuote(input: CartQuoteInput): CartQuote {
         ? "reduit"
         : "standard";
 
-  return { discountCents, freeShippingCoupon, shipping, totals, shippingMethod };
+  return { freeShippingCoupon, shipping, totals, shippingMethod };
 }
