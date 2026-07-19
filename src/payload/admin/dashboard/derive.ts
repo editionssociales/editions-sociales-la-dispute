@@ -150,7 +150,7 @@ export function importSignal(lastRunAt: string | null, now: Date): PanelState {
  * journée du 13/07, décision produit 17/07) — candidats au « désactiver en
  * un clic ». `expiresAt` absent = jamais expiré. Même règle, désormais
  * réellement partagée (et non plus seulement affirmée en commentaire) avec
- * l'évaluation panier de `promo-eval-core.ts:evaluatePromoCode` — alignée
+ * l'évaluation panier de `promo-core.ts:evaluatePromoCode` — alignée
  * checkout ↔ dashboard.
  */
 export function expiredActivePromos<T extends { active?: boolean | null; expiresAt?: string | null }>(

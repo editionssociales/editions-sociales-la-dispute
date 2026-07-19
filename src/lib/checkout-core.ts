@@ -2,7 +2,7 @@
  * Cœur pur du checkout (plan §4, phase 4/lot 2, étape 8) — RE-VALIDATION
  * serveur du panier, zéro confiance dans ce que le client envoie (`id`+`qty`
  * uniquement, jamais un prix). Compose avec les modules purs déjà testés :
- * `evaluatePromoCode` (promo-eval-core.ts), `computeShipping`
+ * `evaluatePromoCode` (promo-core.ts), `computeShipping`
  * (shipping-core.ts), `computeCartTotals` (cart-core.ts) — ce module n'ajoute
  * que ce qu'aucun des trois autres ne couvre : la validation ligne par ligne
  * (verdict `assessSellability` de `sellability.ts`, appelé avec la QUANTITÉ

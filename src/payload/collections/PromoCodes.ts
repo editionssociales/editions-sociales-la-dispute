@@ -1,7 +1,7 @@
 import type { CollectionBeforeValidateHook, CollectionConfig } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
-import { normalizePromoCode } from '../lib/promo-code.ts'
+import { normalizePromoCode } from '../../lib/promo-core.ts'
 
 /** Normalise le code saisi (majuscules, espaces de bord) avant validation d'unicité. */
 const normalizeCode: CollectionBeforeValidateHook = ({ data }) => {

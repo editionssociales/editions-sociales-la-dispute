@@ -10,7 +10,7 @@ import {
 } from "@/lib/checkout-core";
 import { computeCartTotals } from "@/lib/cart-core";
 import { computeShipping } from "@/lib/shipping-core";
-import { evaluatePromoCode } from "@/payload/lib/promo-eval-core";
+import { evaluatePromoCode } from "@/lib/promo-core";
 
 /**
  * `POST /api/checkout` (plan §4 étape 8) — première écriture commerce de la
@@ -18,7 +18,7 @@ import { evaluatePromoCode } from "@/payload/lib/promo-eval-core";
  * zone) depuis une relecture fraîche de Payload — le client n'envoie que des
  * `{id, qty}` + une zone + un code promo optionnel, jamais un prix ni un
  * total. Toute la logique de validation/calcul est pure et testée ailleurs
- * (`checkout-core.ts`, `promo-eval-core.ts`, `shipping-core.ts`,
+ * (`checkout-core.ts`, `promo-core.ts`, `shipping-core.ts`,
  * `cart-core.ts`) — cette route ne fait que la composition + l'appel Stripe,
  * même découpage que `souscription/actions.ts` (E1/phase dons).
  *
