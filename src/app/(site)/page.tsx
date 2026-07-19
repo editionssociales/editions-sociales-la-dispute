@@ -17,6 +17,19 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
+/**
+ * Couleurs du bandeau de mise en avant (`Highlight.couleur`) → classes
+ * littérales (contrat Tailwind : le JIT ne compile pas le dynamique). Le
+ * hover du CTA bascule sur jaune quand le fond est orange — sinon le bouton
+ * survolé se fondrait dans le bandeau.
+ */
+const HIGHLIGHT_STYLES: Record<string, { block: string; ctaHover: string }> = {
+  "pop-pink": { block: "bg-pop-pink", ctaHover: "hover:bg-pop-orange" },
+  "pop-teal": { block: "bg-pop-teal", ctaHover: "hover:bg-pop-orange" },
+  "pop-orange": { block: "bg-pop-orange", ctaHover: "hover:bg-pop-yellow" },
+  "pop-yellow": { block: "bg-pop-yellow", ctaHover: "hover:bg-pop-orange" },
+};
+
 /** Un livre est éligible au carrousel s'il a une couverture et une fiche d'origine (édition connue). */
 function readyForCarousel(
   book: Book,
@@ -45,11 +58,16 @@ export default async function HomePage() {
 
       {/* Mise en avant ponctuelle (E6bis, engagement C32) : rien n'est rendu
           quand `highlight` est absent (inactif ou hors dates) — page
-          strictement iso à l'état actuel, aucun wrapper laissé derrière. */}
+          strictement iso à l'état actuel, aucun wrapper laissé derrière.
+          L'ex-bandeau souscription codé en dur vit désormais ici : c'est une
+          entrée de la collection (semée par la migration
+          `highlight_couleur_cta`), soumise à « une campagne à la fois ». */}
       {highlight && (
         <Container className="mt-[clamp(30px,4.5vw,60px)]">
           <FramedGrid className="grid-cols-1 sm:grid-cols-[1fr_auto]">
-            <div className="flex min-w-0 flex-col justify-center gap-1.5 bg-pop-pink px-6 py-6 sm:px-7">
+            <div
+              className={`flex min-w-0 flex-col justify-center gap-1.5 px-6 py-6 sm:px-7 ${(HIGHLIGHT_STYLES[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_STYLES["pop-pink"]).block}`}
+            >
               <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-black">
                 {highlight.titre}
               </p>
@@ -60,34 +78,15 @@ export default async function HomePage() {
             {highlight.lien && (
               <Link
                 href={highlight.lien}
-                className="flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-black px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-white transition-colors hover:bg-pop-orange hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow motion-reduce:transition-none"
+                className={`flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-black px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-white transition-colors hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow motion-reduce:transition-none ${(HIGHLIGHT_STYLES[highlight.couleur ?? "pop-pink"] ?? HIGHLIGHT_STYLES["pop-pink"]).ctaHover}`}
               >
-                En savoir plus <span aria-hidden="true">→</span>
+                {highlight.lienLibelle?.trim() || "En savoir plus"}{" "}
+                <span aria-hidden="true">→</span>
               </Link>
             )}
           </FramedGrid>
         </Container>
       )}
-
-      <Container className="mt-[clamp(30px,4.5vw,60px)]">
-        <FramedGrid className="grid-cols-1 sm:grid-cols-[1fr_auto]">
-          <div className="flex min-w-0 flex-col justify-center gap-1.5 bg-pop-yellow px-6 py-6 sm:px-7">
-            <p className="font-sans text-[clamp(19px,2.2vw,28px)] font-black italic leading-[1.05] text-black">
-              La souscription est ouverte
-            </p>
-            <p className="mt-0.5 max-w-[56ch] text-sm text-black/70">
-              Soutenez les Éditions sociales et La Dispute — chaque
-              souscription finance les prochains titres.
-            </p>
-          </div>
-          <Link
-            href="/souscription"
-            className="flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-black px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-white transition-colors hover:bg-pop-orange hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow motion-reduce:transition-none"
-          >
-            Souscrire <span aria-hidden="true">→</span>
-          </Link>
-        </FramedGrid>
-      </Container>
     </div>
   );
 }
