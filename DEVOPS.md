@@ -66,13 +66,11 @@ Branches distantes résiduelles à nettoyer : `feat/catalogue-couverture-seule`,
 | Intégration Git | **active** (`vercel[bot]`) : `main` → Production, branche → Preview |
 | Variables d'env prod | posées à la main (non auditables depuis le dépôt) |
 
-> ⚠️ (vérifié 2026-07-19) Un **projet fantôme homonyme** subsiste dans le scope
-> Vercel perso du prestataire (`prj_Mi6jIFHz…`, celui de `.vercel/project.json`) :
-> toujours git-lié au dépôt, il double chaque build de `main` (en échec depuis la
-> coupure OVH — il n'a que les vars `WP_*`) et squatte le domaine nu
-> `editions-sociales-la-dispute.vercel.app`, figé sur un build du 2026-07-11.
-> À délier/supprimer (geste humain). Tout diagnostic mené avec `$VERCEL_TOKEN`
-> (scopes perso/solidz) tombe sur ce fantôme, pas sur le vrai projet.
+> Note (2026-07-19) : l'ancien **projet homonyme de la team solidz**
+> (`prj_Mi6jIFHz…`, git-lié au repo perso `yourimerad/…`) doublait les builds de
+> `main` en échec et squattait le domaine nu `editions-sociales-la-dispute.vercel.app`
+> (figé au 2026-07-11) — **supprimé le 2026-07-19**. `site/.vercel/project.json`
+> pointe encore dessus : relinker (`vercel link`) avant tout usage du CLI local.
 
 ### 1.3 Base de référence (vérifiée sur `main`, commit `012fe02`)
 
