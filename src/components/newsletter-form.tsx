@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LEGAL_LINK } from "@/components/legal-section";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
@@ -25,6 +25,7 @@ import {
 export function NewsletterForm() {
   const [state, formAction, isPending] = useActionState(subscribeToNewsletter, NEWSLETTER_INITIAL_STATE);
   const [renderedAt, setRenderedAt] = useState<number | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     // Enveloppé dans une fonction nommée (plutôt qu'un `setState` nu en tête
@@ -39,9 +40,24 @@ export function NewsletterForm() {
     markRendered();
   }, []);
 
+  useEffect(() => {
+    // Succès (DOI envoyée) → formulaire réinitialisé, `renderedAt` reposé
+    // pour un envoi ultérieur sans redéclencher `too-fast`. Enveloppé dans
+    // une fonction nommée (cf. `markRendered` ci-dessus) — même faux
+    // positif `react-hooks/set-state-in-effect`.
+    function resetFormOnSuccess() {
+      if (state.status !== "ok") return;
+      formRef.current?.reset();
+      setRenderedAt(Date.now());
+    }
+    resetFormOnSuccess();
+  }, [state]);
+
+  const emailInvalid = state.status === "error" && state.field === "email";
+
   return (
     <>
-      <form action={formAction} className="mt-1 flex border-2 border-ink">
+      <form ref={formRef} action={formAction} className="mt-1 flex border-2 border-ink">
         <label htmlFor="footer-newsletter-email" className="sr-only">
           Adresse e-mail
         </label>
@@ -51,6 +67,8 @@ export function NewsletterForm() {
           type="email"
           required
           placeholder="vous@exemple.fr"
+          aria-invalid={emailInvalid ? true : undefined}
+          aria-describedby={emailInvalid ? "newsletter-status" : undefined}
           className={`min-w-0 flex-1 bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 ${FOCUS_RING_LIGHT}`}
         />
 
@@ -76,15 +94,18 @@ export function NewsletterForm() {
       </form>
 
       {/* Zone de message d'état — additive. */}
-      <p
-        role="status"
-        aria-live="polite"
-        className={`mt-1 text-xs leading-snug empty:hidden ${
-          state.status === "error" ? "text-brick" : "text-ink/70"
-        }`}
-      >
-        {state.status !== "idle" ? state.message : ""}
-      </p>
+      {state.status !== "idle" && (
+        <div
+          id="newsletter-status"
+          role="status"
+          aria-live="polite"
+          className={`mt-1 border-2 bg-paper-2 px-3 py-2 font-sans text-xs font-bold leading-snug text-ink ${
+            state.status === "ok" ? "border-bottle" : "border-brick"
+          }`}
+        >
+          {state.message}
+        </div>
+      )}
 
       {/* Mention RGPD — additive. */}
       <p className="text-[11px] leading-snug text-ink/70">

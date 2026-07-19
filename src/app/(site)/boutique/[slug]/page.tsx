@@ -77,10 +77,10 @@ export default async function BoutiqueBookPage({
             />
           </div>
 
-          <div className="mt-6">
-            <p className="mb-2 font-sans text-xs font-bold uppercase tracking-[.08em] text-ink">
+          <div className="mt-6 border-2 border-ink bg-paper p-4">
+            <Eyebrow variant="sm" className="mb-2">
               Acheter
-            </p>
+            </Eyebrow>
             <BuyLinksList book={book} />
           </div>
 

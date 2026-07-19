@@ -18,9 +18,13 @@ import { validateContactSubmission, type ContactSubmission } from "@/lib/contact
  * pour ne pas renseigner un bot sur la détection.
  */
 
+/** Champ fautif d'un refus de validation — pose `aria-invalid`/`aria-describedby` côté formulaire (`contact-form.tsx`). `undefined` pour un échec sans rapport avec un champ précis (honeypot, panne d'envoi). */
+export type ContactField = "name" | "email" | "subject" | "message";
+
 export interface ContactFormState {
   status: "idle" | "ok" | "error";
   message: string | null;
+  field?: ContactField;
 }
 
 export const CONTACT_INITIAL_STATE: ContactFormState = { status: "idle", message: null };
@@ -79,17 +83,17 @@ export async function sendContactMessage(
         // Même réponse que le succès — ne jamais renseigner un bot sur la détection.
         return { status: "ok", message: OK_MESSAGE };
       case "invalid-email":
-        return { status: "error", message: "Adresse email invalide." };
+        return { status: "error", message: "Adresse email invalide.", field: "email" };
       case "name-missing":
-        return { status: "error", message: "Merci d'indiquer votre nom." };
+        return { status: "error", message: "Merci d'indiquer votre nom.", field: "name" };
       case "name-too-long":
-        return { status: "error", message: "Le nom saisi est trop long." };
+        return { status: "error", message: "Le nom saisi est trop long.", field: "name" };
       case "subject-too-long":
-        return { status: "error", message: "Le sujet saisi est trop long." };
+        return { status: "error", message: "Le sujet saisi est trop long.", field: "subject" };
       case "message-too-short":
-        return { status: "error", message: "Votre message est trop court." };
+        return { status: "error", message: "Votre message est trop court.", field: "message" };
       case "message-too-long":
-        return { status: "error", message: "Votre message est trop long." };
+        return { status: "error", message: "Votre message est trop long.", field: "message" };
     }
   }
 

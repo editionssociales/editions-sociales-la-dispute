@@ -60,13 +60,21 @@ describe("sendContactMessage — validations, messages dédiés", () => {
       CONTACT_INITIAL_STATE,
       form({ ...VALID, email: "pas-un-email" }),
     );
-    expect(state).toEqual({ status: "error", message: "Adresse email invalide." });
+    expect(state).toEqual({
+      status: "error",
+      message: "Adresse email invalide.",
+      field: "email",
+    });
     expect(sendTransactionalEmail).not.toHaveBeenCalled();
   });
 
   it("nom manquant → message dédié", async () => {
     const state = await sendContactMessage(CONTACT_INITIAL_STATE, form({ ...VALID, name: " " }));
-    expect(state).toEqual({ status: "error", message: "Merci d'indiquer votre nom." });
+    expect(state).toEqual({
+      status: "error",
+      message: "Merci d'indiquer votre nom.",
+      field: "name",
+    });
   });
 
   it("message trop court → message dédié", async () => {
@@ -74,7 +82,11 @@ describe("sendContactMessage — validations, messages dédiés", () => {
       CONTACT_INITIAL_STATE,
       form({ ...VALID, message: "court" }),
     );
-    expect(state).toEqual({ status: "error", message: "Votre message est trop court." });
+    expect(state).toEqual({
+      status: "error",
+      message: "Votre message est trop court.",
+      field: "message",
+    });
     expect(sendTransactionalEmail).not.toHaveBeenCalled();
   });
 });
