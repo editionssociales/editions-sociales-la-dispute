@@ -8,6 +8,7 @@ import * as migration_20260713_035502_sellable_par_defaut from './20260713_03550
 import * as migration_20260713_060544_import_runs from './20260713_060544_import_runs';
 import * as migration_20260713_063159_contenus_editables from './20260713_063159_contenus_editables';
 import * as migration_20260717_150000_orders_status_index from './20260717_150000_orders_status_index';
+import * as migration_20260719_074211_highlight_couleur_cta from './20260719_074211_highlight_couleur_cta';
 
 export const migrations = [
   {
@@ -53,11 +54,16 @@ export const migrations = [
   {
     up: migration_20260713_063159_contenus_editables.up,
     down: migration_20260713_063159_contenus_editables.down,
-    name: '20260713_063159_contenus_editables'
+    name: '20260713_063159_contenus_editables',
   },
   {
     up: migration_20260717_150000_orders_status_index.up,
     down: migration_20260717_150000_orders_status_index.down,
     name: '20260717_150000_orders_status_index',
+  },
+  {
+    up: migration_20260719_074211_highlight_couleur_cta.up,
+    down: migration_20260719_074211_highlight_couleur_cta.down,
+    name: '20260719_074211_highlight_couleur_cta'
   },
 ];

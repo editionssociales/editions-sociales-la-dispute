@@ -47,4 +47,4 @@ Does NOT own : le schéma SQL `public` (réservé — p. ex. dons) ; la jauge de
 - **`src/lib`** — modèle de domaine + couche data.
 - **`src/components`** — présentation brutaliste.
 - **`src/app`** — App Router : `(site)` front + `(payload)` back-office.
-- **`src/payload`** — collections + accès du back-office.
+- **`src/payload`** — collections, accès et surface admin du back-office (dashboard, vues custom `/admin/sante` · `/admin/nouveau-livre`, cœurs purs + endpoints dans `lib/`).
