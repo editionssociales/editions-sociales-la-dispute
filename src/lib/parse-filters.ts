@@ -1,10 +1,8 @@
 import { isEditionSlug } from "./editions";
 import { resolveLibelleSlug } from "./libelles";
-import type { BookFilters, BookSort } from "./types";
+import { BOOK_SORTS, type BookFilters, type BookSort } from "./types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
-
-const SORTS: BookSort[] = ["recent", "ancien", "titre"];
 
 /** Convertit des `searchParams` Next.js en filtres de catalogue validés. */
 export function parseBookFilters(sp: SearchParams): BookFilters {
@@ -23,7 +21,7 @@ export function parseBookFilters(sp: SearchParams): BookFilters {
     libelle,
     author: one("author") || undefined,
     q: one("q") || undefined,
-    sort: SORTS.includes(sort as BookSort) ? (sort as BookSort) : undefined,
+    sort: BOOK_SORTS.includes(sort as BookSort) ? (sort as BookSort) : undefined,
     page: Number.isInteger(page) && page > 0 ? page : undefined,
     upcoming: one("upcoming") === "1" ? true : undefined,
   };

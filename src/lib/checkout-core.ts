@@ -2,7 +2,7 @@
  * Cœur pur du checkout (plan §4, phase 4/lot 2, étape 8) — RE-VALIDATION
  * serveur du panier, zéro confiance dans ce que le client envoie (`id`+`qty`
  * uniquement, jamais un prix). Compose avec les modules purs déjà testés :
- * `evaluatePromoCode` (promo-eval-core.ts), `computeShipping`
+ * `evaluatePromoCode` (promo-core.ts), `computeShipping`
  * (shipping-core.ts), `computeCartTotals` (cart-core.ts) — ce module n'ajoute
  * que ce qu'aucun des trois autres ne couvre : la validation ligne par ligne
  * (verdict `assessSellability` de `sellability.ts`, appelé avec la QUANTITÉ
@@ -16,7 +16,9 @@
  * panier client) — même découpage pur/impur que `shipping-core.ts`/`cart-core.ts`.
  */
 import { MAX_LINE_QTY } from "./cart-core";
+import { eurosToCents } from "./money";
 import { assessSellability } from "./sellability";
+import { isManifestOnly } from "./shipping-core";
 
 /* ------------------------------ requête entrante ------------------------------ */
 
@@ -119,11 +121,6 @@ export interface ValidatedCheckoutLine {
   reducedShippingFlag: boolean;
 }
 
-/** Euros → centimes entiers, arrondi (même règle que `cart-core.ts:priceToCents`). */
-function priceToCents(price: number): number {
-  return Math.round(price * 100);
-}
-
 /**
  * Valide UNE ligne contre le livre fraîchement relu — jamais contre ce que le
  * client prétend. Ordre des règles : introuvable → verdict `assessSellability`
@@ -179,7 +176,7 @@ export function validateCheckoutLine(
       refusal: { id: input.id, reason: "no-price", message: `Prix non renseigné pour « ${book.title} ».` },
     };
   }
-  const unitPriceCents = priceToCents(book.priceEuros);
+  const unitPriceCents = eurosToCents(book.priceEuros);
   return {
     ok: true,
     line: {
@@ -220,26 +217,8 @@ export function validateCheckoutLines(
   if (refusals.length > 0) return { ok: false, refusals };
 
   const subtotalCents = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
-  const manifestOnly = lines.length > 0 && lines.every((l) => l.reducedShippingFlag);
+  const manifestOnly = isManifestOnly(lines);
   return { ok: true, lines, subtotalCents, manifestOnly };
-}
-
-/* ------------------------------ méthode de port (snapshot Order) ------------------------------ */
-
-export type ShippingMethodLabel = "standard" | "reduit" | "offert";
-
-/**
- * Étiquette de méthode de port à snapshoter sur la commande (`Orders.ts:shippingMethod`)
- * — dérivée des mêmes règles que `computeShipping` (`shipping-core.ts`), dans
- * l'ordre où ce module les applique (coupon gratuit prime sur « manifeste »).
- */
-export function resolveShippingMethod(opts: {
-  manifestOnly: boolean;
-  freeShippingCoupon: boolean;
-}): ShippingMethodLabel {
-  if (opts.freeShippingCoupon) return "offert";
-  if (opts.manifestOnly) return "reduit";
-  return "standard";
 }
 
 /* ------------------------------ encodage compact des lignes (metadata Stripe) ------------------------------ */

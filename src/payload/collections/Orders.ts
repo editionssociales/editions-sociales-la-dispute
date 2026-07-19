@@ -1,5 +1,6 @@
 import type { CollectionAfterChangeHook, CollectionConfig, Field } from 'payload'
 
+import type { ShippingMethodLabel } from '../../lib/cart-quote.ts'
 import { isAdmin, isAdminOrEditor } from '../access.ts'
 import {
   exportComptaHandler,
@@ -263,7 +264,7 @@ export const Orders: CollectionConfig = {
         { value: 'standard', label: 'Standard (grille par valeur)' },
         { value: 'reduit', label: 'Réduit (« manifeste »)' },
         { value: 'offert', label: 'Offert (code promo)' },
-      ],
+      ] satisfies { value: ShippingMethodLabel; label: string }[],
     },
     {
       name: 'shippingCostTTC',

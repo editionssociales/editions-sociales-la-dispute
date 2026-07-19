@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import type { BookFilters, Facet } from "@/lib/types";
+import { BOOK_SORTS, type BookFilters, type BookSort, type Facet } from "@/lib/types";
 import { EDITION_LIST } from "@/lib/editions";
 import { serializeBookFilters } from "@/lib/parse-filters";
 import {
@@ -33,11 +33,12 @@ interface Props {
   hideLibelles?: boolean;
 }
 
-const SORTS = [
-  { value: "recent", label: "Plus récents" },
-  { value: "ancien", label: "Plus anciens" },
-  { value: "titre", label: "Titre (A–Z)" },
-];
+const SORT_LABELS: Record<BookSort, string> = {
+  recent: "Plus récents",
+  ancien: "Plus anciens",
+  titre: "Titre (A–Z)",
+};
+const SORTS = BOOK_SORTS.map((s) => ({ value: s, label: SORT_LABELS[s] }));
 
 /**
  * Grille brutaliste : le quadrillage noir vient du fond noir du conteneur

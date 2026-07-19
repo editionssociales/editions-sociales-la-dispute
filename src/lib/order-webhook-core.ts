@@ -9,6 +9,8 @@
  * `payload.create({collection:'orders'})`, symétrique de `checkout-core.ts`
  * côté création de session.
  */
+import type { ShippingMethodLabel } from "./cart-quote";
+import { centsToEuros } from "./money";
 
 /** Ventes restreintes FR/BE/CH (`Orders.ts:shippingAddress.country`, même contrainte que `shipping_address_collection`). */
 export type OrderCountry = "FR" | "BE" | "CH";
@@ -31,7 +33,8 @@ export interface OrderLineFacts {
   unitPriceCents: number;
 }
 
-export type OrderShippingMethod = "standard" | "reduit" | "offert";
+/** Alias du port — même étiquette que `ShippingMethodLabel` (`cart-quote.ts`), sous le nom attendu par ses consommateurs (`order-handler.ts`). */
+export type OrderShippingMethod = ShippingMethodLabel;
 
 export interface OrderSessionFacts {
   stripeSessionId: string;
@@ -74,11 +77,6 @@ export interface OrderCreateData {
   stripeSessionId: string;
   stripePaymentIntentId: string | null;
   paidAt: string;
-}
-
-/** Euros arrondis au centime — l'entrée est déjà des centimes entiers (même règle que `cart-core.ts`, sens inverse). */
-function centsToEuros(cents: number): number {
-  return Math.round(cents) / 100;
 }
 
 /**

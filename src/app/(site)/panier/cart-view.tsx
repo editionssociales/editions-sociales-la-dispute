@@ -9,14 +9,10 @@ import { Button } from "@/components/button";
 import { BookCover } from "@/lib/cover";
 import { formatPrice } from "@/lib/format";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
-import {
-  computeCartTotals,
-  MAX_LINE_QTY,
-  resolveCartSummary,
-  type CartLineView,
-} from "@/lib/cart-core";
-import { computeShipping, FREE_SHIPPING_MIN_CART_CENTS, type ShippingZone } from "@/lib/shipping-core";
-import type { PromoEvalResult } from "@/payload/lib/promo-eval-core";
+import { MAX_LINE_QTY, resolveCartSummary, type CartLineView } from "@/lib/cart-core";
+import { FREE_SHIPPING_MIN_CART_CENTS, type ShippingZone } from "@/lib/shipping-core";
+import { computeCartQuote } from "@/lib/cart-quote";
+import type { PromoEvalResult } from "@/lib/promo-core";
 import { getCartSnapshot, validatePromoCode } from "./actions";
 import type { CartSnapshot } from "./snapshot";
 
@@ -248,15 +244,12 @@ export function CartView() {
     });
   }
 
-  const freeShippingCoupon = promoResult?.ok === true && promoResult.type === "free_shipping";
-  const shipping = computeShipping({
-    cartTotalCents: summary.subtotalCents,
+  const { shipping, totals, freeShippingCoupon } = computeCartQuote({
+    subtotalCents: summary.subtotalCents,
     zone,
     manifestOnly: summary.manifestOnly,
-    freeShippingCoupon,
+    promoEval: promoResult,
   });
-  const discountCents = promoResult?.ok === true && promoResult.type === "fixed_cart" ? promoResult.discountCents : 0;
-  const totals = computeCartTotals(summary.subtotalCents, discountCents, shipping.ok ? shipping.costCents : null);
 
   const [checkoutPending, startCheckoutTransition] = useTransition();
   /** Un item par refus (`checkout-core.ts` en rédige un par article en défaut) — jamais fusionnés en un seul paragraphe (cf. `<ul>` ci-dessous). */

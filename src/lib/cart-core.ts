@@ -23,6 +23,8 @@
  * pourraient légitimement partager un slug. `id` est la seule clé sûre pour
  * distinguer sans ambiguïté deux lignes.
  */
+import { eurosToCents } from "./money";
+import { isManifestOnly } from "./shipping-core";
 import type { Book, Cover, EditionSlug } from "./types";
 
 /** Version du format persisté — toute valeur différente (ou absente) invalide le panier stocké. */
@@ -173,11 +175,6 @@ export interface CartSummary {
   manifestOnly: boolean;
 }
 
-/** Prix en euros (`Book.price`) → centimes entiers, arrondi au centime. */
-function priceToCents(price: number): number {
-  return Math.round(price * 100);
-}
-
 /** Extrait uniquement les livres demandés d'un instantané — pur, réutilisé par la façade serveur (`panier/actions.ts`). */
 export function pickBooksByIds(books: Book[], ids: number[]): Book[] {
   const set = new Set(ids);
@@ -209,7 +206,7 @@ export function resolveCartSummary(
       continue;
     }
     const purchasable = canAddToCart(book) && book.price != null;
-    const unitPriceCents = book.price != null ? priceToCents(book.price) : null;
+    const unitPriceCents = book.price != null ? eurosToCents(book.price) : null;
     lines.push({
       id: book.id,
       title: book.title,
@@ -228,8 +225,7 @@ export function resolveCartSummary(
 
   const purchasableLines = lines.filter((l) => l.purchasable);
   const subtotalCents = purchasableLines.reduce((sum, l) => sum + l.lineTotalCents, 0);
-  const manifestOnly =
-    purchasableLines.length > 0 && purchasableLines.every((l) => l.reducedShippingFlag);
+  const manifestOnly = isManifestOnly(purchasableLines);
 
   return { lines, missingIds, subtotalCents, manifestOnly };
 }

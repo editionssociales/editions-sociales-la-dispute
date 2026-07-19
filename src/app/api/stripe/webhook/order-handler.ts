@@ -39,6 +39,12 @@ function toOrderCountry(country: string | null): OrderCountry {
     : "FR";
 }
 
+/** Parse un montant en centimes posé en `metadata` Stripe — `0` si absent/non fini (metadata corrompue), jamais `NaN` stocké. */
+function metadataCents(value: string | undefined): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 /** Adresse Stripe (`collected_information.shipping_details`) → faits `Orders` — `null` si absente (anomalie sur une session complétée). */
 function addressFromStripe(
   shipping: Stripe.Checkout.Session.CollectedInformation.ShippingDetails | null | undefined,
@@ -101,8 +107,8 @@ function sessionFacts(
     shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
     lines,
     shippingMethod: (metadata.shippingMethod as OrderShippingMethod) ?? "standard",
-    shippingCostCents: Number(metadata.shippingCostCents ?? 0),
-    discountCents: Number(metadata.discountCents ?? 0),
+    shippingCostCents: metadataCents(metadata.shippingCostCents),
+    discountCents: metadataCents(metadata.discountCents),
     promoCodeId: promoCodeId && Number.isFinite(promoCodeId) ? promoCodeId : null,
     totalCents: session.amount_total ?? 0,
     paidAtISO: new Date(createdAtEpoch * 1000).toISOString(),

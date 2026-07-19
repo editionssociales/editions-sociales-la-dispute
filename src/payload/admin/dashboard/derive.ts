@@ -1,4 +1,5 @@
 import type { WorkOrdersData } from './data.ts'
+import { isPromoExpired } from '../../../lib/promo-core.ts'
 
 /**
  * Cœur pur du tableau de bord `/admin` (design v3 — home = zones A « File du
@@ -150,17 +151,14 @@ export function importSignal(lastRunAt: string | null, now: Date): PanelState {
  * journée du 13/07, décision produit 17/07) — candidats au « désactiver en
  * un clic ». `expiresAt` absent = jamais expiré. Même règle, désormais
  * réellement partagée (et non plus seulement affirmée en commentaire) avec
- * l'évaluation panier de `promo-eval-core.ts:evaluatePromoCode` — alignée
+ * l'évaluation panier de `promo-core.ts:evaluatePromoCode` — alignée
  * checkout ↔ dashboard.
  */
 export function expiredActivePromos<T extends { active?: boolean | null; expiresAt?: string | null }>(
   promos: T[],
   now: Date,
 ): T[] {
-  const today = now.toISOString().slice(0, 10)
-  return promos.filter(
-    (p) => p.active === true && typeof p.expiresAt === 'string' && p.expiresAt.slice(0, 10) < today,
-  )
+  return promos.filter((p) => p.active === true && isPromoExpired(p.expiresAt, now))
 }
 
 /* ────────────────────────── Observabilité (3.12) ────────────────────────── */

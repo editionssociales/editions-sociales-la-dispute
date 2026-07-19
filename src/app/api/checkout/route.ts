@@ -2,15 +2,9 @@ import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
-import {
-  encodeCheckoutLines,
-  parseCheckoutRequest,
-  resolveShippingMethod,
-  validateCheckoutLines,
-} from "@/lib/checkout-core";
-import { computeCartTotals } from "@/lib/cart-core";
-import { computeShipping } from "@/lib/shipping-core";
-import { evaluatePromoCode } from "@/payload/lib/promo-eval-core";
+import { encodeCheckoutLines, parseCheckoutRequest, validateCheckoutLines } from "@/lib/checkout-core";
+import { computeCartQuote } from "@/lib/cart-quote";
+import { evaluatePromoCode } from "@/lib/promo-core";
 
 /**
  * `POST /api/checkout` (plan §4 étape 8) — première écriture commerce de la
@@ -18,9 +12,9 @@ import { evaluatePromoCode } from "@/payload/lib/promo-eval-core";
  * zone) depuis une relecture fraîche de Payload — le client n'envoie que des
  * `{id, qty}` + une zone + un code promo optionnel, jamais un prix ni un
  * total. Toute la logique de validation/calcul est pure et testée ailleurs
- * (`checkout-core.ts`, `promo-eval-core.ts`, `shipping-core.ts`,
- * `cart-core.ts`) — cette route ne fait que la composition + l'appel Stripe,
- * même découpage que `souscription/actions.ts` (E1/phase dons).
+ * (`checkout-core.ts`, `promo-core.ts`, `cart-quote.ts` pour le devis
+ * port/remise/total) — cette route ne fait que la composition + l'appel
+ * Stripe, même découpage que `souscription/actions.ts` (E1/phase dons).
  *
  * Garde Stripe en PREMIER, avant même de lire le corps de la requête :
  * sans clé (`donationsEnabled()`), aucun encaissement possible — 503 propre
@@ -63,25 +57,15 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const freeShippingCoupon = promoEval?.ok === true && promoEval.type === "free_shipping";
-  const discountCents =
-    promoEval?.ok === true && promoEval.type === "fixed_cart" ? promoEval.discountCents : 0;
-
-  const shipping = computeShipping({
-    cartTotalCents: validation.subtotalCents,
+  const { shipping, totals, shippingMethod } = computeCartQuote({
+    subtotalCents: validation.subtotalCents,
     zone: parsed.zone,
     manifestOnly: validation.manifestOnly,
-    freeShippingCoupon,
+    promoEval,
   });
   if (!shipping.ok) {
     return Response.json({ error: shipping.message, reason: "shipping" }, { status: 422 });
   }
-
-  const totals = computeCartTotals(validation.subtotalCents, discountCents, shipping.costCents);
-  const shippingMethod = resolveShippingMethod({
-    manifestOnly: validation.manifestOnly,
-    freeShippingCoupon,
-  });
 
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ?? `https://${(await headers()).get("host")}`;

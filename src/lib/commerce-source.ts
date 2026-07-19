@@ -1,10 +1,9 @@
 import "server-only";
 import config from "@payload-config";
 import { getPayload } from "payload";
-import { normalizePromoCode } from "@/payload/lib/promo-code";
-import type { PromoCodeLike } from "@/payload/lib/promo-eval-core";
 import { PUBLIC_BOOKS_READ } from "./catalogue-source";
 import type { CheckoutBookLookup } from "./checkout-core";
+import { normalizePromoCode, type PromoCodeLike } from "./promo-core";
 
 /**
  * Lecture Payload dédiée du parcours d'achat — le SEUL module qui relit

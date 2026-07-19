@@ -3,7 +3,7 @@
 import { getAllBooks } from "@/lib/catalogue";
 import { pickBooksByIds } from "@/lib/cart-core";
 import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
-import { evaluatePromoCode, type PromoEvalResult } from "@/payload/lib/promo-eval-core";
+import { evaluatePromoCode, type PromoEvalResult } from "@/lib/promo-core";
 import type { CartSnapshot } from "./snapshot";
 
 /**
@@ -19,7 +19,7 @@ import type { CartSnapshot } from "./snapshot";
  *    faits de vente frais (`getCommerceBookRecords`) ;
  *  - `validatePromoCode` relit un code (`getPromoCodeRecord` — normalisation
  *    et accès collection assumés par le seam) et l'évalue contre le
- *    sous-total courant (`promo-eval-core.ts`, pur).
+ *    sous-total courant (`promo-core.ts`, pur).
  *
  * Types : `./snapshot` — un fichier `"use server"` ne peut exporter que des
  * async functions.
@@ -40,7 +40,7 @@ export async function getCartSnapshot(ids: number[]): Promise<CartSnapshot> {
 
 /**
  * Valide un code promo contre le sous-total courant. `cartTotalCents` est le
- * sous-total BRUT (avant remise, cf. `promo-eval-core.ts`) — recalculé par
+ * sous-total BRUT (avant remise, cf. `promo-core.ts`) — recalculé par
  * l'appelant à partir du dernier `getCartSnapshot`, jamais transmis tel quel
  * par un simple champ de formulaire non revérifié.
  */

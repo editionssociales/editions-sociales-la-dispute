@@ -3,6 +3,7 @@ import {
   CART_MAX_CENTS,
   computeShipping,
   FREE_SHIPPING_MIN_CART_CENTS,
+  isManifestOnly,
   MANIFEST_SHIPPING_COST_CENTS,
   type ShippingRequest,
 } from "./shipping-core";
@@ -235,5 +236,23 @@ describe("computeShipping — garde-fous d'entrée (centimes entiers)", () => {
 
   it("cartTotalCents négatif → jette", () => {
     expect(() => computeShipping(request({ cartTotalCents: -1 }))).toThrow(TypeError);
+  });
+});
+
+describe("isManifestOnly — règle « panier manifeste »", () => {
+  it("panier vide → false (rien à livrer en port réduit)", () => {
+    expect(isManifestOnly([])).toBe(false);
+  });
+
+  it("toutes les lignes à port réduit → true", () => {
+    expect(
+      isManifestOnly([{ reducedShippingFlag: true }, { reducedShippingFlag: true }]),
+    ).toBe(true);
+  });
+
+  it("panier mixte (au moins une ligne standard) → false", () => {
+    expect(
+      isManifestOnly([{ reducedShippingFlag: true }, { reducedShippingFlag: false }]),
+    ).toBe(false);
   });
 });
