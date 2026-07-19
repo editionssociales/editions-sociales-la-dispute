@@ -147,333 +147,335 @@ export const Books: CollectionConfig = {
   ],
   fields: [
     {
-      name: 'title',
-      type: 'text',
-      required: true,
-      label: 'Titre',
-    },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      index: true,
-      label: 'Slug',
-      admin: {
-        description: "Identifiant d'URL — ne pas modifier après publication",
-      },
-    },
-    {
-      name: 'edition',
-      type: 'select',
-      index: true,
-      label: 'Maison',
-      options: [
-        { value: 'editions-sociales', label: 'Éditions sociales' },
-        { value: 'la-dispute', label: 'La Dispute' },
-      ],
-    },
-    {
-      name: 'origin',
-      type: 'select',
-      required: true,
-      defaultValue: 'catalogue',
-      label: 'Origine',
-      admin: {
-        position: 'sidebar',
-      },
-      options: [
-        { value: 'catalogue', label: 'Catalogue' },
-        { value: 'boutique', label: 'Boutique' },
-      ],
-    },
-    {
-      name: 'presentation',
-      type: 'richText',
-      required: true,
-      label: 'Présentation',
-      admin: {
-        disableListColumn: true,
-        description:
-          'Tant que « Contenu réédité » (barre latérale) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.',
-      },
-    },
-    {
-      name: 'presentationLegacyHtml',
-      type: 'textarea',
-      // Champ interne (parachute de parité) : jamais servi brut aux anonymes
-      // via l'API REST publique de Payload — le front le consommera via la
-      // Local API (overrideAccess) puis sanitizeCms (E4).
-      access: { read: ({ req }) => Boolean(req.user) },
-      admin: {
-        hidden: true,
-        disableListColumn: true,
-      },
-    },
-    {
-      name: 'plusLoin',
-      type: 'richText',
-      label: 'Pour aller plus loin',
-      admin: {
-        disableListColumn: true,
-      },
-    },
-    {
-      name: 'plusLoinLegacyHtml',
-      type: 'textarea',
-      access: { read: ({ req }) => Boolean(req.user) },
-      admin: {
-        hidden: true,
-        disableListColumn: true,
-      },
-    },
-    {
-      name: 'contentTouched',
-      type: 'checkbox',
-      defaultValue: false,
-      label: 'Contenu réédité',
-      access: { read: ({ req }) => Boolean(req.user) },
-      admin: {
-        position: 'sidebar',
-        readOnly: true,
-        disableListColumn: true,
-        description:
-          'Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.',
-      },
-    },
-    {
-      name: 'isbn',
-      type: 'text',
-      label: 'ISBN',
-    },
-    {
-      name: 'prix',
-      type: 'number',
-      min: 0,
-      label: 'Prix (€)',
-      admin: {
-        description:
-          'Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au ' +
-          'checkout (pratique actuelle conservée, plan phase 4 étape 8).',
-      },
-    },
-    {
-      name: 'pages',
-      type: 'number',
-      label: 'Pages',
-    },
-    {
-      name: 'dateParution',
-      type: 'date',
-      required: true,
-      label: 'Date de parution',
-      admin: {
-        date: {
-          pickerAppearance: 'dayOnly',
-          displayFormat: 'dd/MM/yyyy',
-        },
-      },
-    },
-    {
-      name: 'sortDate',
-      type: 'date',
-      required: true,
-      defaultValue: () => new Date().toISOString(),
-      admin: {
-        hidden: true,
-        description: "Clé de tri du port — parité avec l'ordre WordPress",
-      },
-    },
-    {
-      name: 'aParaitre',
-      type: 'checkbox',
-      defaultValue: false,
-      label: 'À paraître (informatif)',
-    },
-    {
-      name: 'authors',
-      type: 'relationship',
-      relationTo: 'authors',
-      hasMany: true,
-      label: 'Auteur·rice·s',
-    },
-    {
-      name: 'collection',
-      type: 'relationship',
-      relationTo: 'collections',
-      label: 'Collection',
-    },
-    {
-      name: 'cover',
-      type: 'relationship',
-      relationTo: 'media',
-      label: 'Couverture',
-      validate: validateCover,
-    },
-    {
-      name: 'coverFallbackUrl',
-      type: 'text',
-      access: { read: ({ req }) => Boolean(req.user) },
-      admin: {
-        hidden: true,
-        description:
-          'URL OVH de repli si le rapatriement du média a échoué (risque 11 du plan).',
-      },
-    },
-    {
-      name: 'tablePdf',
-      type: 'relationship',
-      relationTo: 'media',
-      label: 'Table des matières (PDF)',
-    },
-    {
-      name: 'extraitPdf',
-      type: 'relationship',
-      relationTo: 'media',
-      label: 'Extrait (PDF)',
-    },
-    {
-      name: 'buy',
-      type: 'group',
-      label: "Liens d'achat",
-      fields: [
+      type: 'tabs',
+      tabs: [
+        // Onglet par défaut (ouverture de fiche) : tout ce qui relève de la
+        // rédaction éditoriale — jamais de prix/stock/champs techniques ici
+        // (issue #24, critères d'acceptation).
         {
-          name: 'boutiqueUrl',
-          type: 'text',
-          label: 'Boutique',
-        },
-        {
-          name: 'parislibrairies',
-          type: 'text',
-          label: 'Paris Librairies',
-        },
-        {
-          name: 'lalibrairie',
-          type: 'text',
-          label: 'La Librairie',
-        },
-      ],
-    },
-    {
-      name: 'commerce',
-      type: 'group',
-      label: 'Commerce natif',
-      admin: {
-        description: 'Vente en ligne native — pilote le panier et le checkout du site.',
-      },
-      fields: [
-        {
-          name: 'sellable',
-          type: 'checkbox',
-          defaultValue: true,
-          label: 'Vendable nativement',
-          admin: {
-            description:
-              'Tout ce qui est au catalogue est vendable par défaut (décision ' +
-              'client du 13/07) — décocher pour retirer un titre de la vente ' +
-              'en ligne. Un livre non vendable reste au catalogue (jamais ' +
-              'retiré, cf. §Local Contracts). La disponibilité réelle reste ' +
-              'gouvernée par le stock (0 = épuisé) et la date de parution ' +
-              '(« à paraître » prime sur tout).',
-          },
-        },
-        {
-          name: 'stock',
-          type: 'number',
-          min: 0,
-          label: 'Stock',
-          admin: {
-            description:
-              'Champ unique pour tout ce qui se vend — livres ET produits ' +
-              'boutique-seuls/goodies (même mécanique de décrément ensuite). ' +
-              'Vide = pas de décompte saisi (disponible si vendable — même ' +
-              "fallback que les goodies). Alimenté par l'import routeur " +
-              'mensuel (suivi « routeur ») ou saisi ici à la main (suivi ' +
-              '« manuel », et possible aussi en suivi routeur — écrasé au ' +
-              'prochain fichier si la fiche y figure). Le stock EST la ' +
-              'disponibilité — pas de bascule « en stock/épuisé » séparée ' +
-              '(décision client du 12/07) ; 0 signifie épuisé sans retirer ' +
-              'la fiche du catalogue.',
-          },
-        },
-        {
-          name: 'stockSuivi',
-          type: 'select',
-          defaultValue: 'manuel',
-          label: 'Suivi du stock',
-          options: [
-            { value: 'routeur', label: 'Routeur (import mensuel)' },
-            { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
-          ],
-          admin: {
-            description:
-              "Posé à « routeur » automatiquement par l'import mensuel dès " +
-              "qu'une fiche est appariée au fichier ; « manuel » (défaut) " +
-              'pour tout le reste — goodies ET livres non suivis par le ' +
-              'routeur, traités pareil (décision client du 12/07). Une fiche ' +
-              '« routeur » absente du fichier suivant est signalée par ' +
-              "l'import (titre disparu du routeur) et garde ce mode tant " +
-              "que l'anomalie n'est pas résolue.",
-          },
-        },
-        {
-          name: 'reducedShippingFlag',
-          type: 'checkbox',
-          defaultValue: false,
-          label: 'Port réduit (« manifeste »)',
-          admin: {
-            description:
-              "Remplace l'ancienne règle « manifeste » au poids : un panier " +
-              "composé uniquement d'articles cochés bénéficie du tarif de " +
-              'port réduit plutôt que la grille standard (décision client du ' +
-              '12/07, question ouverte n°2 du plan).',
-          },
-        },
-        {
-          name: 'stockUpdatedAt',
-          type: 'date',
-          label: 'Stock mis à jour le',
-          admin: {
-            readOnly: true,
-            description:
-              "Posé automatiquement par l'import stock routeur mensuel " +
-              '(`POST /api/books/import-stock`) — jamais saisi à la main.',
-          },
-        },
-      ],
-    },
-    {
-      name: 'wpSource',
-      type: 'group',
-      label: 'Source WordPress',
-      access: { read: ({ req }) => Boolean(req.user) },
-      admin: {
-        readOnly: true,
-        description: "Clé d'upsert de la migration — vide pour les fiches nées dans Payload.",
-      },
-      fields: [
-        {
-          name: 'site',
-          type: 'select',
-          label: 'Site',
-          options: [
-            { value: 'editions-sociales', label: 'Éditions sociales' },
-            { value: 'la-dispute', label: 'La Dispute' },
+          label: 'Édition',
+          fields: [
+            {
+              name: 'title',
+              type: 'text',
+              required: true,
+              label: 'Titre',
+            },
+            {
+              name: 'slug',
+              type: 'text',
+              required: true,
+              index: true,
+              label: 'Slug',
+              admin: {
+                description: "Identifiant d'URL — ne pas modifier après publication",
+              },
+            },
+            {
+              name: 'edition',
+              type: 'select',
+              index: true,
+              label: 'Maison',
+              options: [
+                { value: 'editions-sociales', label: 'Éditions sociales' },
+                { value: 'la-dispute', label: 'La Dispute' },
+              ],
+            },
+            {
+              name: 'authors',
+              type: 'relationship',
+              relationTo: 'authors',
+              hasMany: true,
+              label: 'Auteur·rice·s',
+            },
+            {
+              name: 'collection',
+              type: 'relationship',
+              relationTo: 'collections',
+              label: 'Collection',
+            },
+            {
+              name: 'cover',
+              type: 'relationship',
+              relationTo: 'media',
+              label: 'Couverture',
+              validate: validateCover,
+            },
+            {
+              name: 'tablePdf',
+              type: 'relationship',
+              relationTo: 'media',
+              label: 'Table des matières (PDF)',
+            },
+            {
+              name: 'extraitPdf',
+              type: 'relationship',
+              relationTo: 'media',
+              label: 'Extrait (PDF)',
+            },
+            {
+              name: 'presentation',
+              type: 'richText',
+              required: true,
+              label: 'Présentation',
+              admin: {
+                disableListColumn: true,
+                description:
+                  'Tant que « Contenu réédité » (onglet Technique) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.',
+              },
+            },
+            {
+              name: 'plusLoin',
+              type: 'richText',
+              label: 'Pour aller plus loin',
+              admin: {
+                disableListColumn: true,
+              },
+            },
+            {
+              name: 'dateParution',
+              type: 'date',
+              required: true,
+              label: 'Date de parution',
+              admin: {
+                date: {
+                  pickerAppearance: 'dayOnly',
+                  displayFormat: 'dd/MM/yyyy',
+                },
+              },
+            },
+            {
+              name: 'aParaitre',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'À paraître (informatif)',
+            },
+            {
+              name: 'isbn',
+              type: 'text',
+              label: 'ISBN',
+            },
+            {
+              name: 'pages',
+              type: 'number',
+              label: 'Pages',
+            },
           ],
         },
+        // Onglet vente en ligne — prix, canaux d'achat externes, pilotage du
+        // commerce natif (panier/checkout).
         {
-          name: 'wpId',
-          type: 'number',
-          label: 'ID WordPress',
+          label: 'Commerce',
+          fields: [
+            {
+              name: 'prix',
+              type: 'number',
+              min: 0,
+              label: 'Prix (€)',
+              admin: {
+                description:
+                  'Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au checkout.',
+              },
+            },
+            {
+              name: 'origin',
+              type: 'select',
+              required: true,
+              defaultValue: 'catalogue',
+              label: 'Origine',
+              options: [
+                { value: 'catalogue', label: 'Catalogue' },
+                { value: 'boutique', label: 'Boutique' },
+              ],
+            },
+            {
+              name: 'buy',
+              type: 'group',
+              label: "Liens d'achat",
+              fields: [
+                {
+                  name: 'boutiqueUrl',
+                  type: 'text',
+                  label: 'Boutique',
+                },
+                {
+                  name: 'parislibrairies',
+                  type: 'text',
+                  label: 'Paris Librairies',
+                },
+                {
+                  name: 'lalibrairie',
+                  type: 'text',
+                  label: 'La Librairie',
+                },
+              ],
+            },
+            {
+              name: 'commerce',
+              type: 'group',
+              label: 'Commerce natif',
+              admin: {
+                description: 'Vente en ligne native — pilote le panier et le checkout du site.',
+              },
+              fields: [
+                {
+                  name: 'sellable',
+                  type: 'checkbox',
+                  defaultValue: true,
+                  label: 'Vendable nativement',
+                  admin: {
+                    description:
+                      'Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.',
+                  },
+                },
+                {
+                  name: 'stock',
+                  type: 'number',
+                  min: 0,
+                  label: 'Stock',
+                  admin: {
+                    description:
+                      'Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.',
+                  },
+                },
+                {
+                  name: 'stockSuivi',
+                  type: 'select',
+                  defaultValue: 'manuel',
+                  label: 'Suivi du stock',
+                  options: [
+                    { value: 'routeur', label: 'Routeur (import mensuel)' },
+                    { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
+                  ],
+                  admin: {
+                    description:
+                      "Posé automatiquement à « routeur » par l'import mensuel ; « manuel » (défaut) sinon.",
+                  },
+                },
+                {
+                  name: 'reducedShippingFlag',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  label: 'Port réduit (« manifeste »)',
+                  admin: {
+                    description:
+                      "Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.",
+                  },
+                },
+                {
+                  name: 'stockUpdatedAt',
+                  type: 'date',
+                  label: 'Stock mis à jour le',
+                  admin: {
+                    readOnly: true,
+                    description:
+                      "Posé automatiquement par l'import stock routeur mensuel " +
+                      '(`POST /api/books/import-stock`) — jamais saisi à la main.',
+                  },
+                },
+              ],
+            },
+          ],
         },
+        // Onglet technique — legacy WordPress, parachutes de parité, clés de
+        // migration. Reste visible pour tous les rôles (pas d'access par
+        // champ), juste relégué en dernière position (choix acté issue #24).
         {
-          name: 'wpSlug',
-          type: 'text',
-          label: 'Slug WordPress',
-        },
-        {
-          name: 'wpDate',
-          type: 'date',
-          label: 'Date WordPress',
+          label: 'Technique',
+          fields: [
+            {
+              name: 'contentTouched',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Contenu réédité',
+              access: { read: ({ req }) => Boolean(req.user) },
+              admin: {
+                readOnly: true,
+                disableListColumn: true,
+                description:
+                  'Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.',
+              },
+            },
+            {
+              name: 'wpSource',
+              type: 'group',
+              label: 'Source WordPress',
+              access: { read: ({ req }) => Boolean(req.user) },
+              admin: {
+                readOnly: true,
+                description:
+                  "Clé d'upsert de la migration — vide pour les fiches nées dans Payload.",
+              },
+              fields: [
+                {
+                  name: 'site',
+                  type: 'select',
+                  label: 'Site',
+                  options: [
+                    { value: 'editions-sociales', label: 'Éditions sociales' },
+                    { value: 'la-dispute', label: 'La Dispute' },
+                  ],
+                },
+                {
+                  name: 'wpId',
+                  type: 'number',
+                  label: 'ID WordPress',
+                },
+                {
+                  name: 'wpSlug',
+                  type: 'text',
+                  label: 'Slug WordPress',
+                },
+                {
+                  name: 'wpDate',
+                  type: 'date',
+                  label: 'Date WordPress',
+                },
+              ],
+            },
+            {
+              name: 'coverFallbackUrl',
+              type: 'text',
+              access: { read: ({ req }) => Boolean(req.user) },
+              admin: {
+                hidden: true,
+                description:
+                  'URL OVH de repli si le rapatriement du média a échoué (risque 11 du plan).',
+              },
+            },
+            {
+              name: 'sortDate',
+              type: 'date',
+              required: true,
+              defaultValue: () => new Date().toISOString(),
+              admin: {
+                hidden: true,
+                description: "Clé de tri du port — parité avec l'ordre WordPress",
+              },
+            },
+            {
+              name: 'presentationLegacyHtml',
+              type: 'textarea',
+              // Champ interne (parachute de parité) : jamais servi brut aux
+              // anonymes via l'API REST publique de Payload — le front le
+              // consommera via la Local API (overrideAccess) puis
+              // sanitizeCms (E4).
+              access: { read: ({ req }) => Boolean(req.user) },
+              admin: {
+                hidden: true,
+                disableListColumn: true,
+              },
+            },
+            {
+              name: 'plusLoinLegacyHtml',
+              type: 'textarea',
+              access: { read: ({ req }) => Boolean(req.user) },
+              admin: {
+                hidden: true,
+                disableListColumn: true,
+              },
+            },
+          ],
         },
       ],
     },
