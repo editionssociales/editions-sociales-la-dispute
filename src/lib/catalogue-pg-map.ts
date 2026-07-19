@@ -1,5 +1,5 @@
 import { convertLexicalToHTML } from "@payloadcms/richtext-lexical/html";
-import type { Author, Book as PayloadBook, Collection, Media } from "../payload-types";
+import type { Author, Book as PayloadBook, Libelle, Media } from "../payload-types";
 import type { CommerceInfo, RawBook } from "./catalogue-source";
 import type { Cover, Term } from "./types";
 
@@ -62,14 +62,21 @@ function isPopulated<T extends { id: number }>(
   return typeof value === "object" && value !== null;
 }
 
-/** `Author`/`Collection` peuplés → `Term` du port (mêmes champs `name`/`slug`). */
-function toTerm(value: number | Author | Collection | null | undefined): Term | null {
+/** `Author`/`Libelle` peuplés → `Term` du port (mêmes champs `name`/`slug`). */
+function toTerm(value: number | Author | Libelle | null | undefined): Term | null {
   return isPopulated(value) ? { name: value.name, slug: value.slug } : null;
 }
 
 function toAuthors(value: PayloadBook["authors"]): Term[] {
   return (value ?? []).flatMap((a) => {
     const term = toTerm(a);
+    return term ? [term] : [];
+  });
+}
+
+function toLibelles(value: PayloadBook["libelles"]): Term[] {
+  return (value ?? []).flatMap((l) => {
+    const term = toTerm(l);
     return term ? [term] : [];
   });
 }
@@ -110,7 +117,7 @@ export function payloadBookToRawBook(doc: PayloadBook): RawBook {
     title: doc.title,
     // Auteurs déjà en forme d'affichage (la migration convertit `Nom/Prénom` à l'import).
     authors: toAuthors(doc.authors),
-    collection: toTerm(doc.collection),
+    libelles: toLibelles(doc.libelles),
     isbn: doc.isbn ?? null,
     price: doc.prix ?? null,
     pages: doc.pages ?? null,

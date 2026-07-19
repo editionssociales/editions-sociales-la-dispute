@@ -24,7 +24,7 @@ const book = (over: Partial<Book> & Pick<Book, "id" | "slug" | "title">): Book =
   edition: "editions-sociales",
   origin: "catalogue",
   authors: [],
-  collection: null,
+  libelles: [],
   isbn: null,
   price: 20,
   pages: null,

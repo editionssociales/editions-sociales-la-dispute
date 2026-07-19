@@ -3,14 +3,12 @@ import type {
   CollectionConfig,
   RelationshipFieldSingleValidation,
 } from 'payload'
-import { ValidationError } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
 import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
-import { checkCollectionEditionMatch, resolveCollectionEditionLookup } from '../lib/books-core.ts'
 import { createBookDraftHandler } from '../lib/book-draft-handler.ts'
 import { importStockHandler } from '../lib/stock-import.ts'
 
@@ -28,47 +26,6 @@ const setContentTouched: CollectionBeforeChangeHook = ({ data, req, operation })
   }
   if (operation === 'create' || operation === 'update') {
     return { ...data, contentTouched: true }
-  }
-  return data
-}
-
-/**
- * Cohérence `collection.edition === book.edition` : une fiche rattachée à une
- * collection éditoriale ne peut pas afficher une maison différente de celle
- * de la collection. Neutralisé pendant l'import (le script de migration a
- * déjà réconcilié collections/éditions en amont — cf. plan, section migration).
- *
- * Règle pure (fusion `data`/`originalDoc`, formes de relation, comparaison)
- * dans `../lib/books-core.ts` — ce hook reste un adapter mince : `findByID`
- * (I/O) et traduction en `ValidationError` restent ici.
- */
-const ensureCollectionEditionMatches: CollectionBeforeChangeHook = async ({
-  data,
-  originalDoc,
-  req,
-}) => {
-  if (req.context?.migration) {
-    return data
-  }
-
-  const lookup = resolveCollectionEditionLookup(data, originalDoc)
-  if (!lookup) {
-    return data
-  }
-
-  const relatedCollection = await req.payload.findByID({
-    collection: 'collections',
-    id: lookup.collectionId,
-    req,
-    depth: 0,
-  })
-
-  const verdict = checkCollectionEditionMatch(lookup.bookEdition, relatedCollection?.edition)
-  if (!verdict.ok) {
-    throw new ValidationError({
-      errors: [{ path: 'collection', message: verdict.message }],
-      req,
-    })
   }
   return data
 }
@@ -105,7 +62,7 @@ export const Books: CollectionConfig = {
     group: 'Quotidien',
     useAsTitle: 'title',
     // Colonnes légères — pas de richText/legacy dans la liste (payload volumineux).
-    defaultColumns: ['title', 'edition', 'cover', 'dateParution', '_status'],
+    defaultColumns: ['title', 'edition', 'libelles', 'cover', 'dateParution', '_status'],
     listSearchableFields: ['title', 'isbn', 'slug'],
     // Chips de filtre État/Maison + bouton « Nouveau livre » (issue #26) —
     // au-dessus du tableau, cf. `BooksFilterChipsPanel.tsx` (même slot que
@@ -129,7 +86,7 @@ export const Books: CollectionConfig = {
     delete: isAdmin,
   },
   hooks: {
-    beforeChange: [setContentTouched, ensureCollectionEditionMatches],
+    beforeChange: [setContentTouched],
     afterChange: [revalidateCatalogueAfterChange],
     afterDelete: [revalidateCatalogueAfterDelete],
   },
@@ -206,10 +163,15 @@ export const Books: CollectionConfig = {
               label: 'Auteur·rice·s',
             },
             {
-              name: 'collection',
+              name: 'libelles',
               type: 'relationship',
-              relationTo: 'collections',
-              label: 'Collection',
+              relationTo: 'libelles',
+              hasMany: true,
+              label: 'Libellés',
+              admin: {
+                description:
+                  'Thèmes du catalogue (plusieurs possibles). Liste gérée sous Catalogue → Libellés.',
+              },
             },
             {
               name: 'cover',

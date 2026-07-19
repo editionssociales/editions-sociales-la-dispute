@@ -26,7 +26,7 @@ const rawBook = (
   over: Partial<RawBook> & Pick<RawBook, "id" | "slug" | "title">,
 ): RawBook => ({
   authors: [],
-  collection: null,
+  libelles: [],
   isbn: null,
   price: null,
   pages: null,
@@ -49,7 +49,7 @@ const ES_BOOKS: RawBook[] = [
     slug: "capital",
     title: "Le Capital",
     authors: [{ name: "Karl Marx", slug: "marx" }],
-    collection: { name: "GEME", slug: "geme" },
+    libelles: [{ name: "GEME", slug: "geme" }],
     price: 20,
     publishedAt: "2020-03-01",
     commerce: sellable(5),
@@ -62,7 +62,7 @@ const ES_BOOKS: RawBook[] = [
     slug: "ideologie",
     title: "L’Idéologie",
     authors: [{ name: "Karl Marx", slug: "marx" }],
-    collection: { name: "GEME", slug: "geme" },
+    libelles: [{ name: "GEME", slug: "geme" }],
     buy: {
       boutique: null,
       parislibrairies: "https://parislibrairies.fr/ideologie",
@@ -78,7 +78,7 @@ const LD_BOOKS: RawBook[] = [
     slug: "genre",
     title: "Le Genre",
     authors: [{ name: "Elsa Dorlin", slug: "dorlin" }],
-    collection: { name: "Le genre du monde", slug: "genre-monde" },
+    libelles: [{ name: "Genre & sexualités", slug: "genre-sexualites" }],
   }),
 ];
 
@@ -108,8 +108,8 @@ describe("toBook — travail indépendant de la source", () => {
 });
 
 describe("queryBooks (filtre + tri)", () => {
-  it("filtre par collection", () => {
-    expect(queryBooks(CATALOGUE, { collection: "geme" }).map((b) => b.slug).sort()).toEqual([
+  it("filtre par libellé", () => {
+    expect(queryBooks(CATALOGUE, { libelle: "geme" }).map((b) => b.slug).sort()).toEqual([
       "capital",
       "ideologie",
     ]);
@@ -130,14 +130,14 @@ describe("queryBooks (filtre + tri)", () => {
 });
 
 describe("computeFacets (facettes dynamiques)", () => {
-  it("compte les collections et renvoie le total « tous les livres »", () => {
+  it("compte les libellés et renvoie le total « tous les livres »", () => {
     const f = computeFacets(CATALOGUE, {});
-    expect(f.collections.find((c) => c.slug === "geme")?.count).toBe(2);
+    expect(f.libelles.find((c) => c.slug === "geme")?.count).toBe(2);
     expect(f.total).toBe(5);
   });
 
-  it("restreint les auteurs à la collection active (croisement des dimensions)", () => {
-    const f = computeFacets(CATALOGUE, { collection: "geme" });
+  it("restreint les auteurs au libellé actif (croisement des dimensions)", () => {
+    const f = computeFacets(CATALOGUE, { libelle: "geme" });
     expect(f.authors.map((a) => a.slug)).toEqual(["marx"]);
     expect(f.authors[0].count).toBe(2);
   });

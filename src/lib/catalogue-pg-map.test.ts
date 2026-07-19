@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lexicalToHtml, payloadBookToRawBook } from "./catalogue-pg-map";
-import type { Author, Book as PayloadBook, Collection, Media } from "../payload-types";
+import type { Author, Book as PayloadBook, Libelle, Media } from "../payload-types";
 
 /* -------- fixtures -------- */
 
@@ -40,11 +40,10 @@ const AUTHOR: Author = {
   createdAt: "",
 };
 
-const COLLECTION: Collection = {
+const LIBELLE: Libelle = {
   id: 1,
   name: "GEME",
   slug: "geme",
-  edition: "editions-sociales",
   updatedAt: "",
   createdAt: "",
 };
@@ -85,7 +84,7 @@ function book(overrides: Partial<PayloadBook> = {}): PayloadBook {
     sortDate: "2020-03-01T00:00:00.000Z",
     aParaitre: false,
     authors: [AUTHOR],
-    collection: COLLECTION,
+    libelles: [LIBELLE],
     cover: COVER,
     tablePdf: TABLE_PDF,
     extraitPdf: null,
@@ -102,7 +101,7 @@ function book(overrides: Partial<PayloadBook> = {}): PayloadBook {
 }
 
 describe("payloadBookToRawBook — mapping droit, sans enveloppe WordPress", () => {
-  it("mappe une fiche complète (auteurs, collection, cover, PDF, liens d'achat)", () => {
+  it("mappe une fiche complète (auteurs, libellés, cover, PDF, liens d'achat)", () => {
     const raw = payloadBookToRawBook(book());
 
     expect(raw.id).toBe(42);
@@ -110,7 +109,7 @@ describe("payloadBookToRawBook — mapping droit, sans enveloppe WordPress", () 
     expect(raw.title).toBe("Le Capital");
     expect(raw.isbn).toBe("978-2-35367-000-0");
     expect(raw.authors).toEqual([{ name: "Karl Marx", slug: "marx" }]);
-    expect(raw.collection).toEqual({ name: "GEME", slug: "geme" });
+    expect(raw.libelles).toEqual([{ name: "GEME", slug: "geme" }]);
     expect(raw.cover).toEqual({
       url: "https://blob.example/cover.jpg",
       width: 400,
@@ -192,12 +191,12 @@ describe("payloadBookToRawBook — mapping droit, sans enveloppe WordPress", () 
     expect(raw.authors).toEqual([{ name: "Karl Marx", slug: "marx" }]);
   });
 
-  it("tolère authors/collection/cover absents", () => {
+  it("tolère authors/libelles/cover absents", () => {
     const raw = payloadBookToRawBook(
-      book({ authors: null, collection: null, cover: null, tablePdf: null, extraitPdf: null }),
+      book({ authors: null, libelles: null, cover: null, tablePdf: null, extraitPdf: null }),
     );
     expect(raw.authors).toEqual([]);
-    expect(raw.collection).toBeNull();
+    expect(raw.libelles).toEqual([]);
     expect(raw.cover).toBeNull();
     expect(raw.tocUrl).toBeNull();
     expect(raw.excerptUrl).toBeNull();

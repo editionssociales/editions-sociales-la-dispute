@@ -7,7 +7,7 @@ import type { Book } from '../../payload-types.ts'
  * requête et assemblage des données du brouillon. Aucune I/O ici :
  * `payload.find`/`payload.create` (résolution des slugs existants, écriture)
  * restent dans `book-draft-handler.ts`, même découpage pur/impur que
- * `books-core.ts`/`stock-import-core.ts`.
+ * `stock-import-core.ts`.
  */
 
 /** Slug dérivé du titre : minuscules, diacritiques retirés, tirets, bornes propres. */

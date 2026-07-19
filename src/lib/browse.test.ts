@@ -21,7 +21,7 @@ const makeBook = (id: number, overrides: Partial<Book> = {}): Book => ({
   slug: `livre-${id}`,
   title: `Livre ${id}`,
   authors: [],
-  collection: null,
+  libelles: [],
   isbn: null,
   price: null,
   pages: null,
@@ -33,7 +33,7 @@ const makeBook = (id: number, overrides: Partial<Book> = {}): Book => ({
   ...overrides,
 });
 
-const noFacets = { collections: [] as Facet[], authors: [] as Facet[], total: 0 };
+const noFacets = { libelles: [] as Facet[], authors: [] as Facet[], total: 0 };
 
 describe("paginate", () => {
   it("borne, découpe et compte (page pleine)", () => {
@@ -78,31 +78,31 @@ describe("catalogueHref", () => {
   });
 
   it("encode un filtre", () => {
-    expect(catalogueHref({ collection: "geme" })).toBe("/catalogue?collection=geme");
+    expect(catalogueHref({ libelle: "geme" })).toBe("/catalogue?libelle=geme");
   });
 
   it("omet la page 1", () => {
     expect(catalogueHref({ page: 1 })).toBe("/catalogue");
-    expect(catalogueHref({ collection: "geme", page: 2 })).toContain("page=2");
+    expect(catalogueHref({ libelle: "geme", page: 2 })).toContain("page=2");
   });
 
   it("respecte un basePath (édition dans le chemin)", () => {
-    expect(catalogueHref({ collection: "geme" }, "/catalogue/editions-sociales")).toBe(
-      "/catalogue/editions-sociales?collection=geme",
+    expect(catalogueHref({ libelle: "geme" }, "/catalogue/editions-sociales")).toBe(
+      "/catalogue/editions-sociales?libelle=geme",
     );
   });
 });
 
 describe("withFilter / withoutFilter / clearFilters", () => {
   it("pose un filtre et remet à la page 1", () => {
-    expect(withFilter({ collection: "a", page: 3 }, "collection", "b")).toEqual({
-      collection: "b",
+    expect(withFilter({ libelle: "a", page: 3 }, "libelle", "b")).toEqual({
+      libelle: "b",
       page: undefined,
     });
   });
 
   it("retire un filtre avec une valeur vide", () => {
-    expect(withFilter({ collection: "a" }, "collection", "").collection).toBeUndefined();
+    expect(withFilter({ libelle: "a" }, "libelle", "").libelle).toBeUndefined();
   });
 
   it("valide l'édition et le tri, ignore les valeurs inconnues", () => {
@@ -118,14 +118,14 @@ describe("withFilter / withoutFilter / clearFilters", () => {
   });
 
   it("withoutFilter retire par nom de paramètre et remet à la page 1", () => {
-    const r = withoutFilter({ q: "x", collection: "a", page: 4 }, "q");
+    const r = withoutFilter({ q: "x", libelle: "a", page: 4 }, "q");
     expect(r.q).toBeUndefined();
-    expect(r.collection).toBe("a");
+    expect(r.libelle).toBe("a");
     expect(r.page).toBeUndefined();
   });
 
   it("clearFilters ne conserve que le tri", () => {
-    expect(clearFilters({ collection: "a", sort: "titre", edition: "la-dispute" })).toEqual({
+    expect(clearFilters({ libelle: "a", sort: "titre", edition: "la-dispute" })).toEqual({
       sort: "titre",
     });
   });
@@ -133,17 +133,17 @@ describe("withFilter / withoutFilter / clearFilters", () => {
 
 describe("readFilters (inverse de l'encodeur)", () => {
   it("relit une query string en filtres validés", () => {
-    const f = readFilters(new URLSearchParams("collection=geme&page=2&sort=titre&upcoming=1"));
-    expect(f).toMatchObject({ collection: "geme", page: 2, sort: "titre", upcoming: true });
+    const f = readFilters(new URLSearchParams("libelle=geme&page=2&sort=titre&upcoming=1"));
+    expect(f).toMatchObject({ libelle: "geme", page: 2, sort: "titre", upcoming: true });
   });
 
   it("premier gagnant sur clé dupliquée (aligné sur le serveur)", () => {
-    // ?collection=a&collection=b → le serveur (parseBookFilters) prend v[0]=\"a\".
-    expect(readFilters(new URLSearchParams("collection=a&collection=b")).collection).toBe("a");
+    // ?libelle=a&libelle=b → le serveur (parseBookFilters) prend v[0]=\"a\".
+    expect(readFilters(new URLSearchParams("libelle=a&libelle=b")).libelle).toBe("a");
   });
 
   it("aller-retour encode ∘ relit conserve les filtres", () => {
-    const original = { collection: "geme", author: "marx", sort: "ancien" as const, page: 2 };
+    const original = { libelle: "geme", author: "marx", sort: "ancien" as const, page: 2 };
     const href = catalogueHref(original);
     const qs = href.split("?")[1] ?? "";
     expect(readFilters(new URLSearchParams(qs))).toMatchObject(original);
@@ -152,14 +152,14 @@ describe("readFilters (inverse de l'encodeur)", () => {
 
 describe("activeChips", () => {
   const ctx = {
-    collections: [{ slug: "geme", name: "GEME" }],
+    libelles: [{ slug: "geme", name: "GEME" }],
     authors: [{ slug: "marx", name: "Karl Marx" }],
   };
 
   it("dérive un chip par filtre actif avec libellés résolus", () => {
-    const chips = activeChips({ q: "état", collection: "geme", author: "marx", upcoming: true }, ctx);
-    expect(chips.map((c) => c.param)).toEqual(["q", "collection", "author", "upcoming"]);
-    expect(chips.find((c) => c.param === "collection")?.label).toBe("GEME");
+    const chips = activeChips({ q: "état", libelle: "geme", author: "marx", upcoming: true }, ctx);
+    expect(chips.map((c) => c.param)).toEqual(["q", "libelle", "author", "upcoming"]);
+    expect(chips.find((c) => c.param === "libelle")?.label).toBe("GEME");
     expect(chips.find((c) => c.param === "author")?.label).toBe("Karl Marx");
   });
 
@@ -198,7 +198,7 @@ describe("buildCatalogueView", () => {
 
   it("passe les facettes telles quelles", () => {
     const facets = {
-      collections: [{ slug: "geme", name: "GEME", count: 3 }],
+      libelles: [{ slug: "geme", name: "GEME", count: 3 }],
       authors: [{ slug: "marx", name: "Karl Marx", count: 5 }],
       total: 8,
     };

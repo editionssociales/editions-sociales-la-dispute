@@ -44,13 +44,13 @@ export interface CatalogueView {
   totalPages: number;
   total: number;
   isUpcoming: boolean;
-  facets: { collections: Facet[]; authors: Facet[]; total: number };
+  facets: { libelles: Facet[]; authors: Facet[]; total: number };
 }
 
 /** Assemble la vue catalogue à partir des livres filtrés, des facettes et des filtres actifs. */
 export function buildCatalogueView(
   all: Book[],
-  facets: { collections: Facet[]; authors: Facet[]; total: number },
+  facets: { libelles: Facet[]; authors: Facet[]; total: number },
   filters: BookFilters,
 ): CatalogueView {
   const { items, page, totalPages, total } = paginate(all, filters.page);
@@ -91,7 +91,7 @@ export function readFilters(params: URLSearchParams): BookFilters {
 
 /* ------------------------------- algèbre filtres ------------------------------- */
 
-export type FilterField = "edition" | "collection" | "author" | "q" | "sort" | "upcoming";
+export type FilterField = "edition" | "libelle" | "author" | "q" | "sort" | "upcoming";
 
 const SORTS: BookSort[] = ["recent", "ancien", "titre"];
 
@@ -105,8 +105,8 @@ export function withFilter(filters: BookFilters, field: FilterField, value: stri
     case "edition":
       next.edition = value && isEditionSlug(value) ? value : undefined;
       break;
-    case "collection":
-      next.collection = value || undefined;
+    case "libelle":
+      next.libelle = value || undefined;
       break;
     case "author":
       next.author = value || undefined;
@@ -124,7 +124,7 @@ export function withFilter(filters: BookFilters, field: FilterField, value: stri
   return next;
 }
 
-/** Retire un filtre par son nom de paramètre d'URL (`q`, `edition`, `collection`, `author`, `upcoming`). */
+/** Retire un filtre par son nom de paramètre d'URL (`q`, `edition`, `libelle`, `author`, `upcoming`). */
 export function withoutFilter(filters: BookFilters, param: string): BookFilters {
   return withFilter(filters, param as FilterField, "");
 }
@@ -144,7 +144,7 @@ export interface ActiveChip {
 }
 
 export interface ChipContext {
-  collections: { slug: string; name: string }[];
+  libelles: { slug: string; name: string }[];
   authors: { slug: string; name: string }[];
   /** Édition verrouillée par le chemin (pages `/catalogue/[edition]`) : pas de chip maison. */
   lockedEdition?: string;
@@ -158,9 +158,9 @@ export function activeChips(filters: BookFilters, ctx: ChipContext): ActiveChip[
     const e = EDITION_LIST.find((x) => x.slug === filters.edition);
     chips.push({ param: "edition", type: "maison", label: e?.name ?? filters.edition });
   }
-  if (filters.collection) {
-    const c = ctx.collections.find((x) => x.slug === filters.collection);
-    chips.push({ param: "collection", type: "thème", label: c?.name ?? filters.collection });
+  if (filters.libelle) {
+    const l = ctx.libelles.find((x) => x.slug === filters.libelle);
+    chips.push({ param: "libelle", type: "libellé", label: l?.name ?? filters.libelle });
   }
   if (filters.author) {
     const a = ctx.authors.find((x) => x.slug === filters.author);

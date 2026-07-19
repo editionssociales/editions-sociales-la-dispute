@@ -122,7 +122,7 @@ async function redirects() {
       // 3-5 — taxonomies WP → facettes de l'archive ES (mêmes clés que
       // `parseBookFilters`, `src/lib/parse-filters.ts:14-25`).
       r({ source: "/auteur/:slug", destination: "/catalogue/editions-sociales?author=:slug" }),
-      r({ source: "/collection/:slug", destination: "/catalogue/editions-sociales?collection=:slug" }),
+      r({ source: "/collection/:slug", destination: "/catalogue/editions-sociales?libelle=:slug" }),
       r({ source: "/parution/:slug", destination: "/catalogue/editions-sociales?upcoming=1" }),
       // 6 — anciennes pages d'archive par taxonomie
       r({ source: "/catalogue-collection", destination: "/catalogue/editions-sociales" }),
@@ -154,7 +154,7 @@ async function redirects() {
       r({ source: "/auteur/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute?author=:slug" }),
       r({
         source: "/collection/:slug",
-        destination: "https://editionssociales.fr/catalogue/la-dispute?collection=:slug",
+        destination: "https://editionssociales.fr/catalogue/la-dispute?libelle=:slug",
       }),
       r({ source: "/parution/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute?upcoming=1" }),
       // 7 — page « à propos » LD → page « éditions » dédiée du site unifié

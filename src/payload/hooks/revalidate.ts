@@ -48,7 +48,7 @@ function revalidateHome(): void {
 }
 
 /**
- * Hooks `books`/`authors`/`collections`/`media` : toute fiche de ces
+ * Hooks `books`/`authors`/`libelles`/`media` : toute fiche de ces
  * collections peut apparaître sur n'importe quelle page catalogue (listes,
  * facettes, fiche détail) — on revalide donc large plutôt que de tenter un
  * ciblage fin par relation inverse (hors budget de cette étape, 0,5 j).

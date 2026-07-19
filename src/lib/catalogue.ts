@@ -74,7 +74,7 @@ export async function countBooks(edition?: EditionSlug): Promise<number> {
 
 export async function getFacets(
   filters: BookFilters = {},
-): Promise<{ collections: Facet[]; authors: Facet[]; total: number }> {
+): Promise<{ libelles: Facet[]; authors: Facet[]; total: number }> {
   return computeFacets(await getAllBooks(), filters);
 }
 

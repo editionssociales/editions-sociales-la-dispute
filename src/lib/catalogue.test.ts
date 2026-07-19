@@ -15,7 +15,7 @@ const rawBook = (id: number, over: Partial<RawBook> = {}): RawBook => ({
   slug: `livre-${id}`,
   title: `Livre ${id}`,
   authors: [],
-  collection: null,
+  libelles: [],
   isbn: null,
   price: null,
   pages: null,

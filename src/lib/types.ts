@@ -14,7 +14,7 @@ export type SourceKey = "es" | "ld" | "boutique";
 /** Les deux fonds historiques réunis dans la maison. */
 export type EditionSlug = "editions-sociales" | "la-dispute";
 
-/** Un terme de taxonomie (auteur, collection). */
+/** Un terme de taxonomie (auteur, libellé). */
 export interface Term {
   name: string;
   slug: string;
@@ -58,7 +58,8 @@ export interface Book {
   slug: string;
   title: string;
   authors: Term[];
-  collection: Term | null;
+  /** Libellés thématiques (0..n) — remplacent l'ancienne collection unique. */
+  libelles: Term[];
   isbn: string | null;
   /** Prix affiché : celui de la boutique si résolu, sinon le prix catalogue. */
   price: number | null;
@@ -94,7 +95,8 @@ export interface BookDetail extends Book {
 /** Filtres appliqués au catalogue. */
 export interface BookFilters {
   edition?: EditionSlug;
-  collection?: string;
+  /** Slug d'un libellé thématique (`?libelle=`). */
+  libelle?: string;
   author?: string;
   q?: string;
   sort?: BookSort;

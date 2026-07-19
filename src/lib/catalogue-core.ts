@@ -47,7 +47,7 @@ export function toBook(
     // saisi dans Payload mérite ses insécables autant qu'un titre WordPress.
     title: frenchTypo(raw.title),
     authors: raw.authors,
-    collection: raw.collection,
+    libelles: raw.libelles,
     isbn: raw.isbn,
     price: raw.price,
     pages: raw.pages,
@@ -143,15 +143,15 @@ export function buildNativeCatalogue(
 
 /* ------------------------------- requêtes ------------------------------- */
 
-const FILTER_KEYS = ["edition", "collection", "author", "q", "upcoming"] as const;
+const FILTER_KEYS = ["edition", "libelle", "author", "q", "upcoming"] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 
 function matches(book: Book, filters: BookFilters, key: FilterKey): boolean {
   switch (key) {
     case "edition":
       return !filters.edition || book.edition === filters.edition;
-    case "collection":
-      return !filters.collection || book.collection?.slug === filters.collection;
+    case "libelle":
+      return !filters.libelle || book.libelles.some((l) => l.slug === filters.libelle);
     case "author":
       return !filters.author || book.authors.some((a) => a.slug === filters.author);
     case "q": {
@@ -211,22 +211,22 @@ function tally(books: Book[], terms: (b: Book) => Term[]): Facet[] {
 /**
  * Facettes **dynamiques** : les options de chaque dimension sont calculées à
  * partir des livres qui correspondent à *toutes les autres* dimensions
- * actives — sélectionner une collection ne laisse dans la liste des auteurs
+ * actives — sélectionner un libellé ne laisse dans la liste des auteurs
  * que ceux qui y publient, et inversement.
  */
 export function computeFacets(
   all: Book[],
   filters: BookFilters = {},
-): { collections: Facet[]; authors: Facet[]; total: number } {
-  const forCollections = filterBooks(all, filters, ["collection"]);
+): { libelles: Facet[]; authors: Facet[]; total: number } {
+  const forLibelles = filterBooks(all, filters, ["libelle"]);
   const forAuthors = filterBooks(all, filters, ["author"]);
   return {
-    collections: tally(forCollections, (b) => (b.collection ? [b.collection] : [])),
+    libelles: tally(forLibelles, (b) => b.libelles),
     authors: tally(forAuthors, (b) => b.authors),
-    // Total de la cellule « Tous les livres » du menu thèmes : les mêmes livres
-    // que la tally des collections (toutes les dimensions sauf collection),
-    // pas `allBooks.length` qui serait déjà restreint si une collection est active.
-    total: forCollections.length,
+    // Total de la cellule « Tous les livres » du menu libellés : les mêmes livres
+    // que la tally des libellés (toutes les dimensions sauf libelle),
+    // pas `allBooks.length` qui serait déjà restreint si un libellé est actif.
+    total: forLibelles.length,
   };
 }
 

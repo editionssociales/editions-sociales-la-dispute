@@ -19,18 +19,18 @@ import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
 
 interface Props {
-  collections: Facet[];
+  libelles: Facet[];
   authors: Facet[];
   /** Si défini, l'édition est verrouillée (pages /catalogue/[edition]). */
   lockedEdition?: string;
   /** Nombre total de titres, pour l'étiquette « Tous les livres ». */
   totalCount?: number;
   /**
-   * Masque les étiquettes de collection — la mosaïque de thèmes de
-   * `/catalogue/[edition]` couvre déjà ce rôle, une double navigation par
-   * thème sur la même page serait un doublon.
+   * Masque les étiquettes de libellé — la mosaïque de `/catalogue/[edition]`
+   * couvre déjà ce rôle, une double navigation sur la même page serait un
+   * doublon.
    */
-  hideCollections?: boolean;
+  hideLibelles?: boolean;
 }
 
 const SORTS = [
@@ -48,7 +48,7 @@ const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-ink";
 const FIELD_CLASS = `bg-paper px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_RING_LIGHT}`;
 const SELECT_CLASS = `${FIELD_CLASS} cursor-pointer`;
 
-/** Étiquette cliquable (thème, maison) — cellule inversante à l'état actif. */
+/** Étiquette cliquable (libellé, maison) — cellule inversante à l'état actif. */
 function Tag({
   active,
   onClick,
@@ -71,11 +71,11 @@ function Tag({
 }
 
 export function CatalogueFilters({
-  collections,
+  libelles,
   authors,
   lockedEdition,
   totalCount,
-  hideCollections,
+  hideLibelles,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -122,13 +122,13 @@ export function CatalogueFilters({
     pushFilters(clearFilters(filters));
   };
 
-  const activeCollection = filters.collection ?? "";
+  const activeLibelle = filters.libelle ?? "";
   const activeEdition = filters.edition ?? "";
-  const chips = activeChips(filters, { collections, authors, lockedEdition });
-  // Rangée de thèmes/maisons : vide quand les deux sources sont masquées
-  // (typiquement /catalogue/[edition], où hideCollections ET lockedEdition
+  const chips = activeChips(filters, { libelles, authors, lockedEdition });
+  // Rangée de libellés/maisons : vide quand les deux sources sont masquées
+  // (typiquement /catalogue/[edition], où hideLibelles ET lockedEdition
   // sont posés — la mosaïque au-dessus couvre déjà ce rôle).
-  const hasTags = !hideCollections || !lockedEdition;
+  const hasTags = !hideLibelles || !lockedEdition;
 
   return (
     <div
@@ -143,21 +143,21 @@ export function CatalogueFilters({
         <FramedGrid
           flow="flex"
           role="group"
-          aria-label="Thèmes du catalogue"
+          aria-label="Libellés du catalogue"
           className="items-stretch overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
         >
-          {!hideCollections && (
+          {!hideLibelles && (
             <>
-              <Tag active={activeCollection === ""} onClick={() => setFilter("collection", "")}>
+              <Tag active={activeLibelle === ""} onClick={() => setFilter("libelle", "")}>
                 Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
               </Tag>
-              {collections.map((c) => (
+              {libelles.map((l) => (
                 <Tag
-                  key={c.slug}
-                  active={activeCollection === c.slug}
-                  onClick={() => setFilter("collection", c.slug)}
+                  key={l.slug}
+                  active={activeLibelle === l.slug}
+                  onClick={() => setFilter("libelle", l.slug)}
                 >
-                  {c.name} ({c.count})
+                  {l.name} ({l.count})
                 </Tag>
               ))}
             </>

@@ -8,6 +8,8 @@
  * reste dans les composants ; ce module ne porte que le contenu et la logique.
  */
 
+import { resolveLibelleSlug } from "./libelles";
+
 export type NavSectionId = "catalogue" | "geme" | "a-paraitre" | "agenda";
 
 /** Lecture minimale des query params (URLSearchParams ou objet get-only). */
@@ -29,6 +31,12 @@ function param(search: NavSearch | null | undefined, name: string): string | nul
   return search?.get(name) ?? null;
 }
 
+/** Libellé GEME actif — accepte `?libelle=geme` et l'ancien `?collection=geme`. */
+function isGemeFilter(search: NavSearch | null | undefined): boolean {
+  const raw = param(search, "libelle") || param(search, "collection");
+  return resolveLibelleSlug(raw) === "geme";
+}
+
 export const NAV_SECTIONS: NavSection[] = [
   {
     id: "catalogue",
@@ -37,7 +45,7 @@ export const NAV_SECTIONS: NavSection[] = [
     isActive: (p, search) => {
       if (!p.startsWith("/catalogue")) return false;
       // Geme et À paraître ont leurs propres cellules.
-      if (p.startsWith("/catalogue/editions-sociales") && param(search, "collection") === "geme") {
+      if (p.startsWith("/catalogue/editions-sociales") && isGemeFilter(search)) {
         return false;
       }
       if ((p === "/catalogue" || p === "/catalogue/") && param(search, "upcoming") === "1") {
@@ -49,9 +57,8 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "geme",
     label: "La Geme",
-    href: "/catalogue/editions-sociales?collection=geme",
-    isActive: (p, search) =>
-      p.startsWith("/catalogue/editions-sociales") && param(search, "collection") === "geme",
+    href: "/catalogue/editions-sociales?libelle=geme",
+    isActive: (p, search) => p.startsWith("/catalogue/editions-sociales") && isGemeFilter(search),
   },
   {
     id: "a-paraitre",

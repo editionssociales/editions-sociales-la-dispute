@@ -10,7 +10,7 @@ import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
 import { Authors } from './payload/collections/Authors.ts'
-import { BookCollections } from './payload/collections/BookCollections.ts'
+import { BookLabels } from './payload/collections/BookLabels.ts'
 import { Books } from './payload/collections/Books.ts'
 import { Highlight } from './payload/collections/Highlight.ts'
 import { ImportRuns } from './payload/collections/ImportRuns.ts'
@@ -67,7 +67,7 @@ export default buildConfig({
     },
   },
   // Ordre = ordre des groupes dans la nav admin (issue #25) : Quotidien
-  // (Books, Orders, Media) → Catalogue (Authors, BookCollections, Highlight)
+  // (Books, Orders, Media) → Catalogue (Authors, BookLabels, Highlight)
   // → Boutique (PromoCodes, ImportRuns) → Site (Users, cf. les globals
   // ci-dessous pour la suite du groupe « Site »).
   collections: [
@@ -75,7 +75,7 @@ export default buildConfig({
     Orders,
     Media,
     Authors,
-    BookCollections,
+    BookLabels,
     Highlight,
     PromoCodes,
     ImportRuns,

@@ -45,7 +45,7 @@ async function CatalogueBody({
       <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
 
       <PageHero
-        title={isUpcoming ? "Les livres à paraître" : "Le catalogue par thèmes"}
+        title={isUpcoming ? "Les livres à paraître" : "Le catalogue par libellés"}
         className="max-w-2xl"
       >
         {/* Le rayon boutique (goodies, manuels…) n'a pas sa place dans cette
@@ -65,7 +65,7 @@ async function CatalogueBody({
 
       <div className="mt-6 sm:mt-7">
         <CatalogueFilters
-          collections={facets.collections}
+          libelles={facets.libelles}
           authors={facets.authors}
           totalCount={facets.total}
         />
