@@ -151,7 +151,7 @@ export interface Book {
   id: number;
   title: string;
   /**
-   * Identifiant d'URL — ne pas modifier après publication
+   * Prérempli depuis le titre — ne pas modifier après publication
    */
   slug: string;
   edition?: ('editions-sociales' | 'la-dispute') | null;
@@ -160,11 +160,20 @@ export interface Book {
    * Thèmes du catalogue (plusieurs possibles). Liste gérée sous Catalogue → Libellés.
    */
   libelles?: (number | Libelle)[] | null;
+  /**
+   * Téléversez une image (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
+   */
   cover?: (number | null) | Media;
+  /**
+   * Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
+   */
   tablePdf?: (number | null) | Media;
+  /**
+   * Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
+   */
   extraitPdf?: (number | null) | Media;
   /**
-   * Tant que « Contenu réédité » (onglet Technique) est décoché, le site sert le HTML WordPress d’origine, pas ce Lexical.
+   * À la première sauvegarde humaine, ce texte Lexical remplace le HTML WordPress d’origine sur le site.
    */
   presentation: {
     root: {
@@ -198,6 +207,9 @@ export interface Book {
   } | null;
   dateParution: string;
   aParaitre?: boolean | null;
+  /**
+   * ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.
+   */
   isbn?: string | null;
   pages?: number | null;
   /**
@@ -219,6 +231,10 @@ export interface Book {
      */
     sellable?: boolean | null;
     /**
+     * Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.
+     */
+    reducedShippingFlag?: boolean | null;
+    /**
      * Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.
      */
     stock?: number | null;
@@ -227,34 +243,18 @@ export interface Book {
      */
     stockSuivi?: ('routeur' | 'manuel') | null;
     /**
-     * Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.
-     */
-    reducedShippingFlag?: boolean | null;
-    /**
      * Posé automatiquement par l'import stock routeur mensuel (`POST /api/books/import-stock`) — jamais saisi à la main.
      */
     stockUpdatedAt?: string | null;
   };
-  /**
-   * Coché automatiquement dès qu’une humaine enregistre la fiche. Décoché = le front (source pg) affiche encore le HTML WordPress migrée.
-   */
   contentTouched?: boolean | null;
-  /**
-   * Clé d'upsert de la migration — vide pour les fiches nées dans Payload.
-   */
   wpSource?: {
     site?: ('editions-sociales' | 'la-dispute') | null;
     wpId?: number | null;
     wpSlug?: string | null;
     wpDate?: string | null;
   };
-  /**
-   * URL OVH de repli si le rapatriement du média a échoué (risque 11 du plan).
-   */
   coverFallbackUrl?: string | null;
-  /**
-   * Clé de tri du port — parité avec l'ordre WordPress
-   */
   sortDate: string;
   presentationLegacyHtml?: string | null;
   plusLoinLegacyHtml?: string | null;
@@ -313,6 +313,9 @@ export interface Libelle {
  */
 export interface Media {
   id: number;
+  /**
+   * Rempli automatiquement à la sauvegarde du livre (couverture, table des matières ou extrait — titre + auteur·rice·s). Non modifiable à la main.
+   */
   alt?: string | null;
   /**
    * Clé d'idempotence de la migration
@@ -649,9 +652,9 @@ export interface BooksSelect<T extends boolean = true> {
     | T
     | {
         sellable?: T;
+        reducedShippingFlag?: T;
         stock?: T;
         stockSuivi?: T;
-        reducedShippingFlag?: T;
         stockUpdatedAt?: T;
       };
   contentTouched?: T;

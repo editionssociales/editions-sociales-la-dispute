@@ -13,3 +13,20 @@
 .dashboard .collections {
   display: none;
 }
+
+/*
+ * Médias fiche livre (couverture, table des matières, extrait) :
+ * téléversement + preview uniquement — masque « Choisir parmi les
+ * existants » (Payload n'a pas encore `allowSelectExisting: false`,
+ * discussion upstream #17028). Classe posée sur ces champs
+ * (`Books.ts`, `admin.className`).
+ */
+.book-upload-only {
+  .upload__listToggler {
+    display: none;
+  }
+
+  .upload__dropzoneContent__buttons > .upload__dropzoneContent__orText {
+    display: none;
+  }
+}
