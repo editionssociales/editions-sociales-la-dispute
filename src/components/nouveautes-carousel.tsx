@@ -265,7 +265,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
         onDragStart={(e) => e.preventDefault()}
-        className="flex cursor-grab select-none items-center gap-[clamp(14px,1.6vw,26px)] overflow-x-auto px-[calc(50%_-_clamp(96px,11vw,132px))] pb-[clamp(20px,3vw,40px)] pt-[clamp(24px,4vw,52px)] [--cover-h:clamp(272px,32vw,392px)] [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex cursor-grab select-none items-center gap-[clamp(14px,1.6vw,26px)] overflow-x-auto px-[calc(50%_-_clamp(96px,11vw,132px))] pb-[clamp(20px,3vw,40px)] pt-[clamp(24px,4vw,52px)] [--cover-h:clamp(200px,32vw,392px)] [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {books.map((book, i) => (
           <li key={book.href} data-card className="flex-none [scroll-snap-align:center]">
@@ -306,17 +306,25 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   return (
     <section aria-label="Nouveautés">
       {/* Titre de section sur la même rangée que les flèches (titre à gauche,
-          flèches à droite) — même mise en forme que l'ancien en-tête de page. */}
+          flèches à droite) — même mise en forme que l'ancien en-tête de page.
+          h2 (pas h1) : le héros de marque en tête de page porte désormais le
+          h1 unique de l'accueil (chantier 4 §1). */}
       <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-between gap-4 px-[clamp(16px,4vw,64px)]">
         <div className="min-w-0">
           <Eyebrow>
             Les Éditions sociales × La Dispute
           </Eyebrow>
-          <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.98] text-ink">
+          <h2 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.98] text-ink">
             Nouveautés
-          </h1>
+          </h2>
         </div>
-        <div className="flex flex-none gap-2">
+        <div className="flex flex-none items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex items-center pr-1 font-sans text-xs font-bold uppercase tracking-[.08em] text-ink-soft"
+          >
+            {String(active + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
+          </span>
           <button
             type="button"
             aria-label="Couverture précédente"
