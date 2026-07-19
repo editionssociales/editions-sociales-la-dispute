@@ -56,22 +56,22 @@ export default async function MerciPage({
   const order = await lookupOrder(sessionId);
 
   return (
-    <section className="bg-white">
+    <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
         <Eyebrow>Commande</Eyebrow>
         {order && <ClearCartOnConfirmation />}
         {order ? (
           <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               {order.pending ? "Paiement en cours de confirmation" : "Merci pour votre commande !"}
             </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-black/70">
+            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
               {order.pending ? (
                 "Votre paiement est en cours de confirmation — vous recevrez un email dès qu'il sera validé, sans action de votre part."
               ) : (
                 <>
                   Votre commande de{" "}
-                  <strong className="font-bold text-black">
+                  <strong className="font-bold text-ink">
                     {order.totalTTC.toLocaleString("fr-FR")}&nbsp;€
                   </strong>{" "}
                   a bien été enregistrée
@@ -79,7 +79,7 @@ export default async function MerciPage({
                     <>
                       {" "}
                       — un email de confirmation a été envoyé à{" "}
-                      <strong className="font-bold text-black">{order.email}</strong>
+                      <strong className="font-bold text-ink">{order.email}</strong>
                     </>
                   ) : null}
                   .
@@ -89,10 +89,10 @@ export default async function MerciPage({
           </>
         ) : (
           <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               Merci pour votre commande !
             </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-black/70">
+            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
               Votre commande a bien été prise en compte. Si le paiement a
               abouti, un email de confirmation vous a été envoyé.
             </p>

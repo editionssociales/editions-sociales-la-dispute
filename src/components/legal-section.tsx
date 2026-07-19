@@ -11,18 +11,18 @@ import type { SafeHtml } from "@/lib/cms-html";
  */
 
 const H2_CLASS =
-  "font-sans text-2xl font-black italic leading-[0.98] text-black sm:text-3xl";
+  "font-sans text-2xl font-black italic leading-[0.98] text-ink sm:text-3xl";
 
 /** Paragraphe courant des pages légales (corps + chapeau du héro). */
-export const LEGAL_BODY = "mt-4 text-[15px] leading-relaxed text-black/70";
+export const LEGAL_BODY = "mt-4 text-[15px] leading-relaxed text-ink/70";
 
 /** Lien dans un corps de texte légal. */
 export const LEGAL_LINK =
-  "font-bold text-black underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-black hover:text-white";
+  "font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper";
 
 export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="border-t-2 border-black">
+    <section className="border-t-2 border-ink">
       <Container className="py-12 sm:py-16">
         <h2 className={H2_CLASS}>{title}</h2>
         {children}
@@ -40,7 +40,7 @@ export function LegalSection({ title, children }: { title: string; children: Rea
  */
 export function LegalCmsBody({ html }: { html: SafeHtml }) {
   return (
-    <section className="border-t-2 border-black">
+    <section className="border-t-2 border-ink">
       <Container className="py-12 sm:py-16">
         <div className="prose-book max-w-[70ch]" dangerouslySetInnerHTML={{ __html: html }} />
       </Container>

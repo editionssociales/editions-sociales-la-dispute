@@ -14,7 +14,7 @@ export function CollectionTag({
 }) {
   return (
     <span
-      className={`inline-flex items-center border border-black px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.06em] text-black ${className}`}
+      className={`inline-flex items-center border border-ink px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.06em] text-ink ${className}`}
     >
       {collection.name}
     </span>

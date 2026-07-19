@@ -3,7 +3,7 @@ import { Fragment } from "react";
 
 /**
  * Fil d'ariane — recette partagée par les 8 pages qui en affichent un :
- * texte gris `text-black/60`, liens qui s'assombrissent au survol, dernière
+ * texte gris `text-ink/60`, liens qui s'assombrissent au survol, dernière
  * miette (page courante) en noir plein, séparateur `/` décoratif.
  */
 
@@ -16,7 +16,7 @@ export function Breadcrumb({
   trail: Crumb[];
   className?: string;
 }) {
-  const base = "font-sans text-xs font-bold uppercase tracking-[.06em] text-black/60";
+  const base = "font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60";
 
   return (
     <nav aria-label="Fil d'ariane" className={className ? `${base} ${className}` : base}>
@@ -33,12 +33,12 @@ export function Breadcrumb({
             {crumb.href && !isLast ? (
               <Link
                 href={crumb.href}
-                className="transition-colors motion-reduce:transition-none hover:text-black"
+                className="transition-colors motion-reduce:transition-none hover:text-ink"
               >
                 {crumb.label}
               </Link>
             ) : (
-              <span className="text-black">{crumb.label}</span>
+              <span className="text-ink">{crumb.label}</span>
             )}
           </Fragment>
         );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import { FOCUS_RING } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { useCart } from "./cart-context";
 
 /**
@@ -42,7 +42,7 @@ export function AddToCartButton({
         type="button"
         onClick={handleClick}
         aria-label="Ajouter au panier"
-        className={`absolute bottom-1.5 right-1.5 z-[1] flex h-8 w-8 items-center justify-center border-2 border-black bg-pop-yellow font-sans text-lg font-black leading-none text-black transition-colors motion-reduce:transition-none hover:bg-black hover:text-pop-yellow ${FOCUS_RING} ${className ?? ""}`}
+        className={`absolute bottom-1.5 right-1.5 z-[1] flex h-8 w-8 items-center justify-center border-2 border-ink bg-pop-yellow font-sans text-lg font-black leading-none text-black transition-colors motion-reduce:transition-none hover:bg-ink hover:text-pop-yellow ${FOCUS_RING_LIGHT} ${className ?? ""}`}
       >
         +
       </button>
@@ -53,7 +53,7 @@ export function AddToCartButton({
     <button
       type="button"
       onClick={handleClick}
-      className={`inline-flex items-center justify-center border-2 border-black bg-black px-5 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-white transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black ${FOCUS_RING} ${className ?? ""}`}
+      className={`inline-flex items-center justify-center border-2 border-ink bg-ink px-5 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black ${FOCUS_RING_DARK} ${className ?? ""}`}
     >
       {justAdded ? "Ajouté au panier" : "Ajouter au panier"}
     </button>

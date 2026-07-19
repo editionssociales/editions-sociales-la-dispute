@@ -9,11 +9,12 @@ import {
   activeSections,
   type NavSectionId,
 } from "@/lib/nav";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { CartNavCell } from "./cart/cart-badge";
 
 /**
  * Navbar brutaliste — quadrillage noir 2px (conteneur `grid gap-[2px]
- * bg-black p-[2px]`, cellules blanches/pop). Collante (sticky) : GRANDE en haut
+ * bg-ink p-[2px]`, cellules blanches/pop). Collante (sticky) : GRANDE en haut
  * de page, elle se COMPACTE en douceur dès qu'on défile (état `compact`, ~200ms).
  *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » | nav 2×2.
@@ -34,10 +35,10 @@ const NAV_ACCENT_CLASS: Record<NavSectionId, string> = {
   agenda: "bg-pop-yellow",
 };
 const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
-  catalogue: "bg-white hover:bg-pop-pink",
-  geme: "bg-white hover:bg-pop-teal",
-  "a-paraitre": "bg-white hover:bg-pop-orange",
-  agenda: "bg-white hover:bg-pop-yellow",
+  catalogue: "bg-paper hover:bg-pop-pink",
+  geme: "bg-paper hover:bg-pop-teal",
+  "a-paraitre": "bg-paper hover:bg-pop-orange",
+  agenda: "bg-paper hover:bg-pop-yellow",
 };
 
 /** Placement en grille desktop (littéral : le JIT ne compile pas `col-start-${n}`). */
@@ -61,10 +62,6 @@ const DESKTOP_GRID =
 // compactage) s'animent sur la même durée.
 const CELL_TRANSITION =
   "transition-all duration-200 ease-out motion-reduce:transition-none";
-const FOCUS_DARK =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black";
-const FOCUS_LIGHT =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white";
 
 // Fondu/échelle des deux calques du CTA « Nous soutenir » (cf. SoutenirCell) :
 // on anime opacité + transform (compositables, continus) et JAMAIS la police
@@ -73,18 +70,19 @@ const MORPH_TRANSITION =
   "transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none";
 
 function maisonCellClass(compact: boolean) {
-  return `flex items-center bg-white px-6 font-sans font-bold italic uppercase leading-none tracking-[.01em] text-black hover:bg-black hover:text-white ${CELL_TRANSITION} ${FOCUS_DARK} ${
+  return `flex items-center bg-paper px-6 font-sans font-bold italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${
     compact ? "py-3 text-[14px]" : "py-7 text-[clamp(18px,1.5vw,23px)]"
   }`;
 }
 
 function navCellClass(section: NavSectionId, active: boolean, compact: boolean) {
   // Sur desktop la hauteur des cellules nav suit la rangée (py-0) ; le padding
-  // vertical ne joue qu'en mobile.
+  // vertical ne joue qu'en mobile. Fond au repos toujours clair (bg-paper) ou
+  // pop (R2) : anneau clair dans les deux cas (R5).
   const size = compact
     ? "py-3 text-[12px] lg:py-0"
     : "py-7 text-[14px] lg:py-0";
-  return `flex items-center justify-center px-4 text-center font-sans font-extrabold uppercase tracking-[.08em] text-black ${CELL_TRANSITION} ${FOCUS_DARK} ${size} ${
+  return `flex items-center justify-center px-4 text-center font-sans font-extrabold uppercase tracking-[.08em] text-black ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${size} ${
     active ? NAV_ACCENT_CLASS[section] : NAV_HOVER_CLASS[section]
   }`;
 }
@@ -95,7 +93,8 @@ function soutenirClass(placement: string) {
   // ici — deux calques empilés s'en chargent (cf. SoutenirCell). `grid` sert de
   // pile : les deux calques occupent la MÊME cellule ([grid-area:1/1]). `relative`
   // ancre la flèche déployée (hors des calques, pour garder sa position d'origine).
-  return `relative grid bg-black px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-white hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_LIGHT} ${placement}`;
+  // Fond ink au repos : anneau de focus sombre (pop-yellow, R2/R5).
+  return `relative grid bg-ink px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-paper hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_RING_DARK} ${placement}`;
 }
 
 /**
@@ -210,7 +209,7 @@ function SiteHeaderChrome({
 }) {
   return (
     <header className="sticky top-0 z-50">
-      <nav aria-label="Navigation principale" className="bg-black">
+      <nav aria-label="Navigation principale" className="bg-ink">
         {/* Mobile (< lg) : maisons pleine largeur, nav 2×2, panier, puis « Nous soutenir ». */}
         <div className="grid grid-cols-2 gap-[2px] p-[2px] lg:hidden">
           {NAV_HOUSES.map((house) => (

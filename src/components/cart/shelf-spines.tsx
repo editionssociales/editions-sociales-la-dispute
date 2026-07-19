@@ -26,7 +26,7 @@ export function ShelfSpines() {
           />
         ))}
       </div>
-      <div className="-mx-3 h-1.5 bg-black" />
+      <div className="-mx-3 h-1.5 bg-ink" />
     </div>
   );
 }

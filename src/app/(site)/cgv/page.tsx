@@ -20,7 +20,7 @@ export default async function CgvPage() {
   const { cgv } = await getPagesLegales();
   return (
     <>
-      <Container className="bg-white pb-16 pt-10 sm:pb-20 sm:pt-14">
+      <Container className="bg-paper pb-16 pt-10 sm:pb-20 sm:pt-14">
         <Breadcrumb
           trail={[
             { label: "Accueil", href: "/" },
@@ -32,7 +32,7 @@ export default async function CgvPage() {
             <Eyebrow>
               Dons et vente en ligne
             </Eyebrow>
-            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
               Conditions générales &amp; conditions de don
             </h1>
             {!cgv && (

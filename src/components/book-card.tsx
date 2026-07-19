@@ -4,6 +4,7 @@ import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
 import { formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
+import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 export function BookCard({ book }: { book: Book }) {
   // Catalogue : toujours la fiche interne, quel que soit le statut d'achat.
@@ -34,7 +35,7 @@ export function BookCard({ book }: { book: Book }) {
   );
 
   const upcomingBadge = book.status === "upcoming" && (
-    <span className="absolute left-0 top-0 z-[1] border-b-2 border-r-2 border-black bg-pop-orange px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
+    <span className="absolute left-0 top-0 z-[1] border-b-2 border-r-2 border-ink bg-pop-orange px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
       À paraître
     </span>
   );
@@ -58,7 +59,7 @@ export function BookCard({ book }: { book: Book }) {
 
   const meta = (
     <div className="mt-3 flex min-w-0 flex-col gap-0.5">
-      <p className="font-sans text-sm font-bold leading-snug text-black line-clamp-2">
+      <p className="font-sans text-sm font-bold leading-snug text-ink line-clamp-2">
         {book.title}
       </p>
       {authors ? (
@@ -71,12 +72,12 @@ export function BookCard({ book }: { book: Book }) {
   );
 
   return (
-    <article className="group flex flex-col bg-white p-4">
+    <article className="group flex flex-col bg-paper p-4">
       <Link
         href={href}
-        className="flex flex-col focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-2"
+        className={`flex flex-col ${FOCUS_RING_LIGHT_OUTER}`}
       >
-        <span className="relative block w-full overflow-hidden border-2 border-black bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none">
+        <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none">
           {upcomingBadge}
           {externalBadge}
           {unavailableBadge}

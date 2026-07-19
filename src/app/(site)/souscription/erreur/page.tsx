@@ -16,13 +16,13 @@ export const metadata: Metadata = {
 
 export default function ErreurPage() {
   return (
-    <section className="bg-white">
+    <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
         <Eyebrow>Souscription 2026</Eyebrow>
-        <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-black sm:text-4xl">
+        <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
           Le paiement n&apos;a pas pu démarrer
         </h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-black/70">
+        <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
           Un problème technique a empêché l&apos;ouverture de la page de
           paiement. Aucune somme n&apos;a été prélevée. Vous pouvez réessayer,
           ou nous écrire si le problème persiste.

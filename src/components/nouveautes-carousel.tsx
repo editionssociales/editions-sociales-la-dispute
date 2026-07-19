@@ -312,7 +312,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           <Eyebrow>
             Les Éditions sociales × La Dispute
           </Eyebrow>
-          <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-black">
+          <h1 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.94] text-ink">
             Nouveautés
           </h1>
         </div>

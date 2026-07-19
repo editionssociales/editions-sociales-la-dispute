@@ -12,7 +12,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
 import { parseBookFilters } from "@/lib/parse-filters";
 import { catalogueHref } from "@/lib/browse";
-import { FOCUS_RING, invertingCell } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -75,7 +75,7 @@ function ThemeCell({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`relative flex flex-col justify-end gap-1.5 overflow-hidden px-[17px] py-[15px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${FOCUS_RING} ${span} ${invertingCell(active)}`}
+      className={`relative flex flex-col justify-end gap-1.5 overflow-hidden px-[17px] py-[15px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${span} ${invertingCell(active)}`}
     >
       <span className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] ${textClass}`}>
         {label}
@@ -111,7 +111,7 @@ async function EditionCatalogueBody({
   ];
 
   return (
-    <Container className="bg-white py-12">
+    <Container className="bg-paper py-12">
       <Breadcrumb
         trail={[
           { label: "Accueil", href: "/" },
@@ -121,10 +121,10 @@ async function EditionCatalogueBody({
       />
 
       <div className="mt-3.5 max-w-2xl">
-        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-black sm:text-5xl">
+        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
           {info.name}
         </h1>
-        <p className="mt-3.5 text-[15px] leading-relaxed text-black/70">{info.tagline}</p>
+        <p className="mt-3.5 text-[15px] leading-relaxed text-ink/70">{info.tagline}</p>
       </div>
 
       <FramedGrid
@@ -161,12 +161,12 @@ async function EditionCatalogueBody({
         />
       </div>
 
-      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-black pt-[18px]">
-        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-black">
+      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
+        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
           {total} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
         {totalPages > 1 && (
-          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-black/70">
+          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-ink/70">
             Page {page} sur {totalPages}
           </span>
         )}

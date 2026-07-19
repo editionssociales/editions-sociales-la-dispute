@@ -13,7 +13,7 @@ const SPINES: { h: number; w: string; accent: Accent; fallen?: boolean }[] = [
 
 export default function NotFound() {
   return (
-    <Container className="bg-white py-24 text-center sm:py-32">
+    <Container className="bg-paper py-24 text-center sm:py-32">
       {/* L'étagère où un livre est tombé */}
       <div className="mx-auto w-fit" aria-hidden="true">
         <div className="flex items-end gap-1.5">
@@ -27,12 +27,12 @@ export default function NotFound() {
             />
           ))}
         </div>
-        <div className="-mx-3 h-1.5 rounded bg-black/25" />
+        <div className="-mx-3 h-1.5 rounded bg-ink/25" />
       </div>
 
       {/* 404 géant, le zéro devenu losange */}
       <p
-        className="mt-10 flex items-center justify-center gap-3 font-sans text-8xl font-black italic leading-none text-black"
+        className="mt-10 flex items-center justify-center gap-3 font-sans text-8xl font-black italic leading-none text-ink"
         aria-hidden="true"
       >
         <span>4</span>
@@ -40,13 +40,13 @@ export default function NotFound() {
         <span>4</span>
       </p>
 
-      <h1 className="mt-6 font-sans text-2xl font-black italic text-black sm:text-3xl">
+      <h1 className="mt-6 font-sans text-2xl font-black italic text-ink sm:text-3xl">
         <span className="sr-only">Erreur 404 — </span>Page introuvable
       </h1>
-      <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-black/70">
+      <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink/70">
         Cette page n&apos;existe pas ou a été déplacée.
       </p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-black/50">
+      <p className="mx-auto mt-1 max-w-md text-sm text-ink/50">
         Elle a peut-être glissé derrière l&apos;étagère.
       </p>
 

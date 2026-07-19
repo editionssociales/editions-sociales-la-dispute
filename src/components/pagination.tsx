@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
-import { FOCUS_RING, invertingCell } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
 
 interface Props {
   page: number;
@@ -11,8 +11,8 @@ interface Props {
 
 /** Flèches Précédent/Suivant — cellules carrées 40px de haut, grille encadrée. */
 function arrowClass(disabled: boolean): string {
-  return `flex h-10 items-center gap-1.5 bg-white px-4 text-sm font-bold uppercase tracking-[.03em] text-black transition-colors motion-reduce:transition-none ${FOCUS_RING} ${
-    disabled ? "pointer-events-none text-black/30" : "hover:bg-black hover:text-white"
+  return `flex h-10 items-center gap-1.5 bg-paper px-4 text-sm font-bold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
+    disabled ? "pointer-events-none text-ink/30" : "hover:bg-ink hover:text-paper"
   }`;
 }
 
@@ -42,7 +42,7 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
           <span key={p} className="flex items-stretch">
             {i > 0 && p - items[i - 1] > 1 && (
               <span
-                className="flex h-10 w-6 items-center justify-center bg-white text-black/40"
+                className="flex h-10 w-6 items-center justify-center bg-paper text-ink/40"
                 aria-hidden="true"
               >
                 …
@@ -51,7 +51,7 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
             <Link
               href={hrefFor(p)}
               aria-current={p === page ? "page" : undefined}
-              className={`flex h-10 w-10 items-center justify-center text-sm font-bold transition-colors motion-reduce:transition-none ${FOCUS_RING} ${invertingCell(p === page)}`}
+              className={`flex h-10 w-10 items-center justify-center text-sm font-bold transition-colors motion-reduce:transition-none ${p === page ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(p === page)}`}
             >
               {p}
             </Link>
