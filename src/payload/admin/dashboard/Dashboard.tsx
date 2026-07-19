@@ -302,7 +302,7 @@ export async function Dashboard({ payload, user }: ServerProps) {
         <section className={styles.panel} aria-labelledby="t-raccourcis">
           <div className={styles.shortcutLinks}>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-            <a className={styles.shortcutLink} href="/admin/collections/books/create">
+            <a className={styles.shortcutLink} href="/admin/nouveau-livre">
               + Nouveau livre
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}

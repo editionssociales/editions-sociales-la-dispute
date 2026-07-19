@@ -47,11 +47,20 @@ export default buildConfig({
       // Vue admin `/admin/sante` (issue #27) : observabilité + configuration
       // & accès, rôle admin strict (redirect interne vers `/admin` sinon —
       // `HealthPage.tsx`). Lien de découverte : `afterNavLinks` ci-dessous.
+      // Vue admin `/admin/nouveau-livre` (issue #26) : création guidée d'une
+      // fiche livre en brouillon, rôle admin OU editor (redirect interne vers
+      // `/admin` sinon — `NewBookView.tsx`). Accès depuis la liste Livres
+      // (chips, `BooksFilterChips.tsx`) et la home (`Dashboard.tsx`, zone C).
       views: {
         sante: {
           Component: '/payload/admin/health/HealthPage.tsx#HealthPage',
           meta: { title: 'Santé' },
           path: '/sante',
+        },
+        nouveauLivre: {
+          Component: '/payload/admin/books/NewBookView.tsx#NewBookView',
+          meta: { title: 'Nouveau livre' },
+          path: '/nouveau-livre',
         },
       },
       afterNavLinks: ['/payload/admin/health/HealthNavLink.tsx#HealthNavLink'],

@@ -11,6 +11,7 @@ import {
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
 import { checkCollectionEditionMatch, resolveCollectionEditionLookup } from '../lib/books-core.ts'
+import { createBookDraftHandler } from '../lib/book-draft-handler.ts'
 import { importStockHandler } from '../lib/stock-import.ts'
 
 /**
@@ -106,6 +107,12 @@ export const Books: CollectionConfig = {
     // Colonnes légères — pas de richText/legacy dans la liste (payload volumineux).
     defaultColumns: ['title', 'edition', 'cover', 'dateParution', '_status'],
     listSearchableFields: ['title', 'isbn', 'slug'],
+    // Chips de filtre État/Maison + bouton « Nouveau livre » (issue #26) —
+    // au-dessus du tableau, cf. `BooksFilterChipsPanel.tsx` (même slot que
+    // `OrderExportPanel.tsx`/`Orders.ts`).
+    components: {
+      beforeListTable: ['/payload/admin/books/BooksFilterChipsPanel.tsx#BooksFilterChipsPanel'],
+    },
   },
   access: {
     // Un visiteur anonyme (front public via la Local API) ne voit que les fiches publiées ;
@@ -129,11 +136,20 @@ export const Books: CollectionConfig = {
   // `POST /api/books/import-stock` — import stock routeur mensuel (multipart,
   // admin/éditeur authentifié) ; cf. `src/payload/lib/stock-import.ts` pour
   // le détail (auth, parsing, appariement, rapport, écritures).
+  // `POST /api/books/create-draft` — création guidée « Nouveau livre »
+  // (issue #26, vue `/admin/nouveau-livre`) ; cf.
+  // `src/payload/lib/book-draft-handler.ts` (auth, slug unique, écriture en
+  // brouillon).
   endpoints: [
     {
       path: '/import-stock',
       method: 'post',
       handler: importStockHandler,
+    },
+    {
+      path: '/create-draft',
+      method: 'post',
+      handler: createBookDraftHandler,
     },
   ],
   // Unicité couvrant l'espace `edition` ∪ null (contrat phase 4, ~20 produits
