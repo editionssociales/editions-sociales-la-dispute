@@ -101,6 +101,7 @@ export const Books: CollectionConfig = {
     drafts: true,
   },
   admin: {
+    group: 'Quotidien',
     useAsTitle: 'title',
     // Colonnes légères — pas de richText/legacy dans la liste (payload volumineux).
     defaultColumns: ['title', 'edition', 'cover', 'dateParution', '_status'],

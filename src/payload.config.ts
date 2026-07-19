@@ -36,14 +36,29 @@ export default buildConfig({
     components: {
       // Dashboard v2 (`_specs/dashboard-admin/design-v2.md`) : bandeau d'état
       // + panneaux 3.2→3.10 + codes promo expirés AVANT la grille native
-      // `CollectionCards` (3.11, rendue par Payload entre les deux slots) ;
+      // `CollectionCards` (3.11, rendue par Payload entre les deux slots —
+      // masquée en CSS depuis la nav groupée, issue #25, `custom.scss`) ;
       // observabilité + configuration (3.12/3.13, rôle admin) APRÈS. Ces
       // composants absorbent les anciens StockImportPanel/StockLowWidget.
       beforeDashboard: ['/payload/admin/dashboard/Dashboard.tsx#Dashboard'],
       afterDashboard: ['/payload/admin/dashboard/DashboardFooter.tsx#DashboardFooter'],
     },
   },
-  collections: [Users, Media, Authors, BookCollections, Books, Highlight, Orders, PromoCodes, ImportRuns],
+  // Ordre = ordre des groupes dans la nav admin (issue #25) : Quotidien
+  // (Books, Orders, Media) → Catalogue (Authors, BookCollections, Highlight)
+  // → Boutique (PromoCodes, ImportRuns) → Site (Users, cf. les globals
+  // ci-dessous pour la suite du groupe « Site »).
+  collections: [
+    Books,
+    Orders,
+    Media,
+    Authors,
+    BookCollections,
+    Highlight,
+    PromoCodes,
+    ImportRuns,
+    Users,
+  ],
   globals: [ReglagesBoutique, PagesLegales, ReglagesSite, PageAPropos, PageSouscription],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

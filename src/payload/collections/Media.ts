@@ -27,6 +27,9 @@ export const Media: CollectionConfig = {
     singular: 'Média',
     plural: 'Médias',
   },
+  admin: {
+    group: 'Quotidien',
+  },
   upload: {
     mimeTypes: ['image/*', 'application/pdf'],
     staticDir: path.resolve(dirname, '../../../media'),

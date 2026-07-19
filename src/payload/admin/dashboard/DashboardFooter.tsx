@@ -8,8 +8,9 @@ import { DashboardLegend } from './Legend.tsx'
 
 /**
  * Slot `afterDashboard` du dashboard `/admin` v2 : observabilité (3.12) et
- * configuration & accès (3.13), SOUS la grille native `CollectionCards` —
- * rôle strictement admin (`null` pour un editor, qui reçoit sa légende via
+ * configuration & accès (3.13), SOUS la grille native `CollectionCards`
+ * (masquée en CSS, `custom.scss` — nav groupée, issue #25) — rôle
+ * strictement admin (`null` pour un editor, qui reçoit sa légende via
  * `Dashboard`). Mêmes lecteurs `data.ts` que le bandeau : `readSentryIssues`
  * est mémoïsé (`cache()`), une seule lecture par requête. `dotClass`/
  * `badgeClass` : module partagé avec `Dashboard.tsx` (`dashboard-classes.ts`).

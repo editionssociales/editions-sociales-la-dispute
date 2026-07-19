@@ -34,7 +34,8 @@ import { StockImportForm } from './StockImportForm.tsx'
  * #23) : bandeau d'état (3.1) puis zone A « File du jour » (toujours
  * visible), zone B « Alertes » (rendue seulement si au moins une alerte),
  * zone C « Raccourcis » (toujours visible). La grille native
- * `CollectionCards` reste rendue par Payload SOUS ce composant ; 3.12/3.13
+ * `CollectionCards` reste rendue par Payload SOUS ce composant (masquée en
+ * CSS, `custom.scss` — nav groupée, issue #25) ; 3.12/3.13
  * vivent toujours dans `DashboardFooter` (`afterDashboard`, admin seul,
  * inchangé par ce lot).
  *
