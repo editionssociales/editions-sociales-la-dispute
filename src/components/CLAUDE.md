@@ -25,10 +25,11 @@ données ni le routage.
   `shelf-cover` (étagère 3D du héro : exclusion d'ouverture entre livres, ratio
   réel de couverture), `cart/cart-context` (état global du panier — Context +
   `localStorage`, monté par le layout `(site)` sur tout le site),
-  `cart/cart-badge` (compteur dans `site-header`) et `cart/add-to-cart-button`
-  (handler d'ajout, rendu par `buy-links`/`book-card`). Tout le reste est
-  composant serveur — dont `cart/shelf-spines` (décor de l'état vide du
-  panier, sans état propre).
+  `cart/cart-badge` (compteur dans `site-header`), `cart/add-to-cart-button`
+  (handler d'ajout, rendu par `buy-links`/`book-card`) et `submit-button`
+  (état `pending` d'une server action via `useFormStatus` — doit vivre sous le
+  `<form>`, jamais l'englober). Tout le reste est composant serveur — dont
+  `cart/shelf-spines` (décor de l'état vide du panier, sans état propre).
 - Les couvertures passent toujours par `Cover` / `BookCover` (`src/lib/cover.tsx`) :
   jamais recadrées, au ratio réel de l'image.
 
