@@ -18,6 +18,7 @@ export const Highlight: CollectionConfig = {
     plural: 'Mises en avant',
   },
   admin: {
+    group: 'Catalogue',
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'actif', 'dateDebut', 'dateFin'],
     description: 'Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).',
