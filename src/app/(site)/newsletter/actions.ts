@@ -21,6 +21,8 @@ import { validateNewsletterSubmission } from "@/lib/newsletter";
 export interface NewsletterFormState {
   status: "idle" | "ok" | "error";
   message: string | null;
+  /** Posé uniquement quand l'échec porte sur le champ email (adresse invalide) — jamais sur une panne d'envoi générique — pour `aria-invalid`/`aria-describedby` côté formulaire. */
+  field?: "email";
 }
 
 export const NEWSLETTER_INITIAL_STATE: NewsletterFormState = { status: "idle", message: null };
@@ -79,7 +81,7 @@ export async function subscribeToNewsletter(
 
   if (!result.ok) {
     if (result.reason === "invalid-email") {
-      return { status: "error", message: "Adresse email invalide." };
+      return { status: "error", message: "Adresse email invalide.", field: "email" };
     }
     // honeypot / too-fast : même réponse que le succès, aucun appel Brevo — ne jamais renseigner un bot sur la détection.
     return { status: "ok", message: GENERIC_OK_MESSAGE };

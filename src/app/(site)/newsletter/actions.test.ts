@@ -62,7 +62,11 @@ describe("subscribeToNewsletter — email invalide", () => {
       NEWSLETTER_INITIAL_STATE,
       form({ email: "pas-un-email" }),
     );
-    expect(state).toEqual({ status: "error", message: "Adresse email invalide." });
+    expect(state).toEqual({
+      status: "error",
+      message: "Adresse email invalide.",
+      field: "email",
+    });
     expect(sendDoiConfirmation).not.toHaveBeenCalled();
   });
 });

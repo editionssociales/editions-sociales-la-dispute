@@ -64,28 +64,31 @@ function EmptyCart() {
 function QuantityStepper({
   qty,
   onChange,
+  disabled = false,
 }: {
   qty: number;
   onChange: (next: number) => void;
+  /** Ligne non `purchasable` (indisponible) — stepper entièrement désactivé, la quantité n'a plus de sens à modifier. */
+  disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2" role="group" aria-label="Quantité">
+    <div className="flex items-center gap-3" role="group" aria-label="Quantité">
       <button
         type="button"
         onClick={() => onChange(qty - 1)}
-        disabled={qty <= 1}
+        disabled={disabled || qty <= 1}
         aria-label="Retirer un exemplaire"
         className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`}
       >
         −
       </button>
-      <span className="w-6 text-center font-sans text-sm font-bold text-ink" aria-live="polite">
+      <span className="w-8 text-center font-sans text-sm font-bold text-ink" aria-live="polite">
         {qty}
       </span>
       <button
         type="button"
         onClick={() => onChange(qty + 1)}
-        disabled={qty >= MAX_LINE_QTY}
+        disabled={disabled || qty >= MAX_LINE_QTY}
         aria-label="Ajouter un exemplaire"
         className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`}
       >
@@ -104,9 +107,13 @@ function CartLineRow({
   onSetQty: (qty: number) => void;
   onRemove: () => void;
 }) {
+  // Ligne non `purchasable` : grisée ENTIÈREMENT (les 4 cellules, pas
+  // seulement titre/quantité) — un article exclu du calcul doit se lire
+  // d'un coup d'œil, pas seulement au milieu de la ligne.
+  const dim = line.purchasable ? "" : "opacity-50";
   return (
     <Fragment>
-      <div className="flex items-center justify-center bg-paper p-2">
+      <div className={`flex items-center justify-center bg-paper p-2 ${dim}`}>
         <Link href={line.href} className="block w-14 shrink-0">
           <BookCover
             cover={line.cover}
@@ -118,7 +125,7 @@ function CartLineRow({
           />
         </Link>
       </div>
-      <div className={`flex flex-col justify-center gap-2 bg-paper p-3 ${line.purchasable ? "" : "opacity-60"}`}>
+      <div className={`flex flex-col justify-center gap-2 bg-paper p-3 ${dim}`}>
         <Link
           href={line.href}
           className={`font-sans text-sm font-bold text-ink hover:underline ${FOCUS_RING_LIGHT}`}
@@ -130,21 +137,28 @@ function CartLineRow({
             Indisponible — exclu du calcul, retirez-le si besoin.
           </p>
         )}
+        {/* Résumé qty × prix unitaire = total — visible uniquement sous `sm`,
+            où les cellules prix (colonnes 3/4) sont masquées. */}
+        {line.purchasable && line.unitPriceCents != null && (
+          <p className="font-sans text-sm font-bold text-ink sm:hidden">
+            {line.qty} × {euros(line.unitPriceCents)} = {euros(line.lineTotalCents)}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-4">
-          <QuantityStepper qty={line.qty} onChange={onSetQty} />
+          <QuantityStepper qty={line.qty} onChange={onSetQty} disabled={!line.purchasable} />
           <button
             type="button"
             onClick={onRemove}
-            className={`font-sans text-xs font-bold uppercase tracking-[.04em] text-muted underline hover:text-ink ${FOCUS_RING_LIGHT}`}
+            className={`inline-flex min-h-11 items-center px-2 -mx-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted underline decoration-1 underline-offset-2 hover:text-ink ${FOCUS_RING_LIGHT}`}
           >
             Retirer
           </button>
         </div>
       </div>
-      <div className="flex items-center justify-end bg-paper p-3 font-sans text-sm text-ink">
+      <div className={`hidden items-center justify-end bg-paper p-3 font-sans text-sm text-ink sm:flex ${dim}`}>
         {line.unitPriceCents != null ? euros(line.unitPriceCents) : "—"}
       </div>
-      <div className="flex items-center justify-end bg-paper p-3 font-sans text-sm font-bold text-ink">
+      <div className={`hidden items-center justify-end bg-paper p-3 font-sans text-sm font-bold text-ink sm:flex ${dim}`}>
         {line.purchasable ? euros(line.lineTotalCents) : "—"}
       </div>
     </Fragment>
@@ -244,7 +258,8 @@ export function CartView() {
   const totals = computeCartTotals(summary.subtotalCents, discountCents, shipping.ok ? shipping.costCents : null);
 
   const [checkoutPending, startCheckoutTransition] = useTransition();
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  /** Un item par refus (`checkout-core.ts` en rédige un par article en défaut) — jamais fusionnés en un seul paragraphe (cf. `<ul>` ci-dessous). */
+  const [checkoutError, setCheckoutError] = useState<string[] | null>(null);
   const hasPurchasableLine = summary.lines.some((line) => line.purchasable);
 
   /**
@@ -275,14 +290,19 @@ export function CartView() {
         }
         setCheckoutError(
           data.refusals && data.refusals.length > 0
-            ? data.refusals.map((r) => r.message).join(" ")
-            : (data.error ?? "Le paiement est momentanément indisponible, réessayez."),
+            ? data.refusals.map((r) => r.message)
+            : [data.error ?? "Le paiement est momentanément indisponible, réessayez."],
         );
       } catch {
-        setCheckoutError("Le paiement est momentanément indisponible, réessayez.");
+        setCheckoutError(["Le paiement est momentanément indisponible, réessayez."]);
       }
     });
   }
+
+  // Vrai blocage (panier invalide / port impossible) — distinct de l'état
+  // `checkoutPending` (redirection Stripe en cours), qui ne doit jamais se
+  // confondre visuellement avec lui (R7).
+  const checkoutBlocked = !shipping.ok || !hasPurchasableLine;
 
   if (!ready) {
     return <p className="py-16 text-center font-sans text-sm text-muted">Chargement du panier…</p>;
@@ -294,13 +314,18 @@ export function CartView() {
   return (
     <div className={`transition-opacity motion-reduce:transition-none ${snapshotReady ? "" : "opacity-70"}`}>
       {snapshotError && (
-        <p className="mb-4 font-sans text-sm font-bold text-brick" role="alert">
-          Impossible de vérifier votre panier pour le moment (catalogue
-          momentanément indisponible). Les prix et disponibilités affichés
-          peuvent être périmés — réessayez dans un instant.
-        </p>
+        <div className="mb-4 border-2 border-brick bg-paper-2 px-4 py-3" role="alert">
+          <p className="font-sans text-xs font-extrabold uppercase tracking-[.06em] text-brick">
+            Vérification impossible
+          </p>
+          <p className="mt-2 font-sans text-sm font-bold text-ink">
+            Impossible de vérifier votre panier pour le moment (catalogue
+            momentanément indisponible). Les prix et disponibilités affichés
+            peuvent être périmés — réessayez dans un instant.
+          </p>
+        </div>
       )}
-      <FramedGrid className="grid-cols-[72px_1fr_auto_auto] items-stretch">
+      <FramedGrid className="grid-cols-[72px_1fr] items-stretch sm:grid-cols-[72px_1fr_auto_auto]">
         {summary.lines.map((line) => (
           <CartLineRow
             key={line.id}
@@ -426,20 +451,44 @@ export function CartView() {
           </p>
         )}
 
-      <div className="mt-8 flex flex-col items-start gap-2">
+      <div className="mt-8 flex flex-col items-start gap-3">
         <button
           type="button"
           onClick={handleCheckout}
-          disabled={checkoutPending || !shipping.ok || !hasPurchasableLine}
-          aria-disabled={checkoutPending || !shipping.ok || !hasPurchasableLine}
-          className={`inline-flex items-center justify-center border-2 border-ink bg-ink px-8 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.05em] text-paper transition-colors motion-reduce:transition-none hover:bg-pop-yellow hover:text-black disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`}
+          disabled={checkoutPending || checkoutBlocked}
+          aria-busy={checkoutPending}
+          className={`inline-flex items-center justify-center gap-2.5 border-2 border-ink bg-ink px-8 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.05em] text-paper transition-colors motion-reduce:transition-none ${FOCUS_RING_DARK} ${
+            checkoutPending
+              ? "cursor-wait"
+              : checkoutBlocked
+                ? "cursor-not-allowed opacity-40"
+                : "hover:bg-paper hover:text-ink"
+          }`}
         >
-          {checkoutPending ? "Redirection…" : "Commander"}
+          {checkoutPending && (
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 shrink-0 animate-pulse bg-pop-yellow motion-reduce:animate-none"
+            />
+          )}
+          {checkoutPending ? "Redirection vers le paiement…" : "Commander"}
         </button>
-        {checkoutError && (
-          <p className="font-sans text-xs font-bold text-brick" role="alert">
-            {checkoutError}
-          </p>
+        {checkoutError && checkoutError.length > 0 && (
+          <div className="w-full border-2 border-brick bg-paper-2 px-4 py-3 sm:w-auto" role="alert">
+            <p className="font-sans text-xs font-extrabold uppercase tracking-[.06em] text-brick">
+              Paiement impossible
+            </p>
+            <ul className="mt-2 flex flex-col gap-1">
+              {checkoutError.map((message, i) => (
+                <li key={i} className="flex gap-2 font-sans text-sm font-bold text-ink">
+                  <span aria-hidden="true" className="text-brick">
+                    ▸
+                  </span>
+                  <span>{message}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>

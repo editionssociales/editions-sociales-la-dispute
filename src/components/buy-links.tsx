@@ -4,37 +4,28 @@ import { formatDateFr, formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { Button } from "./button";
 
+/**
+ * Boîte d'achat unifiée (chantier 2.2) — les 4 statuts (`available`+panier,
+ * `available`(défensif)/`external`, `upcoming`, `unavailable`) partagent la
+ * même architecture visuelle : info clé en grand → action → microcopie de
+ * disponibilité. Rendue dans le conteneur bordé porté par l'appelant
+ * (`catalogue/[edition]/[slug]/page.tsx`, `boutique/[slug]/page.tsx` :
+ * `border-2 border-ink bg-paper p-4`), jamais ici — cette liste reste
+ * réutilisable sans imposer son propre cadre.
+ */
+
+const PRICE_CLASS = "font-sans text-3xl font-black leading-none text-ink";
+const STATUS_CLASS = "font-sans text-xl font-black italic text-ink";
+const MICROCOPY_CLASS = "mt-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted";
+/** Espace insécable entre la valeur et son unité (typographie française). */
+const IN_STOCK_COPY = "En stock — expédié sous 48 h";
+
 export function BuyLinksList({ book }: { book: Book }) {
-  if (book.status === "upcoming") {
-    return (
-      <p className="text-sm text-muted">
-        À paraître{book.publishedAt ? ` le ${formatDateFr(book.publishedAt)}` : ""}.
-      </p>
-    );
-  }
-  if (book.status === "unavailable") {
-    return (
-      <p className="text-sm text-muted">
-        Indisponible à la vente en ligne pour le moment.
-      </p>
-    );
-  }
-
-  // Panier natif (plan §4 étape 6, reflet exact de `resolveNativePurchase`) :
-  // bouton panier pour un livre disponible. `book.permalink` vaut alors la
-  // fiche interne elle-même (pas un lien d'achat externe) — inutile ici,
-  // remplacé par le bouton.
-  if (canAddToCart(book)) {
-    return (
-      <div className="flex flex-wrap items-center gap-3">
-        <AddToCartButton id={book.id} />
-        {book.price != null && (
-          <span className="font-sans text-sm font-bold text-ink">{formatPrice(book.price)}</span>
-        )}
-      </div>
-    );
-  }
-
+  // Liens libraires de repli — lus une seule fois, jamais jetés quel que
+  // soit le statut (bug corrigé : `upcoming`/`unavailable` les perdaient
+  // via un early return qui court-circuitait ce bloc). Exclus pour
+  // `external` : le CTA principal en reprend déjà un des deux
+  // (`resolveNativePurchase`), les répéter en secondaire serait redondant.
   const secondary = [
     book.status !== "external" && book.buy.parislibrairies
       ? { label: "ParisLibrairies", href: book.buy.parislibrairies }
@@ -44,20 +35,8 @@ export function BuyLinksList({ book }: { book: Book }) {
       : null,
   ].filter((o): o is { label: string; href: string } => o != null);
 
-  return (
-    <div className="flex flex-wrap gap-2">
-      {book.permalink && (
-        <Button
-          href={book.permalink}
-          target="_blank"
-          rel="noreferrer"
-          className="px-5 py-2.5 text-sm tracking-[.03em]"
-        >
-          {book.status === "available"
-            ? `Acheter${book.price != null ? ` · ${formatPrice(book.price)}` : ""}`
-            : `Voir en librairie${book.price != null ? ` · ${formatPrice(book.price)}` : ""}`}
-        </Button>
-      )}
+  const secondaryLinks = secondary.length > 0 && (
+    <div className="mt-2 flex flex-wrap gap-2">
       {secondary.map((s) => (
         <Button
           key={s.label}
@@ -65,11 +44,76 @@ export function BuyLinksList({ book }: { book: Book }) {
           variant="outline"
           target="_blank"
           rel="noreferrer"
-          className="px-5 py-2.5 text-sm tracking-[.03em]"
+          className="px-4 py-2 text-xs tracking-[.03em]"
         >
           {s.label}
         </Button>
       ))}
+    </div>
+  );
+
+  if (book.status === "upcoming") {
+    return (
+      <div>
+        <p className={STATUS_CLASS}>
+          À paraître{book.publishedAt ? ` le ${formatDateFr(book.publishedAt)}` : ""}
+        </p>
+        <p className={MICROCOPY_CLASS}>Pas encore en vente en ligne</p>
+        {secondaryLinks}
+      </div>
+    );
+  }
+
+  if (book.status === "unavailable") {
+    return (
+      <div>
+        <p className={STATUS_CLASS}>Indisponible à la vente en ligne</p>
+        <p className={MICROCOPY_CLASS}>
+          {secondary.length > 0 ? "Consultez nos partenaires libraires ci-dessous" : "Revenez bientôt."}
+        </p>
+        {secondaryLinks}
+      </div>
+    );
+  }
+
+  // Panier natif (plan §4 étape 6, reflet exact de `resolveNativePurchase`) :
+  // bouton panier pour un livre disponible. `book.permalink` vaut alors la
+  // fiche interne elle-même (pas un lien d'achat externe) — inutile ici,
+  // remplacé par le bouton.
+  if (canAddToCart(book)) {
+    return (
+      <div>
+        {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
+        <AddToCartButton id={book.id} className="mt-3 w-full" />
+        <p className={MICROCOPY_CLASS}>{IN_STOCK_COPY}</p>
+      </div>
+    );
+  }
+
+  // `available` sans panier natif (défensif — jamais atteint par
+  // `resolveNativePurchase`, seulement par une fixture de test construite à
+  // la main) et `external` : CTA plein vers `book.permalink`. Le prix est
+  // désormais affiché dans les deux cas (fini le ternaire qui l'excluait
+  // pour `external`, où pourtant `book.price` est souvent connu).
+  return (
+    <div>
+      {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
+      {book.permalink && (
+        <Button
+          href={book.permalink}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 w-full px-5 py-3 text-sm tracking-[.03em]"
+        >
+          {book.status === "available" ? "Acheter" : "Voir en librairie"}
+        </Button>
+      )}
+      <p className={MICROCOPY_CLASS}>
+        {book.status === "available"
+          ? IN_STOCK_COPY
+          : "En vente chez un libraire partenaire"}
+      </p>
+      {secondaryLinks}
     </div>
   );
 }

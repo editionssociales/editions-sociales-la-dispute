@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LEGAL_LINK } from "@/components/legal-section";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
@@ -22,6 +22,7 @@ const LABEL_CLASS = "font-sans text-xs font-bold uppercase tracking-[.06em] text
 export function ContactForm() {
   const [state, formAction, isPending] = useActionState(sendContactMessage, CONTACT_INITIAL_STATE);
   const [renderedAt, setRenderedAt] = useState<number | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     // Cf. `newsletter-form.tsx` : enveloppé dans une fonction nommée pour
@@ -34,8 +35,24 @@ export function ContactForm() {
     markRendered();
   }, []);
 
+  useEffect(() => {
+    // Succès → formulaire réinitialisé (les champs, non contrôlés, portent
+    // encore la saisie précédente sinon) ; `renderedAt` reposé pour un envoi
+    // ultérieur sans redéclencher `too-fast`. Enveloppé dans une fonction
+    // nommée (cf. `markRendered` ci-dessus) — même faux positif
+    // `react-hooks/set-state-in-effect`.
+    function resetFormOnSuccess() {
+      if (state.status !== "ok") return;
+      formRef.current?.reset();
+      setRenderedAt(Date.now());
+    }
+    resetFormOnSuccess();
+  }, [state]);
+
+  const erroredField = state.status === "error" ? state.field : undefined;
+
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="contact-name" className={LABEL_CLASS}>
           Nom
@@ -46,6 +63,8 @@ export function ContactForm() {
           type="text"
           required
           maxLength={NAME_MAX_LENGTH}
+          aria-invalid={erroredField === "name" ? true : undefined}
+          aria-describedby={erroredField === "name" ? "contact-status" : undefined}
           className={FIELD_CLASS}
         />
       </div>
@@ -60,6 +79,8 @@ export function ContactForm() {
           type="email"
           required
           placeholder="vous@exemple.fr"
+          aria-invalid={erroredField === "email" ? true : undefined}
+          aria-describedby={erroredField === "email" ? "contact-status" : undefined}
           className={FIELD_CLASS}
         />
       </div>
@@ -73,6 +94,8 @@ export function ContactForm() {
           name="subject"
           type="text"
           maxLength={SUBJECT_MAX_LENGTH}
+          aria-invalid={erroredField === "subject" ? true : undefined}
+          aria-describedby={erroredField === "subject" ? "contact-status" : undefined}
           className={FIELD_CLASS}
         />
       </div>
@@ -87,6 +110,8 @@ export function ContactForm() {
           required
           rows={7}
           maxLength={MESSAGE_MAX_LENGTH}
+          aria-invalid={erroredField === "message" ? true : undefined}
+          aria-describedby={erroredField === "message" ? "contact-status" : undefined}
           className={`${FIELD_CLASS} resize-y`}
         />
       </div>
@@ -111,9 +136,18 @@ export function ContactForm() {
         {isPending ? "Envoi…" : "Envoyer"}
       </button>
 
-      <p role="status" aria-live="polite" className={`text-sm leading-snug empty:hidden ${state.status === "error" ? "text-brick" : "text-ink/70"}`}>
-        {state.status !== "idle" ? state.message : ""}
-      </p>
+      {state.status !== "idle" && (
+        <div
+          id="contact-status"
+          role="status"
+          aria-live="polite"
+          className={`border-2 bg-paper-2 px-4 py-3 font-sans text-sm font-bold leading-snug text-ink ${
+            state.status === "ok" ? "border-bottle" : "border-brick"
+          }`}
+        >
+          {state.message}
+        </div>
+      )}
 
       <p className="text-[11px] leading-snug text-muted">
         Votre message est transmis à notre boîte de contact via notre
