@@ -8,6 +8,7 @@
  */
 
 import { deriveGauge, type CampaignGauge, type Palier } from "./campaign";
+import { eurosToCents } from "./money";
 
 /**
  * Valeur de `metadata.campaign` posée sur chaque session/paiement Stripe — le
@@ -71,7 +72,7 @@ export function parseDonation(input: {
   if (input.tierId) {
     const tier = DONATION_TIERS.find((t) => t.id === input.tierId);
     if (!tier) return { error: `Palier inconnu : ${input.tierId}` };
-    return { amountMinor: Math.round(tier.amount * 100), tier };
+    return { amountMinor: eurosToCents(tier.amount), tier };
   }
 
   if (!input.amount) return { error: "Montant manquant" };
@@ -87,7 +88,7 @@ export function parseDonation(input: {
       error: `Montant hors bornes (${FREE_AMOUNT.min}–${FREE_AMOUNT.max} €) : ${value}`,
     };
   }
-  return { amountMinor: Math.round(value * 100) };
+  return { amountMinor: eurosToCents(value) };
 }
 
 /** Objectif provisoire de la campagne 2026 (€) — remplacé à réception des contenus (E10). */

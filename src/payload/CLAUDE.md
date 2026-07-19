@@ -16,7 +16,7 @@ Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : 
 - Endpoints custom gardés par `access.ts` (`isAdmin`/`isAdminOrEditor`) en tête de handler, avant tout I/O : `import-stock`, `export/preparation`, `export/compta`, `import-runs/:id/rapport`. Tout le reste (ex. désactivation d'un code promo depuis le dashboard) passe par le REST généré de la collection, sous sa propre `access`.
 - Dashboard (`derive.ts`) : jamais de vert par défaut — un signal non calculable est `na` (gris), jamais `ok`.
 - `Orders` : `create` fermé partout (seul le webhook Stripe écrit, Local API `overrideAccess`) ; tous les champs sont verrouillés en écriture après création sauf `status` (`lockedAfterCreate`).
-- Découpage cœur pur (`*-core.ts`, testé, sans I/O) + orchestration I/O dans le module sœur de `lib/` — même patron pour `stock-import`, `order-export`, `import-run-report`.
+- Découpage cœur pur (testé, sans I/O) + orchestration I/O dans `lib/` — jumeaux `*-core.ts` pour `stock-import` et `import-run-report` ; le cœur pur d'`order-export-handler` vit dans `src/lib/order-export.ts`.
 
 ## Verification
 
