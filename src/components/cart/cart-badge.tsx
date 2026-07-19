@@ -13,11 +13,11 @@ import { useCart } from "./cart-context";
  * paper au repos, R5). Toujours rendue sous `<CartProvider>`.
  *
  * Deux rendus :
- *  - texte « Panier (n) » (desktop) — taille fixe sous `lg`, écart
- *    compact/déployé au scroll à partir de `lg` (chantier 3 §3) ;
- *  - `icon` : pictogramme panier + compteur (rangée mobile du header, jamais
- *    affichée à `lg`) — SVG inline aux angles droits (R8), nom accessible
- *    inchangé via l'`aria-label`.
+ *  - texte « Panier (n) » — conservé pour d'éventuels usages hors carré ;
+ *  - `icon` : pictogramme panier (carré Accueil/Panier du header desktop, et
+ *    rangée mobile) — SVG inline aux angles droits (R8) ; le compteur est un
+ *    pastille superposée pour ne pas élargir le carré ; nom accessible via
+ *    l'`aria-label`.
  */
 const CELL_TRANSITION = "transition-all duration-200 ease-out motion-reduce:transition-none";
 
@@ -45,7 +45,7 @@ export function CartNavCell({
 }: {
   compact: boolean;
   placement: string;
-  /** Rendu pictogramme + compteur (rangée mobile) au lieu du libellé texte. */
+  /** Rendu pictogramme (carré header) au lieu du libellé texte. */
   icon?: boolean;
 }) {
   const { count } = useCart();
@@ -57,11 +57,14 @@ export function CartNavCell({
       <Link
         href="/panier"
         aria-label={ariaLabel}
-        className={`flex min-h-11 items-center justify-center gap-1 bg-paper px-2 text-black hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${placement}`}
+        className={`relative flex min-h-11 items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${placement}`}
       >
         <CartGlyph />
         {count > 0 && (
-          <span aria-hidden="true" className="font-sans text-[12px] font-extrabold leading-none">
+          <span
+            aria-hidden="true"
+            className="absolute right-1 top-1 font-sans text-[10px] font-extrabold leading-none"
+          >
             {count}
           </span>
         )}
@@ -75,7 +78,7 @@ export function CartNavCell({
     <Link
       href="/panier"
       aria-label={ariaLabel}
-      className={`flex min-h-11 items-center justify-center bg-paper px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-black hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg} ${placement}`}
+      className={`flex min-h-11 items-center justify-center bg-paper px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg} ${placement}`}
     >
       {label}
     </Link>
