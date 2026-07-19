@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
-import { Reveal } from "@/components/reveal";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY, LEGAL_LINK } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
 
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
 function IdentityRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1 border-t-2 border-ink bg-paper px-4 py-3 first:border-t-0 sm:flex-row sm:items-baseline sm:gap-3">
-      <dt className="w-56 shrink-0 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/50">
+      <dt className="w-56 shrink-0 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
         {label}
       </dt>
       <dd className="text-sm text-ink">{value}</dd>
@@ -33,27 +32,18 @@ export default async function MentionsLegalesPage() {
   const { mentionsLegales } = await getPagesLegales();
   return (
     <>
-      <Container className="bg-paper pb-16 pt-10 sm:pb-20 sm:pt-14">
+      <Container className="bg-paper py-12 sm:py-16">
         <Breadcrumb
           trail={[{ label: "Accueil", href: "/" }, { label: "Mentions légales" }]}
         />
-        <Reveal>
-          <div className="mt-6 max-w-3xl">
-            <Eyebrow>
-              Éditeur, hébergement, propriété
-            </Eyebrow>
-            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-              Mentions légales
-            </h1>
-            {!mentionsLegales && (
-              <p className={LEGAL_BODY}>
-                Conformément à l&apos;article 6-III de la loi n° 2004-575 du 21
-                juin 2004 pour la confiance dans l&apos;économie numérique
-                (LCEN).
-              </p>
-            )}
-          </div>
-        </Reveal>
+        <PageHero
+          eyebrow="Éditeur, hébergement, propriété"
+          title="Mentions légales"
+          intro={
+            !mentionsLegales &&
+            "Conformément à l'article 6-III de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN)."
+          }
+        />
       </Container>
 
       {mentionsLegales ? (

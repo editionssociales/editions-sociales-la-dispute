@@ -8,6 +8,12 @@ import type { SafeHtml } from "@/lib/cms-html";
  * redéclaraient à l'identique. Le texte (juridiquement sensible) reste dans
  * chaque page ; seule la structure est possédée ici — la prochaine page
  * légale (CGU ?) naît profonde au lieu d'être copiée-collée.
+ *
+ * Rythme vertical (R6/0.6) — un seul couple de padding de section fermé pour
+ * tout le site : `py-12 sm:py-16` ici et sur les pages listing (catalogue,
+ * boutique, editions…) ; `py-16 sm:py-20` sur les pages éditoriales (a-propos,
+ * héros plein cadre `/editions/[slug]`…), cf. `PageHero`. Toute nouvelle
+ * section choisit l'une des deux, jamais une troisième valeur.
  */
 
 const H2_CLASS =

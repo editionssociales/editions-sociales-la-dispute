@@ -3,7 +3,7 @@ import { Container } from "@/components/container";
 /** Skeleton streamé pendant le rendu dynamique des vues catalogue (searchParams). */
 export function CatalogueFallback() {
   return (
-    <Container className="bg-paper py-12">
+    <Container className="bg-paper py-12 sm:py-16">
       <div aria-busy="true" aria-live="polite">
         <div className="h-3 w-40 bg-ink/10" />
         <div className="mt-6 h-10 max-w-md bg-ink/10" />

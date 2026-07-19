@@ -386,7 +386,7 @@ export default async function SouscriptionPage() {
                           </li>
                         ))}
                       </ul>
-                      <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/50">
+                      <p className="mt-4 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
                         {p.soutiens2024} soutiens en 2024
                       </p>
                       {enabled ? (

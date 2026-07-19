@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
-import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 import { CAMPAIGN_KEY, DONATION_TIERS } from "@/lib/donation-tiers";
 
@@ -56,14 +56,13 @@ export default async function MerciPage({
   return (
     <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
-        <Eyebrow>Souscription 2026</Eyebrow>
         {donation ? (
-          <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              {donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
-            </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-              {donation.pending ? (
+          <PageHero
+            eyebrow="Souscription 2026"
+            tone="system"
+            title={donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
+            intro={
+              donation.pending ? (
                 "Votre paiement est en cours de confirmation — vous recevrez un reçu par email dès qu'il sera validé, sans action de votre part."
               ) : (
                 <>
@@ -74,19 +73,16 @@ export default async function MerciPage({
                   — {donation.tierTitle} — a bien été enregistré. Un reçu vous a été
                   envoyé par email.
                 </>
-              )}
-            </p>
-          </>
+              )
+            }
+          />
         ) : (
-          <>
-            <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              Merci pour votre soutien !
-            </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-              Votre contribution a bien été prise en compte. Si le paiement a
-              abouti, un reçu vous a été envoyé par email.
-            </p>
-          </>
+          <PageHero
+            eyebrow="Souscription 2026"
+            tone="system"
+            title="Merci pour votre soutien !"
+            intro="Votre contribution a bien été prise en compte. Si le paiement a abouti, un reçu vous a été envoyé par email."
+          />
         )}
         <div className="mt-8 flex flex-wrap gap-4">
           <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">

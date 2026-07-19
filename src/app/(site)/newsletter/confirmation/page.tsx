@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
-import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 
 /**
  * Page de confirmation DOI (plan §5 étape 6) — cible de `redirectionUrl`
@@ -20,16 +20,12 @@ export default function NewsletterConfirmationPage() {
   return (
     <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
-        <Eyebrow>Newsletter</Eyebrow>
-        <h1 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-          Inscription confirmée
-        </h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-          Votre adresse email est confirmée : vous recevrez désormais nos
-          actualités (parutions, rencontres, souscriptions) — une fois par
-          mois. Vous pourrez vous désinscrire à tout moment depuis n&apos;importe
-          quel email reçu.
-        </p>
+        <PageHero
+          eyebrow="Newsletter"
+          tone="system"
+          title="Inscription confirmée"
+          intro="Votre adresse email est confirmée : vous recevrez désormais nos actualités (parutions, rencontres, souscriptions) — une fois par mois. Vous pourrez vous désinscrire à tout moment depuis n'importe quel email reçu."
+        />
         <div className="mt-8 flex flex-wrap gap-4">
           <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">
             Découvrir le catalogue

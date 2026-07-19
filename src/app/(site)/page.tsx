@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
+import { Button } from "@/components/button";
 import { NouveautesCarousel, type NouveauteBook } from "@/components/nouveautes-carousel";
 import { getActiveHighlight } from "@/lib/highlight";
 import { getNewReleases } from "@/lib/catalogue";
 import { EDITIONS } from "@/lib/editions";
 import type { Book, Cover, EditionSlug } from "@/lib/types";
-import { FOCUS_RING_DARK_OUTER } from "@/lib/ui";
 
 export const metadata: Metadata = {
   title: "Accueil",
@@ -59,12 +58,12 @@ export default async function HomePage() {
               )}
             </div>
             {highlight.lien && (
-              <Link
+              <Button
                 href={highlight.lien}
-                className={`flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-ink px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-paper transition-colors hover:bg-pop-orange hover:text-black motion-reduce:transition-none ${FOCUS_RING_DARK_OUTER}`}
+                className="flex-none gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em]"
               >
                 En savoir plus <span aria-hidden="true">→</span>
-              </Link>
+              </Button>
             )}
           </FramedGrid>
         </Container>
@@ -81,12 +80,12 @@ export default async function HomePage() {
               souscription finance les prochains titres.
             </p>
           </div>
-          <Link
+          <Button
             href="/souscription"
-            className={`flex flex-none items-center justify-center gap-2 whitespace-nowrap bg-ink px-8 py-6 font-sans text-sm font-extrabold uppercase tracking-[.06em] text-paper transition-colors hover:bg-pop-orange hover:text-black motion-reduce:transition-none ${FOCUS_RING_DARK_OUTER}`}
+            className="flex-none gap-2 whitespace-nowrap px-8 py-6 text-sm tracking-[.06em]"
           >
             Souscrire <span aria-hidden="true">→</span>
-          </Link>
+          </Button>
         </FramedGrid>
       </Container>
     </div>

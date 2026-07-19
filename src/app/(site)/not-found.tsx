@@ -11,6 +11,12 @@ const SPINES: { h: number; w: string; accent: Accent; fallen?: boolean }[] = [
   { h: 68, w: "w-4", accent: "brick", fallen: true },
 ];
 
+/**
+ * Composition bespoke (R6/0.3) — exception nommée à l'échelle `<PageHero>` :
+ * le « 404 » géant est le vrai titre visuel de cette page, aucun tone ne le
+ * couvre. `error.tsx`/`catalogue/error.tsx` reprendront ce vocabulaire au
+ * chantier « finitions » (5.3) ; pas cette page-ci.
+ */
 export default function NotFound() {
   return (
     <Container className="bg-paper py-24 text-center sm:py-32">
@@ -46,7 +52,7 @@ export default function NotFound() {
       <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink/70">
         Cette page n&apos;existe pas ou a été déplacée.
       </p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-ink/50">
+      <p className="mx-auto mt-1 max-w-md text-sm text-muted">
         Elle a peut-être glissé derrière l&apos;étagère.
       </p>
 

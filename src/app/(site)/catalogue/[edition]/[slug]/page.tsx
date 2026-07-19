@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllBookParams, getBook } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { CollectionTag } from "@/components/collection-tag";
 import { BuyLinksList } from "@/components/buy-links";
 import { FramedGrid } from "@/components/framed-grid";
@@ -37,7 +37,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   if (value == null || value === "") return null;
   return (
     <div className="flex flex-col gap-1 bg-paper px-3.5 py-3">
-      <dt className="font-sans text-[10px] font-bold uppercase tracking-[.08em] text-ink/50">
+      <dt className="font-sans text-[10px] font-bold uppercase tracking-[.08em] text-muted">
         {label}
       </dt>
       <dd className="font-sans text-sm font-bold text-ink">{value}</dd>
@@ -123,40 +123,19 @@ export default async function BookPage({
   const bookJsonLdScript = JSON.stringify(bookJsonLd).replace(/</g, "\\u003c");
 
   return (
-    <Container className="bg-paper py-12">
+    <Container className="bg-paper py-12 sm:py-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: bookJsonLdScript }}
       />
-      <nav
-        aria-label="Fil d'ariane"
-        className="mb-8 font-sans text-xs font-bold uppercase tracking-[.06em] text-ink/60"
-      >
-        <Link
-          href="/"
-          className="transition-colors motion-reduce:transition-none hover:text-ink"
-        >
-          Accueil
-        </Link>
-        <span aria-hidden="true" className="px-1.5">
-          /
-        </span>
-        <Link
-          href="/catalogue"
-          className="transition-colors motion-reduce:transition-none hover:text-ink"
-        >
-          Catalogue
-        </Link>
-        <span aria-hidden="true" className="px-1.5">
-          /
-        </span>
-        <Link
-          href={`/catalogue/${edition}`}
-          className="transition-colors motion-reduce:transition-none hover:text-ink"
-        >
-          {editionInfo.name}
-        </Link>
-      </nav>
+      <Breadcrumb
+        trail={[
+          { label: "Accueil", href: "/" },
+          { label: "Catalogue", href: "/catalogue" },
+          { label: editionInfo.name, href: `/catalogue/${edition}` },
+        ]}
+        currentIsPage={false}
+      />
 
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         <div className="lg:sticky lg:top-24 lg:self-start">
@@ -217,7 +196,7 @@ export default async function BookPage({
         </div>
 
         <article>
-          <Eyebrow className="mb-2">
+          <Eyebrow variant="sm" className="mb-2">
             {editionInfo.name}
           </Eyebrow>
           {book.collection && <CollectionTag collection={book.collection} className="mb-3" />}

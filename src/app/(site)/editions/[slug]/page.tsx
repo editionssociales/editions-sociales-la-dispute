@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
-import { Reveal } from "@/components/reveal";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { Button } from "@/components/button";
 import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { ACCENT_BG } from "@/lib/accents";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { countBooks, getBooks } from "@/lib/catalogue";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
 export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
 
@@ -50,35 +52,16 @@ export default async function EditionPage({
     <>
       {/* Héro plein cadre, dans l'accent de la maison */}
       <section className={`border-b-2 border-ink ${ACCENT_BG[info.accent]}`}>
-        <Container className="py-14 sm:py-20">
-          <Reveal>
-            <nav
-              aria-label="Fil d'ariane"
-              className="font-sans text-xs font-bold uppercase tracking-[.06em] text-paper/70"
-            >
-              <Link
-                href="/"
-                className="transition-colors motion-reduce:transition-none hover:text-paper"
-              >
-                Accueil
-              </Link>
-              <span aria-hidden="true" className="px-1.5">
-                /
-              </span>
-              <Link
-                href="/editions"
-                className="transition-colors motion-reduce:transition-none hover:text-paper"
-              >
-                Nos collections
-              </Link>
-              <span aria-hidden="true" className="px-1.5">
-                /
-              </span>
-              <span className="text-paper">{info.shortName}</span>
-            </nav>
-            <h1 className="mt-5 max-w-4xl font-sans text-4xl font-black italic uppercase leading-[0.94] text-paper sm:text-6xl">
-              {info.name}
-            </h1>
+        <Container className="py-16 sm:py-20">
+          <Breadcrumb
+            tone="dark"
+            trail={[
+              { label: "Accueil", href: "/" },
+              { label: "Nos collections", href: "/editions" },
+              { label: info.shortName },
+            ]}
+          />
+          <PageHero tone="cover" title={info.name} className="max-w-4xl">
             <p className="mt-4 max-w-2xl font-sans text-lg font-bold leading-snug text-paper/90">
               {info.tagline}
             </p>
@@ -94,17 +77,18 @@ export default async function EditionPage({
                   titres au catalogue
                 </span>
               </p>
-              <a
+              <Button
                 href={info.legacyUrl}
                 target="_blank"
                 rel="noreferrer"
-                className={`inline-flex items-center gap-1 border-2 border-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
+                variant="outline"
+                className="gap-1 px-4 py-2.5 text-xs tracking-[.04em]"
               >
                 Site historique
                 <span aria-hidden="true">&nbsp;↗</span>
-              </a>
+              </Button>
             </div>
-          </Reveal>
+          </PageHero>
         </Container>
       </section>
 
@@ -115,7 +99,7 @@ export default async function EditionPage({
             <Eyebrow>
               {info.shortName}
             </Eyebrow>
-            <h2 className="mt-2 font-sans text-2xl font-black italic uppercase leading-[0.96] text-ink sm:text-3xl">
+            <h2 className="mt-2 font-sans text-2xl font-black italic uppercase leading-[0.98] text-ink sm:text-3xl">
               Parutions récentes
             </h2>
           </div>
@@ -136,12 +120,12 @@ export default async function EditionPage({
             Le fonds {info.shortName} compte {total} titres — tous réunis dans
             le catalogue de la maison.
           </p>
-          <Link
+          <Button
             href={`/catalogue/${slug}`}
-            className={`shrink-0 border-2 border-ink bg-ink px-6 py-3.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
+            className="shrink-0 px-6 py-3.5 text-sm tracking-[.03em]"
           >
             Parcourir tout le fonds
-          </Link>
+          </Button>
         </Container>
       </section>
     </>

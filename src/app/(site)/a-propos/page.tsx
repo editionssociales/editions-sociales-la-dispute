@@ -7,6 +7,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import { getPageAPropos } from "@/lib/site-content";
 
@@ -33,33 +34,25 @@ export default async function AProposPage() {
   return (
     <>
       {/* Héro : qui nous sommes */}
-      <Container className="bg-paper pb-16 pt-10 sm:pb-24 sm:pt-14">
+      <Container className="bg-paper py-16 sm:py-20">
         <Breadcrumb
           trail={[{ label: "Accueil", href: "/" }, { label: "À propos" }]}
         />
-        <Reveal>
-          <div className="mt-6 max-w-3xl">
-            <Eyebrow>
-              Qui nous sommes
-            </Eyebrow>
-            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-              {content.herosTitre}
-            </h1>
-            <p className="mt-6 text-lg leading-relaxed text-ink/70">
-              {content.herosIntro}
-            </p>
-            <div className="mt-7 flex flex-wrap gap-2">
-              {REPERES.map((r) => (
-                <span
-                  key={r}
-                  className="border-2 border-ink px-3 py-1.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink"
-                >
-                  {r}
-                </span>
-              ))}
-            </div>
+        <PageHero eyebrow="Qui nous sommes" title={content.herosTitre}>
+          <p className="mt-6 text-lg leading-relaxed text-ink/70">
+            {content.herosIntro}
+          </p>
+          <div className="mt-7 flex flex-wrap gap-2">
+            {REPERES.map((r) => (
+              <span
+                key={r}
+                className="border-2 border-ink px-3 py-1.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink"
+              >
+                {r}
+              </span>
+            ))}
           </div>
-        </Reveal>
+        </PageHero>
       </Container>
 
       {/* Les deux maisons, côte à côte */}
@@ -82,7 +75,7 @@ export default async function AProposPage() {
                   <h3 className="font-sans text-2xl font-black italic text-ink">
                     {m.name}
                   </h3>
-                  <p className="mt-1 font-sans text-xs font-bold uppercase tracking-[.05em] text-ink/60">
+                  <p className="mt-1 font-sans text-xs font-bold uppercase tracking-[.05em] text-muted">
                     {m.tagline}
                   </p>
                   <p className="mt-4 flex-1 text-[15px] leading-relaxed text-ink/70">

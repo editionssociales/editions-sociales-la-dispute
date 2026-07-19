@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
-import { Reveal } from "@/components/reveal";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { ContactForm } from "@/components/contact-form";
 
 /**
@@ -21,20 +20,14 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <Container className="bg-paper pb-16 pt-10 sm:pb-20 sm:pt-14">
+    <Container className="bg-paper py-12 sm:py-16">
       <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Contact" }]} />
-      <Reveal>
-        <div className="mt-6 max-w-xl">
-          <Eyebrow>Nous écrire</Eyebrow>
-          <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-            Contact
-          </h1>
-          <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-            Une question sur un livre, une commande, une proposition
-            éditoriale ? Écrivez-nous, nous vous répondrons dès que possible.
-          </p>
-        </div>
-      </Reveal>
+      <PageHero
+        eyebrow="Nous écrire"
+        title="Contact"
+        intro="Une question sur un livre, une commande, une proposition éditoriale ? Écrivez-nous, nous vous répondrons dès que possible."
+        className="max-w-xl"
+      />
 
       <div className="mt-10 max-w-xl">
         <ContactForm />

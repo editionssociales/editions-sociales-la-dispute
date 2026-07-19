@@ -115,7 +115,7 @@ export function ContactForm() {
         {state.status !== "idle" ? state.message : ""}
       </p>
 
-      <p className="text-[11px] leading-snug text-ink/50">
+      <p className="text-[11px] leading-snug text-muted">
         Votre message est transmis à notre boîte de contact via notre
         prestataire Brevo (sous-traitant), qui reçoit également votre adresse
         email pour permettre une réponse.{" "}

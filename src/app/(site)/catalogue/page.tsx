@@ -7,6 +7,7 @@ import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { PageHero } from "@/components/page-hero";
 import { parseBookFilters } from "@/lib/parse-filters";
 import { catalogueHref } from "@/lib/browse";
 
@@ -34,14 +35,13 @@ async function CatalogueBody({
   const hrefFor = (p: number) => catalogueHref({ ...filters, page: p });
 
   return (
-    <Container className="bg-paper py-12">
+    <Container className="bg-paper py-12 sm:py-16">
       <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
 
-      <div className="mt-3.5 max-w-2xl">
-        <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-          {isUpcoming ? "Les livres à paraître" : "Le catalogue par thèmes"}
-        </h1>
-      </div>
+      <PageHero
+        title={isUpcoming ? "Les livres à paraître" : "Le catalogue par thèmes"}
+        className="max-w-2xl"
+      />
 
       <div className="mt-6 sm:mt-7">
         <CatalogueFilters

@@ -12,7 +12,7 @@ export default function PanierPage() {
     <Container className="bg-paper py-12">
       <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Panier" }]} />
 
-      <div className="mt-3.5 max-w-2xl">
+      <div className="max-w-2xl">
         <Eyebrow>
           Commande
         </Eyebrow>

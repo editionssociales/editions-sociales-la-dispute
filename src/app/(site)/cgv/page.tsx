@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
-import { Reveal } from "@/components/reveal";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Eyebrow } from "@/components/eyebrow";
+import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
 
@@ -20,29 +19,21 @@ export default async function CgvPage() {
   const { cgv } = await getPagesLegales();
   return (
     <>
-      <Container className="bg-paper pb-16 pt-10 sm:pb-20 sm:pt-14">
+      <Container className="bg-paper py-12 sm:py-16">
         <Breadcrumb
           trail={[
             { label: "Accueil", href: "/" },
             { label: "Conditions générales & conditions de don" },
           ]}
         />
-        <Reveal>
-          <div className="mt-6 max-w-3xl">
-            <Eyebrow>
-              Dons et vente en ligne
-            </Eyebrow>
-            <h1 className="mt-3 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-              Conditions générales &amp; conditions de don
-            </h1>
-            {!cgv && (
-              <p className={LEGAL_BODY}>
-                Ce site propose la vente en ligne de nos livres, ainsi que les
-                dons de la campagne en cours.
-              </p>
-            )}
-          </div>
-        </Reveal>
+        <PageHero
+          eyebrow="Dons et vente en ligne"
+          title="Conditions générales & conditions de don"
+          intro={
+            !cgv &&
+            "Ce site propose la vente en ligne de nos livres, ainsi que les dons de la campagne en cours."
+          }
+        />
       </Container>
 
       {cgv ? (
