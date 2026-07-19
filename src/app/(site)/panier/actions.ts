@@ -4,7 +4,7 @@ import { getAllBooks } from "@/lib/catalogue";
 import { pickBooksByIds } from "@/lib/cart-core";
 import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
 import { evaluatePromoCode, type PromoEvalResult } from "@/payload/lib/promo-eval-core";
-import type { Book } from "@/lib/types";
+import type { CartSnapshot } from "./snapshot";
 
 /**
  * Server actions de `/panier` (plan §4 étape 6) — le panier lui-même (ids +
@@ -20,12 +20,10 @@ import type { Book } from "@/lib/types";
  *  - `validatePromoCode` relit un code (`getPromoCodeRecord` — normalisation
  *    et accès collection assumés par le seam) et l'évalue contre le
  *    sous-total courant (`promo-eval-core.ts`, pur).
+ *
+ * Types : `./snapshot` — un fichier `"use server"` ne peut exporter que des
+ * async functions.
  */
-
-export interface CartSnapshot {
-  books: Book[];
-  reducedShippingFlags: { id: number; flag: boolean }[];
-}
 
 /** Relecture serveur des lignes du panier — jamais de prix/statut lus depuis le client. */
 export async function getCartSnapshot(ids: number[]): Promise<CartSnapshot> {

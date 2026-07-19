@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { sendDoiConfirmation } from "@/lib/brevo";
 import { validateNewsletterSubmission } from "@/lib/newsletter";
+import type { NewsletterFormState } from "./state";
 
 /**
  * Server action de l'îlot `newsletter-form.tsx` (plan §5 étape 6) — décision
@@ -16,16 +17,10 @@ import { validateNewsletterSubmission } from "@/lib/newsletter";
  * email syntaxiquement invalide obtient en revanche un message distinct : ce
  * n'est pas une fuite d'information sur un abonné existant, juste une
  * validation de forme utile à un visiteur qui s'est trompé de frappe.
+ *
+ * Types / état initial : `./state` — un fichier `"use server"` ne peut
+ * exporter que des async functions.
  */
-
-export interface NewsletterFormState {
-  status: "idle" | "ok" | "error";
-  message: string | null;
-  /** Posé uniquement quand l'échec porte sur le champ email (adresse invalide) — jamais sur une panne d'envoi générique — pour `aria-invalid`/`aria-describedby` côté formulaire. */
-  field?: "email";
-}
-
-export const NEWSLETTER_INITIAL_STATE: NewsletterFormState = { status: "idle", message: null };
 
 /**
  * Liste blanche de hosts de confiance pour dériver `redirectionUrl` en

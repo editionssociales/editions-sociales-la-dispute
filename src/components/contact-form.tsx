@@ -5,7 +5,8 @@ import Link from "next/link";
 import { LEGAL_LINK } from "@/components/legal-section";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { MESSAGE_MAX_LENGTH, NAME_MAX_LENGTH, SUBJECT_MAX_LENGTH } from "@/lib/contact-form";
-import { CONTACT_INITIAL_STATE, sendContactMessage } from "@/app/(site)/contact/actions";
+import { sendContactMessage } from "@/app/(site)/contact/actions";
+import { CONTACT_INITIAL_STATE } from "@/app/(site)/contact/state";
 
 /**
  * Formulaire de contact unique (plan §5 étape 7) — sujet libre, un seul

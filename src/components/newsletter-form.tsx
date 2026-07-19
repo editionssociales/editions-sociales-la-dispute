@@ -4,10 +4,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LEGAL_LINK } from "@/components/legal-section";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
-import {
-  NEWSLETTER_INITIAL_STATE,
-  subscribeToNewsletter,
-} from "@/app/(site)/newsletter/actions";
+import { subscribeToNewsletter } from "@/app/(site)/newsletter/actions";
+import { NEWSLETTER_INITIAL_STATE } from "@/app/(site)/newsletter/state";
 
 /**
  * Îlot client extrait de `NewsletterCell` (`site-footer.tsx`, plan §5 étape

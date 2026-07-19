@@ -21,7 +21,8 @@ vi.mock("next/headers", () => ({
 const sendDoiConfirmation = vi.fn(async (): Promise<BrevoResult> => ({ ok: true }));
 vi.mock("@/lib/brevo", () => ({ sendDoiConfirmation }));
 
-const { NEWSLETTER_INITIAL_STATE, subscribeToNewsletter } = await import("./actions");
+const { subscribeToNewsletter } = await import("./actions");
+const { NEWSLETTER_INITIAL_STATE } = await import("./state");
 
 const form = (entries: Record<string, string>): FormData => {
   const fd = new FormData();

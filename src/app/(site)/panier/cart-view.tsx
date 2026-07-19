@@ -17,7 +17,8 @@ import {
 } from "@/lib/cart-core";
 import { computeShipping, FREE_SHIPPING_MIN_CART_CENTS, type ShippingZone } from "@/lib/shipping-core";
 import type { PromoEvalResult } from "@/payload/lib/promo-eval-core";
-import { getCartSnapshot, validatePromoCode, type CartSnapshot } from "./actions";
+import { getCartSnapshot, validatePromoCode } from "./actions";
+import type { CartSnapshot } from "./snapshot";
 
 interface CheckoutErrorBody {
   error?: string;

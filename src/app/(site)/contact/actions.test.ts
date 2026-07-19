@@ -11,7 +11,8 @@ import type { BrevoResult } from "@/lib/brevo";
 const sendTransactionalEmail = vi.fn(async (): Promise<BrevoResult> => ({ ok: true }));
 vi.mock("@/lib/brevo", () => ({ sendTransactionalEmail }));
 
-const { CONTACT_INITIAL_STATE, sendContactMessage } = await import("./actions");
+const { sendContactMessage } = await import("./actions");
+const { CONTACT_INITIAL_STATE } = await import("./state");
 
 const VALID = {
   name: "Simone",
