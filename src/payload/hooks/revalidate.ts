@@ -28,11 +28,22 @@ import type {
  * Les chemins littéraux (page d'accueil, listes) n'ont pas besoin du
  * groupe : ils correspondent à l'URL réellement visitée.
  */
-const CATALOGUE_LITERAL_PATHS = ['/', '/catalogue', '/editions']
+const CATALOGUE_LITERAL_PATHS = ['/', '/catalogue', '/editions', '/boutique']
+// Motifs en ESPACE D'URL, sans le groupe de routes : la référence Next 16
+// (`revalidatePath.md` : « a route pattern with dynamic segments like
+// `/product/[slug]` ») ne préfixe jamais par le groupe — la forme
+// `/(site)/...` héritée d'un ancien exemple ne matchait RIEN (constat live :
+// fiches jamais purgées après édition back-office). Les deux formes sont
+// émises par prudence, l'appel excédentaire est inoffensif.
 const CATALOGUE_PAGE_PATTERNS = [
+  '/catalogue/[edition]',
+  '/catalogue/[edition]/[slug]',
+  '/editions/[slug]',
+  '/boutique/[slug]',
   '/(site)/catalogue/[edition]',
   '/(site)/catalogue/[edition]/[slug]',
   '/(site)/editions/[slug]',
+  '/(site)/boutique/[slug]',
 ]
 
 /** Revalide toutes les pages qui peuvent afficher un livre/auteur/collection/média. */
