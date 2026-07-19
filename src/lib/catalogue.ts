@@ -32,7 +32,8 @@ export type { CatalogueView } from "./browse";
  * Cache data (`unstable_cache`, tag `catalogue`, 3600 s) : les pages catalogue
  * lisent `searchParams` donc restent dynamiques (`no-store`), mais le
  * chargement Postgres n'est plus rejoué à chaque MISS — invalidé via
- * `revalidateTag('catalogue', 'max')` dans les hooks Payload.
+ * `revalidateTag('catalogue', { expire: 0 })` dans les hooks Payload
+ * (expiration bloquante — read-your-writes du back-office).
  */
 
 const source = pgCatalogueSource();

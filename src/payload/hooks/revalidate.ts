@@ -48,7 +48,13 @@ const CATALOGUE_PAGE_PATTERNS = [
 
 /** Revalide toutes les pages qui peuvent afficher un livre/auteur/collection/média. */
 function revalidateCatalogueRoutes(): void {
-  revalidateTag('catalogue', 'max')
+  // `{ expire: 0 }` (et pas `'max'`) : le profil `'max'` est du
+  // stale-while-revalidate — combiné à la purge de route ci-dessous, la page
+  // se re-rendait UNE fois avec les données périmées puis restait en cache
+  // 1 h (constat live). L'édition back-office exige du read-your-writes :
+  // expiration bloquante du data-cache AVANT la purge des routes, pour que
+  // le premier re-rendu parte de Postgres.
+  revalidateTag('catalogue', { expire: 0 })
   for (const path of CATALOGUE_LITERAL_PATHS) revalidatePath(path)
   for (const pattern of CATALOGUE_PAGE_PATTERNS) revalidatePath(pattern, 'page')
 }
