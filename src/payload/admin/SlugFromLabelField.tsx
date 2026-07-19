@@ -11,14 +11,15 @@ import {
 import type { TextFieldClientComponent } from 'payload'
 import { useEffect, useRef, type ChangeEvent } from 'react'
 
-import { slugify } from '../../lib/slugify.ts'
+import { slugify } from '../lib/slugify.ts'
 
 /**
- * Slug prérempli depuis le titre tant que l'éditeur ne l'a pas modifié à la
- * main. Sur une fiche déjà enregistrée (slug présent au montage), le suivi
- * auto est coupé — on ne réécrit pas un slug publié.
+ * Slug prérempli depuis `title` ou `name` tant que l'éditeur ne l'a pas
+ * modifié à la main. Sur une fiche déjà enregistrée (slug présent au
+ * montage), le suivi auto est coupé — on ne réécrit pas un slug publié.
+ * Utilisé par Livres, Auteur·rice·s et Libellés (même modèle de création).
  */
-export const SlugFromTitleField: TextFieldClientComponent = ({
+export const SlugFromLabelField: TextFieldClientComponent = ({
   field,
   path: pathFromProps,
   readOnly,
@@ -29,7 +30,13 @@ export const SlugFromTitleField: TextFieldClientComponent = ({
 
   const { value, setValue, showError, errorMessage } = useField<string>({ path })
 
-  const title = useFormFields(([fields]) => fields.title?.value as string | undefined)
+  const source = useFormFields(([fields]) => {
+    const title = fields.title?.value
+    if (typeof title === 'string') return title
+    const name = fields.name?.value
+    if (typeof name === 'string') return name
+    return undefined
+  })
 
   const initialized = useRef(false)
   const locked = useRef(false)
@@ -44,11 +51,11 @@ export const SlugFromTitleField: TextFieldClientComponent = ({
     }
     if (locked.current || readOnly) return
 
-    const next = typeof title === 'string' ? slugify(title) : ''
+    const next = typeof source === 'string' ? slugify(source) : ''
     if (next !== (value ?? '')) {
       setValue(next)
     }
-  }, [title, value, setValue, readOnly])
+  }, [source, value, setValue, readOnly])
 
   return (
     <div className={['field-type', 'text', className].filter(Boolean).join(' ')} style={{ width }}>

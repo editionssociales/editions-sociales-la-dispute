@@ -5,6 +5,7 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import { deriveSlugFromLabel } from '../lib/slug-field.ts'
 
 export const Authors: CollectionConfig = {
   slug: 'authors',
@@ -30,21 +31,37 @@ export const Authors: CollectionConfig = {
   },
   fields: [
     {
-      name: 'name',
-      type: 'text',
-      required: true,
-      label: 'Nom',
-      admin: {
-        description: 'Forme « Prénom Nom »',
-      },
-    },
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      unique: true,
-      index: true,
-      label: 'Slug',
+      type: 'row',
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+          required: true,
+          label: 'Nom',
+          admin: {
+            width: '65%',
+            description: 'Forme « Prénom Nom »',
+          },
+        },
+        {
+          name: 'slug',
+          type: 'text',
+          required: true,
+          unique: true,
+          index: true,
+          label: 'Slug',
+          hooks: {
+            beforeValidate: [deriveSlugFromLabel('name')],
+          },
+          admin: {
+            width: '35%',
+            description: 'Prérempli depuis le nom — ne pas modifier après publication',
+            components: {
+              Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
+            },
+          },
+        },
+      ],
     },
     {
       name: 'bio',
