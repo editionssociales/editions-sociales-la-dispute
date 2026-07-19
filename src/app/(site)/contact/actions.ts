@@ -2,6 +2,7 @@
 
 import { sendTransactionalEmail } from "@/lib/brevo";
 import { validateContactSubmission, type ContactSubmission } from "@/lib/contact-form";
+import type { ContactFormState } from "./state";
 
 /**
  * Server action de l'îlot `contact-form.tsx` (plan §5 étape 7) — même
@@ -16,18 +17,10 @@ import { validateContactSubmission, type ContactSubmission } from "@/lib/contact
  * protéger ici) — chaque motif de refus a son propre message, utile au
  * visiteur. Seuls honeypot/délai gardent une réponse identique au succès,
  * pour ne pas renseigner un bot sur la détection.
+ *
+ * Types / état initial : `./state` — un fichier `"use server"` ne peut
+ * exporter que des async functions.
  */
-
-/** Champ fautif d'un refus de validation — pose `aria-invalid`/`aria-describedby` côté formulaire (`contact-form.tsx`). `undefined` pour un échec sans rapport avec un champ précis (honeypot, panne d'envoi). */
-export type ContactField = "name" | "email" | "subject" | "message";
-
-export interface ContactFormState {
-  status: "idle" | "ok" | "error";
-  message: string | null;
-  field?: ContactField;
-}
-
-export const CONTACT_INITIAL_STATE: ContactFormState = { status: "idle", message: null };
 
 const OK_MESSAGE =
   "Merci, votre message a bien été envoyé. Nous vous répondrons dès que possible.";
