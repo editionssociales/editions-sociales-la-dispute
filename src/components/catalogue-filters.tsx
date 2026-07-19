@@ -25,6 +25,12 @@ interface Props {
   lockedEdition?: string;
   /** Nombre total de titres, pour l'étiquette « Tous les livres ». */
   totalCount?: number;
+  /**
+   * Masque les étiquettes de collection — la mosaïque de thèmes de
+   * `/catalogue/[edition]` couvre déjà ce rôle, une double navigation par
+   * thème sur la même page serait un doublon.
+   */
+  hideCollections?: boolean;
 }
 
 const SORTS = [
@@ -64,7 +70,13 @@ function Tag({
   );
 }
 
-export function CatalogueFilters({ collections, authors, lockedEdition, totalCount }: Props) {
+export function CatalogueFilters({
+  collections,
+  authors,
+  lockedEdition,
+  totalCount,
+  hideCollections,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -113,6 +125,10 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
   const activeCollection = filters.collection ?? "";
   const activeEdition = filters.edition ?? "";
   const chips = activeChips(filters, { collections, authors, lockedEdition });
+  // Rangée de thèmes/maisons : vide quand les deux sources sont masquées
+  // (typiquement /catalogue/[edition], où hideCollections ET lockedEdition
+  // sont posés — la mosaïque au-dessus couvre déjà ce rôle).
+  const hasTags = !hideCollections || !lockedEdition;
 
   return (
     <div
@@ -120,36 +136,54 @@ export function CatalogueFilters({ collections, authors, lockedEdition, totalCou
         isPending ? "opacity-70" : ""
       }`}
     >
+      {hasTags && (
+        // Rail horizontal sur mobile (pas de mur de puces qui repousse
+        // recherche/tri hors écran) ; redevient une grille qui s'enroule à
+        // partir de `sm`.
+        <FramedGrid
+          flow="flex"
+          role="group"
+          aria-label="Thèmes du catalogue"
+          className="items-stretch overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
+        >
+          {!hideCollections && (
+            <>
+              <Tag active={activeCollection === ""} onClick={() => setFilter("collection", "")}>
+                Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
+              </Tag>
+              {collections.map((c) => (
+                <Tag
+                  key={c.slug}
+                  active={activeCollection === c.slug}
+                  onClick={() => setFilter("collection", c.slug)}
+                >
+                  {c.name} ({c.count})
+                </Tag>
+              ))}
+            </>
+          )}
+
+          {!lockedEdition &&
+            EDITION_LIST.map((e) => (
+              <Tag
+                key={e.slug}
+                active={activeEdition === e.slug}
+                onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
+              >
+                {e.shortName}
+              </Tag>
+            ))}
+        </FramedGrid>
+      )}
+
+      {/* Recherche + tri : toujours visibles, jamais dans le rail de puces
+          ci-dessus (elles ne défilent jamais). */}
       <FramedGrid
         flow="flex"
         role="group"
-        aria-label="Thèmes et filtres du catalogue"
-        className="items-stretch"
+        aria-label="Recherche et tri du catalogue"
+        className={`items-stretch ${hasTags ? "mt-[2px]" : ""}`}
       >
-        <Tag active={activeCollection === ""} onClick={() => setFilter("collection", "")}>
-          Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
-        </Tag>
-        {collections.map((c) => (
-          <Tag
-            key={c.slug}
-            active={activeCollection === c.slug}
-            onClick={() => setFilter("collection", c.slug)}
-          >
-            {c.name} ({c.count})
-          </Tag>
-        ))}
-
-        {!lockedEdition &&
-          EDITION_LIST.map((e) => (
-            <Tag
-              key={e.slug}
-              active={activeEdition === e.slug}
-              onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
-            >
-              {e.shortName}
-            </Tag>
-          ))}
-
         <label className="flex items-center bg-paper px-3.5">
           <span className="sr-only">Rechercher</span>
           <input

@@ -33,6 +33,9 @@ async function CatalogueBody({
   const { books, page, totalPages, total, isUpcoming, facets } = await catalogueView(filters);
 
   const hrefFor = (p: number) => catalogueHref({ ...filters, page: p });
+  // Sortie de l'état « 0 résultat » : repart du catalogue complet (tri
+  // conservé), même logique que « Tout effacer » côté filtres.
+  const resetHref = catalogueHref({ sort: filters.sort });
 
   return (
     <Container className="bg-paper py-12 sm:py-16">
@@ -63,7 +66,7 @@ async function CatalogueBody({
       </div>
 
       <div className="mt-4">
-        <BookGrid books={books} />
+        <BookGrid books={books} resetHref={resetHref} />
       </div>
 
       <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
