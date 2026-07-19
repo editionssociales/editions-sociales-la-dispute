@@ -7,6 +7,7 @@ import {
   NAV_HOUSES,
   NAV_SECTIONS,
   activeSections,
+  type NavSearch,
   type NavSectionId,
 } from "@/lib/nav";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
@@ -14,8 +15,18 @@ import { CartNavCell } from "./cart/cart-badge";
 
 /**
  * Navbar brutaliste — quadrillage noir 2px (conteneur `grid gap-[2px]
- * bg-ink p-[2px]`, cellules blanches/pop). Collante (sticky) : GRANDE en haut
- * de page, elle se COMPACTE en douceur dès qu'on défile (état `compact`, ~200ms).
+ * bg-ink p-[2px]`, cellules blanches/pop).
+ *
+ * Sous `lg` : COMPACTE PAR DÉFAUT, en permanence — l'arbitrage retenu contre
+ * le menu burger (le quadrillage permanent EST l'identité de marque ; on
+ * réduit sa taille, on ne le cache jamais). Les tailles « déployées »
+ * (grande navbar du haut de page) sont réservées à `lg:` : sous `lg`, chaque
+ * cellule porte une taille fixe, indépendante du scroll.
+ *
+ * À `lg` et au-delà : la navbar reste collante (sticky) et GRANDE en haut de
+ * page, elle se COMPACTE en douceur dès qu'on défile (état `compact`, géré
+ * par `useCompactOnScroll`, ~200ms) — comportement scroll inchangé, mais
+ * cantonné au desktop.
  *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » | nav 2×2.
  * Mobile : empilé — 2 maisons pleine largeur, nav 2×2, puis « Nous soutenir ».
@@ -25,7 +36,10 @@ import { CartNavCell } from "./cart/cart-badge";
  * `<Suspense>` — sans ça, le layout racine dynamiserait tout le site.
  *
  * Sections et maisons viennent du modèle de données `lib/nav` (label, href,
- * matcher d'activité) ; ce composant n'ajoute que l'apparence.
+ * matcher d'activité) ; ce composant n'ajoute que l'apparence. Les cellules
+ * (maisons, sections, panier, CTA) sont des `<li>` d'un `<ul>` — parité avec
+ * le footer pour une annonce cohérente en lecteur d'écran ; `display:
+ * contents` les rend transparentes à la grille CSS (aucun changement visuel).
  */
 
 const NAV_ACCENT_CLASS: Record<NavSectionId, string> = {
@@ -69,20 +83,25 @@ const CELL_TRANSITION =
 const MORPH_TRANSITION =
   "transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none";
 
+/**
+ * Taille FIXE sous `lg` (compact par défaut, indépendante du scroll) ; à `lg`
+ * et au-delà, le scroll retrouve l'écart compact/déployé — plafond déployé
+ * rééquilibré à ~30px (au lieu de 23px) et graisse `font-black` (au lieu de
+ * `font-bold`) pour porter l'identité maison au même niveau que le CTA
+ * « Nous soutenir » (chantier 3 §4 — c'était l'inverse : CTA à 42px, maisons
+ * à 23px, dans le composant le plus vu du site).
+ */
 function maisonCellClass(compact: boolean) {
-  return `flex items-center bg-paper px-6 font-sans font-bold italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${
-    compact ? "py-3 text-[14px]" : "py-7 text-[clamp(18px,1.5vw,23px)]"
-  }`;
+  const lg = compact ? "lg:py-3 lg:text-[14px]" : "lg:py-7 lg:text-[clamp(22px,2vw,30px)]";
+  return `flex min-h-11 items-center bg-paper px-6 py-4 font-sans text-[16px] font-black italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg}`;
 }
 
 function navCellClass(section: NavSectionId, active: boolean, compact: boolean) {
-  // Sur desktop la hauteur des cellules nav suit la rangée (py-0) ; le padding
-  // vertical ne joue qu'en mobile. Fond au repos toujours clair (bg-paper) ou
-  // pop (R2) : anneau clair dans les deux cas (R5).
-  const size = compact
-    ? "py-3 text-[12px] lg:py-0"
-    : "py-7 text-[14px] lg:py-0";
-  return `flex items-center justify-center px-4 text-center font-sans font-extrabold uppercase tracking-[.08em] text-black ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${size} ${
+  // Fond au repos toujours clair (bg-paper) ou pop (R2) : anneau clair dans
+  // les deux cas (R5). Taille fixe sous `lg` (compact par défaut) ; à `lg`
+  // la hauteur suit la rangée (py-0), seule la taille de texte varie au scroll.
+  const lg = compact ? "lg:min-h-0 lg:py-0 lg:text-[12px]" : "lg:min-h-0 lg:py-0 lg:text-[14px]";
+  return `flex min-h-11 items-center justify-center px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-black ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg} ${
     active ? NAV_ACCENT_CLASS[section] : NAV_HOVER_CLASS[section]
   }`;
 }
@@ -93,8 +112,10 @@ function soutenirClass(placement: string) {
   // ici — deux calques empilés s'en chargent (cf. SoutenirCell). `grid` sert de
   // pile : les deux calques occupent la MÊME cellule ([grid-area:1/1]). `relative`
   // ancre la flèche déployée (hors des calques, pour garder sa position d'origine).
-  // Fond ink au repos : anneau de focus sombre (pop-yellow, R2/R5).
-  return `relative grid bg-ink px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-paper hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_RING_DARK} ${placement}`;
+  // `min-h-11` : cible tactile garantie sous `lg`, où le calque compact seul
+  // porte la hauteur de la cellule (chantier 3 §3). Fond ink au repos :
+  // anneau de focus sombre (pop-yellow, R2/R5).
+  return `relative grid min-h-11 bg-ink px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-paper hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_RING_DARK} ${placement}`;
 }
 
 /**
@@ -103,12 +124,20 @@ function soutenirClass(placement: string) {
  * jamais un libellé unique (dont le passage 2 lignes → 1 ligne « sauterait ») :
  *
  *  • calque DÉPLOYÉ  — grand corps, libellé sur ~2 lignes, flèche au coin bas-droit ;
+ *    RÉSERVÉ à `lg:` (`hidden lg:flex`/`hidden lg:block`) — sous `lg`, la navbar
+ *    est compacte par défaut (chantier 3 §3), ce calque ne s'affiche donc jamais
+ *    en dessous de ce point de rupture, quel que soit le scroll.
  *  • calque COMPACT  — corps réduit, libellé sur 1 ligne aligné à une grande flèche.
+ *    Base TOUJOURS visible (mobile compact par défaut) ; ne cross-fade qu'à `lg:`.
  *
- * On croise leur opacité + une légère échelle (grossit en se déployant, rétrécit
- * en se compactant) : morphing fluide et continu, sans reflow. Le libellé est
- * dupliqué visuellement mais chaque calque est `aria-hidden` ; le nom accessible
- * unique et stable vient de l'`aria-label` du lien. `placement` place la cellule.
+ * À `lg` et au-delà, on croise leur opacité + une légère échelle (grossit en se
+ * déployant, rétrécit en se compactant) : morphing fluide et continu, sans
+ * reflow. Plafond du calque déployé aligné à ~30px (chantier 3 §4, au lieu de
+ * 42px) — les maisons (`maisonCellClass`) plafonnent au même corps, en
+ * `font-black` : la CTA de dons ne domine plus l'identité éditoriale. Le
+ * libellé est dupliqué visuellement mais chaque calque est `aria-hidden` ; le
+ * nom accessible unique et stable vient de l'`aria-label` du lien. `placement`
+ * place la cellule.
  */
 function SoutenirCell({ compact, placement }: { compact: boolean; placement: string }) {
   return (
@@ -117,22 +146,22 @@ function SoutenirCell({ compact, placement }: { compact: boolean; placement: str
       aria-label="Nous soutenir"
       className={soutenirClass(placement)}
     >
-      {/* Calque DÉPLOYÉ : grand libellé (~2 lignes). Visible en haut de page ;
-          s'efface en rétrécissant au compactage. */}
+      {/* Calque DÉPLOYÉ : grand libellé (~2 lignes), réservé à lg:. */}
       <span
         aria-hidden="true"
-        className={`flex items-center justify-center [grid-area:1/1] ${MORPH_TRANSITION} ${
+        className={`hidden [grid-area:1/1] items-center justify-center lg:flex ${MORPH_TRANSITION} ${
           compact ? "scale-90 opacity-0" : "scale-100 opacity-100"
         }`}
       >
-        <span className="leading-[0.95] text-[clamp(22px,7vw,42px)]">Nous soutenir</span>
+        <span className="leading-[0.95] text-[clamp(22px,7vw,30px)]">Nous soutenir</span>
       </span>
 
-      {/* Calque COMPACT : libellé 1 ligne + flèche alignés. Apparaît en rétrécissant au compactage. */}
+      {/* Calque COMPACT : libellé 1 ligne + flèche alignés. Visible en permanence
+          sous lg (compact par défaut) ; ne cross-fade qu'à partir de lg:. */}
       <span
         aria-hidden="true"
-        className={`flex items-center justify-center gap-3 [grid-area:1/1] ${MORPH_TRANSITION} ${
-          compact ? "scale-100 opacity-100" : "scale-110 opacity-0"
+        className={`flex scale-100 items-center justify-center gap-3 opacity-100 [grid-area:1/1] ${MORPH_TRANSITION} ${
+          compact ? "lg:scale-100 lg:opacity-100" : "lg:scale-110 lg:opacity-0"
         }`}
       >
         <span className="whitespace-nowrap leading-none text-[clamp(20px,2vw,28px)]">
@@ -143,10 +172,10 @@ function SoutenirCell({ compact, placement }: { compact: boolean; placement: str
 
       {/* Flèche du calque déployé : ancrée au coin bas-droit de la cellule, contre le
           lien (hors des calques transformés, pour garder sa position d'origine) ;
-          s'efface avec le grand libellé. */}
+          réservée à lg: comme le calque déployé qu'elle accompagne. */}
       <span
         aria-hidden="true"
-        className={`pointer-events-none absolute bottom-2 right-4 leading-none text-[clamp(32px,3vw,44px)] ${MORPH_TRANSITION} ${
+        className={`pointer-events-none absolute bottom-2 right-4 hidden leading-none text-[clamp(32px,3vw,44px)] lg:block ${MORPH_TRANSITION} ${
           compact ? "scale-90 opacity-0" : "scale-100 opacity-100"
         }`}
       >
@@ -210,59 +239,70 @@ function SiteHeaderChrome({
   return (
     <header className="sticky top-0 z-50">
       <nav aria-label="Navigation principale" className="bg-ink">
-        {/* Mobile (< lg) : maisons pleine largeur, nav 2×2, panier, puis « Nous soutenir ». */}
-        <div className="grid grid-cols-2 gap-[2px] p-[2px] lg:hidden">
+        {/* Mobile (< lg) : maisons pleine largeur, nav 2×2, panier, puis « Nous
+            soutenir » — chaque cellule est un <li> (`display: contents`, R7/lecteur
+            d'écran) ; le placement en grille reste porté par le <Link> lui-même. */}
+        <ul className="grid grid-cols-2 gap-[2px] p-[2px] lg:hidden">
           {NAV_HOUSES.map((house) => (
-            <Link
-              key={house.href}
-              href={house.href}
-              className={`col-span-2 ${maisonCellClass(compact)}`}
-            >
-              {house.label}
-            </Link>
+            <li key={house.href} className="contents">
+              <Link href={house.href} className={`col-span-2 ${maisonCellClass(compact)}`}>
+                {house.label}
+              </Link>
+            </li>
           ))}
           {NAV_SECTIONS.map((section) => (
-            <Link
-              key={section.id}
-              href={section.href}
-              aria-current={active[section.id] ? "page" : undefined}
-              className={navCellClass(section.id, active[section.id], compact)}
-            >
-              {section.label}
-            </Link>
+            <li key={section.id} className="contents">
+              <Link
+                href={section.href}
+                aria-current={active[section.id] ? "page" : undefined}
+                className={navCellClass(section.id, active[section.id], compact)}
+              >
+                {section.label}
+              </Link>
+            </li>
           ))}
-          <CartNavCell compact={compact} placement="col-span-2" />
-          <SoutenirCell compact={compact} placement="col-span-2 py-4" />
-        </div>
+          <li className="contents">
+            <CartNavCell compact={compact} placement="col-span-2" />
+          </li>
+          <li className="contents">
+            <SoutenirCell compact={compact} placement="col-span-2 py-4" />
+          </li>
+        </ul>
 
         {/* Desktop (lg+) : maisons | « Nous soutenir » | nav 2×2 | panier. */}
-        <div className={DESKTOP_GRID}>
+        <ul className={DESKTOP_GRID}>
           {NAV_HOUSES.map((house, i) => (
-            <Link
-              key={house.href}
-              href={house.href}
-              className={`col-start-1 ${HOUSE_ROW[i]} ${maisonCellClass(compact)}`}
-            >
-              {house.label}
-            </Link>
+            <li key={house.href} className="contents">
+              <Link
+                href={house.href}
+                className={`col-start-1 ${HOUSE_ROW[i]} ${maisonCellClass(compact)}`}
+              >
+                {house.label}
+              </Link>
+            </li>
           ))}
 
           {/* Cellule centrale (vide dans la maquette) : CTA « Nous soutenir ». */}
-          <SoutenirCell compact={compact} placement="col-start-2 row-span-2 row-start-1" />
+          <li className="contents">
+            <SoutenirCell compact={compact} placement="col-start-2 row-span-2 row-start-1" />
+          </li>
 
           {NAV_SECTIONS.map((section) => (
-            <Link
-              key={section.id}
-              href={section.href}
-              aria-current={active[section.id] ? "page" : undefined}
-              className={`${SECTION_PLACEMENT[section.id]} ${navCellClass(section.id, active[section.id], compact)}`}
-            >
-              {section.label}
-            </Link>
+            <li key={section.id} className="contents">
+              <Link
+                href={section.href}
+                aria-current={active[section.id] ? "page" : undefined}
+                className={`${SECTION_PLACEMENT[section.id]} ${navCellClass(section.id, active[section.id], compact)}`}
+              >
+                {section.label}
+              </Link>
+            </li>
           ))}
 
-          <CartNavCell compact={compact} placement="col-start-5 row-span-2 row-start-1" />
-        </div>
+          <li className="contents">
+            <CartNavCell compact={compact} placement="col-start-5 row-span-2 row-start-1" />
+          </li>
+        </ul>
       </nav>
     </header>
   );
@@ -274,10 +314,27 @@ function SiteHeaderInner() {
   return <SiteHeaderChrome active={active} compact={compact} />;
 }
 
-/** Fallback Suspense : pathname seul, sans `useSearchParams` (pas de query). */
+/**
+ * Lecture SYNCHRONE de `window.location.search` à l'initialisation (jamais en
+ * effet) — `URLSearchParams` est un `NavSearch` valide (méthode `get`).
+ * Élimine le flash de couleur active (rose → teal) que produisait
+ * `search=null` en fallback avant l'hydratation de `useSearchParams`, sur un
+ * lien profond (ex. `/catalogue/editions-sociales?collection=geme`) : sans
+ * cette lecture précoce, la cellule « Catalogue » s'allumait d'abord avant
+ * de basculer sur « La Geme » une fois `SiteHeaderInner` monté.
+ */
+function useInitialSearch(): NavSearch | null {
+  const [search] = useState<NavSearch | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search),
+  );
+  return search;
+}
+
+/** Fallback Suspense : pathname + lecture synchrone de la query (pas de re-render au montage). */
 function SiteHeaderFallback() {
   const pathname = usePathname() ?? "/";
-  const active = activeSections(pathname, null);
+  const search = useInitialSearch();
+  const active = activeSections(pathname, search);
   const compact = useCompactOnScroll();
   return <SiteHeaderChrome active={active} compact={compact} />;
 }
