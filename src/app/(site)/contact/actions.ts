@@ -25,7 +25,7 @@ import type { ContactFormState } from "./state";
 const OK_MESSAGE =
   "Merci, votre message a bien été envoyé. Nous vous répondrons dès que possible.";
 const GENERIC_ERROR_MESSAGE =
-  "L'envoi est momentanément indisponible. Réessayez dans quelques minutes, ou écrivez-nous directement à l'adresse indiquée ci-dessous.";
+  "L'envoi est momentanément indisponible. Réessayez dans un instant ; si le problème persiste, revenez un peu plus tard.";
 
 function str(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";

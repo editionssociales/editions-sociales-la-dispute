@@ -3,16 +3,19 @@ import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
 import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirmation";
+import { formatPrice } from "@/lib/format";
+import { ACCENT_BG } from "@/lib/accents";
 import { donationsEnabled, getStripe } from "@/lib/stripe";
 
 /**
  * Page de retour après un achat Stripe Checkout (`success_url` posée par
  * `POST /api/checkout`, plan §4 étape 8) — sobre par construction (plan §4
  * étape 8 : « crée une page de confirmation sobre si nécessaire »), même
- * gabarit que `souscription/merci` mais générique (le webhook, étape 9, est
- * l'unique source de vérité de la commande — cette page ne fait que relire
- * la session pour un message immédiat, jamais une garantie que la commande
- * est déjà en base : la création peut suivre de quelques secondes).
+ * gabarit que `souscription/merci` (barre d'accent + badge + `PageHero`) mais
+ * générique (le webhook, étape 9, est l'unique source de vérité de la
+ * commande — cette page ne fait que relire la session pour un message
+ * immédiat, jamais une garantie que la commande est déjà en base : la
+ * création peut suivre de quelques secondes).
  */
 export const metadata: Metadata = {
   title: "Merci",
@@ -54,6 +57,10 @@ export default async function MerciPage({
 }) {
   const { session_id: sessionId } = await searchParams;
   const order = await lookupOrder(sessionId);
+  // Issue sémantique (R3) : paiement confirmé (ou aucune info de session à
+  // relire, cas de repli optimiste) = bottle ; confirmation Stripe encore en
+  // cours = ocher — même code couleur que `souscription/merci`.
+  const tone = order?.pending ? "ocher" : "bottle";
 
   const title = order?.pending ? "Paiement en cours de confirmation" : "Merci pour votre commande !";
   const intro = order ? (
@@ -62,9 +69,7 @@ export default async function MerciPage({
     ) : (
       <>
         Votre commande de{" "}
-        <strong className="font-bold text-ink">
-          {order.totalTTC.toLocaleString("fr-FR")}&nbsp;€
-        </strong>{" "}
+        <strong className="font-bold text-ink">{formatPrice(order.totalTTC)}</strong>{" "}
         a bien été enregistrée
         {order.email ? (
           <>
@@ -81,40 +86,46 @@ export default async function MerciPage({
   );
 
   return (
-    <section className="bg-paper">
-      <Container className="max-w-2xl py-20 sm:py-28">
-        {order && <ClearCartOnConfirmation />}
-        <PageHero eyebrow="Commande" tone="system" title={title} />
-
-        {/* Carte de confirmation (R3) : liseré bottle (succès) ou ocher (paiement
-            en attente) en tête — même code couleur que les issues de la
-            souscription, jamais un dégradé, jamais deux couleurs pour un même
-            rôle. Référence citable pour un contact support ultérieur, dérivée
-            de l'identifiant de session Stripe (connu même si la commande n'a
-            pas encore atteint la base — le webhook fait foi, cf. commentaire
-            de `lookupOrder`). */}
-        <div className="mt-6 border-2 border-ink bg-paper-2 p-6 sm:p-8">
+    <>
+      <div aria-hidden="true" className={`h-1.5 ${ACCENT_BG[tone]}`} />
+      <section className="bg-paper">
+        <Container className="max-w-2xl py-20 sm:py-28">
+          {order && <ClearCartOnConfirmation />}
           <div
-            aria-hidden="true"
-            className={`h-1.5 w-12 ${order?.pending ? "bg-ocher" : "bg-bottle"}`}
-          />
-          <p className="mt-4 font-sans text-base leading-relaxed text-ink">{intro}</p>
+            className={`mb-6 flex h-14 w-14 items-center justify-center border-2 border-ink ${ACCENT_BG[tone]}`}
+          >
+            <span aria-hidden="true" className="font-sans text-2xl font-black text-paper">
+              ✓
+            </span>
+          </div>
+          <PageHero eyebrow="Commande" tone="system" title={title} intro={intro} />
+          {/* Référence citable pour un contact support ultérieur — dérivée de
+              l'identifiant de session Stripe (connu même si la commande n'a pas
+              encore atteint la base — le webhook fait foi, cf. commentaire de
+              `lookupOrder`). Contenu propre à cette page de commande, absent de
+              `souscription/merci`. */}
           {sessionId && (
             <p className="mt-3 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
               Référence : {sessionId.slice(-10).toUpperCase()}
             </p>
           )}
-        </div>
 
-        <div className="mt-6 flex flex-wrap gap-4">
-          <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">
-            Découvrir le catalogue
-          </Button>
-          <Button href="/panier" variant="outline" className="px-6 py-3 text-sm tracking-[.03em]">
-            Retour au panier
-          </Button>
-        </div>
-      </Container>
-    </section>
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">
+              Découvrir le catalogue
+            </Button>
+            {/* Cas nominal (commande retrouvée) : le panier a déjà été vidé par
+                `ClearCartOnConfirmation` ci-dessus — un lien « Retour au panier »
+                mènerait à un panier vide. Il ne reste utile que dans le cas de
+                repli (session absente/invalide) où le panier n'a pas été touché. */}
+            {!order && (
+              <Button href="/panier" variant="outline" className="px-6 py-3 text-sm tracking-[.03em]">
+                Retour au panier
+              </Button>
+            )}
+          </div>
+        </Container>
+      </section>
+    </>
   );
 }

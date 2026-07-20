@@ -4,7 +4,7 @@ import type { Book } from "@/lib/types";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
 import { FramedGrid } from "@/components/framed-grid";
-import { Button } from "@/components/button";
+import { Button, INVERT } from "@/components/button";
 import { SubmitButton } from "@/components/submit-button";
 import { ShelfCover } from "@/components/shelf-cover";
 import { ShelfLock } from "@/components/shelf-lock";
@@ -282,14 +282,15 @@ function FreeAmountForm({ enabled, idSuffix }: { enabled: boolean; idSuffix: str
   if (!enabled) {
     return (
       <div className="flex flex-col items-start gap-1.5">
-        <button
+        <Button
           type="button"
+          variant="invert"
           disabled
           aria-disabled="true"
-          className="inline-flex shrink-0 items-center gap-2 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          className="shrink-0 gap-2 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
         >
           Contribuer
-        </button>
+        </Button>
         <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/60">
           {OPENING_MICROCOPY}
         </p>
@@ -317,7 +318,7 @@ function FreeAmountForm({ enabled, idSuffix }: { enabled: boolean; idSuffix: str
       <SubmitButton
         tone="light"
         pendingLabel="Redirection…"
-        className={`inline-flex shrink-0 items-center gap-2 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+        className={`inline-flex shrink-0 items-center gap-2 border-2 px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] transition-colors motion-reduce:transition-none ${INVERT}`}
       >
         Contribuer
       </SubmitButton>
@@ -471,6 +472,12 @@ export default async function SouscriptionPage() {
                 {/* CTA immédiat : montant libre, avant même le choix d'un palier. */}
                 <div className="mt-8">
                   <FreeAmountForm enabled={enabled} idSuffix="hero" />
+                  <a
+                    href="#paliers"
+                    className={`mt-3 inline-block font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper ${FOCUS_RING_DARK}`}
+                  >
+                    Voir les contreparties ↓
+                  </a>
                 </div>
 
                 <div className="mt-14">
@@ -681,21 +688,22 @@ export default async function SouscriptionPage() {
                             tone="light"
                             pendingLabel="Redirection…"
                             ariaLabel={`Contribuer ${p.tier.amount.toLocaleString("fr-FR")} € — ${p.tier.title}`}
-                            className={`mt-3 inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+                            className={`mt-3 inline-flex items-center gap-2 self-start border-2 px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] transition-colors motion-reduce:transition-none ${INVERT}`}
                           >
                             Contribuer
                           </SubmitButton>
                         </form>
                       ) : (
                         <div className="mt-3 flex flex-col items-start gap-1.5">
-                          <button
+                          <Button
                             type="button"
+                            variant="invert"
                             disabled
                             aria-disabled="true"
-                            className="inline-flex items-center gap-2 self-start border-2 border-paper bg-paper px-6 py-2.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                            className="self-start gap-2 px-6 py-2.5 text-sm font-extrabold tracking-[.03em]"
                           >
                             Contribuer
-                          </button>
+                          </Button>
                           <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/60">
                             {OPENING_MICROCOPY}
                           </p>
@@ -786,12 +794,13 @@ export default async function SouscriptionPage() {
           </div>
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <FreeAmountForm enabled={enabled} idSuffix="final" />
-            <a
+            <Button
               href="#paliers"
-              className={`shrink-0 border-2 border-paper bg-paper px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+              variant="invert"
+              className="shrink-0 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
             >
               Choisir un palier
-            </a>
+            </Button>
           </div>
         </Container>
       </section>
