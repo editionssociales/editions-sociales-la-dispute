@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getBoutiqueBooks } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
 import { Container } from "@/components/container";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHero } from "@/components/page-hero";
 
 /**
@@ -25,8 +24,6 @@ export default async function BoutiquePage() {
 
   return (
     <Container className="bg-paper py-12 sm:py-16">
-      <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Boutique" }]} />
-
       <PageHero title="La boutique" className="max-w-2xl" />
 
       {books.length > 0 && (

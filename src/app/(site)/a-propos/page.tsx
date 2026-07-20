@@ -3,10 +3,8 @@ import Link from "next/link";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { ACCENT_BORDER_T } from "@/lib/accents";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
-import { Eyebrow } from "@/components/eyebrow";
 import { PageHero } from "@/components/page-hero";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import { getPageAPropos, getReglagesSite } from "@/lib/site-content";
@@ -75,10 +73,6 @@ export default async function AProposPage() {
           héros de /editions/[slug]). */}
       <section className="border-b-2 border-ink bg-ink">
         <Container className="py-12 sm:py-16">
-          <Breadcrumb
-            tone="dark"
-            trail={[{ label: "Accueil", href: "/" }, { label: "À propos" }]}
-          />
           <PageHero tone="cover" title={<>Qui sommes-nous&nbsp;?</>} />
         </Container>
       </section>
@@ -119,8 +113,7 @@ export default async function AProposPage() {
                 aria-label="Réseaux sociaux"
                 className="border-2 border-ink bg-paper p-6 sm:p-7"
               >
-                <Eyebrow>Suivez-nous</Eyebrow>
-                <ul className="mt-4 flex flex-wrap gap-2">
+                <ul className="flex flex-wrap gap-2">
                   {reseaux.map((r) => (
                     <li key={r.url}>
                       <a
@@ -194,10 +187,7 @@ export default async function AProposPage() {
       <section className="border-t-2 border-ink">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <Eyebrow>
-              Deux maisons
-            </Eyebrow>
-            <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+            <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               Deux catalogues, une seule équipe d&apos;éditrices
             </h2>
           </Reveal>
@@ -272,10 +262,7 @@ export default async function AProposPage() {
           <Container className="py-16 sm:py-20">
             <Reveal>
               <div className="max-w-2xl">
-                <Eyebrow>
-                  Sur ce site
-                </Eyebrow>
-                <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+                <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
                   Le catalogue
                 </h2>
                 <p className="mt-4 text-[15px] leading-relaxed text-ink/70">

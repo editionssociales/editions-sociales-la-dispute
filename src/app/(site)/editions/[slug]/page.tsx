@@ -3,9 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { BookGrid } from "@/components/book-grid";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { Button } from "@/components/button";
-import { Eyebrow } from "@/components/eyebrow";
 import { PageHero } from "@/components/page-hero";
 import { ACCENT_BG } from "@/lib/accents";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
@@ -55,14 +53,6 @@ export default async function EditionPage({
       {/* Héro plein cadre, dans l'accent de la maison */}
       <section className={`border-b-2 border-ink ${ACCENT_BG[info.accent]}`}>
         <Container className="py-16 sm:py-20">
-          <Breadcrumb
-            tone="dark"
-            trail={[
-              { label: "Accueil", href: "/" },
-              { label: "Nos collections", href: "/editions" },
-              { label: info.shortName },
-            ]}
-          />
           <PageHero tone="cover" title={info.name} className="max-w-4xl">
             <p className="mt-4 max-w-2xl font-sans text-lg font-bold leading-snug text-paper/90">
               {info.tagline}
@@ -98,10 +88,7 @@ export default async function EditionPage({
       <Container className="bg-paper py-12 sm:py-16">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b-2 border-ink pb-4 sm:mb-8">
           <div>
-            <Eyebrow>
-              {info.shortName}
-            </Eyebrow>
-            <h2 className="mt-2 font-sans text-2xl font-black italic uppercase leading-[0.98] text-ink sm:text-3xl">
+            <h2 className="font-sans text-2xl font-black italic uppercase leading-[0.98] text-ink sm:text-3xl">
               Parutions récentes
             </h2>
           </div>

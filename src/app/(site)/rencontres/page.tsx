@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
 import { Reveal } from "@/components/reveal";
 import { Button } from "@/components/button";
-import { Eyebrow } from "@/components/eyebrow";
 
 export const metadata: Metadata = {
   title: "Rencontres",
@@ -25,11 +23,9 @@ export default function RencontresPage() {
     <>
       {/* Héro */}
       <Container className="bg-paper py-16 sm:py-20">
-        <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Rencontres" }]} />
         <Reveal>
           <div className="max-w-3xl">
-            <Eyebrow dot="bg-pop-yellow">Agenda</Eyebrow>
-            <h1 className="mt-4 font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
+            <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
               Faire vivre les livres, dans et hors les murs
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-ink/70">
@@ -45,10 +41,7 @@ export default function RencontresPage() {
       <section className="border-y-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
           <Reveal>
-            <Eyebrow>
-              En préparation
-            </Eyebrow>
-            <h2 className="mt-2 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+            <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
               L&apos;agenda arrive bientôt
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
