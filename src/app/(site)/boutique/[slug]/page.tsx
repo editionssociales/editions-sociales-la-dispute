@@ -3,10 +3,8 @@ import { notFound } from "next/navigation";
 import { getAllBoutiqueParams, getBoutiqueBook } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { BuyLinksList } from "@/components/buy-links";
 import { FramedGrid } from "@/components/framed-grid";
-import { Eyebrow } from "@/components/eyebrow";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
@@ -52,14 +50,6 @@ export default async function BoutiqueBookPage({
 
   return (
     <Container className="bg-paper py-12 sm:py-16">
-      <Breadcrumb
-        trail={[
-          { label: "Accueil", href: "/" },
-          { label: "Boutique", href: "/boutique" },
-        ]}
-        currentIsPage={false}
-      />
-
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         {/* Même règle que la fiche catalogue : titre avant achat sur mobile
             (order), couverture jamais plus large que 300px CSS avant lg. */}
@@ -78,9 +68,6 @@ export default async function BoutiqueBookPage({
           </div>
 
           <div className="mt-6 border-2 border-ink bg-paper p-4">
-            <Eyebrow variant="sm" className="mb-2">
-              Acheter
-            </Eyebrow>
             <BuyLinksList book={book} />
           </div>
 
@@ -134,7 +121,6 @@ export default async function BoutiqueBookPage({
         </div>
 
         <article className="order-1 lg:order-2">
-          <Eyebrow variant="sm" className="mb-2">Boutique</Eyebrow>
           <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
             {book.title}
           </h1>
