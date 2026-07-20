@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { CountUp } from "@/components/count-up";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { Button } from "@/components/button";
 import { FramedGrid } from "@/components/framed-grid";
 import { PageHero } from "@/components/page-hero";
@@ -25,11 +24,7 @@ export default async function EditionsPage() {
 
   return (
     <Container className="bg-paper py-12 sm:py-16">
-      <Breadcrumb
-        trail={[{ label: "Accueil", href: "/" }, { label: "Nos collections" }]}
-      />
-
-      <PageHero eyebrow="Deux maisons, une équipe" title="Nos collections" className="max-w-2xl">
+      <PageHero title="Nos collections" className="max-w-2xl">
         <p className="mt-3.5 max-w-xl text-[15px] leading-relaxed text-ink/70">
           Deux fonds éditoriaux, chacun avec son identité, réunis dans le
           même catalogue.

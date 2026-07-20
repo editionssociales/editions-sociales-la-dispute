@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
@@ -24,14 +23,7 @@ export default async function CgvPage() {
   return (
     <>
       <Container className="bg-paper py-12 sm:py-16">
-        <Breadcrumb
-          trail={[
-            { label: "Accueil", href: "/" },
-            { label: "Conditions générales & conditions de don" },
-          ]}
-        />
         <PageHero
-          eyebrow="Dons et vente en ligne"
           title="Conditions générales & conditions de don"
           intro={
             !cgv &&

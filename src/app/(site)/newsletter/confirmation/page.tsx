@@ -21,7 +21,6 @@ export default function NewsletterConfirmationPage() {
     <section className="bg-paper">
       <Container className="max-w-2xl py-20 sm:py-28">
         <PageHero
-          eyebrow="Newsletter"
           tone="system"
           title="Inscription confirmée"
           intro="Votre adresse email est confirmée : vous recevrez désormais nos actualités (parutions, rencontres, souscriptions) — une fois par mois. Vous pourrez vous désinscrire à tout moment depuis n'importe quel email reçu."

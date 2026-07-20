@@ -28,7 +28,6 @@ export default function ErreurPage() {
             </span>
           </div>
           <PageHero
-            eyebrow="Souscription 2026"
             tone="system"
             title="Le paiement n'a pas pu démarrer"
             intro="Un problème technique a empêché l'ouverture de la page de paiement. Aucune somme n'a été prélevée. Vous pouvez réessayer, ou nous écrire si le problème persiste."

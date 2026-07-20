@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHero } from "@/components/page-hero";
 import { ContactForm } from "@/components/contact-form";
 
@@ -21,9 +20,7 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <Container className="bg-paper py-12 sm:py-16">
-      <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Contact" }]} />
       <PageHero
-        eyebrow="Nous écrire"
         title="Contact"
         intro="Une question sur un livre, une commande, une proposition éditoriale ? Écrivez-nous, nous vous répondrons dès que possible."
         className="max-w-xl"

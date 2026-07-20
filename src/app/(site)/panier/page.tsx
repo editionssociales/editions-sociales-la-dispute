@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHero } from "@/components/page-hero";
 import { CartView } from "./cart-view";
 
@@ -10,9 +9,7 @@ export const metadata: Metadata = { title: "Panier" };
 export default function PanierPage() {
   return (
     <Container className="bg-paper py-12">
-      <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Panier" }]} />
-
-      <PageHero eyebrow="Commande" title="Votre panier" className="max-w-2xl" />
+      <PageHero title="Votre panier" className="max-w-2xl" />
 
       <div className="mt-6 sm:mt-7">
         <CartView />

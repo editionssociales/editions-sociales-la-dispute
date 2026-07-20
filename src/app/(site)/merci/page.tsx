@@ -98,7 +98,7 @@ export default async function MerciPage({
               ✓
             </span>
           </div>
-          <PageHero eyebrow="Commande" tone="system" title={title} intro={intro} />
+          <PageHero tone="system" title={title} intro={intro} />
           {/* Référence citable pour un contact support ultérieur — dérivée de
               l'identifiant de session Stripe (connu même si la commande n'a pas
               encore atteint la base — le webhook fait foi, cf. commentaire de

@@ -73,7 +73,6 @@ export default async function MerciPage({
           </div>
           {donation ? (
             <PageHero
-              eyebrow="Souscription 2026"
               tone="system"
               title={donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
               intro={
@@ -93,7 +92,6 @@ export default async function MerciPage({
             />
           ) : (
             <PageHero
-              eyebrow="Souscription 2026"
               tone="system"
               title="Merci pour votre soutien !"
               intro="Votre contribution a bien été prise en compte. Si le paiement a abouti, un reçu vous a été envoyé par email."

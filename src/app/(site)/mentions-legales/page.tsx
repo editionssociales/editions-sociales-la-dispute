@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY, LEGAL_LINK } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
@@ -40,11 +39,7 @@ export default async function MentionsLegalesPage() {
   return (
     <>
       <Container className="bg-paper py-12 sm:py-16">
-        <Breadcrumb
-          trail={[{ label: "Accueil", href: "/" }, { label: "Mentions légales" }]}
-        />
         <PageHero
-          eyebrow="Éditeur, hébergement, propriété"
           title="Mentions légales"
           intro={
             !mentionsLegales &&
