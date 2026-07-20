@@ -12,7 +12,6 @@ import { BookCover, coverAspectRatio } from "@/lib/cover";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
-import { Eyebrow } from "@/components/eyebrow";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
 import { CAMPAIGN_2024 } from "@/lib/campaign";
 import { formatInt, type Accent } from "@/lib/format";
@@ -365,9 +364,8 @@ export default async function SouscriptionPage() {
           <Reveal>
             <div className="flex flex-col gap-[2px] bg-ink p-[2px] lg:flex-row">
               <div className="flex-1 bg-paper p-6 sm:p-8">
-                <Eyebrow dot="bg-pop-yellow">La collecte en direct</Eyebrow>
                 {liveCampaign.collected > 0 ? (
-                  <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
+                  <p className="flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
                     Déjà
                     <CountUp
                       value={liveCampaign.collected}
@@ -382,7 +380,7 @@ export default async function SouscriptionPage() {
                     contributeur·rices.
                   </p>
                 ) : (
-                  <p className="mt-3 max-w-md text-[15px] leading-relaxed text-ink/70">
+                  <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
                     Campagne tout juste lancée — soyez les premier·ères à
                     contribuer.
                   </p>
@@ -442,10 +440,7 @@ export default async function SouscriptionPage() {
                   CTA montant libre immédiat, étagère (3D en lg+, grille de
                   couvertures en dessous). Éditorial figé, pas dans le CMS. */}
               <div className="bg-ink p-7 text-paper sm:p-9">
-                <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
-                  Souscription 2026 — campagne de lancement
-                </p>
-                <h1 className="mt-4 font-sans text-4xl font-black italic leading-[0.98] text-paper">
+                <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-paper">
                   Tenir une édition marxiste{" "}
                   <span className="text-pop-yellow">et indépendante</span>
                 </h1>
@@ -491,8 +486,7 @@ export default async function SouscriptionPage() {
                   aucun verbatim n'existe, les faits 2024 tiennent ce rôle). */}
               <div>
                 <Reveal>
-                  <Eyebrow dot="bg-pop-teal">Ce que 2024 a permis</Eyebrow>
-                  <h2 className="mt-3 font-sans text-3xl font-black italic leading-[0.98] text-ink">
+                  <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink">
                     {content.herosTitre}
                   </h2>
                   <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
@@ -527,8 +521,7 @@ export default async function SouscriptionPage() {
               {/* Les chantiers : où va votre argent */}
               <div>
                 <Reveal>
-                  <Eyebrow dot="bg-pop-orange">Où va votre argent</Eyebrow>
-                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+                  <h2 className="font-sans text-3xl font-black italic text-ink">
                     Cinq chantiers pour la suite
                   </h2>
                 </Reveal>
@@ -552,8 +545,7 @@ export default async function SouscriptionPage() {
               {/* Et après : les perspectives des deux maisons — la suite */}
               <div>
                 <Reveal>
-                  <Eyebrow dot="bg-pop-teal">Et après</Eyebrow>
-                  <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+                  <h2 className="font-sans text-3xl font-black italic text-ink">
                     Des projets, on en a plein
                   </h2>
                 </Reveal>
@@ -749,8 +741,7 @@ export default async function SouscriptionPage() {
       <section className="bg-paper">
         <Container className="max-w-3xl py-16 sm:py-20">
           <Reveal>
-            <Eyebrow dot="bg-pop-yellow">FAQ</Eyebrow>
-            <h2 className="mt-3 font-sans text-3xl font-black italic text-ink">
+            <h2 className="font-sans text-3xl font-black italic text-ink">
               Questions fréquentes
             </h2>
           </Reveal>
