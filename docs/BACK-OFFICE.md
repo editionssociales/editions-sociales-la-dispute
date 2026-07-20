@@ -90,9 +90,10 @@ une page par erreur.
   date du jour est dans la période choisie — pratique pour préparer une
   annonce à l'avance sans qu'elle sorte trop tôt.
 
-Le groupe **Réglages** regroupe les paramètres du back-office : comptes
-(**Utilisateur·rice·s**, admin seulement) et **Seuil stock** (alerte stock
-bas du tableau de bord / page Stock).
+Le **Seuil stock** (alerte stock bas du tableau de bord / page Stock) vit
+dans le groupe **Boutique**, à côté des codes promo. Les comptes
+(**Utilisateur·rice·s**) forment le groupe **Administration**, visible des
+admins uniquement.
 
 ## Suivre les commandes et les remboursements
 
