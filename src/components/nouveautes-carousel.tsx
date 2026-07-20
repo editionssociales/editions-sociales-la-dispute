@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
-import { Eyebrow } from "@/components/eyebrow";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /** Un livre déjà mis en forme par la page serveur — aucune fonction, uniquement des données sérialisables. */
@@ -29,7 +28,7 @@ const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /**
- * Carrousel « coverflow » des dernières parutions.
+ * Carrousel des dernières parutions.
  *
  * DÉFILEMENT NATIF : le rail est un conteneur `overflow-x` classique. Le
  * mouvement (roue libre à la molette / trackpad / tactile, inertie) reste géré
@@ -41,14 +40,16 @@ const prefersReducedMotion = () =>
  * défilement. Pas de boucle infinie : catalogue affiché une seule fois (DOM
  * léger, toutes les cartes réelles et focusables).
  *
- * EFFET 3D : par-dessus, on applique image par image une transform coverflow
- * (échelle + opacité + rotation 3D) à chaque couverture selon la distance de sa
- * carte au centre du viewport — la centrale zoomée et opaque, les latérales
- * reculent et s'inclinent. On mesure le `<li>` (jamais mis à l'échelle → mesure
- * stable) et on applique la transform à son enfant interne, sur l'événement
- * `scroll` (throttlé en rAF). Le rail est mémoïsé : changer la légende ne re-rend
- * jamais les images. Couvertures au ratio réel (hauteur commune, largeur
- * variable) ; marges d'extrémité ajustées pour centrer la 1re / la dernière.
+ * PROFONDEUR (épure minimaliste — la perspective 3D/rotation a été retirée) :
+ * par-dessus, on applique image par image une échelle + opacité + z-index à
+ * chaque couverture selon la distance de sa carte au centre du viewport — la
+ * centrale zoomée et opaque, les latérales reculent et s'estompent, sans
+ * aucune rotation ni perspective. On mesure le `<li>` (jamais mis à l'échelle →
+ * mesure stable) et on applique la transform à son enfant interne, sur
+ * l'événement `scroll` (throttlé en rAF). Le rail est mémoïsé : changer la
+ * légende ne re-rend jamais les images. Couvertures au ratio réel (hauteur
+ * commune, largeur variable) ; marges d'extrémité ajustées pour centrer la
+ * 1re / la dernière.
  */
 export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   const n = books.length;
@@ -80,8 +81,9 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     el.style.paddingRight = `${Math.max(16, (cw - last) / 2)}px`;
   }, []);
 
-  /** Applique la transform coverflow à chaque couverture selon la distance de sa
-   *  carte au centre du viewport, et retient l'indice le plus centré (légende). */
+  /** Applique l'échelle/opacité/z-index à chaque couverture selon la distance
+   *  de sa carte au centre du viewport, et retient l'indice le plus centré
+   *  (légende). */
   const paint = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
@@ -109,14 +111,12 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
         nearest = i;
       }
       const t = Math.min(abs / pitch, 2.4); // distance normalisée
-      const norm = Math.max(-1.4, Math.min(1.4, d / pitch));
       const scale = Math.max(0.72, 1.12 - 0.3 * t);
       const opacity = Math.max(0.32, 1 - 0.42 * t);
-      const rotate = -norm * 13; // rotation 3D douce, côté opposé au centre
       const z = 100 - Math.round(t * 10);
       const inner = card.firstElementChild as HTMLElement | null;
       if (inner) {
-        inner.style.transform = `perspective(1400px) rotateY(${rotate.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+        inner.style.transform = `scale(${scale.toFixed(3)})`;
         inner.style.opacity = opacity.toFixed(3);
         if (zRef.current[i] !== z) {
           inner.style.zIndex = String(z);
@@ -306,25 +306,13 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
   return (
     <section aria-label="Nouveautés">
-      {/* Titre de section sur la même rangée que les flèches (titre à gauche,
-          flèches à droite) — même mise en forme que l'ancien en-tête de page.
-          h2 (pas h1) : le héros de marque en tête de page porte désormais le
-          h1 unique de l'accueil (chantier 4 §1). */}
-      <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-between gap-4 px-[clamp(16px,4vw,64px)]">
-        <div className="min-w-0">
-          <Eyebrow>Vient de paraître</Eyebrow>
-          <h2 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.98] text-ink">
-            Nouveautés
-          </h2>
-        </div>
+      {/* Épure minimaliste : plus de titre de section visible ici (le
+          nom « Nouveautés » n'apportait rien — aria-label sur la section
+          suffit) ; la rangée ne porte plus que les flèches et la sortie
+          vers le catalogue, alignées à droite. */}
+      <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-end gap-4 px-[clamp(16px,4vw,64px)]">
         <div className="flex flex-none flex-col items-end gap-1">
           <div className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="flex items-center pr-1 font-sans text-xs font-bold uppercase tracking-[.08em] text-ink-soft"
-            >
-              {String(active + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
-            </span>
             <button
               type="button"
               aria-label="Couverture précédente"
@@ -342,7 +330,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
               →
             </button>
           </div>
-          {/* Sortie discrète du carrousel, à proximité du compteur — même
+          {/* Sortie discrète du carrousel, à proximité des flèches — même
               patron que les liens secondaires existants (`min-h-11`, anneau
               de focus, soulignement sobre ; ex. « Retirer » du panier). */}
           <Link
