@@ -17,6 +17,7 @@ Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : 
 - Dashboard (`derive.ts`) : jamais de vert par défaut — un signal non calculable est `na` (gris), jamais `ok`.
 - `Orders` : `create` fermé partout (seul le webhook Stripe écrit, Local API `overrideAccess`) ; tous les champs sont verrouillés en écriture après création sauf `status` (`lockedAfterCreate`).
 - Découpage cœur pur (testé, sans I/O) + orchestration I/O dans `lib/` — jumeaux `*-core.ts` pour `stock-import` et `import-run-report` ; le cœur pur d'`order-export-handler` vit dans `src/lib/order-export.ts`.
+- Nav admin = ordre de déclaration dans `payload.config.ts` (tableau `collections` puis `globals`, un global rejoint le groupe existant à sa suite) ; groupes cibles : Quotidien (Livres, Commandes) · Catalogue (Auteur·rice·s, Libellés, Médias) · Boutique (Codes promo, Imports routeur, Réglages boutique) · Site (Mises en avant, Page À propos, Page Souscription, Pages) · Administration (Utilisateur·rice·s).
 
 ## Verification
 

@@ -22,6 +22,17 @@ const SOLID = `border-ink bg-ink text-paper hover:bg-paper hover:text-ink disabl
 const OUTLINE = `border-ink bg-paper text-ink hover:bg-ink hover:text-paper disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`;
 
 /**
+ * Variante « inversée » (clair sur fond ink, souscription §7) : même recette
+ * qu'OUTLINE (fond paper au repos, hover inversé), bordure PAPER plutôt
+ * qu'ink — le bord doit rester visible posé sur un fond ink, jamais se
+ * confondre avec lui. Exportée en plus du composant : les CTA en `<form
+ * action>` (`<SubmitButton>`, `tone="light"`) ne composent pas `<Button>`
+ * mais ont besoin de la même recette de couleur pour ne pas la recopier à la
+ * main à chaque emplacement.
+ */
+export const INVERT = `border-paper bg-paper text-ink hover:bg-ink hover:text-paper disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`;
+
+/**
  * Variante « maison » (R3 — navy = Éditions sociales, brick = La Dispute) :
  * CTA à bordure paper sur fond navy/brick, réservée aux liens de maison du
  * héros de marque de l'accueil (chantier 4 §1). Même recette d'inversion au
@@ -36,7 +47,7 @@ const HOUSE: Record<"navy" | "brick", string> = {
 
 type ButtonOwnProps = {
   href?: string;
-  variant?: "solid" | "outline" | "house";
+  variant?: "solid" | "outline" | "house" | "invert";
   /** Couleur de la maison ciblée — requis quand `variant="house"`. */
   tone?: "navy" | "brick";
   className?: string;
@@ -62,7 +73,13 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const variantClass =
-    variant === "house" ? HOUSE[tone ?? "navy"] : variant === "outline" ? OUTLINE : SOLID;
+    variant === "house"
+      ? HOUSE[tone ?? "navy"]
+      : variant === "outline"
+        ? OUTLINE
+        : variant === "invert"
+          ? INVERT
+          : SOLID;
   const classes = [BASE, variantClass, className].filter(Boolean).join(" ");
 
   if (href) {

@@ -393,6 +393,14 @@ export function CartView() {
                   : promoResult.message}
               </p>
             )}
+            {shipping.ok &&
+              !freeShippingCoupon &&
+              summary.subtotalCents > 0 &&
+              summary.subtotalCents < FREE_SHIPPING_MIN_CART_CENTS && (
+                <p className="font-sans text-xs text-muted">
+                  Livraison offerte dès {euros(FREE_SHIPPING_MIN_CART_CENTS)} d’achat avec un code éligible.
+                </p>
+              )}
           </div>
         </div>
 
@@ -436,14 +444,6 @@ export function CartView() {
           {shipping.message}
         </p>
       )}
-      {shipping.ok &&
-        !freeShippingCoupon &&
-        summary.subtotalCents > 0 &&
-        summary.subtotalCents < FREE_SHIPPING_MIN_CART_CENTS && (
-          <p className="mt-4 font-sans text-xs text-muted">
-            Livraison offerte dès {euros(FREE_SHIPPING_MIN_CART_CENTS)} d’achat avec un code éligible.
-          </p>
-        )}
 
       <div className="mt-8 flex flex-col items-start gap-3">
         <button

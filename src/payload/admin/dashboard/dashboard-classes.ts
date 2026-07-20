@@ -31,9 +31,3 @@ export function badgeClass(state: PanelState): string {
   return `${styles.badge} ${byState[state]}`
 }
 
-/** Classe additionnelle du bandeau d'état (3.1) selon le pire signal — vide si OK/gris. */
-export function bannerStateClass(state: PanelState): string {
-  if (state === 'alert') return styles.bannerAlert
-  if (state === 'warn') return styles.bannerWarn
-  return ''
-}

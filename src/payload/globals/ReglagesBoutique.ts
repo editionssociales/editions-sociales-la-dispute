@@ -4,13 +4,14 @@ import { isAdmin, isAdminOrEditor } from '../access.ts'
 
 /**
  * Seuil d'alerte stock (commerce natif, plan phase 4 §3) — un seul document,
- * pas d'historique de versions. Nav : groupe « Réglages » (avec Users).
+ * pas d'historique de versions. Nav : groupe « Boutique » (avec Codes promo,
+ * Imports routeur).
  */
 export const ReglagesBoutique: GlobalConfig = {
   slug: 'reglages-boutique',
   label: 'Seuil stock',
   admin: {
-    group: 'Réglages',
+    group: 'Boutique',
   },
   access: {
     read: isAdminOrEditor,

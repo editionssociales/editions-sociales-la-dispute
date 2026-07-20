@@ -116,7 +116,7 @@ export default async function BoutiqueBookPage({
                   rel="noreferrer"
                   className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                 >
-                  Table des matières
+                  Table des matières (PDF)
                 </a>
               )}
               {book.excerptUrl && (
@@ -126,7 +126,7 @@ export default async function BoutiqueBookPage({
                   rel="noreferrer"
                   className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                 >
-                  Extrait choisi
+                  Extrait choisi (PDF)
                 </a>
               )}
             </FramedGrid>

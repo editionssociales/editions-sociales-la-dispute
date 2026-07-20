@@ -28,7 +28,7 @@ export const Media: CollectionConfig = {
     plural: 'Médias',
   },
   admin: {
-    group: 'Quotidien',
+    group: 'Catalogue',
   },
   upload: {
     mimeTypes: ['image/*', 'application/pdf'],

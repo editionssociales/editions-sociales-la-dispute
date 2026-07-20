@@ -29,11 +29,13 @@ export default async function BoutiquePage() {
 
       <PageHero title="La boutique" className="max-w-2xl" />
 
-      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
-        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
-          {books.length} {books.length > 1 ? "articles" : "article"}
-        </span>
-      </div>
+      {books.length > 0 && (
+        <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
+          <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
+            {books.length} {books.length > 1 ? "articles" : "article"}
+          </span>
+        </div>
+      )}
 
       <div className="mt-4">
         <BookGrid

@@ -235,14 +235,6 @@ export default async function BookPage({
           </div>
 
           <FramedGrid as="dl" className="mt-6 grid-cols-2">
-            {book.libelles.map((libelle) => (
-              <Info
-                key={libelle.slug}
-                label="Libellé"
-                value={libelle.name}
-                href={`/catalogue/${edition}?libelle=${libelle.slug}`}
-              />
-            ))}
             <Info label="Parution" value={formatDateFr(book.publishedAt)} />
             <Info label="Pages" value={book.pages ? `${book.pages} p.` : null} />
             <Info label="ISBN" value={book.isbn} />
@@ -257,7 +249,7 @@ export default async function BookPage({
                   rel="noreferrer"
                   className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                 >
-                  Table des matières
+                  Table des matières (PDF)
                 </a>
               )}
               {book.excerptUrl && (
@@ -267,7 +259,7 @@ export default async function BookPage({
                   rel="noreferrer"
                   className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
                 >
-                  Extrait choisi
+                  Extrait choisi (PDF)
                 </a>
               )}
             </FramedGrid>
@@ -281,7 +273,11 @@ export default async function BookPage({
           {book.libelles.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-1.5">
               {book.libelles.map((libelle) => (
-                <LibelleTag key={libelle.slug} libelle={libelle} />
+                <LibelleTag
+                  key={libelle.slug}
+                  libelle={libelle}
+                  href={`/catalogue/${edition}?libelle=${libelle.slug}`}
+                />
               ))}
             </div>
           )}
