@@ -319,9 +319,9 @@ export default async function BookPage({
                 <Link
                   key={related.id}
                   href={`/catalogue/${related.edition}/${related.slug}`}
-                  className={`flex flex-col bg-paper p-3 ${FOCUS_RING_LIGHT_OUTER}`}
+                  className={`group flex flex-col bg-paper p-3 ${FOCUS_RING_LIGHT_OUTER}`}
                 >
-                  <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2">
+                  <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none">
                     <BookCover
                       cover={related.cover}
                       title={related.title}
