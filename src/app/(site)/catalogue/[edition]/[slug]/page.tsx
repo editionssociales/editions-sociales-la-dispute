@@ -4,11 +4,9 @@ import { notFound } from "next/navigation";
 import { getAllBookParams, getBook, getBooks } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { LibelleTag } from "@/components/libelle-tag";
 import { BuyLinksList } from "@/components/buy-links";
 import { FramedGrid } from "@/components/framed-grid";
-import { Eyebrow } from "@/components/eyebrow";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { getReglagesSite } from "@/lib/site-content";
 import { formatDateFr } from "@/lib/format";
@@ -195,15 +193,6 @@ export default async function BookPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: bookJsonLdScript }}
       />
-      <Breadcrumb
-        trail={[
-          { label: "Accueil", href: "/" },
-          { label: "Catalogue", href: "/catalogue" },
-          { label: editionInfo.name, href: `/catalogue/${edition}` },
-        ]}
-        currentIsPage={false}
-      />
-
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         {/* Mobile/tablette : le titre (article, order-1) précède l'achat
             (order-2) — l'achat ne doit jamais s'afficher avant ce qu'on
@@ -228,9 +217,6 @@ export default async function BookPage({
           </div>
 
           <div className="mt-6 border-2 border-ink bg-paper p-4">
-            <Eyebrow variant="sm" className="mb-2">
-              Acheter
-            </Eyebrow>
             <BuyLinksList book={book} />
           </div>
 
@@ -238,6 +224,7 @@ export default async function BookPage({
             <Info label="Parution" value={formatDateFr(book.publishedAt)} />
             <Info label="Pages" value={book.pages ? `${book.pages} p.` : null} />
             <Info label="ISBN" value={book.isbn} />
+            <Info label="Éditeur" value={editionInfo.name} href={`/catalogue/${edition}`} />
           </FramedGrid>
 
           {(book.tocUrl || book.excerptUrl) && (
@@ -267,9 +254,6 @@ export default async function BookPage({
         </div>
 
         <article className="order-1 lg:order-2">
-          <Eyebrow variant="sm" className="mb-2">
-            {editionInfo.name}
-          </Eyebrow>
           {book.libelles.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-1.5">
               {book.libelles.map((libelle) => (
@@ -293,13 +277,6 @@ export default async function BookPage({
 
           {book.presentation && (
             <section className="mt-8">
-              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
-                  aria-hidden="true"
-                />
-                Présentation
-              </h2>
               <div
                 className="prose-book max-w-none"
                 dangerouslySetInnerHTML={{ __html: book.presentation }}
@@ -322,7 +299,6 @@ export default async function BookPage({
               />
             </section>
           )}
-
         </article>
 
         {/* Bandeau pleine largeur SOUS les deux colonnes (order-3) : sur
@@ -343,7 +319,7 @@ export default async function BookPage({
                 <Link
                   key={related.id}
                   href={`/catalogue/${related.edition}/${related.slug}`}
-                  className={`group flex flex-col bg-paper p-3 ${FOCUS_RING_LIGHT_OUTER}`}
+                  className={`flex flex-col bg-paper p-3 ${FOCUS_RING_LIGHT_OUTER}`}
                 >
                   <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2">
                     <BookCover
@@ -356,9 +332,6 @@ export default async function BookPage({
                       fallbackClassName="p-3"
                     />
                   </span>
-                  <p className="mt-2 font-sans text-xs font-bold leading-snug text-ink line-clamp-2 group-hover:underline">
-                    {related.title}
-                  </p>
                 </Link>
               ))}
             </FramedGrid>
