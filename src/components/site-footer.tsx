@@ -25,14 +25,15 @@ import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core"
  * Plan du site (chantier 3 §2) : la cellule « Adresse » porte deux groupes de
  * liens — « Explorer » (les deux maisons, la Boutique, l'Agenda — les hrefs
  * viennent de `lib/nav`, source unique) et « Pratique » (à propos, panier,
- * souscription, contact). Sous-titres en `text-muted` (token AA, R6).
+ * souscription, contact). Épure minimaliste : les deux groupes n'ont plus de
+ * sous-titre visible (une info de navigation n'apporte rien) — seul
+ * `aria-label` (« Explorer » / « Pratique ») distingue encore les deux `nav`
+ * pour les technologies d'assistance.
  */
 
 const CELL_CLASS = "flex flex-col gap-3 bg-paper p-6 font-sans sm:p-7";
 const HEADING_CLASS =
   "text-xs font-extrabold uppercase tracking-[.08em] text-ink";
-const GROUP_HEADING_CLASS =
-  "text-[10px] font-extrabold uppercase tracking-[.08em] text-muted";
 const BODY_CLASS = "text-sm leading-relaxed text-muted";
 const LINK_CLASS =
   "inline-flex w-fit font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper " +
@@ -51,8 +52,7 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
       <p className={BODY_CLASS}>{adresse}</p>
 
       <nav aria-label="Explorer" className="mt-1">
-        <p className={GROUP_HEADING_CLASS}>Explorer</p>
-        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           {NAV_HOUSES.map((house) => (
             <li key={house.href}>
               <Link href={house.href} className={LINK_CLASS}>
@@ -73,9 +73,8 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
         </ul>
       </nav>
 
-      <nav aria-label="Pratique" className="mt-1">
-        <p className={GROUP_HEADING_CLASS}>Pratique</p>
-        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+      <nav aria-label="Pratique" className="mt-2">
+        <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <li>
             <Link href="/a-propos" className={LINK_CLASS}>
               À propos
