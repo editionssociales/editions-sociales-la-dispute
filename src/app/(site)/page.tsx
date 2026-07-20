@@ -5,7 +5,6 @@ import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { Reveal } from "@/components/reveal";
 import { CountUp } from "@/components/count-up";
-import { Eyebrow } from "@/components/eyebrow";
 import { NouveautesCarousel, type NouveauteBook } from "@/components/nouveautes-carousel";
 import { NAV_ACCENT_BG } from "@/components/nav-accent";
 import { getActiveHighlight } from "@/lib/highlight";
@@ -66,58 +65,14 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="bg-paper pb-[clamp(38px,6vw,76px)]">
-      {/* Héros de marque (chantier 4 §1) — composition bespoke, comme la 404
-          et le héros plein cadre de /editions/[slug] (R6/0.3) : le format
-          XXL sur fond ink porte le SEUL h1 de la page (déclassé en h2 dans
-          NouveautesCarousel) et n'entre dans aucun des 3 tons fermés de
-          PageHero (content/system/cover), conçus pour une page secondaire —
-          pas la vitrine. */}
-      <section className="border-b-2 border-ink bg-ink text-paper">
-        <Container className="py-[clamp(44px,7vw,92px)]">
-          <Reveal>
-            <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
-              <div className="max-w-3xl">
-                <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/60">
-                  Deux maisons, un catalogue
-                </p>
-                <h1 className="mt-3 font-sans text-[clamp(40px,6.8vw,84px)] font-black italic uppercase leading-[0.92] text-paper">
-                  Les Éditions sociales
-                  <br />× La Dispute
-                </h1>
-                <p className="mt-4 max-w-[58ch] text-[15px] leading-relaxed text-paper/75">
-                  La pensée critique et le mouvement ouvrier depuis 1927, les
-                  sciences sociales et le féminisme en dialogue{" "}: un
-                  catalogue commun, deux fonds distincts, une même exigence
-                  éditoriale.
-                </p>
-              </div>
-              <div className="flex flex-none flex-col gap-3 sm:flex-row">
-                <Button
-                  href="/editions/editions-sociales"
-                  variant="house"
-                  tone="navy"
-                  className="justify-between gap-3 px-6 py-4 text-sm tracking-[.06em]"
-                >
-                  Éditions sociales <span aria-hidden="true">→</span>
-                </Button>
-                <Button
-                  href="/editions/la-dispute"
-                  variant="house"
-                  tone="brick"
-                  className="justify-between gap-3 px-6 py-4 text-sm tracking-[.06em]"
-                >
-                  La Dispute <span aria-hidden="true">→</span>
-                </Button>
-              </div>
-            </div>
-          </Reveal>
-        </Container>
-      </section>
+    <div className="bg-paper pb-[clamp(38px,6vw,76px)] pt-[clamp(20px,3vw,36px)]">
+      {/* Épure minimaliste (chantier « épure ») : le héros de marque plein
+          cadre a été retiré — la vitrine ouvre directement sur le carrousel
+          Nouveautés. Le h1 unique de la page devient invisible (a11y/SEO
+          seuls) puisqu'aucune section ne porte plus ce rôle visuellement. */}
+      <h1 className="sr-only">Les Éditions sociales × La Dispute</h1>
 
-      <div className="pt-[clamp(28px,4.5vw,52px)]">
-        <NouveautesCarousel books={books} />
-      </div>
+      <NouveautesCarousel books={books} />
 
       {/* Les deux maisons (chantier 4 §2) — pattern déjà éprouvé de
           /editions (Reveal + CountUp + barre d'accent + CTA), rapatrié entre
@@ -125,13 +80,7 @@ export default async function HomePage() {
           du site sans Reveal ni CountUp, et l'équilibre entre les deux
           maisons devient visible dès la vitrine. */}
       <Container className="mt-[clamp(48px,7vw,88px)]">
-        <Reveal>
-          <Eyebrow>Deux maisons, une équipe</Eyebrow>
-          <h2 className="mt-2 font-sans text-[clamp(26px,3.4vw,40px)] font-black italic uppercase leading-[0.98] text-ink">
-            Le catalogue par maison
-          </h2>
-        </Reveal>
-        <FramedGrid className="mt-8 sm:grid-cols-2">
+        <FramedGrid className="sm:grid-cols-2">
           {EDITION_LIST.map((edition, i) => (
             <Reveal key={edition.slug} delay={i * 120} className="h-full">
               <section className="flex h-full flex-col bg-paper p-7 sm:p-8">
@@ -139,9 +88,9 @@ export default async function HomePage() {
                   aria-hidden="true"
                   className={`block h-[6px] w-16 ${ACCENT_BG[edition.accent]}`}
                 />
-                <h3 className="mt-5 font-sans text-2xl font-black italic uppercase leading-[0.98] text-ink">
+                <h2 className="mt-5 font-sans text-2xl font-black italic uppercase leading-[0.98] text-ink">
                   {edition.name}
-                </h3>
+                </h2>
                 <p className="mt-3 text-[15px] font-bold leading-snug text-ink/80">
                   {edition.tagline}
                 </p>
@@ -181,10 +130,7 @@ export default async function HomePage() {
             <Reveal>
               <div className="flex flex-col gap-6 bg-ink px-6 py-8 text-paper sm:flex-row sm:items-center sm:justify-between sm:px-9 sm:py-9">
                 <div className="flex min-w-0 flex-col gap-1.5">
-                  <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-pop-yellow">
-                    Souscription 2026
-                  </p>
-                  <p className="mt-1 font-sans text-[clamp(22px,2.8vw,34px)] font-black italic leading-[1.05] text-paper">
+                  <p className="font-sans text-[clamp(22px,2.8vw,34px)] font-black italic leading-[1.05] text-paper">
                     {highlight.titre}
                   </p>
                   {highlight.texte && (
