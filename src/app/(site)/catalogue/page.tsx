@@ -7,7 +7,6 @@ import { CatalogueFilters } from "@/components/catalogue-filters";
 import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
-import { Breadcrumb } from "@/components/breadcrumb";
 import { PageHero } from "@/components/page-hero";
 import { parseBookFilters } from "@/lib/parse-filters";
 import { catalogueHref } from "@/lib/browse";
@@ -42,8 +41,6 @@ async function CatalogueBody({
 
   return (
     <Container className="bg-paper py-12 sm:py-16">
-      <Breadcrumb trail={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
-
       <PageHero
         title={isUpcoming ? "Les livres à paraître" : "Le catalogue par libellés"}
         className="max-w-2xl"
@@ -75,11 +72,6 @@ async function CatalogueBody({
         <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
           {total} {isUpcoming ? "titres à paraître" : "résultats"}
         </span>
-        {totalPages > 1 && (
-          <span className="font-sans text-xs font-bold uppercase tracking-[.03em] text-ink/70">
-            Page {page} sur {totalPages}
-          </span>
-        )}
       </div>
 
       <div className="mt-4">
