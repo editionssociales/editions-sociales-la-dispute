@@ -57,22 +57,11 @@ export function BookCard({ book }: { book: Book }) {
   // vers la fiche — seulement si le livre est disponible au panier.
   const cartChip = canAddToCart(book) && <AddToCartButton id={book.id} variant="chip" />;
 
-  const meta = (
-    <div className="mt-3 flex min-w-0 flex-col gap-0.5">
-      {book.libelles.length > 0 && (
-        <p className="font-sans text-[10px] font-bold uppercase tracking-[.06em] text-ink-soft line-clamp-1">
-          {book.libelles.map((l) => l.name).join(" · ")}
-        </p>
-      )}
-      <p className="font-sans text-sm font-bold leading-snug text-ink line-clamp-2">
-        {book.title}
-      </p>
-      {authors ? (
-        <p className="font-sans text-xs leading-snug text-ink-soft line-clamp-1">{authors}</p>
-      ) : null}
-      {book.price != null && (
-        <p className="mt-0.5 font-sans text-sm font-black text-ink">{formatPrice(book.price)}</p>
-      )}
+  // Épure minimaliste : la couverture porte déjà titre/auteurs (alt complet
+  // ci-dessus) — la carte n'affiche plus que le prix en texte visible.
+  const meta = book.price != null && (
+    <div className="mt-3 flex min-w-0 flex-col">
+      <p className="font-sans text-sm font-black text-ink">{formatPrice(book.price)}</p>
     </div>
   );
 
