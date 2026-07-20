@@ -13,7 +13,7 @@ export const Users: CollectionConfig = {
     plural: 'Utilisateur·rice·s',
   },
   admin: {
-    group: 'Réglages',
+    group: 'Administration',
     useAsTitle: 'name',
     // Invisible pour les non-admins (recette n°4 du plan : un compte editor
     // « ne voit pas Users ») — leur propre compte reste accessible via

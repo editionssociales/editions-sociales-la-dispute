@@ -24,15 +24,15 @@ export const Highlight: CollectionConfig = {
     plural: 'Mises en avant',
   },
   admin: {
-    group: 'Catalogue',
+    group: 'Site',
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'actif', 'dateDebut', 'dateFin'],
     description: 'Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).',
   },
   access: {
     // Lu par la page d'accueil via la Local API ; même lecture ouverte que
-    // les autres collections du groupe Catalogue (Authors, BookLabels) — aucune
-    // donnée sensible. Écriture réservée aux mêmes rôles que le reste.
+    // les autres collections/globals du groupe Site (Pages) — aucune donnée
+    // sensible. Écriture réservée aux mêmes rôles que le reste.
     read: () => true,
     create: isAdminOrEditor,
     update: isAdminOrEditor,

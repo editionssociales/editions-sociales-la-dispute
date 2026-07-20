@@ -60,24 +60,21 @@ export default buildConfig({
       ],
     },
   },
-  // Ordre = ordre des groupes dans la nav admin (issue #25) : Quotidien
-  // (Books, Orders, Media) → Catalogue (Authors, BookLabels, Highlight)
-  // → Boutique (PromoCodes, ImportRuns) → Réglages (Users, seuil stock)
-  // → Site (Pages, À propos, Souscription — globals ci-dessous).
+  // L'ordre de déclaration EST le menu admin : la nav groupe collections ET
+  // globals par `admin.group`, dans l'ordre de rencontre ci-dessous — groupes
+  // Quotidien · Catalogue · Boutique · Site · Administration.
   collections: [
     Books,
     Orders,
-    Media,
     Authors,
     BookLabels,
-    Highlight,
+    Media,
     PromoCodes,
     ImportRuns,
+    Highlight,
     Users,
   ],
-  // Pages Site d'abord (groupe « Site »), puis seuil dans « Réglages »
-  // (créé par Users ci-dessus — le global y est rattaché).
-  globals: [PagesLegales, PageAPropos, PageSouscription, ReglagesBoutique],
+  globals: [ReglagesBoutique, PageAPropos, PageSouscription, PagesLegales],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({
