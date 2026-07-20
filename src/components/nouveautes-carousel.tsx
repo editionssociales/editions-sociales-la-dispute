@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
 import { Eyebrow } from "@/components/eyebrow";
+import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /** Un livre déjà mis en forme par la page serveur — aucune fonction, uniquement des données sérialisables. */
 export interface NouveauteBook {
@@ -311,36 +312,45 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           h1 unique de l'accueil (chantier 4 §1). */}
       <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-between gap-4 px-[clamp(16px,4vw,64px)]">
         <div className="min-w-0">
-          <Eyebrow>
-            Les Éditions sociales × La Dispute
-          </Eyebrow>
+          <Eyebrow>Vient de paraître</Eyebrow>
           <h2 className="mt-2 font-sans text-[clamp(30px,4.4vw,54px)] font-black italic uppercase leading-[0.98] text-ink">
             Nouveautés
           </h2>
         </div>
-        <div className="flex flex-none items-center gap-3">
-          <span
-            aria-hidden="true"
-            className="flex items-center pr-1 font-sans text-xs font-bold uppercase tracking-[.08em] text-ink-soft"
+        <div className="flex flex-none flex-col items-end gap-1">
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex items-center pr-1 font-sans text-xs font-bold uppercase tracking-[.08em] text-ink-soft"
+            >
+              {String(active + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
+            </span>
+            <button
+              type="button"
+              aria-label="Couverture précédente"
+              onClick={() => step(-1)}
+              className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              aria-label="Couverture suivante"
+              onClick={() => step(1)}
+              className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
+            >
+              →
+            </button>
+          </div>
+          {/* Sortie discrète du carrousel, à proximité du compteur — même
+              patron que les liens secondaires existants (`min-h-11`, anneau
+              de focus, soulignement sobre ; ex. « Retirer » du panier). */}
+          <Link
+            href="/catalogue"
+            className={`inline-flex min-h-11 items-center gap-1 px-2 -mx-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink-soft underline decoration-1 underline-offset-2 hover:text-ink ${FOCUS_RING_LIGHT}`}
           >
-            {String(active + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
-          </span>
-          <button
-            type="button"
-            aria-label="Couverture précédente"
-            onClick={() => step(-1)}
-            className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            aria-label="Couverture suivante"
-            onClick={() => step(1)}
-            className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
-          >
-            →
-          </button>
+            Tout le catalogue <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </div>
 

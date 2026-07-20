@@ -15,6 +15,7 @@ import {
   type FilterField,
 } from "@/lib/browse";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
+import { ACCENT_BG } from "@/lib/accents";
 import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
 
@@ -49,7 +50,7 @@ const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-ink";
 const FIELD_CLASS = `bg-paper px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_RING_LIGHT}`;
 const SELECT_CLASS = `${FIELD_CLASS} cursor-pointer`;
 
-/** Étiquette cliquable (libellé, maison) — cellule inversante à l'état actif. */
+/** Étiquette cliquable (libellé) — cellule inversante à l'état actif. */
 function Tag({
   active,
   onClick,
@@ -65,6 +66,35 @@ function Tag({
       onClick={onClick}
       aria-pressed={active}
       className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Étiquette de maison — même patron que `Tag`, mais accentée (navy/brick,
+ * R3) plutôt qu'ink : le filtre de maison est d'une autre nature que les
+ * libellés (identité de collection, pas un thème), il mérite son propre
+ * petit groupe distinct plutôt que d'être noyé en fin du rail de libellés.
+ */
+function HouseTag({
+  active,
+  accentBg,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  accentBg: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${active ? `${accentBg} text-paper` : "bg-paper text-ink hover:bg-ink hover:text-paper"}`}
     >
       {children}
     </button>
@@ -126,10 +156,12 @@ export function CatalogueFilters({
   const activeLibelle = filters.libelle ?? "";
   const activeEdition = filters.edition ?? "";
   const chips = activeChips(filters, { libelles, authors, lockedEdition });
-  // Rangée de libellés/maisons : vide quand les deux sources sont masquées
-  // (typiquement /catalogue/[edition], où hideLibelles ET lockedEdition
-  // sont posés — la mosaïque au-dessus couvre déjà ce rôle).
-  const hasTags = !hideLibelles || !lockedEdition;
+  // Deux groupes distincts, chacun masquable indépendamment (typiquement
+  // /catalogue/[edition], où hideLibelles ET lockedEdition sont posés — la
+  // mosaïque de thèmes au-dessus couvre déjà le rôle des deux).
+  const showHouseGroup = !lockedEdition;
+  const showLibelleGroup = !hideLibelles;
+  const hasTags = showHouseGroup || showLibelleGroup;
 
   return (
     <div
@@ -137,7 +169,31 @@ export function CatalogueFilters({
         isPending ? "opacity-70" : ""
       }`}
     >
-      {hasTags && (
+      {showHouseGroup && (
+        // Petit groupe distinct, AVANT la mosaïque de thèmes : le filtre de
+        // maison est d'une autre nature que les libellés (identité de
+        // collection), il ne doit pas se noyer en fin du rail de puces.
+        // `w-fit` : reste un petit groupe compact, pas un rail plein largeur.
+        <FramedGrid
+          flow="flex"
+          role="group"
+          aria-label="Filtrer par maison"
+          className="w-fit items-stretch"
+        >
+          {EDITION_LIST.map((e) => (
+            <HouseTag
+              key={e.slug}
+              accentBg={ACCENT_BG[e.accent]}
+              active={activeEdition === e.slug}
+              onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
+            >
+              {e.shortName}
+            </HouseTag>
+          ))}
+        </FramedGrid>
+      )}
+
+      {showLibelleGroup && (
         // Rail horizontal sur mobile (pas de mur de puces qui repousse
         // recherche/tri hors écran) ; redevient une grille qui s'enroule à
         // partir de `sm`.
@@ -145,35 +201,20 @@ export function CatalogueFilters({
           flow="flex"
           role="group"
           aria-label="Libellés du catalogue"
-          className="items-stretch overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
+          className={`items-stretch overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden ${showHouseGroup ? "mt-[2px]" : ""}`}
         >
-          {!hideLibelles && (
-            <>
-              <Tag active={activeLibelle === ""} onClick={() => setFilter("libelle", "")}>
-                Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
-              </Tag>
-              {libelles.map((l) => (
-                <Tag
-                  key={l.slug}
-                  active={activeLibelle === l.slug}
-                  onClick={() => setFilter("libelle", l.slug)}
-                >
-                  {l.name} ({l.count})
-                </Tag>
-              ))}
-            </>
-          )}
-
-          {!lockedEdition &&
-            EDITION_LIST.map((e) => (
-              <Tag
-                key={e.slug}
-                active={activeEdition === e.slug}
-                onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
-              >
-                {e.shortName}
-              </Tag>
-            ))}
+          <Tag active={activeLibelle === ""} onClick={() => setFilter("libelle", "")}>
+            Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
+          </Tag>
+          {libelles.map((l) => (
+            <Tag
+              key={l.slug}
+              active={activeLibelle === l.slug}
+              onClick={() => setFilter("libelle", l.slug)}
+            >
+              {l.name} ({l.count})
+            </Tag>
+          ))}
         </FramedGrid>
       )}
 

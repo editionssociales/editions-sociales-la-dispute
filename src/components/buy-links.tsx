@@ -23,14 +23,17 @@ const IN_STOCK_COPY = "En stock — expédié sous 48 h";
 export function BuyLinksList({ book }: { book: Book }) {
   // Liens libraires de repli — lus une seule fois, jamais jetés quel que
   // soit le statut (bug corrigé : `upcoming`/`unavailable` les perdaient
-  // via un early return qui court-circuitait ce bloc). Exclus pour
-  // `external` : le CTA principal en reprend déjà un des deux
-  // (`resolveNativePurchase`), les répéter en secondaire serait redondant.
+  // via un early return qui court-circuitait ce bloc). Seul le lien
+  // EXACTEMENT repris par le CTA principal (`book.permalink`, cf.
+  // `resolveNativePurchase` — priorité ParisLibrairies puis LaLibrairie
+  // pour `external`) est exclu du secondaire, pour ne pas le répéter :
+  // l'autre lien libraire, s'il existe, reste affiché (bug corrigé :
+  // `external` les perdait tous les deux, y compris celui non repris).
   const secondary = [
-    book.status !== "external" && book.buy.parislibrairies
+    book.buy.parislibrairies && book.buy.parislibrairies !== book.permalink
       ? { label: "ParisLibrairies", href: book.buy.parislibrairies }
       : null,
-    book.status !== "external" && book.buy.lalibrairie
+    book.buy.lalibrairie && book.buy.lalibrairie !== book.permalink
       ? { label: "LaLibrairie", href: book.buy.lalibrairie }
       : null,
   ].filter((o): o is { label: string; href: string } => o != null);
