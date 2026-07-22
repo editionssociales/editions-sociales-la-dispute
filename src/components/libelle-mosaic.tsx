@@ -119,27 +119,58 @@ function maxWordLength(name: string) {
   return words.reduce((max, w) => Math.max(max, w.length), 0);
 }
 
+/**
+ * Hyphénation « light » (client 23/07) : césure UNIQUEMENT si le mot le plus
+ * long du libellé déborde une ligne entière de sa cellule — sinon retour à la
+ * ligne sans tiret. Le CSS seul ne sait pas l'exprimer (hyphens-auto césure
+ * aussi pour équilibrer) : on estime par cellule, largeur de mot ≈
+ * chars × 0,62 × corps, contre colonnes × unité − padding. Approximations
+ * (unité lg ≈ 110 px dans le conteneur max-w-6xl, mobile ≈ 75 px sur 375px) ;
+ * overflow-wrap:break-word reste le garde-fou des cas limites.
+ */
+const UNIT_LG = 110;
+const UNIT_SM = 75;
+const CHAR_RATIO = 0.62;
+const CELL_PAD_X = 26;
+
+function overflowsLine(maxWord: number, cols: number, font: number, unit: number) {
+  return maxWord * CHAR_RATIO * font > cols * unit - CELL_PAD_X;
+}
+
 function spanFor(count: number, name: string) {
   const area = cellArea(count);
   const [small, large] = closestFactors(area);
-  const portrait = maxWordLength(name) <= VERTICAL_MAX_WORD;
+  const maxWord = maxWordLength(name);
+  const portrait = maxWord <= VERTICAL_MAX_WORD;
   const cols = Math.min(portrait ? small : large, MAX_COLS);
   const rows = Math.min(portrait ? large : small, MAX_ROWS);
   // Mobile : même factorisation, plafonnée à la grille de 5 — la diversité
   // des formes prime sur la proportion à l'écran (amendement client 23/07 :
   // la division par deux normalisait 95 % des cellules en carrés de base).
   const baseCols = Math.min(cols, BASE_MAX_COLS);
+  // Corps = fonction STRICTE de l'aire seule, par TRANCHES de carrés
+  // parfaits (client 23/07) : tranche k = floor(√aire) — aires 1-3 → k=1,
+  // 4-8 → k=2, 9-15 → k=3, 16-24 → k=4, etc. Progression fixe par tranche
+  // (+5 px lg, +3 px mobile), PLAFONNÉE au lisible (40/26 px) pour
+  // anticiper des rayons de milliers de titres.
+  const fontSm = Math.min(11 + 3 * Math.floor(Math.sqrt(area)), 26);
+  const fontLg = Math.min(15 + 5 * Math.floor(Math.sqrt(area)), 40);
   return {
     cols,
     className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
-    // Corps = fonction STRICTE de l'aire seule, par TRANCHES de carrés
-    // parfaits (client 23/07) : tranche k = floor(√aire) — aires 1-3 → k=1,
-    // 4-8 → k=2, 9-15 → k=3, 16-24 → k=4, etc. Progression fixe par tranche
-    // (+5 px lg, +3 px mobile), PLAFONNÉE au lisible (40/26 px) pour
-    // anticiper des rayons de milliers de titres. Une cellule étroite de
-    // grande aire garde son grand corps et césure (hyphens-auto).
-    fontSm: Math.min(11 + 3 * Math.floor(Math.sqrt(area)), 26),
-    fontLg: Math.min(15 + 5 * Math.floor(Math.sqrt(area)), 40),
+    fontSm,
+    fontLg,
+    // Hyphénation light : césure seulement là où le mot le plus long déborde
+    // une ligne entière de la cellule, par point de rupture.
+    hyphenClass: `${
+      overflowsLine(maxWord, baseCols, fontSm, UNIT_SM)
+        ? "hyphens-auto"
+        : "hyphens-none"
+    } ${
+      overflowsLine(maxWord, cols, fontLg, UNIT_LG)
+        ? "lg:hyphens-auto"
+        : "lg:hyphens-none"
+    }`,
   };
 }
 
@@ -157,6 +188,7 @@ function ThemeCell({
   span,
   fontSm,
   fontLg,
+  hyphenClass,
   label,
   count,
 }: {
@@ -166,6 +198,8 @@ function ThemeCell({
   /** Corps du libellé (px), fonction stricte de l'aire — mobile / lg. */
   fontSm: number;
   fontLg: number;
+  /** hyphens-auto/none par point de rupture (hyphénation light). */
+  hyphenClass: string;
   label: string;
   count: number;
 }) {
@@ -177,7 +211,7 @@ function ThemeCell({
       className={`relative flex flex-col justify-end gap-1 overflow-hidden px-[13px] py-[9px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${span} ${invertingCell(active)}`}
     >
       <span
-        className={`font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.02] tracking-[.01em] hyphens-auto [overflow-wrap:break-word] lg:text-[length:var(--fs-lg)]`}
+        className={`font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.02] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs-lg)] ${hyphenClass}`}
       >
         {label}
       </span>
@@ -223,6 +257,7 @@ export function LibelleMosaic({
             span={span.className}
             fontSm={span.fontSm}
             fontLg={span.fontLg}
+            hyphenClass={span.hyphenClass}
             label={item.name}
             count={item.count}
           />
