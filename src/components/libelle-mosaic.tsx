@@ -141,7 +141,7 @@ function ThemeCell({
       className={`relative flex flex-col justify-end gap-1 overflow-hidden px-[13px] py-[9px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${span} ${invertingCell(active)}`}
     >
       <span
-        className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] [overflow-wrap:anywhere] ${textClass}`}
+        className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] hyphens-auto [overflow-wrap:break-word] ${textClass}`}
       >
         {label}
         {!showCount && <span className="sr-only"> ({count} titres)</span>}
@@ -175,7 +175,7 @@ export function LibelleMosaic({
     <FramedGrid
       as="nav"
       aria-label={ariaLabel}
-      className={`grid-flow-row-dense auto-rows-[clamp(44px,4.5vw,60px)] grid-cols-1 lg:grid-cols-10 ${className}`}
+      className={`grid-flow-row-dense auto-rows-[clamp(64px,6.5vw,88px)] grid-cols-1 lg:grid-cols-10 ${className}`}
     >
       {items.map((item, i) => {
         const span = spans[i];
