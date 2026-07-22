@@ -154,6 +154,10 @@ export async function Dashboard({ payload }: ServerProps) {
               + Nouvelle mise en avant
             </a>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
+            <a className={styles.createButton} href="/admin/collections/rencontres/create">
+              + Nouvelle rencontre
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
             <a className={styles.createButton} href="/admin/collections/promo-codes/create">
               + Nouveau code promo
             </a>
