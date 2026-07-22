@@ -16,6 +16,7 @@ Unified product model and data layer: reads the Payload/Postgres catalogue (two 
 - Type ownership: `SafeHtml` (only `sanitizeCms`), RawBook/CatalogueSource (ports), CommerceInfo (port-owned).
 - `env.ts`: `DATABASE_URL` + `PAYLOAD_SECRET` REQUIRED at boot (Payload is the only source); the rest optional but shape-checked.
 - URL codec: `catalogueHref`/`readFilters` (browse.ts) = unique encoder/decoder for filter URLs.
+- `rencontres-data.ts`: PROVISIONAL editorial data (hand-copied from ladispute.fr) pending the Payload rencontres collection — delete it then; never extend it by hand.
 
 ## Work Guidance
 
@@ -24,6 +25,7 @@ Unified product model and data layer: reads the Payload/Postgres catalogue (two 
 - New rule: pure core in dedicated module, Payload I/O behind the named seams (`commerce-source` for the purchase path — books facts + promo codes, its read policy locked by `commerce-source.test.ts` — `order-source` for the Order lifecycle); never widen `CommerceInfo` (port-owned), never inline `getPayload` in routes/actions.
 - Euros↔cents conversion lives ONCE in `money.ts` (`eurosToCents`/`centsToEuros`) — consumed by `cart-core`/`checkout-core`/`promo-core`/`donation-tiers` (euros→cents) and `order-webhook-core` (cents→euros); `order-export.ts:roundCents` stays separate (a euros rounding, not a conversion).
 - Stock/parution semantics live ONCE in `sellability.ts` (`assessSellability`) — consumed by `catalogue-core` (status) and `checkout-core` (refusals).
+- The Book→`NouveauteBook` carousel mapping lives ONCE in `nouveaute-book.ts` (`toNouveauteBooks`) — consumed by the home page and the `?upcoming=1` catalogue view; never re-inline it.
 - The "manifest cart" rule (cart made only of `reducedShippingFlag` items) lives ONCE in `shipping-core.ts` (`isManifestOnly`) — consumed by `resolveCartSummary` (`cart-core`) and `validateCheckoutLines` (`checkout-core`).
 - Promo semantics (normalization, day-inclusive expiration, evaluation) live ONCE in `promo-core.ts` — `isPromoExpired` is consumed by both `evaluatePromoCode` and the admin dashboard (`derive.ts:expiredActivePromos`); `PromoCodes.ts` imports the same `normalizePromoCode`.
 - The cart quote (discount/shipping/total from a subtotal + a resolved promo verdict) lives ONCE in `cart-quote.ts` (`computeCartQuote`, composing `promo-core`/`shipping-core`/`cart-core`) — consumed by both the client display (`panier/cart-view.tsx`) and the server re-validation (`api/checkout/route.ts`); never re-inline that composition at a call site. `cart-quote.ts` also owns `ShippingMethodLabel`, the Order snapshot label (`Orders.ts:shippingMethod`) — it is derived from `computeShipping`'s actual result, never from coupon validity alone (a valid `free_shipping` coupon under `FREE_SHIPPING_MIN_CART_CENTS` must not read as "offert").
