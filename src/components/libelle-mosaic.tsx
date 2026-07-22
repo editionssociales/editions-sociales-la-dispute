@@ -13,21 +13,43 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * qu'elle peut, les trous restants sont acceptés.
  */
 
-/** Poids visuel d'une cellule selon son nombre de titres. */
-const THEME_TIERS: { min: number; span: string; text: string }[] = [
+/**
+ * Poids visuel : l'AIRE de la cellule est proportionnelle à √(nombre de
+ * titres), normalisée sur le plus gros item de la mosaïque (aire max = 6
+ * cellules de grille). Le JIT Tailwind ne compilant pas de spans dynamiques,
+ * l'aire cible est approchée par la combinaison littérale la plus proche —
+ * aires réalisables : 1, 2, 3 (lg), 4, 6 (lg). En mobile (grid-cols-2) les
+ * variantes lg: retombent sur 2 colonnes max.
+ */
+const AREA_SPANS: { area: number; span: string; text: string }[] = [
   {
-    min: 16,
-    span: "col-span-2 lg:col-span-3 row-span-2",
+    area: 6,
+    span: "col-span-2 row-span-2 lg:col-span-3",
     text: "text-[clamp(14px,1.5vw,20px)] lg:text-[clamp(19px,2vw,29px)]",
   },
-  { min: 12, span: "col-span-2 row-span-2", text: "text-[clamp(14px,1.5vw,20px)]" },
-  { min: 9, span: "col-span-2 row-span-1", text: "text-[clamp(14px,1.5vw,20px)]" },
-  { min: 7, span: "col-span-1 row-span-2", text: "text-[clamp(12px,1.2vw,15px)]" },
-  { min: 0, span: "col-span-1 row-span-1", text: "text-[clamp(12px,1.2vw,15px)]" },
+  { area: 4, span: "col-span-2 row-span-2", text: "text-[clamp(14px,1.5vw,20px)]" },
+  {
+    area: 3,
+    span: "col-span-2 row-span-1 lg:col-span-3",
+    text: "text-[clamp(14px,1.5vw,20px)]",
+  },
+  { area: 2, span: "col-span-2 row-span-1", text: "text-[clamp(12px,1.2vw,15px)]" },
+  { area: 1, span: "col-span-1 row-span-1", text: "text-[clamp(12px,1.2vw,15px)]" },
 ];
 
-function themeTier(count: number) {
-  return THEME_TIERS.find((t) => count >= t.min) ?? THEME_TIERS[THEME_TIERS.length - 1];
+function spanForCount(count: number, maxCount: number) {
+  const target =
+    (6 * Math.sqrt(Math.max(0, count))) / Math.sqrt(Math.max(1, maxCount));
+  let best = AREA_SPANS[AREA_SPANS.length - 1];
+  let bestDelta = Infinity;
+  for (const candidate of AREA_SPANS) {
+    const delta = Math.abs(candidate.area - target);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = candidate;
+    }
+  }
+  return best;
 }
 
 export interface LibelleMosaicItem {
@@ -84,6 +106,7 @@ export function LibelleMosaic({
   ariaLabel: string;
   className?: string;
 }) {
+  const maxCount = Math.max(...items.map((i) => i.count), 1);
   return (
     <FramedGrid
       as="nav"
@@ -91,7 +114,7 @@ export function LibelleMosaic({
       className={`grid-flow-row-dense auto-rows-[clamp(62px,7vw,92px)] grid-cols-2 lg:grid-cols-6 ${className}`}
     >
       {items.map((item) => {
-        const tier = themeTier(item.count);
+        const tier = spanForCount(item.count, maxCount);
         const active = (item.slug ?? undefined) === activeLibelle;
         return (
           <ThemeCell
