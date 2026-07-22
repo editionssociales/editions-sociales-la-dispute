@@ -28,10 +28,12 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * qui débordent sont plafonnées à la pleine largeur (aujourd'hui : seule
  * « Tous les livres », aire 17, première → bande pleine largeur). Spans en
  * maps littérales (JIT). RESPONSIVE (client 23/07 : « garder une forme
- * similaire même sur mobile ») : sous lg la grille passe à 5 colonnes — la
- * moitié — et chaque bloc garde ses proportions avec une largeur divisée par
- * deux (ceil, minimum 2 colonnes pour la lisibilité des libellés) ; les
- * bandes d'une ligne passent pleine largeur ; les hauteurs de rangées sont
+ * similaire même sur mobile », amendé : garder aussi la DIVERSITÉ des
+ * formes) : sous lg la grille passe à 5 colonnes et chaque cellule garde LA
+ * MÊME factorisation qu'en lg, simplement plafonnée à 5 de large — les
+ * cellules occupent donc une part de largeur double, mais leurs formes
+ * restent différenciées (2×2, 3×2, 4×2, 5×2, bandes 3×1…) au lieu de se
+ * normaliser en carrés de base et pleines largeurs. Hauteurs de rangées
  * identiques aux deux tailles.
  */
 
@@ -103,13 +105,10 @@ function spanFor(count: number) {
   const [rawRows, rawCols] = closestFactors(cellArea(count));
   const cols = Math.min(rawCols, MAX_COLS);
   const rows = Math.min(rawRows, MAX_ROWS);
-  // Mobile : bandes d'une ligne pleine largeur ; blocs à largeur divisée par
-  // deux (ceil), plancher 2 colonnes — sous 2 unités (~150px), les libellés
-  // longs ne tiennent plus même césurés.
-  const baseCols =
-    rows === 1
-      ? BASE_MAX_COLS
-      : Math.min(Math.max(Math.ceil(cols / 2), 2), BASE_MAX_COLS);
+  // Mobile : même factorisation, plafonnée à la grille de 5 — la diversité
+  // des formes prime sur la proportion à l'écran (amendement client 23/07 :
+  // la division par deux normalisait 95 % des cellules en carrés de base).
+  const baseCols = Math.min(cols, BASE_MAX_COLS);
   return {
     cols,
     className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
