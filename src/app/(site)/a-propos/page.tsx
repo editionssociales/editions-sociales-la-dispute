@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
-import { ACCENT_BORDER_T, ACCENT_TEXT } from "@/lib/accents";
 import { EDITIONS } from "@/lib/editions";
 import type { EditionSlug } from "@/lib/types";
 import { FramedGrid } from "@/components/framed-grid";
-import { Button } from "@/components/button";
-import { PageHero } from "@/components/page-hero";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import { getPageAPropos, getReglagesSite } from "@/lib/site-content";
 
@@ -17,28 +13,32 @@ export const metadata: Metadata = {
   alternates: { canonical: "/a-propos" },
 };
 
-// Repères du bloc de présentation, repris de l'intro — décoratifs, sans code
-// couleur (réservé aux 4 sections de la navbar).
-const REPERES = [
-  "Deux fonds historiques",
-  "Une seule équipe d'éditrices",
-  "Un même engagement",
-];
-
 /**
- * Équipe et dépôt de manuscrit (maquette « Qui sommes-nous ? », 2026-07,
- * révisée 2026-07-20 avec la maquette PDF client) : éditorial figé, hors CMS
- * — même statut que le pitch 2026 du héros de `/souscription`. À déplacer
- * dans le global `page-a-propos` si le client veut la main dessus.
+ * Page « Qui sommes-nous ? » commune aux deux maisons — gabarit repris de la
+ * maquette PDF client (2026-07-20, `_specs/qui-sommes-nous-maquette-*.pdf`),
+ * dans cet ordre strict : bandeau-titre sur aplat pop-teal → encadré de texte
+ * principal (justifié) → boîte réseaux sociaux (le « logo des réseaux » de la
+ * maquette) → bandeau ÉQUIPE | DÉPÔT DE MANUSCRIT sur pop-teal → deux
+ * colonnes encadrées. Rien d'autre : la maquette ne comporte ni cartes
+ * maisons, ni citation, ni sections libres.
  *
- * ⚠️ La maquette PDF du 2026-07-20 introduit une incohérence non résolue par
- * le client : ses deux variantes (page ES / page LD) reprennent VERBATIM la
- * même phrase d'intro « Les éditions La Dispute sont composées… » pour les
- * DEUX bureaux (seule la liste de membres change) — ce n'est donc pas une
- * source fiable pour trancher quelle liste appartient à quelle maison. La
- * répartition ci-dessous (déjà en place avant cette maquette) n'a PAS été
- * modifiée sur la base de ce PDF ; à confirmer avec le client avant tout
- * changement de la liste des bureaux éditoriaux.
+ * Arbitrages maquette (à confirmer en validation client) :
+ * - La maquette existe en 2 variantes mono-maison (teal = page « QUI
+ *   SOMMES-NOUS ? », orange = page « MAKE MARXISM GREAT AGAIN ! ») ; cette
+ *   page étant commune, on suit la variante teal — celle qui porte le titre.
+ * - Aplats sur les tokens pop existants (#5fd0c4) plutôt que le #80D4CE
+ *   mesuré dans le PDF : même palette DA, une seule source de couleurs (R1) —
+ *   l'écart vient vraisemblablement de l'export PDF.
+ * - Les titres du gabarit sont en gras DROIT (pas l'italique maison) — suivi.
+ * - « Titre de la souscription » + lorem de l'encadré principal = remplissage
+ *   InDesign → contenu réel CMS (`herosTitre`/`herosIntro`, /admin) dans la
+ *   même boîte, en attendant le copy définitif de l'équipe souscription.
+ *
+ * ⚠️ Attribution des bureaux éditoriaux : les 2 variantes du PDF répètent la
+ * même phrase d'intro (« Les éditions La Dispute sont composées… ») avec des
+ * listes différentes — source non fiable pour trancher qui est qui. La
+ * répartition ci-dessous (antérieure à la maquette) est conservée telle
+ * quelle ; à confirmer avec le client avant tout changement.
  */
 const EQUIPE_PERMANENTE =
   "Noémie Brun, Clara Laspalas, Marina Simonin et Nicolas Vieillescazes";
@@ -61,15 +61,14 @@ const INLINE_LINK =
   "font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper " +
   FOCUS_RING_LIGHT_OUTER;
 
-/** Bandeau d'en-tête des colonnes Équipe / Dépôt de manuscrit. */
-const COL_HEADING =
-  "bg-ink px-6 py-3 text-center font-sans text-sm font-extrabold uppercase tracking-[.08em] text-paper";
+/** Bandeau de sous-titre sur aplat pop-teal (gabarit) : centré, gras droit. */
+const BAND_HEADING =
+  "bg-pop-teal px-6 py-4 text-center font-sans text-base font-extrabold uppercase tracking-[.08em] text-ink sm:text-lg";
 
 export default async function AProposPage() {
-  // Global `page-a-propos` (textes du bloc de présentation, citation,
-  // surcharge des deux maisons, sections libres) + `pages-legales` (liens
-  // réseaux sociaux, les mêmes que la cellule « Suivez-nous » du footer).
-  // Global vide = les textes en dur d'`EDITION_LIST` et de
+  // Global `page-a-propos` (titre + intro de l'encadré principal) +
+  // `pages-legales` (liens réseaux sociaux, les mêmes que la cellule
+  // « Suivez-nous » du footer). Global vide = textes en dur de
   // `site-content-core.ts`.
   const [content, reglages] = await Promise.all([
     getPageAPropos(),
@@ -79,63 +78,44 @@ export default async function AProposPage() {
 
   return (
     <>
-      {/* Bandeau-titre plein cadre (maquette « Qui sommes-nous ? ») — aplat
-          ink, seule variante sombre de PageHero (tone="cover"). La maquette
-          PDF client (2026-07-20) colore ce bandeau en turquoise/orange selon
-          la maison (ES/LD) ; on garde l'aplat ink NEUTRE ici — cette page
-          réunit désormais les deux maisons (`NAV_HOUSES` pointent toutes deux
-          ici), il n'y a plus de « maison courante » contre laquelle coder
-          cette couleur. Le mapping turquoise/orange → navy/brick est
-          appliqué là où il reste sans ambiguïté : les bureaux éditoriaux
-          ci-dessous et la section « Deux maisons » (accents déjà en place). */}
-      <section className="border-b-2 border-ink bg-ink">
-        <Container className="py-12 sm:py-16">
-          <PageHero tone="cover" title={<>Qui sommes-nous&nbsp;?</>} />
+      {/* 1. Bandeau-titre pleine largeur sur aplat pop-teal (gabarit) —
+          composition bespoke hors PageHero, comme la home et la 404 :
+          l'échelle fermée R6 n'a pas de ton « aplat pop ». */}
+      <section className="border-b-2 border-ink bg-pop-teal">
+        <Container className="py-[clamp(36px,6vw,72px)]">
+          <h1 className="font-sans text-[clamp(36px,6vw,72px)] font-black uppercase leading-[0.95] text-ink">
+            Qui sommes-nous&nbsp;?
+          </h1>
         </Container>
       </section>
 
-      {/* Grand bloc de présentation encadré : titre + intro CMS + repères.
-          La maquette PDF client place ici un encadré « Titre de la
-          souscription » rempli de lorem ipsum (texte de remplissage
-          explicitement signalé comme tel dans l'extraction fournie) —
-          contenu non exploitable verbatim sur une page en production. On
-          garde donc l'encadré CMS existant (`herosTitre`/`herosIntro`,
-          éditables depuis /admin), qui occupe le même emplacement structurel
-          avec du vrai copy plutôt que du texte de remplissage. */}
+      {/* 2. Encadré de texte principal — une seule boîte à filet noir, corps
+          justifié (seul bloc justifié du gabarit). */}
       <section>
         <Container className="py-12 sm:py-16">
           <Reveal>
             <div className="border-2 border-ink bg-paper p-7 sm:p-10">
-              <h2 className="max-w-3xl font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+              <p className="font-sans text-xl font-extrabold leading-snug text-ink sm:text-2xl">
                 {content.herosTitre}
-              </h2>
-              <p className="mt-5 max-w-[70ch] text-lg leading-relaxed text-ink/70">
+              </p>
+              <p className="mt-4 max-w-none text-justify text-[15px] leading-relaxed text-ink/80 sm:text-base">
                 {content.herosIntro}
               </p>
-              <div className="mt-7 flex flex-wrap gap-2">
-                {REPERES.map((r) => (
-                  <span
-                    key={r}
-                    className="border-2 border-ink px-3 py-1.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink"
-                  >
-                    {r}
-                  </span>
-                ))}
-              </div>
             </div>
           </Reveal>
         </Container>
       </section>
 
-      {/* Réseaux sociaux — mêmes liens que la cellule « Suivez-nous » du
-          footer (global `pages-legales`) ; aucune saisie = pas de section. */}
+      {/* 3. Réseaux sociaux — la boîte « logo des réseaux » du gabarit :
+          encadré étroit aligné à gauche, pas pleine largeur. Liens réels du
+          global `pages-legales` ; aucune saisie = pas de boîte. */}
       {reseaux.length > 0 && (
-        <section className="border-t-2 border-ink">
-          <Container className="py-12 sm:py-16">
+        <section>
+          <Container className="pb-12 sm:pb-16">
             <Reveal>
               <nav
                 aria-label="Réseaux sociaux"
-                className="border-2 border-ink bg-paper p-6 sm:p-7"
+                className="w-fit border-2 border-ink bg-paper p-4 sm:p-5"
               >
                 <ul className="flex flex-wrap gap-2">
                   {reseaux.map((r) => (
@@ -157,42 +137,36 @@ export default async function AProposPage() {
         </section>
       )}
 
-      {/* Équipe | Dépôt de manuscrit — deux colonnes à bandeau (maquette) */}
+      {/* 4+5. Bandeau ÉQUIPE | DÉPÔT DE MANUSCRIT sur pop-teal + les deux
+          colonnes encadrées. Une seule FramedGrid : le gap ink de 2px fait le
+          filet vertical continu bandeau→colonnes du gabarit ; en mobile,
+          chaque colonne empile son bandeau puis son texte. */}
       <section className="border-t-2 border-ink">
-        <Container className="py-16 sm:py-20">
+        <Container className="py-12 sm:py-16">
           <FramedGrid className="md:grid-cols-2">
             <Reveal className="h-full">
               <div className="flex h-full flex-col bg-paper">
-                <h2 className={COL_HEADING}>Équipe</h2>
-                <div className="flex flex-1 flex-col gap-5 p-6 text-[15px] leading-relaxed text-ink/70 sm:p-7">
+                <h2 className={BAND_HEADING}>Équipe</h2>
+                <div className="flex flex-1 flex-col gap-5 border-t-2 border-ink p-6 text-[15px] leading-relaxed text-ink/80 sm:p-7">
                   <p>
                     Les Éditions sociales et La Dispute sont animées par une
                     équipe permanente&nbsp;: {EQUIPE_PERMANENTE}.
                   </p>
-                  {BUREAUX.map((b) => {
-                    const edition = EDITIONS[b.slug];
-                    return (
-                      <div key={b.slug}>
-                        {/* Couleur d'identité de la maison (maquette PDF client,
-                            turquoise/orange) mappée sur les accents existants
-                            (R1/R3 : navy = Éditions sociales, brick = La
-                            Dispute) plutôt qu'une nouvelle couleur littérale. */}
-                        <p
-                          className={`font-sans text-xs font-bold uppercase tracking-[.05em] ${ACCENT_TEXT[edition.accent]}`}
-                        >
-                          Bureau éditorial — {edition.name}
-                        </p>
-                        <p className="mt-1.5">{b.membres}.</p>
-                      </div>
-                    );
-                  })}
+                  {BUREAUX.map((b) => (
+                    <div key={b.slug}>
+                      <p className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-ink">
+                        Bureau éditorial — {EDITIONS[b.slug].name}
+                      </p>
+                      <p className="mt-1.5">{b.membres}.</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </Reveal>
             <Reveal delay={120} className="h-full">
               <div className="flex h-full flex-col bg-paper">
-                <h2 className={COL_HEADING}>Dépôt de manuscrit</h2>
-                <div className="flex flex-1 flex-col gap-4 p-6 text-[15px] leading-relaxed text-ink/70 sm:p-7">
+                <h2 className={BAND_HEADING}>Dépôt de manuscrit</h2>
+                <div className="flex flex-1 flex-col gap-4 border-t-2 border-ink p-6 text-[15px] leading-relaxed text-ink/80 sm:p-7">
                   <p>
                     Vous pouvez nous soumettre un manuscrit en nous contactant à{" "}
                     <a href={`mailto:${MANUSCRITS_EMAIL}`} className={INLINE_LINK}>
@@ -215,120 +189,6 @@ export default async function AProposPage() {
           </FramedGrid>
         </Container>
       </section>
-
-      {/* Les deux maisons, côte à côte */}
-      <section className="border-t-2 border-ink">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              Deux catalogues, une seule équipe d&apos;éditrices
-            </h2>
-          </Reveal>
-          <FramedGrid className="mt-8 md:grid-cols-2">
-            {content.maisons.map((m, i) => (
-              <Reveal key={m.slug} delay={i * 120} className="h-full">
-                <article
-                  className={`flex h-full flex-col border-t-4 bg-paper p-7 ${ACCENT_BORDER_T[m.accent]}`}
-                >
-                  <h3 className="font-sans text-2xl font-black italic text-ink">
-                    {m.name}
-                  </h3>
-                  <p className="mt-1 font-sans text-xs font-bold uppercase tracking-[.05em] text-muted">
-                    {m.tagline}
-                  </p>
-                  <p className="mt-4 flex-1 text-[15px] leading-relaxed text-ink/70">
-                    {m.description}
-                  </p>
-                  {/* Cible `/catalogue/${slug}`, pas `/editions/${slug}` :
-                      cette dernière route est désormais une redirection
-                      permanente VERS `/a-propos` (chantier agenda/à-propos,
-                      2026-07) — y pointer depuis ici boucle sur la même
-                      page. */}
-                  <Link
-                    href={`/catalogue/${m.slug}`}
-                    className={`mt-6 inline-flex w-fit items-center gap-1.5 border-b-2 border-ink font-sans text-xs font-bold uppercase tracking-[.05em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT_OUTER}`}
-                  >
-                    Découvrir {m.shortName}
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                </article>
-              </Reveal>
-            ))}
-          </FramedGrid>
-        </Container>
-      </section>
-
-      {/* Citation en exergue */}
-      <section className="border-t-2 border-ink">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <blockquote className="mx-auto max-w-3xl border-2 border-ink bg-ink p-8 text-paper sm:p-12">
-              <p className="font-sans text-2xl font-black italic leading-snug sm:text-3xl">
-                {content.citation}
-              </p>
-              <footer className="mt-5 font-sans text-xs font-bold uppercase tracking-[.05em] text-paper/70">
-                {content.citationAttribution}
-              </footer>
-            </blockquote>
-          </Reveal>
-        </Container>
-      </section>
-
-      {/* Sections éditées dans /admin, sinon la section « Le catalogue » en dur */}
-      {content.sections ? (
-        content.sections.map((s, i) => (
-          <section key={`${i}-${s.titre}`} className="border-t-2 border-ink">
-            <Container className="py-16 sm:py-20">
-              <Reveal>
-                <div className="max-w-2xl">
-                  <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-                    {s.titre}
-                  </h2>
-                  {s.html && (
-                    <div
-                      className="prose-book mt-4 max-w-none"
-                      dangerouslySetInnerHTML={{ __html: s.html }}
-                    />
-                  )}
-                </div>
-              </Reveal>
-            </Container>
-          </section>
-        ))
-      ) : (
-        <section className="border-t-2 border-ink">
-          <Container className="py-16 sm:py-20">
-            <Reveal>
-              <div className="max-w-2xl">
-                <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-                  Le catalogue
-                </h2>
-                <p className="mt-4 text-[15px] leading-relaxed text-ink/70">
-                  Un catalogue filtrable par collection et par auteur, une
-                  librairie en ligne, et une page de souscription pour
-                  accompagner ce nouveau départ. Les deux fonds réunis, à
-                  parcourir dès maintenant.
-                </p>
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <Button
-                    href="/catalogue"
-                    className="px-7 py-3.5 text-sm tracking-[.04em]"
-                  >
-                    Parcourir le catalogue
-                  </Button>
-                  <Button
-                    href="/souscription"
-                    variant="outline"
-                    className="px-7 py-3.5 text-sm tracking-[.04em]"
-                  >
-                    Soutenir la souscription
-                  </Button>
-                </div>
-              </div>
-            </Reveal>
-          </Container>
-        </section>
-      )}
     </>
   );
 }

@@ -21,10 +21,3 @@ export const ACCENT_TEXT: Record<Accent, string> = {
   ocher: "text-ocher-text",
   brick: "text-brick",
 };
-
-export const ACCENT_BORDER_T: Record<Accent, string> = {
-  navy: "border-t-navy",
-  bottle: "border-t-bottle",
-  ocher: "border-t-ocher",
-  brick: "border-t-brick",
-};
