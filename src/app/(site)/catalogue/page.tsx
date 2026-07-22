@@ -6,6 +6,7 @@ import { CatalogueFilters } from "@/components/catalogue-filters";
 import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
+import { LibelleMosaic } from "@/components/libelle-mosaic";
 import { NouveautesCarousel } from "@/components/nouveautes-carousel";
 import { toNouveauteBooks } from "@/lib/nouveaute-book";
 import { parseBookFilters } from "@/lib/parse-filters";
@@ -66,11 +67,27 @@ async function CatalogueBody({
           rôle visuellement. */}
       <h1 className="sr-only">Le catalogue par libellés</h1>
 
-      <div>
+      {/* Même mosaïque pondérée que /catalogue/[edition] (vue « GEME »
+          retenue par le client — les cases suivent le nombre de titres) ;
+          les étiquettes de libellés des filtres ci-dessous sont masquées,
+          la mosaïque couvre déjà ce rôle. */}
+      <LibelleMosaic
+        items={[
+          { name: "Tous les livres", slug: null, count: facets.total },
+          ...facets.libelles,
+        ]}
+        activeLibelle={filters.libelle}
+        hrefFor={(slug) =>
+          catalogueHref({ ...filters, libelle: slug ?? undefined, page: undefined })
+        }
+        ariaLabel="Libellés du catalogue"
+      />
+
+      <div className="mt-6">
         <CatalogueFilters
           libelles={facets.libelles}
           authors={facets.authors}
-          totalCount={facets.total}
+          hideLibelles
         />
       </div>
 
