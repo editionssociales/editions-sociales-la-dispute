@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Container } from "@/components/container";
-import { FramedGrid } from "@/components/framed-grid";
 import { Reveal } from "@/components/reveal";
-import { Button } from "@/components/button";
-import { formatDateFr } from "@/lib/format";
-import { RENCONTRES_EVENTS } from "@/lib/rencontres-data";
+import { Cover } from "@/lib/cover";
+import { splitDateFr } from "@/lib/format";
+import { getRencontres, type Rencontre } from "@/lib/rencontres";
 
 export const metadata: Metadata = {
   title: "Rencontres",
@@ -12,151 +12,216 @@ export const metadata: Metadata = {
   alternates: { canonical: "/rencontres" },
 };
 
-/**
- * Emplacements d'événements à venir : purement décoratifs (aucune date
- * réelle) — repli affiché UNIQUEMENT si `RENCONTRES_EVENTS` est vide. État
- * honnête plutôt que skeleton (5.4/R8, bordures pointillées assumées) — pas
- * de barres grises qui imiteraient un chargement en cours, juste la forme de
- * l'agenda (en-tête date/lieu) et le mot « en préparation ».
- */
-const PLACEHOLDER_EVENTS = [1, 2, 3];
+// Donnée Payload/Postgres, comme le reste des pages branchées back-office
+// (`(site)/page.tsx`, fiche livre) — même fenêtre ISR, purgée à l'édition par
+// `revalidateRencontresAfterChange`/`AfterDelete` (`src/payload/hooks/revalidate.ts`).
+export const revalidate = 3600;
 
-export default function RencontresPage() {
-  const events = RENCONTRES_EVENTS;
-  const hasEvents = events.length > 0;
+/** URL de la fiche d'un livre lié — même règle que `book-card.tsx` (fonds vs boutique-seul). */
+function livreHref(livre: NonNullable<Rencontre["livre"]>): string {
+  return livre.edition ? `/catalogue/${livre.edition}/${livre.slug}` : `/boutique/${livre.slug}`;
+}
+
+type EventJsonLd = {
+  "@type": "Event";
+  name: string;
+  startDate: string;
+  location: { "@type": "Place"; name: string; address: string };
+  description?: string;
+  image?: string;
+};
+
+/** URL absolue exigée par schema.org — même repli que la fiche livre (`catalogue/[edition]/[slug]/page.tsx`). */
+function absoluteUrl(url: string): string {
+  return new URL(url, process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr").toString();
+}
+
+export default async function RencontresPage() {
+  const { aVenir, passees } = await getRencontres();
+  const hasAVenir = aVenir.length > 0;
+  const hasPassees = passees.length > 0;
+
+  const eventsJsonLd: EventJsonLd[] = aVenir.map((r) => ({
+    "@type": "Event",
+    name: r.titre,
+    startDate: r.date,
+    location: { "@type": "Place", name: r.lieu, address: r.ville },
+    ...(r.description ? { description: r.description } : {}),
+    ...(r.image ? { image: absoluteUrl(r.image.url) } : {}),
+  }));
+  const jsonLdScript =
+    eventsJsonLd.length > 0
+      ? JSON.stringify({ "@context": "https://schema.org", "@graph": eventsJsonLd }).replace(
+          /</g,
+          "\\u003c",
+        )
+      : null;
 
   return (
     <>
-      {/* Titre visuel et paragraphes d'intro retirés (demande client) : le
-          nom accessible de la page reste porté par ce h1, masqué visuellement
+      {/* Titre visuel retiré (demande client, refonte 2026-07) : le nom
+          accessible de la page reste porté par ce h1, masqué visuellement
           (même recette que l'accueil, `(site)/page.tsx`). */}
       <h1 className="sr-only">Agenda</h1>
 
-      {hasEvents ? (
-        /* Rencontres réelles — même langage visuel que le repli (cadres
-           pointillés R8, exception assumée à cette page), rempli avec les
-           données de `rencontres-data.ts` en attendant la collection Payload
-           dédiée. */
-        <section className="border-b-2 border-ink bg-paper">
-          <Container className="py-16 sm:py-20">
-            <FramedGrid className="sm:grid-cols-2 lg:grid-cols-3">
-              {events.map((event, i) => (
-                <Reveal key={`${event.titre}-${event.date}`} delay={i * 120} className="h-full">
-                  <article className="flex h-full flex-col border-2 border-dashed border-ink bg-paper-2">
-                    {/* En-tête : date (+ heure éventuelle) sur fond noir + lieu/ville */}
-                    <div className="flex items-stretch border-b-2 border-dashed border-ink">
-                      <div className="flex items-center bg-ink px-4 py-3">
-                        <span className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-pop-yellow">
-                          {formatDateFr(event.date)}
-                          {event.heure ? ` · ${event.heure}` : ""}
-                        </span>
-                      </div>
-                      <div className="flex flex-1 items-center border-l-2 border-dashed border-ink px-4 py-3">
-                        <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
-                          {event.lieu}, {event.ville}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-1 flex-col gap-2 p-6">
-                      <p className="font-sans text-base font-black italic leading-snug text-ink">
-                        {event.titre}
-                      </p>
-                      <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
-                        {event.livreOuAuteurs}
-                      </p>
-                      <p className="text-[14px] leading-relaxed text-ink-soft">
-                        {event.description}
-                      </p>
-                    </div>
-                  </article>
+      {jsonLdScript && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript }} />
+      )}
+
+      <section className="border-b-2 border-ink bg-paper">
+        <Container className="py-16 sm:py-20">
+          <Reveal>
+            {/* Pas de surtitre au-dessus du titre (R6) — le marqueur pop-yellow
+                vit EN LIGNE avec le h2, jamais en surtitre distinct. */}
+            <h2 className="flex items-center gap-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+              <span className="inline-block h-3 w-3 flex-none bg-pop-yellow" aria-hidden="true" />
+              À venir
+            </h2>
+          </Reveal>
+
+          {hasAVenir ? (
+            <div className="mt-10 flex flex-col gap-8">
+              {aVenir.map((r, i) => (
+                <Reveal key={r.id} delay={i * 100}>
+                  <RencontreRow rencontre={r} />
                 </Reveal>
               ))}
-            </FramedGrid>
-          </Container>
-        </section>
-      ) : (
-        /* L'agenda arrive bientôt : état d'attente — repli quand la liste est vide. */
-        <section className="border-y-2 border-ink bg-paper">
+            </div>
+          ) : (
+            <Reveal delay={80}>
+              <div className="mt-10 border-2 border-dashed border-ink bg-paper-2 p-8 text-center">
+                <p className="font-sans text-lg font-black italic text-ink">
+                  Prochaines dates en préparation
+                </p>
+                <p className="mt-2 text-[15px] text-ink-soft">
+                  Aucune rencontre n&apos;est programmée pour le moment — revenez bientôt, ou
+                  suivez l&apos;actualité des deux maisons sur le catalogue.
+                </p>
+              </div>
+            </Reveal>
+          )}
+        </Container>
+      </section>
+
+      {hasPassees && (
+        <section className="bg-paper">
           <Container className="py-16 sm:py-20">
             <Reveal>
-              <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-                L&apos;agenda arrive bientôt
+              <h2 className="flex items-center gap-3 font-sans text-2xl font-black italic leading-[0.98] text-ink">
+                <span className="inline-block h-3 w-3 flex-none bg-ink/30" aria-hidden="true" />
+                Rencontres passées
               </h2>
-              <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
-                Cette page accueillera l&apos;agenda des rencontres. Les
-                événements pourront être gérés depuis le back-office, au même
-                endroit que le catalogue.
-              </p>
             </Reveal>
-
-            {/* État « programmation en préparation » : décor, en attendant les
-                vraies dates — bordures pointillées (R8 assumé, exception
-                nommée), aucune barre grise qui laisserait croire à un
-                chargement imminent. */}
-            <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
-              {PLACEHOLDER_EVENTS.map((g, i) => (
-                <Reveal key={g} delay={i * 120} className="h-full">
-                  <article className="flex h-full select-none flex-col border-2 border-dashed border-ink bg-paper-2">
-                    {/* En-tête : date sur fond noir + lieu */}
-                    <div className="flex items-stretch border-b-2 border-dashed border-ink">
-                      <div className="flex items-center bg-ink px-4 py-3">
-                        <span className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-pop-yellow">
-                          Date à venir
-                        </span>
-                      </div>
-                      <div className="flex flex-1 items-center border-l-2 border-dashed border-ink px-4 py-3">
-                        <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
-                          Lieu à préciser
-                        </span>
-                      </div>
-                    </div>
-                    {/* État honnête : pas de vraie date tant que le back-office
-                        n'a rien à afficher. */}
-                    <div className="flex flex-1 flex-col items-center justify-center gap-1 p-6 text-center">
-                      <span className="font-sans text-xs font-bold uppercase tracking-[.08em] text-muted">
-                        Programmation
-                      </span>
-                      <span className="font-sans text-sm text-ink-soft">en préparation</span>
-                    </div>
-                  </article>
+            <div className="mt-8 flex flex-col gap-5">
+              {passees.map((r, i) => (
+                <Reveal key={r.id} delay={i * 80}>
+                  <RencontreRow rencontre={r} compact />
                 </Reveal>
               ))}
-            </FramedGrid>
+            </div>
           </Container>
         </section>
       )}
-
-      {/* CTA final — copy adaptée : ne plus prétendre « en attendant les
-          premières dates » puisque des dates réelles sont affichées au-dessus. */}
-      <section className="bg-ink text-paper">
-        <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="font-sans text-2xl font-black italic sm:text-3xl">
-              {hasEvents ? "Retrouvez-nous en librairie" : "En attendant les premières dates"}
-            </h2>
-            <p className="mt-2 text-paper/75">
-              Parcourez le catalogue des deux maisons, ou soutenez la
-              souscription de lancement.
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-3">
-            <Button
-              href="/catalogue"
-              variant="outline"
-              className="px-7 py-3.5 text-sm tracking-[.04em]"
-            >
-              Découvrir le catalogue
-            </Button>
-            <Button
-              href="/souscription"
-              variant="outline"
-              className="px-7 py-3.5 text-sm tracking-[.04em]"
-            >
-              Soutenir la souscription
-            </Button>
-          </div>
-        </Container>
-      </section>
     </>
+  );
+}
+
+/**
+ * Une rencontre = une ligne. Layout horizontal desktop (date · image ·
+ * contenu), bandeau + empilement vertical en mobile — cf. commentaires
+ * inline pour l'ordre DOM (identique aux deux ruptures, seul le CSS change).
+ */
+function RencontreRow({ rencontre, compact = false }: { rencontre: Rencontre; compact?: boolean }) {
+  const { titre, date, heure, lieu, ville, intervenants, description, image, livre } = rencontre;
+  const parts = splitDateFr(date);
+  const alt = image?.alt ?? titre;
+  const imageHeight = compact ? "h-36" : "h-48";
+  const titleClass = compact
+    ? "font-sans text-lg font-black italic leading-snug text-ink"
+    : "font-sans text-xl font-black italic leading-snug text-ink sm:text-2xl";
+  const padding = compact ? "p-4 sm:p-5" : "p-6";
+
+  const imageEl = image && (
+    <span
+      className={`flex ${imageHeight} flex-none items-center justify-center border-b-2 border-dashed border-ink bg-paper-2 p-3 sm:border-b-0 sm:border-r-2`}
+    >
+      <Cover cover={image} alt={alt} fit="height" sizes="200px" className="max-w-full" />
+    </span>
+  );
+
+  return (
+    <article className="flex flex-col border-2 border-dashed border-ink bg-paper-2 sm:flex-row">
+      {/* Bloc date desktop — fond ink, largeur fixe (~7rem). Masqué en
+          mobile (le bandeau ci-dessous porte la même info, layout différent). */}
+      <div className="hidden w-28 flex-none flex-col items-center justify-center gap-1 border-r-2 border-dashed border-ink bg-ink px-3 py-6 text-center sm:flex">
+        {parts && (
+          <time
+            dateTime={date}
+            className="flex flex-col items-center gap-0.5 leading-none"
+          >
+            <span className="font-sans text-4xl font-black text-pop-yellow">{parts.jour}</span>
+            <span className="font-sans text-xs font-extrabold uppercase tracking-[.08em] text-paper">
+              {parts.mois}
+            </span>
+            <span className="font-sans text-[11px] text-paper/70">{parts.annee}</span>
+          </time>
+        )}
+        {heure && (
+          <span className="mt-1 font-sans text-[11px] font-bold text-pop-yellow">{heure}</span>
+        )}
+      </div>
+
+      {/* Bandeau mobile — date + heure à gauche (fond ink), lieu à droite.
+          Masqué en desktop (le bloc date ci-dessus prend le relais). */}
+      <div className="flex items-stretch border-b-2 border-dashed border-ink sm:hidden">
+        <div className="flex flex-col items-center justify-center gap-0.5 bg-ink px-4 py-3">
+          {parts && (
+            <time dateTime={date} className="font-sans text-base font-black leading-none text-pop-yellow">
+              {parts.jour} {parts.mois}
+            </time>
+          )}
+          {heure && (
+            <span className="font-sans text-[11px] font-bold text-pop-yellow">{heure}</span>
+          )}
+        </div>
+        <div className="flex flex-1 items-center justify-end border-l-2 border-dashed border-ink px-4 py-3 text-right">
+          <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+            {lieu}, {ville}
+          </span>
+        </div>
+      </div>
+
+      {/* Colonne image — cliquable vers la fiche livre si un livre est lié.
+          Aucune colonne si aucune image (pas de placeholder gris, le contenu
+          prend la place). */}
+      {imageEl && livre ? (
+        <Link href={livreHref(livre)} className="block flex-none">
+          {imageEl}
+        </Link>
+      ) : (
+        imageEl
+      )}
+
+      <div className={`flex flex-1 flex-col gap-2 ${padding}`}>
+        <p className="hidden font-sans text-xs font-bold uppercase tracking-[.04em] text-muted sm:block">
+          {lieu}, {ville}
+        </p>
+        <p className={titleClass}>{titre}</p>
+        {intervenants && (
+          <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+            {intervenants}
+          </p>
+        )}
+        <p className="max-w-prose text-[15px] leading-relaxed text-ink-soft">{description}</p>
+        {livre && (
+          <Link
+            href={livreHref(livre)}
+            className="mt-1 inline-block w-fit text-sm font-bold text-ink underline underline-offset-2 hover:text-ink/70"
+          >
+            Découvrir le livre →
+          </Link>
+        )}
+      </div>
+    </article>
   );
 }
