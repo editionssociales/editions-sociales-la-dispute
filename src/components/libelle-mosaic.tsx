@@ -115,12 +115,13 @@ function spanFor(count: number) {
     className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
     // Grand corps dans les blocs multi-lignes (l'unité de la grille 10 col
     // est assez large), petit corps dans les bandes d'une ligne.
-    // Corps +75 % (demande client 23/07) — les deux recettes et le compte
-    // sont grossis du même facteur, la hiérarchie ne bouge pas.
+    // Corps +75 % en lg (demande client 23/07) ; sous lg, échelle mobile
+    // dédiée — le corps lg dans des cellules de ~150px multiplie les césures
+    // et fait clipper les blocs.
     textClass:
       rows >= 2
-        ? "text-[clamp(23px,2.45vw,32px)]"
-        : "text-[clamp(19px,1.9vw,25px)]",
+        ? "text-[17px] lg:text-[clamp(23px,2.45vw,32px)]"
+        : "text-[15px] lg:text-[clamp(19px,1.9vw,25px)]",
     // Une case de haut = pas de place pour deux étages : le compte de titres
     // s'efface au profit du libellé, libre de passer sur deux lignes
     // (amendement client 23/07 — le compte reste visible sur les blocs).
@@ -168,7 +169,7 @@ function ThemeCell({
         {!showCount && <span className="sr-only"> ({count} titres)</span>}
       </span>
       {showCount && (
-        <span className="font-sans text-[17px] font-bold uppercase tracking-[.05em] opacity-60">
+        <span className="font-sans text-[13px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[17px]">
           {count} titres
         </span>
       )}
