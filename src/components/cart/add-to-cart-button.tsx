@@ -8,10 +8,10 @@ import { useCart } from "./cart-context";
 /**
  * Bouton « Ajouter au panier » — rendu par `buy-links.tsx` (fiche, pleine
  * taille, `variant="button"`) et `book-card.tsx` (vignette grille, petit chip
- * superposé à la couverture, `variant="chip"`) quand `canAddToCart(book)`
- * (`cart-core.ts`). Les deux appelants ne le rendent qu'à
- * `book.purchaseMode === "cart"` — donc toujours sous `<CartProvider>`
- * (monté par `layout.tsx`).
+ * dans la rangée basse fixe, hors du cadre couverture, `variant="chip"`)
+ * quand `canAddToCart(book)` (`cart-core.ts`). Les deux appelants ne le
+ * rendent qu'à `book.purchaseMode === "cart"` — donc toujours sous
+ * `<CartProvider>` (monté par `layout.tsx`).
  */
 export function AddToCartButton({
   id,
@@ -46,7 +46,7 @@ export function AddToCartButton({
         type="button"
         onClick={handleClick}
         aria-label="Ajouter au panier"
-        className={`absolute bottom-1.5 right-1.5 z-[1] flex h-8 w-8 items-center justify-center border-2 border-ink bg-pop-yellow font-sans text-lg font-black leading-none text-black transition-colors motion-reduce:transition-none hover:bg-ink hover:text-pop-yellow ${FOCUS_RING_LIGHT} ${className ?? ""}`}
+        className={`flex h-8 w-8 flex-none items-center justify-center border-2 border-ink bg-pop-yellow font-sans text-lg font-black leading-none text-black transition-colors motion-reduce:transition-none hover:bg-ink hover:text-pop-yellow ${FOCUS_RING_LIGHT} ${className ?? ""}`}
       >
         +
       </button>
