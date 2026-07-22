@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Button } from "@/components/button";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { Cover } from "@/lib/cover";
@@ -122,6 +123,40 @@ export default async function RencontresPage() {
           </Container>
         </section>
       )}
+
+      {/* CTA final — copy adaptée : ne pas prétendre « en attendant les
+          premières dates » quand des dates réelles sont affichées au-dessus. */}
+      <section className="bg-ink text-paper">
+        <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="font-sans text-2xl font-black italic sm:text-3xl">
+              {hasAVenir || hasPassees
+                ? "Retrouvez-nous en librairie"
+                : "En attendant les premières dates"}
+            </h2>
+            <p className="mt-2 text-paper/75">
+              Parcourez le catalogue des deux maisons, ou soutenez la
+              souscription de lancement.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-3">
+            <Button
+              href="/catalogue"
+              variant="outline"
+              className="px-7 py-3.5 text-sm tracking-[.04em]"
+            >
+              Découvrir le catalogue
+            </Button>
+            <Button
+              href="/souscription"
+              variant="outline"
+              className="px-7 py-3.5 text-sm tracking-[.04em]"
+            >
+              Soutenir la souscription
+            </Button>
+          </div>
+        </Container>
+      </section>
     </>
   );
 }

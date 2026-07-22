@@ -2,6 +2,7 @@ import "server-only";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import type { Book, Media, Rencontre as PayloadRencontre } from "@/payload-types";
+import { isoDayParis } from "./format";
 import type { EditionSlug } from "./types";
 
 /**
@@ -98,7 +99,10 @@ export function rencontreFromDoc(doc: PayloadRencontre): Rencontre {
   return {
     id: doc.id,
     titre: doc.titre,
-    date: doc.date.slice(0, 10),
+    // Jour civil Europe/Paris, PAS `slice(0, 10)` : le picker `dayOnly` de
+    // l'admin stocke minuit local de l'éditeur·rice (22h/23h UTC la veille
+    // depuis la France) — tronquer l'ISO UTC rendrait la veille.
+    date: isoDayParis(doc.date) ?? doc.date.slice(0, 10),
     heure: doc.heure ?? undefined,
     lieu: doc.lieu,
     ville: doc.ville,
@@ -141,7 +145,10 @@ export function splitRencontres(events: Rencontre[], today: string): RencontresS
  * même contrat de dégradation gracieuse que `highlight.ts`.
  */
 export async function getRencontres(
-  today: string = new Date().toISOString().slice(0, 10),
+  // « Aujourd'hui » au sens du visiteur français (Europe/Paris), pas du
+  // serveur UTC — sinon une rencontre du jour basculerait en « passée » dès
+  // minuit UTC au lieu de minuit heure française.
+  today: string = isoDayParis(new Date()) ?? new Date().toISOString().slice(0, 10),
 ): Promise<RencontresSplit> {
   try {
     const payload = await getPayload({ config });

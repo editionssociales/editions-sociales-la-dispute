@@ -38,6 +38,26 @@ export function splitDateFr(iso?: string | null): { jour: string; mois: string; 
   };
 }
 
+const ISO_DAY_PARIS = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Paris",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Jour civil FRANÇAIS (`Europe/Paris`) d'un instant, en `YYYY-MM-DD`. À
+ * utiliser pour ramener un timestamp Payload à une date : le picker `dayOnly`
+ * stocke minuit LOCAL de l'éditeur·rice (soit 22h/23h UTC la veille depuis la
+ * France) — un `slice(0, 10)` sur l'ISO UTC rendrait la veille. Correct dans
+ * les deux conventions rencontrées (minuit UTC du seed SQL, minuit Paris de
+ * l'admin), tant que la saisie se fait depuis la France.
+ */
+export function isoDayParis(instant: string | Date): string | null {
+  const d = instant instanceof Date ? instant : new Date(instant);
+  return Number.isNaN(d.getTime()) ? null : ISO_DAY_PARIS.format(d);
+}
+
 const PRICE_FR = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "EUR",
