@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
-import { ACCENT_BORDER_T } from "@/lib/accents";
+import { ACCENT_BORDER_T, ACCENT_TEXT } from "@/lib/accents";
+import { EDITIONS } from "@/lib/editions";
+import type { EditionSlug } from "@/lib/types";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
@@ -24,21 +26,30 @@ const REPERES = [
 ];
 
 /**
- * Équipe et dépôt de manuscrit (maquette « Qui sommes-nous ? », 2026-07) :
- * éditorial figé, hors CMS — même statut que le pitch 2026 du héros de
- * `/souscription`. À déplacer dans le global `page-a-propos` si le client
- * veut la main dessus.
+ * Équipe et dépôt de manuscrit (maquette « Qui sommes-nous ? », 2026-07,
+ * révisée 2026-07-20 avec la maquette PDF client) : éditorial figé, hors CMS
+ * — même statut que le pitch 2026 du héros de `/souscription`. À déplacer
+ * dans le global `page-a-propos` si le client veut la main dessus.
+ *
+ * ⚠️ La maquette PDF du 2026-07-20 introduit une incohérence non résolue par
+ * le client : ses deux variantes (page ES / page LD) reprennent VERBATIM la
+ * même phrase d'intro « Les éditions La Dispute sont composées… » pour les
+ * DEUX bureaux (seule la liste de membres change) — ce n'est donc pas une
+ * source fiable pour trancher quelle liste appartient à quelle maison. La
+ * répartition ci-dessous (déjà en place avant cette maquette) n'a PAS été
+ * modifiée sur la base de ce PDF ; à confirmer avec le client avant tout
+ * changement de la liste des bureaux éditoriaux.
  */
 const EQUIPE_PERMANENTE =
   "Noémie Brun, Clara Laspalas, Marina Simonin et Nicolas Vieillescazes";
-const BUREAUX: { maison: string; membres: string }[] = [
+const BUREAUX: { slug: EditionSlug; membres: string }[] = [
   {
-    maison: "La Dispute",
+    slug: "la-dispute",
     membres:
       "Noémie Brun, Alexis Cukier, Jérôme Deauvieau, Pauline Delage, Étienne Douat, Amélie Jeammet, Danièle Kergoat, Aurore Koechlin, Richard Lagache, Clara Laspalas, Jacqueline Martinez, Marina Simonin et Hélène Stevens",
   },
   {
-    maison: "Les Éditions sociales",
+    slug: "editions-sociales",
     membres:
       "Alexia Blin, Yohann Douet, Isabelle Garo, Marion Leclair, Alix Bouffard, Alexandre Feron, Vincent Heimendinger, Antony Burlaud, Guillaume Fondu, Richard Lagache, Jean Quétier, Alexis Cukier et Quentin Fondu",
   },
@@ -68,16 +79,29 @@ export default async function AProposPage() {
 
   return (
     <>
-      {/* Bandeau-titre plein cadre (maquette 2026-07) — aplat ink, seule
-          variante sombre de PageHero (tone="cover", même recette que les
-          héros de /editions/[slug]). */}
+      {/* Bandeau-titre plein cadre (maquette « Qui sommes-nous ? ») — aplat
+          ink, seule variante sombre de PageHero (tone="cover"). La maquette
+          PDF client (2026-07-20) colore ce bandeau en turquoise/orange selon
+          la maison (ES/LD) ; on garde l'aplat ink NEUTRE ici — cette page
+          réunit désormais les deux maisons (`NAV_HOUSES` pointent toutes deux
+          ici), il n'y a plus de « maison courante » contre laquelle coder
+          cette couleur. Le mapping turquoise/orange → navy/brick est
+          appliqué là où il reste sans ambiguïté : les bureaux éditoriaux
+          ci-dessous et la section « Deux maisons » (accents déjà en place). */}
       <section className="border-b-2 border-ink bg-ink">
         <Container className="py-12 sm:py-16">
           <PageHero tone="cover" title={<>Qui sommes-nous&nbsp;?</>} />
         </Container>
       </section>
 
-      {/* Grand bloc de présentation encadré : titre + intro CMS + repères */}
+      {/* Grand bloc de présentation encadré : titre + intro CMS + repères.
+          La maquette PDF client place ici un encadré « Titre de la
+          souscription » rempli de lorem ipsum (texte de remplissage
+          explicitement signalé comme tel dans l'extraction fournie) —
+          contenu non exploitable verbatim sur une page en production. On
+          garde donc l'encadré CMS existant (`herosTitre`/`herosIntro`,
+          éditables depuis /admin), qui occupe le même emplacement structurel
+          avec du vrai copy plutôt que du texte de remplissage. */}
       <section>
         <Container className="py-12 sm:py-16">
           <Reveal>
@@ -145,14 +169,23 @@ export default async function AProposPage() {
                     Les Éditions sociales et La Dispute sont animées par une
                     équipe permanente&nbsp;: {EQUIPE_PERMANENTE}.
                   </p>
-                  {BUREAUX.map((b) => (
-                    <div key={b.maison}>
-                      <p className="font-sans text-xs font-bold uppercase tracking-[.05em] text-ink">
-                        Bureau éditorial — {b.maison}
-                      </p>
-                      <p className="mt-1.5">{b.membres}.</p>
-                    </div>
-                  ))}
+                  {BUREAUX.map((b) => {
+                    const edition = EDITIONS[b.slug];
+                    return (
+                      <div key={b.slug}>
+                        {/* Couleur d'identité de la maison (maquette PDF client,
+                            turquoise/orange) mappée sur les accents existants
+                            (R1/R3 : navy = Éditions sociales, brick = La
+                            Dispute) plutôt qu'une nouvelle couleur littérale. */}
+                        <p
+                          className={`font-sans text-xs font-bold uppercase tracking-[.05em] ${ACCENT_TEXT[edition.accent]}`}
+                        >
+                          Bureau éditorial — {edition.name}
+                        </p>
+                        <p className="mt-1.5">{b.membres}.</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </Reveal>
@@ -206,8 +239,13 @@ export default async function AProposPage() {
                   <p className="mt-4 flex-1 text-[15px] leading-relaxed text-ink/70">
                     {m.description}
                   </p>
+                  {/* Cible `/catalogue/${slug}`, pas `/editions/${slug}` :
+                      cette dernière route est désormais une redirection
+                      permanente VERS `/a-propos` (chantier agenda/à-propos,
+                      2026-07) — y pointer depuis ici boucle sur la même
+                      page. */}
                   <Link
-                    href={`/editions/${m.slug}`}
+                    href={`/catalogue/${m.slug}`}
                     className={`mt-6 inline-flex w-fit items-center gap-1.5 border-b-2 border-ink font-sans text-xs font-bold uppercase tracking-[.05em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT_OUTER}`}
                   >
                     Découvrir {m.shortName}
