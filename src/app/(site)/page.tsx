@@ -5,15 +5,15 @@ import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { Reveal } from "@/components/reveal";
 import { CountUp } from "@/components/count-up";
-import { NouveautesCarousel, type NouveauteBook } from "@/components/nouveautes-carousel";
+import { NouveautesCarousel } from "@/components/nouveautes-carousel";
 import { NAV_ACCENT_BG } from "@/components/nav-accent";
 import { getActiveHighlight } from "@/lib/highlight";
 import { getNewReleases, countBooks } from "@/lib/catalogue";
-import { EDITIONS, EDITION_LIST } from "@/lib/editions";
+import { EDITION_LIST } from "@/lib/editions";
 import { ACCENT_BG } from "@/lib/accents";
 import { NAV_BOUTIQUE, NAV_SECTIONS } from "@/lib/nav";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
-import type { Book, Cover, EditionSlug } from "@/lib/types";
+import { toNouveauteBooks } from "@/lib/nouveaute-book";
 
 export const metadata: Metadata = {
   // Titre absolu : la vitrine porte le nom du site seul — jamais
@@ -40,29 +40,13 @@ const HIGHLIGHT_EDGE: Record<string, string> = {
   "pop-yellow": "border-l-pop-yellow",
 };
 
-/** Un livre est éligible au carrousel s'il a une couverture et une fiche d'origine (édition connue). */
-function readyForCarousel(
-  book: Book,
-): book is Book & { edition: EditionSlug; cover: Cover } {
-  return book.cover != null && book.edition != null;
-}
-
 export default async function HomePage() {
   const [releases, highlight, counts] = await Promise.all([
     getNewReleases(12),
     getActiveHighlight(),
     Promise.all(EDITION_LIST.map((e) => countBooks(e.slug))),
   ]);
-  const books: NouveauteBook[] = releases.filter(readyForCarousel).map((book) => ({
-    href: `/catalogue/${book.edition}/${book.slug}`,
-    title: book.title,
-    author: book.authors.map((a) => a.name).join(", "),
-    coverUrl: book.cover.url,
-    coverW: book.cover.width,
-    coverH: book.cover.height,
-    upcoming: book.status === "upcoming",
-    imprint: EDITIONS[book.edition].shortName,
-  }));
+  const books = toNouveauteBooks(releases);
 
   return (
     <div className="bg-paper pb-[clamp(38px,6vw,76px)] pt-[clamp(20px,3vw,36px)]">
@@ -104,7 +88,7 @@ export default async function HomePage() {
                   </span>
                 </p>
                 <Button
-                  href={`/editions/${edition.slug}`}
+                  href={`/catalogue/${edition.slug}`}
                   className="mt-6 w-fit px-5 py-3 text-[13px] tracking-[.04em]"
                 >
                   Découvrir
