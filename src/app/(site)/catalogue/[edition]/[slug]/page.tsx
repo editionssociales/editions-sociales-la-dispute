@@ -196,10 +196,12 @@ export default async function BookPage({
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         {/* Mobile/tablette : le titre (article, order-1) précède l'achat
             (order-2) — l'achat ne doit jamais s'afficher avant ce qu'on
-            achète. À partir de lg, la colonne fixe reprend sa place à gauche
-            et devient sticky. Couverture bornée à 300px CSS jusqu'à lg (le
+            achète. À partir de lg, la colonne fixe reprend sa place à gauche,
+            SANS sticky (l'ancrage se superposait aux sections plus basses —
+            retiré, il vit désormais sur l'aside paliers de /souscription).
+            Couverture bornée à 300px CSS jusqu'à lg (le
             `sizes="300px"` de BookCover reste vrai à tout moment). */}
-        <div className="order-2 mx-auto w-full max-w-[300px] lg:sticky lg:top-24 lg:order-1 lg:mx-0 lg:max-w-none lg:self-start">
+        <div className="order-2 mx-auto w-full max-w-[300px] lg:order-1 lg:mx-0 lg:max-w-none lg:self-start">
           {/* Largeur fixée par la colonne ; la hauteur suit le ratio réel de
               la couverture — jamais recadrée, jamais de bande. Couverture
               encadrée d'un contour noir 2px, comme les vignettes du catalogue. */}

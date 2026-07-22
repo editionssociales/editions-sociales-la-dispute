@@ -53,7 +53,7 @@ export default async function BoutiqueBookPage({
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         {/* Même règle que la fiche catalogue : titre avant achat sur mobile
             (order), couverture jamais plus large que 300px CSS avant lg. */}
-        <div className="order-2 mx-auto w-full max-w-[300px] lg:sticky lg:top-24 lg:order-1 lg:mx-0 lg:max-w-none lg:self-start">
+        <div className="order-2 mx-auto w-full max-w-[300px] lg:order-1 lg:mx-0 lg:max-w-none lg:self-start">
           <div className="relative w-full overflow-hidden border-2 border-ink bg-paper-2">
             <BookCover
               cover={book.cover}

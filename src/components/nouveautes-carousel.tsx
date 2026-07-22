@@ -306,12 +306,13 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   const current = books[((active % n) + n) % n];
 
   return (
-    <section aria-label="Nouveautés">
-      {/* Épure minimaliste : plus de titre de section visible ici (le
-          nom « Nouveautés » n'apportait rien — aria-label sur la section
-          suffit) ; la rangée ne porte plus que les flèches et la sortie
-          vers le catalogue, alignées à droite. */}
-      <div className="mb-[clamp(9px,1.2vw,14px)] flex items-end justify-end gap-4 px-[clamp(16px,4vw,64px)]">
+    <section aria-label="Nouveautés" className="relative">
+      {/* Épure minimaliste : plus de titre de section ni de rangée dédiée —
+          flèches et sortie catalogue sont SUPERPOSÉES au cadre du carrousel,
+          coin supérieur droit (z au-dessus des cartes, dont le z-index peint
+          monte à 100) : les couvertures rétrécissent près des bords, le coin
+          reste visuellement libre. Aucun espace vertical réservé. */}
+      <div className="absolute right-[clamp(16px,4vw,64px)] top-0 z-[120] flex items-end justify-end gap-4">
         <div className="flex flex-none flex-col items-end gap-1">
           <div className="flex items-center gap-3">
             <button

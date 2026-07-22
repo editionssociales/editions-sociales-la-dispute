@@ -577,8 +577,14 @@ export default async function SouscriptionPage() {
               </div>
             </div>
 
-            {/* Colonne contreparties */}
-            <aside id="paliers">
+            {/* Colonne contreparties — ancrée au défilement (le sticky retiré
+                des fiches livre vit désormais ici) : bornée à la hauteur du
+                viewport sous le header, avec sa propre barre de scroll pour
+                parcourir les paliers sans quitter le récit de gauche. */}
+            <aside
+              id="paliers"
+              className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain"
+            >
               <FramedGrid className="grid-cols-1">
                 {content.contreparties.map((p, i) => {
                   // Paliers de don : les 4 accents de marque, jamais le cycle pop
