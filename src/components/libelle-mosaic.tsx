@@ -15,12 +15,18 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * Loi de taille (client, 22/07 au soir, amendée 23/07) : l'AIRE d'une
  * cellule, en unités de grille (minimum 1), est `round(√(nb de titres))`,
  * posée comme un produit colonnes × lignes aux facteurs les plus proches
- * possibles — la paire de diviseurs la plus « carrée », le plus grand
- * facteur à l'horizontale. Une aire PREMIÈRE ≥ 5 reçoit **+1** (elle devient
- * paire, donc factorisable en bloc — trop de bandes sinon) ; seules les
- * aires 2 et 3 restent en bande d'une seule ligne.
- * Ex. : 9 titres → aire 3 → bande 3×1 ; 14 → aire 4 → 2×2 ; 38 → aire 6 →
- * 3×2 ; 54 → aire 7→8 → 4×2 ; 93 → aire 10 → 5×2 ; 295 → aire 17→18 → 6×3.
+ * possibles — la paire de diviseurs la plus « carrée ». Une aire PREMIÈRE
+ * ≥ 5 reçoit **+1** (elle devient paire, donc factorisable en bloc — trop
+ * de bandes sinon) ; les aires 2 et 3 restent en ligne (ou colonne) simple.
+ *
+ * ORIENTATION (client 23/07, remplace « grand facteur toujours horizontal ») :
+ * décidée par le MOT LE PLUS LONG du libellé, seuil fixe
+ * `VERTICAL_MAX_WORD = 9` — un mot court tient dans une cellule étroite →
+ * grand facteur à la VERTICALE (portrait) ; un mot long exige de la largeur
+ * → grand facteur à l'HORIZONTALE (paysage). Ex. : « Écologie » (8) →
+ * 1×3 portrait ; « Actualité & interventions » (13) → 3×1 paysage ;
+ * « Marxisme & économie politique » (« politique » = 9) → 2×5 portrait ;
+ * « État, droit & institutions » (12) → 3×2 paysage.
  *
  * Grille : taille CHOISIE D'AVANCE — 10 colonnes en lg (unité ≈ 110 px dans
  * le conteneur max-w-6xl : les petites cellules restent lisibles), plutôt
@@ -101,10 +107,22 @@ const ROW_SPAN: Record<number, string> = {
 };
 const MAX_ROWS = 6;
 
-function spanFor(count: number) {
-  const [rawRows, rawCols] = closestFactors(cellArea(count));
-  const cols = Math.min(rawCols, MAX_COLS);
-  const rows = Math.min(rawRows, MAX_ROWS);
+/**
+ * Seuil fixe d'orientation : mot le plus long ≤ 9 caractères → portrait
+ * (le libellé tient dans une cellule étroite), sinon paysage.
+ */
+const VERTICAL_MAX_WORD = 9;
+
+function maxWordLength(name: string) {
+  const words = name.match(/[\p{L}]+/gu) ?? [];
+  return words.reduce((max, w) => Math.max(max, w.length), 0);
+}
+
+function spanFor(count: number, name: string) {
+  const [small, large] = closestFactors(cellArea(count));
+  const portrait = maxWordLength(name) <= VERTICAL_MAX_WORD;
+  const cols = Math.min(portrait ? small : large, MAX_COLS);
+  const rows = Math.min(portrait ? large : small, MAX_ROWS);
   // Mobile : même factorisation, plafonnée à la grille de 5 — la diversité
   // des formes prime sur la proportion à l'écran (amendement client 23/07 :
   // la division par deux normalisait 95 % des cellules en carrés de base).
@@ -114,13 +132,16 @@ function spanFor(count: number) {
     className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
     // Grand corps dans les blocs multi-lignes (l'unité de la grille 10 col
     // est assez large), petit corps dans les bandes d'une ligne.
-    // Corps +75 % en lg (demande client 23/07) ; sous lg, échelle mobile
-    // dédiée — le corps lg dans des cellules de ~150px multiplie les césures
-    // et fait clipper les blocs.
+    // Corps indexé sur la LARGEUR (l'orientation portrait crée des cellules
+    // hautes mais étroites — un corps de bloc y déborderait) : +75 % en lg
+    // pour les larges, échelle réduite pour les étroites ; sous lg, échelle
+    // mobile dédiée.
     textClass:
-      rows >= 2
+      cols >= 3
         ? "text-[17px] lg:text-[clamp(23px,2.45vw,32px)]"
-        : "text-[15px] lg:text-[clamp(19px,1.9vw,25px)]",
+        : cols === 2
+          ? "text-[15px] lg:text-[clamp(19px,1.9vw,25px)]"
+          : "text-[13px] lg:text-[clamp(15px,1.5vw,19px)]",
     // Une case de haut = pas de place pour deux étages : le compte de titres
     // s'efface au profit du libellé, libre de passer sur deux lignes
     // (amendement client 23/07 — le compte reste visible sur les blocs).
@@ -191,7 +212,7 @@ export function LibelleMosaic({
   ariaLabel: string;
   className?: string;
 }) {
-  const spans = items.map((item) => spanFor(item.count));
+  const spans = items.map((item) => spanFor(item.count, item.name));
   return (
     <FramedGrid
       as="nav"
