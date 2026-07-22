@@ -27,8 +27,12 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * qu'une grille dérivée du plus gros item qui écrasait l'unité. Les largeurs
  * qui débordent sont plafonnées à la pleine largeur (aujourd'hui : seule
  * « Tous les livres », aire 17, première → bande pleine largeur). Spans en
- * maps littérales (JIT). En mobile : une colonne, chaque libellé est une
- * bande pleine largeur.
+ * maps littérales (JIT). RESPONSIVE (client 23/07 : « garder une forme
+ * similaire même sur mobile ») : sous lg la grille passe à 5 colonnes — la
+ * moitié — et chaque bloc garde ses proportions avec une largeur divisée par
+ * deux (ceil, minimum 2 colonnes pour la lisibilité des libellés) ; les
+ * bandes d'une ligne passent pleine largeur ; les hauteurs de rangées sont
+ * identiques aux deux tailles.
  */
 
 function isPrime(n: number) {
@@ -61,7 +65,7 @@ function closestFactors(n: number): [number, number] {
 }
 
 /** Spans littéraux (le JIT ne compile pas `col-span-${n}`). */
-const COL_SPAN: Record<number, string> = {
+const LG_COL_SPAN: Record<number, string> = {
   1: "lg:col-span-1",
   2: "lg:col-span-2",
   3: "lg:col-span-3",
@@ -75,13 +79,23 @@ const COL_SPAN: Record<number, string> = {
 };
 /** Largeur de la grille lg, fixée d'avance (cf. docstring). */
 const MAX_COLS = 10;
+/** Spans mobile (grille 5 colonnes sous lg). */
+const BASE_COL_SPAN: Record<number, string> = {
+  1: "col-span-1",
+  2: "col-span-2",
+  3: "col-span-3",
+  4: "col-span-4",
+  5: "col-span-5",
+};
+const BASE_MAX_COLS = 5;
+/** Hauteurs identiques à toutes les tailles — pas de variante lg. */
 const ROW_SPAN: Record<number, string> = {
-  1: "lg:row-span-1",
-  2: "lg:row-span-2",
-  3: "lg:row-span-3",
-  4: "lg:row-span-4",
-  5: "lg:row-span-5",
-  6: "lg:row-span-6",
+  1: "row-span-1",
+  2: "row-span-2",
+  3: "row-span-3",
+  4: "row-span-4",
+  5: "row-span-5",
+  6: "row-span-6",
 };
 const MAX_ROWS = 6;
 
@@ -89,9 +103,16 @@ function spanFor(count: number) {
   const [rawRows, rawCols] = closestFactors(cellArea(count));
   const cols = Math.min(rawCols, MAX_COLS);
   const rows = Math.min(rawRows, MAX_ROWS);
+  // Mobile : bandes d'une ligne pleine largeur ; blocs à largeur divisée par
+  // deux (ceil), plancher 2 colonnes — sous 2 unités (~150px), les libellés
+  // longs ne tiennent plus même césurés.
+  const baseCols =
+    rows === 1
+      ? BASE_MAX_COLS
+      : Math.min(Math.max(Math.ceil(cols / 2), 2), BASE_MAX_COLS);
   return {
     cols,
-    className: `${COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
+    className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
     // Grand corps dans les blocs multi-lignes (l'unité de la grille 10 col
     // est assez large), petit corps dans les bandes d'une ligne.
     // Corps +75 % (demande client 23/07) — les deux recettes et le compte
@@ -175,7 +196,7 @@ export function LibelleMosaic({
     <FramedGrid
       as="nav"
       aria-label={ariaLabel}
-      className={`grid-flow-row-dense auto-rows-[clamp(64px,6.5vw,88px)] grid-cols-1 lg:grid-cols-10 ${className}`}
+      className={`grid-flow-row-dense auto-rows-[clamp(64px,6.5vw,88px)] grid-cols-5 lg:grid-cols-10 ${className}`}
     >
       {items.map((item, i) => {
         const span = spans[i];
