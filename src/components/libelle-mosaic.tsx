@@ -98,6 +98,10 @@ function spanFor(count: number) {
       rows >= 2
         ? "text-[clamp(13px,1.4vw,18px)]"
         : "text-[clamp(11px,1.1vw,14px)]",
+    // Une case de haut = pas de place pour deux étages : le compte de titres
+    // s'efface au profit du libellé, libre de passer sur deux lignes
+    // (amendement client 23/07 — le compte reste visible sur les blocs).
+    showCount: rows >= 2,
   };
 }
 
@@ -116,6 +120,7 @@ function ThemeCell({
   textClass,
   label,
   count,
+  showCount,
 }: {
   href: string;
   active: boolean;
@@ -123,6 +128,9 @@ function ThemeCell({
   textClass: string;
   label: string;
   count: number;
+  /** Masqué dans les cellules d'une case de haut — le libellé y prend toute
+   *  la place et peut passer sur deux lignes. */
+  showCount: boolean;
 }) {
   return (
     <Link
@@ -134,10 +142,13 @@ function ThemeCell({
         className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] [overflow-wrap:anywhere] ${textClass}`}
       >
         {label}
+        {!showCount && <span className="sr-only"> ({count} titres)</span>}
       </span>
-      <span className="font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60">
-        {count} titres
-      </span>
+      {showCount && (
+        <span className="font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60">
+          {count} titres
+        </span>
+      )}
     </Link>
   );
 }
@@ -176,6 +187,7 @@ export function LibelleMosaic({
             textClass={span.textClass}
             label={item.name}
             count={item.count}
+            showCount={span.showCount}
           />
         );
       })}
