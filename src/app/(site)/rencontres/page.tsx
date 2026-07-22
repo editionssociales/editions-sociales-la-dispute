@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Button } from "@/components/button";
 import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
-import { Cover } from "@/lib/cover";
+import { BookCover, Cover } from "@/lib/cover";
 import { splitDateFr } from "@/lib/format";
+import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import { getRencontres, type Rencontre } from "@/lib/rencontres";
 
 export const metadata: Metadata = {
@@ -69,8 +72,8 @@ export default async function RencontresPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript }} />
       )}
 
-      <section className="border-b-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
+      <section className="bg-paper py-14 md:py-24">
+        <Container>
           <Reveal>
             {/* Pas de surtitre au-dessus du titre (R6) — le marqueur pop-yellow
                 vit EN LIGNE avec le h2, jamais en surtitre distinct. */}
@@ -81,16 +84,16 @@ export default async function RencontresPage() {
           </Reveal>
 
           {hasAVenir ? (
-            <div className="mt-10 flex flex-col gap-8">
+            <div className="mt-14 flex flex-col gap-10">
               {aVenir.map((r, i) => (
                 <Reveal key={r.id} delay={i * 100}>
-                  <RencontreRow rencontre={r} />
+                  <HeroCard rencontre={r} />
                 </Reveal>
               ))}
             </div>
           ) : (
             <Reveal delay={80}>
-              <div className="mt-10 border-2 border-dashed border-ink bg-paper-2 p-8 text-center">
+              <div className="mt-14 border-2 border-dashed border-ink bg-paper-2 p-8 text-center">
                 <p className="font-sans text-lg font-black italic text-ink">
                   Prochaines dates en préparation
                 </p>
@@ -105,18 +108,18 @@ export default async function RencontresPage() {
       </section>
 
       {hasPassees && (
-        <section className="bg-paper">
-          <Container className="py-16 sm:py-20">
+        <section className="border-t-2 border-dashed border-line bg-paper py-14 md:py-24">
+          <Container>
             <Reveal>
               <h2 className="flex items-center gap-3 font-sans text-2xl font-black italic leading-[0.98] text-ink">
                 <span className="inline-block h-3 w-3 flex-none bg-ink/30" aria-hidden="true" />
                 Rencontres passées
               </h2>
             </Reveal>
-            <div className="mt-8 flex flex-col gap-5">
+            <div className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-2">
               {passees.map((r, i) => (
                 <Reveal key={r.id} delay={i * 80}>
-                  <RencontreRow rencontre={r} compact />
+                  <PastCard rencontre={r} />
                 </Reveal>
               ))}
             </div>
@@ -162,100 +165,212 @@ export default async function RencontresPage() {
 }
 
 /**
- * Une rencontre = une ligne. Layout horizontal desktop (date · image ·
- * contenu), bandeau + empilement vertical en mobile — cf. commentaires
- * inline pour l'ordre DOM (identique aux deux ruptures, seul le CSS change).
+ * Plaque date — débord assumé (`-left-4 -top-4`, 16px) sur le cadre de la
+ * carte porteuse : PAS de `overflow-hidden` sur les ancêtres (cadre pointillé
+ * cassé par la plaque, effet recherché de la maquette « plein cadre »).
+ * `z-10` explicite : départage la superposition avec la zone visuelle,
+ * elle-même `relative` (nécessaire à l'image `fill`) — deux voisins positionnés
+ * `z-index:auto` s'ordonneraient sinon par ordre DOM (la zone visuelle, placée
+ * après en JSX, passerait au-dessus).
  */
-function RencontreRow({ rencontre, compact = false }: { rencontre: Rencontre; compact?: boolean }) {
-  const { titre, date, heure, lieu, ville, intervenants, description, image, livre } = rencontre;
+function DatePlaque({ date, heure, small = false }: { date: string; heure?: string; small?: boolean }) {
   const parts = splitDateFr(date);
-  const alt = image?.alt ?? titre;
-  const imageHeight = compact ? "h-36" : "h-48";
-  const titleClass = compact
-    ? "font-sans text-lg font-black italic leading-snug text-ink"
-    : "font-sans text-xl font-black italic leading-snug text-ink sm:text-2xl";
-  const padding = compact ? "p-4 sm:p-5" : "p-6";
-
-  const imageEl = image && (
-    <span
-      className={`flex ${imageHeight} flex-none items-center justify-center border-b-2 border-dashed border-ink bg-paper-2 p-3 sm:border-b-0 sm:border-r-2`}
+  if (!parts) return null;
+  return (
+    <div
+      className={`absolute -left-4 -top-4 z-10 flex flex-col items-start border-2 border-ink bg-ink text-paper ${
+        small ? "px-4 py-2.5" : "px-5 py-3.5"
+      }`}
     >
-      <Cover cover={image} alt={alt} fit="height" sizes="200px" className="max-w-full" />
-    </span>
+      <time dateTime={date} className="flex flex-col items-start leading-none">
+        <span
+          className={`font-sans font-black italic leading-[0.9] text-pop-yellow ${
+            small ? "text-[40px]" : "text-[56px]"
+          }`}
+        >
+          {parts.jour}
+        </span>
+        <span className="mt-1.5 font-sans text-[13px] font-bold uppercase tracking-[.06em] text-paper">
+          {parts.mois} {parts.annee}
+        </span>
+      </time>
+      {heure && (
+        <span className="mt-1.5 font-sans text-xs font-bold tracking-[.03em] text-pop-yellow">
+          {heure}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Zone visuelle (gauche du héros / haut d'une carte passée) — règle « photo
+ * vs couverture » (décision design, chantier plein cadre 2026-07) : une image
+ * PAYSAGE (`width > height`) est une photo d'événement, recadrable en plein
+ * cadre (`next/image` `fill` + `object-cover`, dimensions connues à l'upload) ;
+ * une image PORTRAIT (ou carrée) est une couverture de livre ou un visuel
+ * vertical, JAMAIS recadrée (`Cover`, `fit="height"`, même contrat que
+ * partout ailleurs sur le site). Sans image : repli typographique du titre du
+ * livre lié via `BookCover` (cover `null`) ; sans livre non plus, `null` — pas
+ * de zone visuelle du tout (l'appelant retombe alors sur une carte à une
+ * seule colonne de contenu).
+ */
+function renderVisualZone(
+  rencontre: Rencontre,
+  { zoneClassName, coverHeightClassName, imageSizes }: {
+    zoneClassName: string;
+    coverHeightClassName: string;
+    imageSizes: string;
+  },
+) {
+  const { image, titre, livre } = rencontre;
+  const alt = image?.alt ?? livre?.titre ?? titre;
+
+  // Chaque branche re-teste sa propre variable (`image`/`livre`) plutôt que de
+  // dériver l'absence des deux avant coup : garde le rétrécissement de type
+  // simple, sans assertion non-null.
+  let media: ReactNode = null;
+  if (image && image.width > image.height) {
+    media = <Image src={image.url} alt={alt} fill sizes={imageSizes} className="object-cover" />;
+  } else if (image) {
+    media = (
+      <span className={`flex ${coverHeightClassName} items-center justify-center`}>
+        <Cover cover={image} alt={alt} fit="height" sizes="320px" className="max-w-full" />
+      </span>
+    );
+  } else if (livre) {
+    media = (
+      <span className={`flex ${coverHeightClassName} w-full items-center justify-center`}>
+        <BookCover
+          cover={null}
+          title={livre.titre}
+          alt={alt}
+          fit="height"
+          sizes="320px"
+          fallbackClassName="px-8 py-6"
+        />
+      </span>
+    );
+  }
+  if (!media) return null;
+
+  const content = livre ? (
+    <Link
+      href={livreHref(livre)}
+      className={`group flex h-full w-full items-center justify-center ${FOCUS_RING_LIGHT_OUTER}`}
+    >
+      <span className="flex h-full w-full items-center justify-center transition-opacity duration-300 group-hover:opacity-90 motion-reduce:transition-none">
+        {media}
+      </span>
+    </Link>
+  ) : (
+    media
   );
 
   return (
-    <article className="flex flex-col border-2 border-dashed border-ink bg-paper-2 sm:flex-row">
-      {/* Bloc date desktop — fond ink, largeur fixe (~7rem). Masqué en
-          mobile (le bandeau ci-dessous porte la même info, layout différent). */}
-      <div className="hidden w-28 flex-none flex-col items-center justify-center gap-1 border-r-2 border-dashed border-ink bg-ink px-3 py-6 text-center sm:flex">
-        {parts && (
-          <time
-            dateTime={date}
-            className="flex flex-col items-center gap-0.5 leading-none"
-          >
-            <span className="font-sans text-4xl font-black text-pop-yellow">{parts.jour}</span>
-            <span className="font-sans text-xs font-extrabold uppercase tracking-[.08em] text-paper">
-              {parts.mois}
-            </span>
-            <span className="font-sans text-[11px] text-paper/70">{parts.annee}</span>
-          </time>
-        )}
-        {heure && (
-          <span className="mt-1 font-sans text-[11px] font-bold text-pop-yellow">{heure}</span>
-        )}
-      </div>
+    <div className={`relative flex items-center justify-center bg-paper-2 ${zoneClassName}`}>
+      {content}
+    </div>
+  );
+}
 
-      {/* Bandeau mobile — date + heure à gauche (fond ink), lieu à droite.
-          Masqué en desktop (le bloc date ci-dessus prend le relais). */}
-      <div className="flex items-stretch border-b-2 border-dashed border-ink sm:hidden">
-        <div className="flex flex-col items-center justify-center gap-0.5 bg-ink px-4 py-3">
-          {parts && (
-            <time dateTime={date} className="font-sans text-base font-black leading-none text-pop-yellow">
-              {parts.jour} {parts.mois}
-            </time>
-          )}
-          {heure && (
-            <span className="font-sans text-[11px] font-bold text-pop-yellow">{heure}</span>
-          )}
-        </div>
-        <div className="flex flex-1 items-center justify-end border-l-2 border-dashed border-ink px-4 py-3 text-right">
-          <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
-            {lieu}, {ville}
-          </span>
-        </div>
-      </div>
+/** Méta « lieu · ville », même recette dans le héros et les cartes passées. */
+function MetaLine({ lieu, ville }: { lieu: string; ville: string }) {
+  return (
+    <p className="font-sans text-[13px] font-bold uppercase tracking-[.06em] text-muted">
+      {lieu}
+      <span className="mx-2 text-line" aria-hidden="true">
+        ·
+      </span>
+      {ville}
+    </p>
+  );
+}
 
-      {/* Colonne image — cliquable vers la fiche livre si un livre est lié.
-          Aucune colonne si aucune image (pas de placeholder gris, le contenu
-          prend la place). */}
-      {imageEl && livre ? (
-        <Link href={livreHref(livre)} className="block flex-none">
-          {imageEl}
-        </Link>
-      ) : (
-        imageEl
-      )}
+/** Lien « Découvrir le livre » — soulignement épais jaune, bascule ink au survol (maquette). */
+function DecouvrirLeLivre({ livre }: { livre: NonNullable<Rencontre["livre"]> }) {
+  return (
+    <Link
+      href={livreHref(livre)}
+      className={`mt-1 inline-flex w-fit items-center gap-2 border-b-2 border-pop-yellow pb-1 font-sans text-sm font-bold uppercase tracking-[.05em] text-ink hover:border-ink ${FOCUS_RING_LIGHT_OUTER}`}
+    >
+      Découvrir le livre →
+    </Link>
+  );
+}
 
-      <div className={`flex flex-1 flex-col gap-2 ${padding}`}>
-        <p className="hidden font-sans text-xs font-bold uppercase tracking-[.04em] text-muted sm:block">
-          {lieu}, {ville}
-        </p>
-        <p className={titleClass}>{titre}</p>
+/**
+ * Carte héros — une rencontre à venir, pleine largeur. Cadre pointillé
+ * (`border-dashed`, PAS d'`overflow-hidden` : la plaque date déborde à
+ * dessein). Deux moitiés dès `md:` (zone visuelle / contenu) ; sans zone
+ * visuelle (aucune image ni livre lié), la carte retombe sur une seule
+ * colonne — la plaque reste alors en butée du contenu, d'où le supplément de
+ * marge haute (`pt-24`) pour ne jamais chevaucher le texte (elle déborderait
+ * sinon sur la méta-ligne, la zone visuelle absorbant normalement ce débord).
+ */
+function HeroCard({ rencontre }: { rencontre: Rencontre }) {
+  const { titre, heure, date, lieu, ville, intervenants, description, livre } = rencontre;
+  const visual = renderVisualZone(rencontre, {
+    zoneClassName:
+      "h-72 border-b-2 border-dashed border-ink md:h-auto md:min-h-[420px] md:border-b-0 md:border-r-2",
+    // Mobile : la zone fait `h-72` (288px) — la couverture doit rester en
+    // dessous (240px), sinon elle déborderait du cadre (pas d'overflow-hidden,
+    // débord de plaque oblige).
+    coverHeightClassName: "h-60 md:h-[360px]",
+    imageSizes: "(min-width: 768px) 50vw, 100vw",
+  });
+
+  return (
+    <article
+      className={`relative border-2 border-dashed border-ink bg-paper ${visual ? "grid md:grid-cols-2" : ""}`}
+    >
+      <DatePlaque date={date} heure={heure} />
+      {visual}
+      <div className={`flex flex-col justify-center gap-5 p-10 md:p-14 ${visual ? "" : "pt-24"}`}>
+        <MetaLine lieu={lieu} ville={ville} />
+        <h3 className="font-sans text-[clamp(32px,3vw,44px)] font-black italic leading-[1.08] text-ink">
+          {titre}
+        </h3>
         {intervenants && (
-          <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+          <p className="font-sans text-xs font-bold uppercase tracking-[.05em] text-muted">
             {intervenants}
           </p>
         )}
-        <p className="max-w-prose text-[15px] leading-relaxed text-ink-soft">{description}</p>
-        {livre && (
-          <Link
-            href={livreHref(livre)}
-            className="mt-1 inline-block w-fit text-sm font-bold text-ink underline underline-offset-2 hover:text-ink/70"
-          >
-            Découvrir le livre →
-          </Link>
+        <p className="max-w-[44ch] text-[17px] leading-[1.6] text-ink-soft">{description}</p>
+        {livre && <DecouvrirLeLivre livre={livre} />}
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Carte passée — grille `md:grid-cols-2` de l'appelant, carte TOUJOURS
+ * verticale (zone visuelle en haut, corps en bas, à tout breakpoint — seule
+ * la grille qui les contient devient 2 colonnes dès `md:`). Cadre PLEIN
+ * (`border-ink`, pas pointillé) : distingue visuellement l'acquis du à-venir.
+ */
+function PastCard({ rencontre }: { rencontre: Rencontre }) {
+  const { titre, heure, date, lieu, ville, intervenants, description, livre } = rencontre;
+  const visual = renderVisualZone(rencontre, {
+    zoneClassName: "h-[300px] border-b-2 border-ink",
+    coverHeightClassName: "h-[260px]",
+    imageSizes: "(min-width: 768px) 50vw, 100vw",
+  });
+
+  return (
+    <article className="relative flex flex-col border-2 border-ink bg-paper">
+      <DatePlaque date={date} heure={heure} small />
+      {visual}
+      <div className={`flex flex-1 flex-col gap-4 p-9 ${visual ? "" : "pt-20"}`}>
+        <MetaLine lieu={lieu} ville={ville} />
+        <h3 className="font-sans text-[26px] font-black italic leading-[1.15] text-ink">{titre}</h3>
+        {intervenants && (
+          <p className="font-sans text-xs font-bold uppercase tracking-[.05em] text-muted">
+            {intervenants}
+          </p>
         )}
+        <p className="text-[15px] leading-relaxed text-ink-soft">{description}</p>
+        {livre && <DecouvrirLeLivre livre={livre} />}
       </div>
     </article>
   );
