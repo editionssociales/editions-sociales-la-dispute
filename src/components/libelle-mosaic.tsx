@@ -250,7 +250,7 @@ export function LibelleMosaic({
     <FramedGrid
       as="nav"
       aria-label={ariaLabel}
-      className={`grid-flow-row-dense auto-rows-[clamp(64px,6.5vw,88px)] grid-cols-5 lg:grid-cols-10 ${className}`}
+      className={`grid-flow-row-dense auto-rows-[clamp(76px,6.5vw,88px)] grid-cols-5 lg:grid-cols-10 ${className}`}
     >
       {items.map((item, i) => {
         const span = spans[i];
