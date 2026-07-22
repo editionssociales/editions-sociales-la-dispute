@@ -25,7 +25,8 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * `VERTICAL_MAX_WORD = 9` — un mot court tient dans une cellule étroite →
  * grand facteur à la VERTICALE (portrait) ; un mot long exige de la largeur
  * → grand facteur à l'HORIZONTALE (paysage). Ex. : « Écologie » (8) →
- * 1×3 portrait ; « Actualité & interventions » (13) → 3×1 paysage ;
+ * 1×3 portrait ; « Actualité & interventions » (13) → paysage — la bande
+ * 3×1 est INTERDITE (client 23/07, trop étirée) et retombe en 2×1 ;
  * « Marxisme & économie politique » (« politique » = 9) → 2×5 portrait ;
  * « État, droit & institutions » (12) → 3×2 paysage.
  *
@@ -143,8 +144,12 @@ function spanFor(count: number, name: string) {
   const [small, large] = closestFactors(area);
   const maxWord = maxWordLength(name);
   const portrait = maxWord <= VERTICAL_MAX_WORD;
-  const cols = Math.min(portrait ? small : large, MAX_COLS);
+  let cols = Math.min(portrait ? small : large, MAX_COLS);
   const rows = Math.min(portrait ? large : small, MAX_ROWS);
+  // Forme 3×1 interdite (client 23/07) : bande trop étirée, retombe en 2×1
+  // (seule entorse à l'aire exacte ; le calcul de césure suit les colonnes
+  // finales).
+  if (rows === 1 && cols === 3) cols = 2;
   // Mobile : même factorisation, plafonnée à la grille de 5 — la diversité
   // des formes prime sur la proportion à l'écran (amendement client 23/07 :
   // la division par deux normalisait 95 % des cellules en carrés de base).
@@ -218,7 +223,7 @@ function ThemeCell({
       </span>
       {/* Compte partout (client 23/07, revient sur le masquage des bandes),
           corps réduit de 25 % (13→10 / 17→13). */}
-      <span className="font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[13px]">
+      <span className="whitespace-nowrap font-sans text-[9px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[12px]">
         {count} titres
       </span>
     </Link>
