@@ -124,13 +124,14 @@ function maxWordLength(name: string) {
  * long du libellé déborde une ligne entière de sa cellule — sinon retour à la
  * ligne sans tiret. Le CSS seul ne sait pas l'exprimer (hyphens-auto césure
  * aussi pour équilibrer) : on estime par cellule, largeur de mot ≈
- * chars × 0,62 × corps, contre colonnes × unité − padding. Approximations
- * (unité lg ≈ 110 px dans le conteneur max-w-6xl, mobile ≈ 75 px sur 375px) ;
+ * chars × 0,72 × corps (capitale grasse Inter ≈ 0,72 em), contre
+ * colonnes × unité − padding. Unités mesurées paddings déduits : lg ≈ 108 px
+ * (conteneur max-w-6xl, sm:px-8), mobile ≈ 66 px (375px, px-5) ;
  * overflow-wrap:break-word reste le garde-fou des cas limites.
  */
-const UNIT_LG = 110;
-const UNIT_SM = 75;
-const CHAR_RATIO = 0.62;
+const UNIT_LG = 108;
+const UNIT_SM = 66;
+const CHAR_RATIO = 0.72;
 const CELL_PAD_X = 26;
 
 function overflowsLine(maxWord: number, cols: number, font: number, unit: number) {
