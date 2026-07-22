@@ -313,7 +313,10 @@ function HeroCard({ rencontre }: { rencontre: Rencontre }) {
   const visual = renderVisualZone(rencontre, {
     zoneClassName:
       "h-72 border-b-2 border-dashed border-ink md:h-auto md:min-h-[420px] md:border-b-0 md:border-r-2",
-    coverHeightClassName: "h-[360px]",
+    // Mobile : la zone fait `h-72` (288px) — la couverture doit rester en
+    // dessous (240px), sinon elle déborderait du cadre (pas d'overflow-hidden,
+    // débord de plaque oblige).
+    coverHeightClassName: "h-60 md:h-[360px]",
     imageSizes: "(min-width: 768px) 50vw, 100vw",
   });
 
