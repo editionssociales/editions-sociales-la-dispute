@@ -138,10 +138,6 @@ function spanFor(count: number, name: string) {
     // de grande aire garde donc un grand corps et césure (hyphens-auto).
     fontSm: Math.round(10 + 3 * Math.sqrt(area)),
     fontLg: Math.round(14 + 4.5 * Math.sqrt(area)),
-    // Une case de haut = pas de place pour deux étages : le compte de titres
-    // s'efface au profit du libellé, libre de passer sur deux lignes
-    // (amendement client 23/07 — le compte reste visible sur les blocs).
-    showCount: rows >= 2,
   };
 }
 
@@ -161,7 +157,6 @@ function ThemeCell({
   fontLg,
   label,
   count,
-  showCount,
 }: {
   href: string;
   active: boolean;
@@ -171,9 +166,6 @@ function ThemeCell({
   fontLg: number;
   label: string;
   count: number;
-  /** Masqué dans les cellules d'une case de haut — le libellé y prend toute
-   *  la place et peut passer sur deux lignes. */
-  showCount: boolean;
 }) {
   return (
     <Link
@@ -186,13 +178,12 @@ function ThemeCell({
         className={`font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.02] tracking-[.01em] hyphens-auto [overflow-wrap:break-word] lg:text-[length:var(--fs-lg)]`}
       >
         {label}
-        {!showCount && <span className="sr-only"> ({count} titres)</span>}
       </span>
-      {showCount && (
-        <span className="font-sans text-[13px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[17px]">
-          {count} titres
-        </span>
-      )}
+      {/* Compte partout (client 23/07, revient sur le masquage des bandes),
+          corps réduit de 25 % (13→10 / 17→13). */}
+      <span className="font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[13px]">
+        {count} titres
+      </span>
     </Link>
   );
 }
@@ -232,7 +223,6 @@ export function LibelleMosaic({
             fontLg={span.fontLg}
             label={item.name}
             count={item.count}
-            showCount={span.showCount}
           />
         );
       })}
