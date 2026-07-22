@@ -85,7 +85,7 @@ async function CatalogueBody({
 
       <div className="mt-6 sm:mt-7">
         <CatalogueFilters
-          libelles={facets.libelles}
+          libelles={[...facets.libelles].sort((a, b) => b.count - a.count)}
           authors={facets.authors}
           totalCount={facets.total}
         />
