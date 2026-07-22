@@ -55,10 +55,9 @@ async function EditionCatalogueBody({
   // conservé), même logique que « Tout effacer » côté filtres.
   const resetHref = catalogueHref({ sort: filters.sort }, basePath);
 
-  // Mosaïque triée par taille décroissante (nombre de livres) — la pondération
-  // visuelle (`themeTier`) ne change pas, seul l'ordre de rendu (et donc de
-  // lecture/tabulation, la grille dense se chargeant du placement visuel).
-  // « Tous les livres » reste épinglée en tête, hors tri (pas un vrai libellé).
+  // Ordre alphabétique des libellés (getFacets) — mosaïque « désordonnée »
+  // assumée, tailles pondérées sans tri (arbitrage client 22/07).
+  // « Tous les livres » reste épinglée en tête (pas un vrai libellé).
   const libelleItems: { name: string; slug: string | null; count: number }[] = [
     { name: "Tous les livres", slug: null, count: facets.total },
     ...facets.libelles,

@@ -8,8 +8,9 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * suit le nombre de titres, sur le quadrillage brutaliste noir 2px, cellule
  * active inversée noir/blanc. Extraite de /catalogue/[edition] pour vivre UNE
  * fois — consommée par /catalogue ET /catalogue/[edition] ; l'ordre des items
- * vient de `getFacets` (count décroissant), la grille dense se charge du
- * placement visuel.
+ * vient de `getFacets` (alphabétique — arbitrage client 22/07 : mosaïque
+ * « désordonnée » assumée, pas de tri par taille), la grille dense comble ce
+ * qu'elle peut, les trous restants sont acceptés.
  */
 
 /** Poids visuel d'une cellule selon son nombre de titres. */

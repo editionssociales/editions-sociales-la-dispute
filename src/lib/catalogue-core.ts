@@ -221,13 +221,10 @@ export function computeFacets(
   const forLibelles = filterBooks(all, filters, ["libelle"]);
   const forAuthors = filterBooks(all, filters, ["author"]);
   return {
-    // Ordre des libellés par taille décroissante (demande client 20/07) —
-    // la règle vit ICI une seule fois, pour les deux mosaïques (/catalogue et
-    // /catalogue/[edition]) ; les auteurs restent alphabétiques (tally), le
-    // <select> se parcourt par nom.
-    libelles: tally(forLibelles, (b) => b.libelles).sort(
-      (a, b) => b.count - a.count,
-    ),
+    // Libellés en ordre alphabétique (tally) — arbitrage client 22/07 : la
+    // mosaïque assume un rendu « désordonné » (tailles pondérées SANS tri par
+    // taille, trous acceptés) ; ne pas réintroduire de .sort() par count ici.
+    libelles: tally(forLibelles, (b) => b.libelles),
     authors: tally(forAuthors, (b) => b.authors),
     // Total de la cellule « Tous les livres » du menu libellés : les mêmes livres
     // que la tally des libellés (toutes les dimensions sauf libelle),
