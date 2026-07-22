@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { FramedGrid } from "./framed-grid";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
@@ -119,7 +120,8 @@ function maxWordLength(name: string) {
 }
 
 function spanFor(count: number, name: string) {
-  const [small, large] = closestFactors(cellArea(count));
+  const area = cellArea(count);
+  const [small, large] = closestFactors(area);
   const portrait = maxWordLength(name) <= VERTICAL_MAX_WORD;
   const cols = Math.min(portrait ? small : large, MAX_COLS);
   const rows = Math.min(portrait ? large : small, MAX_ROWS);
@@ -130,18 +132,12 @@ function spanFor(count: number, name: string) {
   return {
     cols,
     className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
-    // Grand corps dans les blocs multi-lignes (l'unité de la grille 10 col
-    // est assez large), petit corps dans les bandes d'une ligne.
-    // Corps indexé sur la LARGEUR (l'orientation portrait crée des cellules
-    // hautes mais étroites — un corps de bloc y déborderait) : +75 % en lg
-    // pour les larges, échelle réduite pour les étroites ; sous lg, échelle
-    // mobile dédiée.
-    textClass:
-      cols >= 3
-        ? "text-[17px] lg:text-[clamp(23px,2.45vw,32px)]"
-        : cols === 2
-          ? "text-[15px] lg:text-[clamp(19px,1.9vw,25px)]"
-          : "text-[13px] lg:text-[clamp(15px,1.5vw,19px)]",
+    // Corps = fonction STRICTE de l'aire seule (client 23/07 — remplace
+    // l'indexation sur la largeur) : lg 14+4,5·√aire px, mobile 10+3·√aire px
+    // (aire 3 → 22/15, aire 6 → 25/17, aire 18 → 33/23). Une cellule étroite
+    // de grande aire garde donc un grand corps et césure (hyphens-auto).
+    fontSm: Math.round(10 + 3 * Math.sqrt(area)),
+    fontLg: Math.round(14 + 4.5 * Math.sqrt(area)),
     // Une case de haut = pas de place pour deux étages : le compte de titres
     // s'efface au profit du libellé, libre de passer sur deux lignes
     // (amendement client 23/07 — le compte reste visible sur les blocs).
@@ -161,7 +157,8 @@ function ThemeCell({
   href,
   active,
   span,
-  textClass,
+  fontSm,
+  fontLg,
   label,
   count,
   showCount,
@@ -169,7 +166,9 @@ function ThemeCell({
   href: string;
   active: boolean;
   span: string;
-  textClass: string;
+  /** Corps du libellé (px), fonction stricte de l'aire — mobile / lg. */
+  fontSm: number;
+  fontLg: number;
   label: string;
   count: number;
   /** Masqué dans les cellules d'une case de haut — le libellé y prend toute
@@ -180,10 +179,11 @@ function ThemeCell({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      style={{ "--fs-sm": `${fontSm}px`, "--fs-lg": `${fontLg}px` } as CSSProperties}
       className={`relative flex flex-col justify-end gap-1 overflow-hidden px-[13px] py-[9px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${span} ${invertingCell(active)}`}
     >
       <span
-        className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] hyphens-auto [overflow-wrap:break-word] ${textClass}`}
+        className={`font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.02] tracking-[.01em] hyphens-auto [overflow-wrap:break-word] lg:text-[length:var(--fs-lg)]`}
       >
         {label}
         {!showCount && <span className="sr-only"> ({count} titres)</span>}
@@ -228,7 +228,8 @@ export function LibelleMosaic({
             href={hrefFor(item.slug)}
             active={active}
             span={span.className}
-            textClass={span.textClass}
+            fontSm={span.fontSm}
+            fontLg={span.fontLg}
             label={item.name}
             count={item.count}
             showCount={span.showCount}
