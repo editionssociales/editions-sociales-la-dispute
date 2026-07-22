@@ -22,7 +22,7 @@ données ni le routage.
 
 ## Ubiquitous Language
 
-- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid` (grille), `Button` (CTA), `PageHero` (en-têtes page, titre + chapeau seuls).
+- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid` (grille), `Button` (CTA), `PageHero` (en-têtes page, titre + chapeau seuls), `LibelleMosaic` (mosaïque pondérée des libellés — l'UNIQUE rendu des libellés pour /catalogue ET /catalogue/[edition], ne jamais la re-inliner).
 
 ## Decisions
 
