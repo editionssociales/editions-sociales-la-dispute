@@ -13,7 +13,7 @@ Surface App Router en deux groupes étanches, sans root layout parent : **`(site
 
 - **Multi-root-layouts** : `(site)/layout.tsx` et `(payload)/layout.tsx` complets indépendants, aucun layout parent. Full page load entre groupes (attendu). Pas de collision d'URL. Sans root layout, pas de 404 racine possible : toute URL hors routes est aspirée par le catch-all `(site)/[...rest]` → `notFound()` → la 404 brandée de `(site)/not-found.tsx`.
 - **Métadonnées** : défauts OG/Twitter posés par `(site)/layout.tsx` ; un `openGraph` de page REMPLACE celui du layout (fusion superficielle par champ, pas de deep-merge) — toute page qui le définit doit reposer `siteName`/`locale` (cf. fiche livre). Titres absolus (`{ absolute }`) quand le template dupliquerait le nom du site.
-- **Politique de fraîcheur** : pas de `force-dynamic`. Catalogue/routes dynamiques : `revalidate = 3600`. Fiches livre, éditions, boutique : ISR. Pages légales, a-propos, accueil, souscription : statique ou ISR. Détail des pages : voir commentaires dans le code.
+- **Politique de fraîcheur** : pas de `force-dynamic`. Catalogue/routes dynamiques : `revalidate = 3600`. Fiches livre, boutique : ISR. Pages légales, a-propos, accueil, souscription : statique ou ISR. `/editions` et `/editions/[slug]` : contenu mort, `permanentRedirect()` vers `/a-propos` (chantier agenda/à-propos, 2026-07 — les deux maisons y vivent désormais, cf. `NAV_HOUSES`). Détail des pages : voir commentaires dans le code.
 - **Injection HTML** : `dangerouslySetInnerHTML` accepte uniquement `SafeHtml` (sanitisé `src/lib`) — fiches livre, boutique, pages légales, a-propos. Champ vide = fallback JSX.
 
 ## Work Guidance

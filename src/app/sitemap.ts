@@ -19,9 +19,10 @@ const STATIC_PATHS = [
   "/catalogue",
   "/catalogue/editions-sociales",
   "/catalogue/la-dispute",
-  "/editions",
-  "/editions/editions-sociales",
-  "/editions/la-dispute",
+  // Pas de `/editions`/`/editions/[slug]` : ces routes sont désormais des
+  // redirections permanentes vers `/a-propos` (chantier agenda/à-propos,
+  // 2026-07, cf. `src/app/(site)/editions/`) — les lister au sitemap
+  // ferait indexer des URLs qui ne servent jamais de contenu propre.
   "/souscription",
   "/a-propos",
   "/rencontres",
