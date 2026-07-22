@@ -85,10 +85,11 @@ function spanFor(count: number) {
   return {
     cols,
     className: `${COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
-    // Bandes d'une ligne : libellé et compte tiennent côte à côte ; blocs
-    // multi-lignes : pile classique avec un corps un cran plus grand.
+    // Le grand corps est réservé aux blocs à la fois hauts ET larges — dans
+    // une cellule étroite (≤ 2 colonnes d'une grille fine), un libellé long
+    // en grand corps déborde et se fait tronquer par l'overflow-hidden.
     textClass:
-      rows >= 2
+      rows >= 2 && cols >= 3
         ? "text-[clamp(13px,1.4vw,18px)]"
         : "text-[clamp(11px,1.1vw,14px)]",
   };
@@ -123,7 +124,9 @@ function ThemeCell({
       aria-current={active ? "page" : undefined}
       className={`relative flex flex-col justify-end gap-1 overflow-hidden px-[13px] py-[9px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${span} ${invertingCell(active)}`}
     >
-      <span className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] ${textClass}`}>
+      <span
+        className={`font-sans font-black uppercase leading-[1.02] tracking-[.01em] [overflow-wrap:anywhere] ${textClass}`}
+      >
         {label}
       </span>
       <span className="font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60">
