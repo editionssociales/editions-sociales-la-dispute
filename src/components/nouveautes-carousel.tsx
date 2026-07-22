@@ -3,19 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
+import { formatDateFr } from "@/lib/format";
+import type { NouveauteBook } from "@/lib/nouveaute-book";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
-/** Un livre déjà mis en forme par la page serveur — aucune fonction, uniquement des données sérialisables. */
-export interface NouveauteBook {
-  href: string;
-  title: string;
-  author: string;
-  coverUrl: string;
-  coverW: number;
-  coverH: number;
-  upcoming: boolean;
-  imprint: string;
-}
+export type { NouveauteBook };
 
 interface DragState {
   startX: number;
@@ -139,8 +131,10 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     });
   }, [paint]);
 
-  /** Recentre la couverture d'indice `i` (défilement natif lisse). */
-  const centerCard = useCallback((i: number) => {
+  /** Recentre la couverture d'indice `i` (défilement natif lisse, ou instantané
+   *  si `instant` — montage initial, toujours compatible prefers-reduced-motion
+   *  puisqu'il n'anime de toute façon jamais). */
+  const centerCard = useCallback((i: number, instant = false) => {
     const el = trackRef.current;
     if (!el) return;
     const cards = el.querySelectorAll<HTMLElement>("[data-card]");
@@ -151,7 +145,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     const delta = r.left + r.width / 2 - (rect.left + rect.width / 2);
     el.scrollTo({
       left: el.scrollLeft + delta,
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      behavior: instant || prefersReducedMotion() ? "auto" : "smooth",
     });
   }, []);
 
@@ -164,11 +158,18 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
   // Peinture initiale + marges d'extrémité, puis à chaque défilement / resize /
   // chargement de couverture (leur largeur n'est exacte qu'une fois l'image
-  // arrivée — capture, car l'event `load` d'une image ne remonte pas).
+  // arrivée — capture, car l'event `load` d'une image ne remonte pas). Le
+  // montage centre directement le 2e livre (repli sur le 1er s'il y en a
+  // moins de deux) — `instant`, jamais d'animation au chargement (compatible
+  // prefers-reduced-motion de fait, puisque rien n'anime dans les deux cas).
   useEffect(() => {
     const el = trackRef.current;
     if (!el) return;
     applyEndPadding();
+    const initialIndex = n > 1 ? 1 : 0;
+    activeRef.current = initialIndex;
+    setActive(initialIndex);
+    centerCard(initialIndex, true);
     schedulePaint();
     const onResize = () => {
       applyEndPadding();
@@ -187,7 +188,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       window.removeEventListener("resize", onResize);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [applyEndPadding, schedulePaint, centerCard]);
+  }, [applyEndPadding, schedulePaint, centerCard, n]);
 
   // Glisser-déposer à la souris (grab) : le trackpad / tactile / molette gardent
   // leur défilement natif. On coupe le snap le temps du glissé (proximity ne
@@ -310,7 +311,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
           nom « Nouveautés » n'apportait rien — aria-label sur la section
           suffit) ; la rangée ne porte plus que les flèches et la sortie
           vers le catalogue, alignées à droite. */}
-      <div className="mb-[clamp(18px,2.4vw,28px)] flex items-end justify-end gap-4 px-[clamp(16px,4vw,64px)]">
+      <div className="mb-[clamp(9px,1.2vw,14px)] flex items-end justify-end gap-4 px-[clamp(16px,4vw,64px)]">
         <div className="flex flex-none flex-col items-end gap-1">
           <div className="flex items-center gap-3">
             <button
@@ -360,6 +361,14 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
         </p>
         {current.author && (
           <p className="mt-1 text-sm text-ink-soft">{current.author}</p>
+        )}
+        {/* Un livre à paraître n'a pas encore de prix ni de disponibilité —
+            sa date de parution est l'information qui compte (vue « à
+            paraître » de /catalogue notamment). */}
+        {current.upcoming && formatDateFr(current.publishedAt) && (
+          <p className="mt-1 text-sm font-bold text-ink-soft">
+            {formatDateFr(current.publishedAt)}
+          </p>
         )}
       </div>
     </section>
