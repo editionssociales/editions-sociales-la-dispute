@@ -132,12 +132,14 @@ function spanFor(count: number, name: string) {
   return {
     cols,
     className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
-    // Corps = fonction STRICTE de l'aire seule (client 23/07 — remplace
-    // l'indexation sur la largeur) : lg 14+4,5·√aire px, mobile 10+3·√aire px
-    // (aire 3 → 22/15, aire 6 → 25/17, aire 18 → 33/23). Une cellule étroite
-    // de grande aire garde donc un grand corps et césure (hyphens-auto).
-    fontSm: Math.round(10 + 3 * Math.sqrt(area)),
-    fontLg: Math.round(14 + 4.5 * Math.sqrt(area)),
+    // Corps = fonction STRICTE de l'aire seule, par TRANCHES de carrés
+    // parfaits (client 23/07) : tranche k = floor(√aire) — aires 1-3 → k=1,
+    // 4-8 → k=2, 9-15 → k=3, 16-24 → k=4, etc. Progression fixe par tranche
+    // (+5 px lg, +3 px mobile), PLAFONNÉE au lisible (40/26 px) pour
+    // anticiper des rayons de milliers de titres. Une cellule étroite de
+    // grande aire garde son grand corps et césure (hyphens-auto).
+    fontSm: Math.min(11 + 3 * Math.floor(Math.sqrt(area)), 26),
+    fontLg: Math.min(15 + 5 * Math.floor(Math.sqrt(area)), 40),
   };
 }
 
