@@ -12,11 +12,11 @@ Unified product model and data layer: reads the Payload/Postgres catalogue (two 
 ## Local Contracts
 
 - Network modules: only `donations` (Stripe Search API, cached per-request via `cache()`) and `brevo` (write-side, never cached, degrades cleanly — `{ ok: false }` when `BREVO_API_KEY` absent) touch the network.
-- Purity: rest is pure; exceptions are back-office/commerce (server-only, Payload via Local API, no `cache()`): `catalogue-pg`, `site-content`, `commerce-source`, `order-source`, `highlight`, `stripe`.
+- Purity: rest is pure; exceptions are back-office/commerce (server-only, Payload via Local API, no `cache()`): `catalogue-pg`, `site-content`, `commerce-source`, `order-source`, `highlight`, `rencontres`, `stripe`.
 - Type ownership: `SafeHtml` (only `sanitizeCms`), RawBook/CatalogueSource (ports), CommerceInfo (port-owned).
 - `env.ts`: `DATABASE_URL` + `PAYLOAD_SECRET` REQUIRED at boot (Payload is the only source); the rest optional but shape-checked.
 - URL codec: `catalogueHref`/`readFilters` (browse.ts) = unique encoder/decoder for filter URLs.
-- `rencontres-data.ts`: PROVISIONAL editorial data (hand-copied from ladispute.fr) pending the Payload rencontres collection — delete it then; never extend it by hand.
+- `rencontres.ts`: reads the Payload `rencontres` collection (agenda, `/rencontres`) — `splitRencontres` (sort/split around today) is the pure, tested half; `getRencontres` is the I/O half, degrades to an empty agenda on failure like `highlight.ts`.
 
 ## Work Guidance
 

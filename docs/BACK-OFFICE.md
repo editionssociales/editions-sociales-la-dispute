@@ -90,6 +90,24 @@ une page par erreur.
   date du jour est dans la période choisie — pratique pour préparer une
   annonce à l'avance sans qu'elle sorte trop tôt.
 
+## Gérer l'agenda des rencontres
+
+Menu de gauche → groupe **Site** → **Rencontres**. Chaque entrée est une
+rencontre, débat ou présentation affiché sur `/rencontres`, triée
+automatiquement entre « à venir » et « passées » selon la date du jour — vous
+n'avez rien à faire pour qu'une rencontre bascule d'une section à l'autre.
+
+Champs : titre, date (+ heure en texte libre, ex. « 15h-16h30 »), lieu et
+ville, un livre lié (facultatif), les intervenant·e·s (texte libre) et une
+description. **L'image affichée sur `/rencontres` est facultative** : si vous
+en téléversez une, elle est utilisée ; sinon, et si un livre est lié, c'est sa
+couverture qui sert d'image par défaut. Sans image ni livre lié, la rencontre
+s'affiche sans colonne image — pas de vignette grise. Aucune contrainte de
+format pour l'image de rencontre (contrairement à la couverture d'un livre).
+
+Une fois enregistrée, une rencontre est visible sur le site en moins d'une
+minute, comme le reste du back-office.
+
 Le **Seuil stock** (alerte stock bas du tableau de bord / page Stock) vit
 dans le groupe **Boutique**, à côté des codes promo. Les comptes
 (**Utilisateur·rice·s**) forment le groupe **Administration**, visible des
