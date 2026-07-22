@@ -12,13 +12,15 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * pas de tri par taille), la grille dense comble ce qu'elle peut, les trous
  * restants sont acceptés.
  *
- * Loi de taille (client, 22/07 au soir) : l'AIRE d'une cellule, en unités de
- * grille (minimum 1), est `round(√(nb de titres))`, posée telle quelle comme
- * un produit colonnes × lignes aux facteurs les plus proches possibles — la
- * paire de diviseurs la plus « carrée », le plus grand facteur à
- * l'horizontale. Une aire PREMIÈRE n'a que 1×p : bande d'une seule ligne.
- * Ex. : 9 titres → aire 3 → 3×1 ; 14 → aire 4 → 2×2 ; 38 → aire 6 → 3×2 ;
- * 93 → aire 10 → 5×2 ; 295 → aire 17 (premier) → bande 17×1.
+ * Loi de taille (client, 22/07 au soir, amendée 23/07) : l'AIRE d'une
+ * cellule, en unités de grille (minimum 1), est `round(√(nb de titres))`,
+ * posée comme un produit colonnes × lignes aux facteurs les plus proches
+ * possibles — la paire de diviseurs la plus « carrée », le plus grand
+ * facteur à l'horizontale. Une aire PREMIÈRE ≥ 5 reçoit **+1** (elle devient
+ * paire, donc factorisable en bloc — trop de bandes sinon) ; seules les
+ * aires 2 et 3 restent en bande d'une seule ligne.
+ * Ex. : 9 titres → aire 3 → bande 3×1 ; 14 → aire 4 → 2×2 ; 38 → aire 6 →
+ * 3×2 ; 54 → aire 7→8 → 4×2 ; 93 → aire 10 → 5×2 ; 295 → aire 17→18 → 6×3.
  *
  * Grille : taille CHOISIE D'AVANCE — 10 colonnes en lg (unité ≈ 110 px dans
  * le conteneur max-w-6xl : les petites cellules restent lisibles), plutôt
@@ -29,9 +31,22 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * bande pleine largeur.
  */
 
-/** Aire d'une cellule en unités de grille : arrondi de √(nb de titres). */
+function isPrime(n: number) {
+  if (n < 2) return false;
+  for (let d = 2; d * d <= n; d++) {
+    if (n % d === 0) return false;
+  }
+  return true;
+}
+
+/**
+ * Aire d'une cellule en unités de grille : arrondi de √(nb de titres) —
+ * +1 sur les aires premières ≥ 5 pour les rendre factorisables en bloc
+ * (amendement client 23/07 : trop de bandes d'une ligne sinon).
+ */
 function cellArea(count: number) {
-  return Math.max(1, Math.round(Math.sqrt(Math.max(0, count))));
+  const area = Math.max(1, Math.round(Math.sqrt(Math.max(0, count))));
+  return area >= 5 && isPrime(area) ? area + 1 : area;
 }
 
 /**
