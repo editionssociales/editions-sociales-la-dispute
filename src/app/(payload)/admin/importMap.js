@@ -24,6 +24,7 @@ import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BooksFilterChipsPanel as BooksFilterChipsPanel_6423322f3bdd549270b95d6fae592749 } from '../../../payload/admin/books/BooksFilterChipsPanel.tsx'
 import { OrderExportPanel as OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0 } from '../../../payload/admin/OrderExportPanel.tsx'
+import { RencontresFilterChipsPanel as RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7 } from '../../../payload/admin/rencontres/RencontresFilterChipsPanel.tsx'
 import { StockNavLink as StockNavLink_6618fbe14a6645bc8a42a9773c06e167 } from '../../../payload/admin/stock/StockNavLink.tsx'
 import { HealthNavLink as HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e } from '../../../payload/admin/health/HealthNavLink.tsx'
 import { Dashboard as Dashboard_1d6cee6a65112732ba58d10371f7c560 } from '../../../payload/admin/dashboard/Dashboard.tsx'
@@ -60,6 +61,7 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "/payload/admin/books/BooksFilterChipsPanel.tsx#BooksFilterChipsPanel": BooksFilterChipsPanel_6423322f3bdd549270b95d6fae592749,
   "/payload/admin/OrderExportPanel.tsx#OrderExportPanel": OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0,
+  "/payload/admin/rencontres/RencontresFilterChipsPanel.tsx#RencontresFilterChipsPanel": RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7,
   "/payload/admin/stock/StockNavLink.tsx#StockNavLink": StockNavLink_6618fbe14a6645bc8a42a9773c06e167,
   "/payload/admin/health/HealthNavLink.tsx#HealthNavLink": HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e,
   "/payload/admin/dashboard/Dashboard.tsx#Dashboard": Dashboard_1d6cee6a65112732ba58d10371f7c560,

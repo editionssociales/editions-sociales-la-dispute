@@ -29,6 +29,13 @@ export const Rencontres: CollectionConfig = {
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'date', 'ville'],
     description: 'Agenda public des rencontres (page /rencontres) — une entrée par événement.',
+    // Chips de filtre À venir/Passées/Toutes — au-dessus du tableau, même
+    // slot et même pattern que `BooksFilterChipsPanel.tsx`/`Books.ts`.
+    components: {
+      beforeListTable: [
+        '/payload/admin/rencontres/RencontresFilterChipsPanel.tsx#RencontresFilterChipsPanel',
+      ],
+    },
   },
   access: {
     // Agenda public, comme le bandeau `highlight` — aucune donnée sensible,

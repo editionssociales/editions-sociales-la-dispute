@@ -1,0 +1,54 @@
+/*
+ * Chips de filtre de la liste Rencontres (`/admin/collections/rencontres`)
+ * — panneau `beforeListTable` (`RencontresFilterChipsPanel.tsx` →
+ * `RencontresFilterChips.tsx`). Calque de `books/books-filter-chips.module.css`
+ * (pas de module partagé entre collections) : variables de thème Payload
+ * `--theme-*`, mêmes hex de secours, même sous-ensemble de classes (un seul
+ * groupe de chips ici — pas de groupe « maison », pas de bouton de création).
+ */
+
+.panel {
+  margin: 1rem 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--theme-elevation-600, #4a4740);
+  background: var(--theme-elevation-50, #f1efe9);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: var(--theme-elevation-100, #edebe4);
+}
+
+.chipActive {
+  background: var(--theme-elevation-800, #2c2a25);
+  border-color: var(--theme-elevation-800, #2c2a25);
+  color: var(--theme-elevation-0, #ffffff);
+}
+
+.chipActive:hover {
+  background: var(--theme-elevation-800, #2c2a25);
+}
