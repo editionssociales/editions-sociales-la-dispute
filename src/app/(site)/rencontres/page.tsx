@@ -3,6 +3,8 @@ import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
 import { Reveal } from "@/components/reveal";
 import { Button } from "@/components/button";
+import { formatDateFr } from "@/lib/format";
+import { RENCONTRES_EVENTS } from "@/lib/rencontres-data";
 
 export const metadata: Metadata = {
   title: "Rencontres",
@@ -12,87 +14,125 @@ export const metadata: Metadata = {
 
 /**
  * Emplacements d'événements à venir : purement décoratifs (aucune date
- * réelle). État honnête plutôt que skeleton (5.4/R8, bordures pointillées
- * assumées) — pas de barres grises qui imiteraient un chargement en cours,
- * juste la forme de l'agenda (en-tête date/lieu) et le mot « en préparation ».
+ * réelle) — repli affiché UNIQUEMENT si `RENCONTRES_EVENTS` est vide. État
+ * honnête plutôt que skeleton (5.4/R8, bordures pointillées assumées) — pas
+ * de barres grises qui imiteraient un chargement en cours, juste la forme de
+ * l'agenda (en-tête date/lieu) et le mot « en préparation ».
  */
 const PLACEHOLDER_EVENTS = [1, 2, 3];
 
 export default function RencontresPage() {
+  const events = RENCONTRES_EVENTS;
+  const hasEvents = events.length > 0;
+
   return (
     <>
-      {/* Héro */}
-      <Container className="bg-paper py-16 sm:py-20">
-        <Reveal>
-          <div className="max-w-3xl">
-            <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
-              Faire vivre les livres, dans et hors les murs
-            </h1>
-            <p className="mt-6 text-lg leading-relaxed text-ink/70">
-              Présentations d&apos;ouvrages, débats et rencontres avec nos
-              autrices et auteurs : toutes les dates seront bientôt réunies
-              ici.
-            </p>
-          </div>
-        </Reveal>
-      </Container>
+      {/* Titre visuel et paragraphes d'intro retirés (demande client) : le
+          nom accessible de la page reste porté par ce h1, masqué visuellement
+          (même recette que l'accueil, `(site)/page.tsx`). */}
+      <h1 className="sr-only">Agenda</h1>
 
-      {/* L'agenda arrive bientôt : état d'attente */}
-      <section className="border-y-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
-          <Reveal>
-            <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              L&apos;agenda arrive bientôt
-            </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
-              Cette page accueillera l&apos;agenda des rencontres. Les
-              événements pourront être gérés depuis le back-office, au même
-              endroit que le catalogue.
-            </p>
-          </Reveal>
-
-          {/* État « programmation en préparation » : décor, en attendant les
-              vraies dates — bordures pointillées (R8 assumé, exception
-              nommée), aucune barre grise qui laisserait croire à un
-              chargement imminent. */}
-          <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
-            {PLACEHOLDER_EVENTS.map((g, i) => (
-              <Reveal key={g} delay={i * 120} className="h-full">
-                <article className="flex h-full select-none flex-col border-2 border-dashed border-ink bg-paper-2">
-                  {/* En-tête : date sur fond noir + lieu */}
-                  <div className="flex items-stretch border-b-2 border-dashed border-ink">
-                    <div className="flex items-center bg-ink px-4 py-3">
-                      <span className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-pop-yellow">
-                        Date à venir
-                      </span>
+      {hasEvents ? (
+        /* Rencontres réelles — même langage visuel que le repli (cadres
+           pointillés R8, exception assumée à cette page), rempli avec les
+           données de `rencontres-data.ts` en attendant la collection Payload
+           dédiée. */
+        <section className="border-b-2 border-ink bg-paper">
+          <Container className="py-16 sm:py-20">
+            <FramedGrid className="sm:grid-cols-2 lg:grid-cols-3">
+              {events.map((event, i) => (
+                <Reveal key={`${event.titre}-${event.date}`} delay={i * 120} className="h-full">
+                  <article className="flex h-full flex-col border-2 border-dashed border-ink bg-paper-2">
+                    {/* En-tête : date (+ heure éventuelle) sur fond noir + lieu/ville */}
+                    <div className="flex items-stretch border-b-2 border-dashed border-ink">
+                      <div className="flex items-center bg-ink px-4 py-3">
+                        <span className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-pop-yellow">
+                          {formatDateFr(event.date)}
+                          {event.heure ? ` · ${event.heure}` : ""}
+                        </span>
+                      </div>
+                      <div className="flex flex-1 items-center border-l-2 border-dashed border-ink px-4 py-3">
+                        <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+                          {event.lieu}, {event.ville}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-1 items-center border-l-2 border-dashed border-ink px-4 py-3">
-                      <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
-                        Lieu à préciser
-                      </span>
+                    <div className="flex flex-1 flex-col gap-2 p-6">
+                      <p className="font-sans text-base font-black italic leading-snug text-ink">
+                        {event.titre}
+                      </p>
+                      <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+                        {event.livreOuAuteurs}
+                      </p>
+                      <p className="text-[14px] leading-relaxed text-ink-soft">
+                        {event.description}
+                      </p>
                     </div>
-                  </div>
-                  {/* État honnête : pas de vraie date tant que le back-office
-                      n'a rien à afficher. */}
-                  <div className="flex flex-1 flex-col items-center justify-center gap-1 p-6 text-center">
-                    <span className="font-sans text-xs font-bold uppercase tracking-[.08em] text-muted">
-                      Programmation
-                    </span>
-                    <span className="font-sans text-sm text-ink-soft">en préparation</span>
-                  </div>
-                </article>
-              </Reveal>
-            ))}
-          </FramedGrid>
-        </Container>
-      </section>
+                  </article>
+                </Reveal>
+              ))}
+            </FramedGrid>
+          </Container>
+        </section>
+      ) : (
+        /* L'agenda arrive bientôt : état d'attente — repli quand la liste est vide. */
+        <section className="border-y-2 border-ink bg-paper">
+          <Container className="py-16 sm:py-20">
+            <Reveal>
+              <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
+                L&apos;agenda arrive bientôt
+              </h2>
+              <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink/70">
+                Cette page accueillera l&apos;agenda des rencontres. Les
+                événements pourront être gérés depuis le back-office, au même
+                endroit que le catalogue.
+              </p>
+            </Reveal>
 
-      {/* CTA : en attendant les premières dates */}
+            {/* État « programmation en préparation » : décor, en attendant les
+                vraies dates — bordures pointillées (R8 assumé, exception
+                nommée), aucune barre grise qui laisserait croire à un
+                chargement imminent. */}
+            <FramedGrid className="mt-10 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+              {PLACEHOLDER_EVENTS.map((g, i) => (
+                <Reveal key={g} delay={i * 120} className="h-full">
+                  <article className="flex h-full select-none flex-col border-2 border-dashed border-ink bg-paper-2">
+                    {/* En-tête : date sur fond noir + lieu */}
+                    <div className="flex items-stretch border-b-2 border-dashed border-ink">
+                      <div className="flex items-center bg-ink px-4 py-3">
+                        <span className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-pop-yellow">
+                          Date à venir
+                        </span>
+                      </div>
+                      <div className="flex flex-1 items-center border-l-2 border-dashed border-ink px-4 py-3">
+                        <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+                          Lieu à préciser
+                        </span>
+                      </div>
+                    </div>
+                    {/* État honnête : pas de vraie date tant que le back-office
+                        n'a rien à afficher. */}
+                    <div className="flex flex-1 flex-col items-center justify-center gap-1 p-6 text-center">
+                      <span className="font-sans text-xs font-bold uppercase tracking-[.08em] text-muted">
+                        Programmation
+                      </span>
+                      <span className="font-sans text-sm text-ink-soft">en préparation</span>
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </FramedGrid>
+          </Container>
+        </section>
+      )}
+
+      {/* CTA final — copy adaptée : ne plus prétendre « en attendant les
+          premières dates » puisque des dates réelles sont affichées au-dessus. */}
       <section className="bg-ink text-paper">
         <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="font-sans text-2xl font-black italic sm:text-3xl">
-              En attendant les premières dates
+              {hasEvents ? "Retrouvez-nous en librairie" : "En attendant les premières dates"}
             </h2>
             <p className="mt-2 text-paper/75">
               Parcourez le catalogue des deux maisons, ou soutenez la
