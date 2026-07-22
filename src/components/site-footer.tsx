@@ -54,7 +54,10 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
       <nav aria-label="Explorer" className="mt-1">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           {NAV_HOUSES.map((house) => (
-            <li key={house.href}>
+            // Clef = label : les deux hrefs pointent désormais vers la même
+            // page commune `/a-propos` (`lib/nav.ts`), ce qui les rend
+            // impropres à servir de clef React.
+            <li key={house.label}>
               <Link href={house.href} className={LINK_CLASS}>
                 {house.label}
               </Link>
