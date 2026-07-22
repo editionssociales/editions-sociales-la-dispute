@@ -16,7 +16,7 @@ Unified product model and data layer: reads the Payload/Postgres catalogue (two 
 - Type ownership: `SafeHtml` (only `sanitizeCms`), RawBook/CatalogueSource (ports), CommerceInfo (port-owned).
 - `env.ts`: `DATABASE_URL` + `PAYLOAD_SECRET` REQUIRED at boot (Payload is the only source); the rest optional but shape-checked.
 - URL codec: `catalogueHref`/`readFilters` (browse.ts) = unique encoder/decoder for filter URLs.
-- `rencontres.ts`: reads the Payload `rencontres` collection (agenda, `/rencontres`) — `splitRencontres` (sort/split around today) is the pure, tested half; `getRencontres` is the I/O half, degrades to an empty agenda on failure like `highlight.ts`. Event days and "today" go through `isoDayParis` (format.ts) — Payload's `dayOnly` picker stores local midnight (22h/23h UTC the day before from France), so slicing the UTC ISO shifts the day.
+- `rencontres.ts`: reads the Payload `rencontres` collection (agenda, `/rencontres`) — `splitRencontres` (sort/split around today) is the pure, tested half; `getRencontres` is the I/O half, degrades to an empty agenda on failure like `highlight.ts`. Event days and "today" go through `isoDayParis` (format.ts) — Payload's `dayOnly` picker stores local midnight (22h/23h UTC the day before from France), so slicing the UTC ISO shifts the day; `parisMidnightUtc` (format.ts) is the inverse (day → instant), the boundary used by the admin filter chips.
 
 ## Work Guidance
 

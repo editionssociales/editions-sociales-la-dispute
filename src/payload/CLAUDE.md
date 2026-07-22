@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : collections + globals, rôles/accès, hooks de revalidation à l'édition, et une surface admin custom (dashboard `/admin` allégé, vues `/admin/stock` · `/admin/sante`, chips de filtre livres) au-dessus du CRUD généré. Cœurs purs et endpoints custom vivent dans `lib/`.
+Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : collections + globals, rôles/accès, hooks de revalidation à l'édition, et une surface admin custom (dashboard `/admin` allégé, vues `/admin/stock` · `/admin/sante`, chips de filtre livres/rencontres) au-dessus du CRUD généré. Cœurs purs et endpoints custom vivent dans `lib/`.
 
 ## Ownership
 
-- **Owns** : la config des collections/globals, les policies d'accès (`access.ts` : `admin`|`editor`), les composants admin custom (`Dashboard.tsx`, `StockPage.tsx`, `HealthPage.tsx`, chips livres, champ slug), les endpoints custom et leurs cœurs purs dans `lib/`.
+- **Owns** : la config des collections/globals, les policies d'accès (`access.ts` : `admin`|`editor`), les composants admin custom (`Dashboard.tsx`, `StockPage.tsx`, `HealthPage.tsx`, chips livres, chips rencontres, champ slug), les endpoints custom et leurs cœurs purs dans `lib/`.
 - **Does NOT own** : le modèle de domaine ni les seams de lecture du front (`src/lib`), les pages (`src/app`), la présentation (`src/components`).
 
 ## Local Contracts
