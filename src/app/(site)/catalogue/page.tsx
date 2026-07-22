@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { catalogueView, getBooks } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
@@ -11,8 +10,6 @@ import { NouveautesCarousel } from "@/components/nouveautes-carousel";
 import { toNouveauteBooks } from "@/lib/nouveaute-book";
 import { parseBookFilters } from "@/lib/parse-filters";
 import { catalogueHref } from "@/lib/browse";
-import { NAV_BOUTIQUE } from "@/lib/nav";
-import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 export const metadata: Metadata = {
   title: "Catalogue",
@@ -69,23 +66,9 @@ async function CatalogueBody({
           rôle visuellement. */}
       <h1 className="sr-only">Le catalogue par libellés</h1>
 
-      {/* Le rayon boutique (goodies, manuels…) n'a pas sa place dans cette
-          grille de livres — chantier 3 §1 : un lien contextuel évite qu'il
-          reste invisible depuis le catalogue. */}
-      <p className="max-w-2xl text-sm text-muted">
-        Vous cherchez un objet plutôt qu&apos;un livre&nbsp;?{" "}
-        <Link
-          href={NAV_BOUTIQUE.href}
-          className={`font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT_OUTER}`}
-        >
-          Direction la {NAV_BOUTIQUE.label.toLowerCase()}
-        </Link>
-        .
-      </p>
-
-      <div className="mt-6 sm:mt-7">
+      <div>
         <CatalogueFilters
-          libelles={[...facets.libelles].sort((a, b) => b.count - a.count)}
+          libelles={facets.libelles}
           authors={facets.authors}
           totalCount={facets.total}
         />

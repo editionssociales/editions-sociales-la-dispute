@@ -116,7 +116,7 @@ async function EditionCatalogueBody({
   // « Tous les livres » reste épinglée en tête, hors tri (pas un vrai libellé).
   const libelleItems: { name: string; slug: string | null; count: number }[] = [
     { name: "Tous les livres", slug: null, count: facets.total },
-    ...[...facets.libelles].sort((a, b) => b.count - a.count),
+    ...facets.libelles,
   ];
 
   return (
