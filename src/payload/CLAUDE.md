@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : collections + globals, rôles/accès, hooks de revalidation à l'édition, et une surface admin custom (dashboard `/admin` allégé, vues `/admin/stock` · `/admin/sante`, chips de filtre livres) au-dessus du CRUD généré. Cœurs purs et endpoints custom vivent dans `lib/`.
+Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : collections + globals, rôles/accès, hooks de revalidation à l'édition, et une surface admin custom (dashboard `/admin` allégé, vues `/admin/stock` · `/admin/sante`, chips de filtre livres/rencontres) au-dessus du CRUD généré. Cœurs purs et endpoints custom vivent dans `lib/`.
 
 ## Ownership
 
