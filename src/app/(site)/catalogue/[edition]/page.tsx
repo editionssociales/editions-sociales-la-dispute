@@ -8,7 +8,6 @@ import { CatalogueFilters } from "@/components/catalogue-filters";
 import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
-import { PageHero } from "@/components/page-hero";
 import { FramedGrid } from "@/components/framed-grid";
 import { parseBookFilters } from "@/lib/parse-filters";
 import { catalogueHref } from "@/lib/browse";
@@ -111,14 +110,21 @@ async function EditionCatalogueBody({
   // conservé), même logique que « Tout effacer » côté filtres.
   const resetHref = catalogueHref({ sort: filters.sort }, basePath);
 
+  // Mosaïque triée par taille décroissante (nombre de livres) — la pondération
+  // visuelle (`themeTier`) ne change pas, seul l'ordre de rendu (et donc de
+  // lecture/tabulation, la grille dense se chargeant du placement visuel).
+  // « Tous les livres » reste épinglée en tête, hors tri (pas un vrai libellé).
   const libelleItems: { name: string; slug: string | null; count: number }[] = [
     { name: "Tous les livres", slug: null, count: facets.total },
-    ...facets.libelles,
+    ...[...facets.libelles].sort((a, b) => b.count - a.count),
   ];
 
   return (
     <Container className="bg-paper py-12 sm:py-16">
-      <PageHero title={info.name} intro={info.tagline} className="max-w-2xl" />
+      {/* Épure minimaliste : l'ex-PageHero (titre + chapeau) a été retiré —
+          le h1 devient invisible (a11y/SEO seuls), rien ne porte plus ce
+          rôle visuellement. */}
+      <h1 className="sr-only">{info.name}</h1>
 
       <FramedGrid
         as="nav"
