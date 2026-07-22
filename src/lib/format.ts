@@ -16,6 +16,48 @@ export function formatDateFr(iso?: string | null): string | null {
   return Number.isNaN(d.getTime()) ? null : DATE_FR.format(d);
 }
 
+const DAY_FR = new Intl.DateTimeFormat("fr-FR", { day: "numeric", timeZone: "UTC" });
+const MONTH_FR = new Intl.DateTimeFormat("fr-FR", { month: "short", timeZone: "UTC" });
+const YEAR_FR = new Intl.DateTimeFormat("fr-FR", { year: "numeric", timeZone: "UTC" });
+
+/**
+ * Date ISO (`YYYY-MM-DD`) découpée en jour/mois/année pour un affichage en
+ * bloc (bandeau date de l'agenda `/rencontres`) — `formatDateFr` rend une
+ * seule chaîne, inutilisable pour un bloc à 3 tailles de police distinctes.
+ * `timeZone: "UTC"` : `iso` n'a pas d'heure (`dayOnly` côté Payload) — sans
+ * ce verrou, un fuseau négatif ferait glisser la date locale d'un jour.
+ */
+export function splitDateFr(iso?: string | null): { jour: string; mois: string; annee: string } | null {
+  if (!iso) return null;
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    jour: DAY_FR.format(d),
+    mois: MONTH_FR.format(d).replace(".", "").toUpperCase(),
+    annee: YEAR_FR.format(d),
+  };
+}
+
+const ISO_DAY_PARIS = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Paris",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Jour civil FRANÇAIS (`Europe/Paris`) d'un instant, en `YYYY-MM-DD`. À
+ * utiliser pour ramener un timestamp Payload à une date : le picker `dayOnly`
+ * stocke minuit LOCAL de l'éditeur·rice (soit 22h/23h UTC la veille depuis la
+ * France) — un `slice(0, 10)` sur l'ISO UTC rendrait la veille. Correct dans
+ * les deux conventions rencontrées (minuit UTC du seed SQL, minuit Paris de
+ * l'admin), tant que la saisie se fait depuis la France.
+ */
+export function isoDayParis(instant: string | Date): string | null {
+  const d = instant instanceof Date ? instant : new Date(instant);
+  return Number.isNaN(d.getTime()) ? null : ISO_DAY_PARIS.format(d);
+}
+
 const PRICE_FR = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "EUR",
