@@ -58,6 +58,41 @@ export function isoDayParis(instant: string | Date): string | null {
   return Number.isNaN(d.getTime()) ? null : ISO_DAY_PARIS.format(d);
 }
 
+// `hourCycle: "h23"` fixé explicitement (pas `hour12: false`, dont le mapping
+// vers `h24` selon la locale/l'ICU ferait lire minuit comme "24" plutôt que
+// "0" — piège connu de `Intl.DateTimeFormat`).
+const HOUR_PARIS = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Paris",
+  hour: "numeric",
+  hourCycle: "h23",
+});
+
+/**
+ * Instant UTC du minuit Europe/Paris du jour `day` (`YYYY-MM-DD`) — inverse
+ * d'`isoDayParis` (jour → instant, plutôt qu'instant → jour). Sert de borne
+ * « à venir / passée » (chips admin `rencontres`) : `<jour>T00:00:00Z` serait
+ * faux la moitié de l'année — une rencontre saisie le jour même dans l'admin
+ * (minuit Paris stocké en UTC, donc 22h/23h UTC la VEILLE, cf. `isoDayParis`)
+ * tomberait « passée » dès minuit UTC au lieu de minuit heure française.
+ *
+ * Sans lib de fuseaux : essaie l'offset été (+02:00) puis hiver (+01:00) et
+ * retient celui dont l'instant obtenu retombe bien à 0h à Paris ET dont
+ * `isoDayParis` de cet instant redonne `day` (double vérification — un
+ * décalage d'offset autour du changement d'heure peut glisser sur un autre
+ * jour civil). Repli `day + "T00:00:00Z"` si aucun des deux n'aboutit
+ * (théoriquement impossible, l'écart hiver/été ne dépasse jamais 1 h).
+ */
+export function parisMidnightUtc(day: string): string {
+  for (const offset of ["+02:00", "+01:00"]) {
+    const d = new Date(`${day}T00:00:00${offset}`);
+    if (Number.isNaN(d.getTime())) continue;
+    if (Number(HOUR_PARIS.format(d)) === 0 && isoDayParis(d) === day) {
+      return d.toISOString();
+    }
+  }
+  return `${day}T00:00:00Z`;
+}
+
 const PRICE_FR = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "EUR",
