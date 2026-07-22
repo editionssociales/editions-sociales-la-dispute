@@ -11,6 +11,7 @@ import * as migration_20260717_150000_orders_status_index from './20260717_15000
 import * as migration_20260719_074211_highlight_couleur_cta from './20260719_074211_highlight_couleur_cta';
 import * as migration_20260719_105000_libelles from './20260719_105000_libelles';
 import * as migration_20260720_004500_pages_absorb_reglages_site from './20260720_004500_pages_absorb_reglages_site';
+import * as migration_20260722_223000_rencontres from './20260722_223000_rencontres';
 
 export const migrations = [
   {
@@ -77,5 +78,10 @@ export const migrations = [
     up: migration_20260720_004500_pages_absorb_reglages_site.up,
     down: migration_20260720_004500_pages_absorb_reglages_site.down,
     name: '20260720_004500_pages_absorb_reglages_site',
+  },
+  {
+    up: migration_20260722_223000_rencontres.up,
+    down: migration_20260722_223000_rencontres.down,
+    name: '20260722_223000_rencontres',
   },
 ];

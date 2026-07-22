@@ -17,6 +17,7 @@ import { ImportRuns } from './payload/collections/ImportRuns.ts'
 import { Media } from './payload/collections/Media.ts'
 import { Orders } from './payload/collections/Orders.ts'
 import { PromoCodes } from './payload/collections/PromoCodes.ts'
+import { Rencontres } from './payload/collections/Rencontres.ts'
 import { Users } from './payload/collections/Users.ts'
 import { PageAPropos } from './payload/globals/PageAPropos.ts'
 import { PageSouscription } from './payload/globals/PageSouscription.ts'
@@ -72,6 +73,7 @@ export default buildConfig({
     PromoCodes,
     ImportRuns,
     Highlight,
+    Rencontres,
     Users,
   ],
   globals: [ReglagesBoutique, PageAPropos, PageSouscription, PagesLegales],

@@ -69,12 +69,13 @@ export interface Config {
   collections: {
     books: Book;
     orders: Order;
-    media: Media;
     authors: Author;
     libelles: Libelle;
-    highlight: Highlight;
+    media: Media;
     'promo-codes': PromoCode;
     'import-runs': ImportRun;
+    highlight: Highlight;
+    rencontres: Rencontre;
     users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -85,12 +86,13 @@ export interface Config {
   collectionsSelect: {
     books: BooksSelect<false> | BooksSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
-    media: MediaSelect<false> | MediaSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     libelles: LibellesSelect<false> | LibellesSelect<true>;
-    highlight: HighlightSelect<false> | HighlightSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
     'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
     'import-runs': ImportRunsSelect<false> | ImportRunsSelect<true>;
+    highlight: HighlightSelect<false> | HighlightSelect<true>;
+    rencontres: RencontresSelect<false> | RencontresSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -103,15 +105,15 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     'reglages-boutique': ReglagesBoutique;
-    'pages-legales': PagesLegales;
     'page-a-propos': PageAPropos;
     'page-souscription': PageSouscription;
+    'pages-legales': PagesLegales;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
-    'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
     'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
     'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
+    'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
   };
   locale: null;
   widgets: {
@@ -428,6 +430,37 @@ export interface PromoCode {
   createdAt: string;
 }
 /**
+ * Historique des imports mensuels du fichier stock routeur — un document par import réussi, créé automatiquement par l'import (jamais à la main). Le dernier run alimente le panneau « Import routeur » du tableau de bord.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "import-runs".
+ */
+export interface ImportRun {
+  id: number;
+  /**
+   * Lignes exploitables du fichier routeur (EAN présent).
+   */
+  nbLignes: number;
+  /**
+   * Fiches appariées par ISBN normalisé et mises à jour.
+   */
+  nbMatchees: number;
+  /**
+   * Rapport complet du run (`StockImportReport`) — les non-appariés se téléchargent en CSV via le tableau de bord.
+   */
+  rapport?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -462,33 +495,34 @@ export interface Highlight {
   createdAt: string;
 }
 /**
- * Historique des imports mensuels du fichier stock routeur — un document par import réussi, créé automatiquement par l'import (jamais à la main). Le dernier run alimente le panneau « Import routeur » du tableau de bord.
+ * Agenda public des rencontres (page /rencontres) — une entrée par événement.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "import-runs".
+ * via the `definition` "rencontres".
  */
-export interface ImportRun {
+export interface Rencontre {
   id: number;
+  titre: string;
+  date: string;
   /**
-   * Lignes exploitables du fichier routeur (EAN présent).
+   * Texte libre, ex. « 15h-16h30 ».
    */
-  nbLignes: number;
+  heure?: string | null;
+  lieu: string;
+  ville: string;
   /**
-   * Fiches appariées par ISBN normalisé et mises à jour.
+   * Livre présenté — sa couverture sert d’image de l’événement par défaut.
    */
-  nbMatchees: number;
+  livre?: (number | null) | Book;
   /**
-   * Rapport complet du run (`StockImportReport`) — les non-appariés se téléchargent en CSV via le tableau de bord.
+   * Photo ou visuel de l’événement (facultatif) — remplace la couverture du livre si renseigné. Format libre.
    */
-  rapport?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
+  image?: (number | null) | Media;
+  /**
+   * Texte libre — ex. « Gouverner les juges, Vincent Sizaire ; avec Marie Dosé et Fabrice Arfi ».
+   */
+  intervenants?: string | null;
+  description: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -552,10 +586,6 @@ export interface PayloadLockedDocument {
         value: number | Order;
       } | null)
     | ({
-        relationTo: 'media';
-        value: number | Media;
-      } | null)
-    | ({
         relationTo: 'authors';
         value: number | Author;
       } | null)
@@ -564,8 +594,8 @@ export interface PayloadLockedDocument {
         value: number | Libelle;
       } | null)
     | ({
-        relationTo: 'highlight';
-        value: number | Highlight;
+        relationTo: 'media';
+        value: number | Media;
       } | null)
     | ({
         relationTo: 'promo-codes';
@@ -574,6 +604,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'import-runs';
         value: number | ImportRun;
+      } | null)
+    | ({
+        relationTo: 'highlight';
+        value: number | Highlight;
+      } | null)
+    | ({
+        relationTo: 'rencontres';
+        value: number | Rencontre;
       } | null)
     | ({
         relationTo: 'users';
@@ -726,25 +764,6 @@ export interface OrdersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
- */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
-  sourceUrl?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "authors_select".
  */
 export interface AuthorsSelect<T extends boolean = true> {
@@ -766,19 +785,22 @@ export interface LibellesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "highlight_select".
+ * via the `definition` "media_select".
  */
-export interface HighlightSelect<T extends boolean = true> {
-  titre?: T;
-  texte?: T;
-  couleur?: T;
-  lien?: T;
-  lienLibelle?: T;
-  dateDebut?: T;
-  dateFin?: T;
-  actif?: T;
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  sourceUrl?: T;
   updatedAt?: T;
   createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -802,6 +824,39 @@ export interface ImportRunsSelect<T extends boolean = true> {
   nbLignes?: T;
   nbMatchees?: T;
   rapport?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "highlight_select".
+ */
+export interface HighlightSelect<T extends boolean = true> {
+  titre?: T;
+  texte?: T;
+  couleur?: T;
+  lien?: T;
+  lienLibelle?: T;
+  dateDebut?: T;
+  dateFin?: T;
+  actif?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rencontres_select".
+ */
+export interface RencontresSelect<T extends boolean = true> {
+  titre?: T;
+  date?: T;
+  heure?: T;
+  lieu?: T;
+  ville?: T;
+  livre?: T;
+  image?: T;
+  intervenants?: T;
+  description?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -879,104 +934,6 @@ export interface ReglagesBoutique {
    * En dessous de ce nombre d'exemplaires (`commerce.stock` des fiches Livres), un article est signalé comme stock bas — usage réservé aux étapes ultérieures du plan (back-office, étape 10) ; ce lot ne pose que le réglage.
    */
   seuilAlerteStockBas: number;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * Pages légales, pied de page, réseaux sociaux et référencement. Un champ vide = texte actuel du site.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "pages-legales".
- */
-export interface PagesLegales {
-  id: number;
-  /**
-   * Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.
-   */
-  cgv?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site, avec ses placeholders [À COMPLÉTER…].
-   */
-  mentionsLegales?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Remplace tout le corps de la page /confidentialite (chapeau compris). Vide = texte actuel du site.
-   */
-  confidentialite?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  footer?: {
-    /**
-     * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
-     */
-    adresse?: string | null;
-    /**
-     * Vide = texte actuel.
-     */
-    texteDiffusion?: string | null;
-  };
-  /**
-   * Affichés dans le pied de page (cellule « Suivez-nous »). Aucun lien = pied de page inchangé.
-   */
-  reseauxSociaux?:
-    | {
-        label: string;
-        /**
-         * URL complète (https://…).
-         */
-        url: string;
-        id?: string | null;
-      }[]
-    | null;
-  seo?: {
-    /**
-     * Titre de la page d’accueil et suffixe des titres de pages (« Page — Titre »). Vide = titre actuel.
-     */
-    titreParDefaut?: string | null;
-    /**
-     * Méta-description par défaut du site. Vide = description actuelle.
-     */
-    descriptionParDefaut?: string | null;
-  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1128,42 +1085,109 @@ export interface PageSouscription {
   createdAt?: string | null;
 }
 /**
+ * Pages légales, pied de page, réseaux sociaux et référencement. Un champ vide = texte actuel du site.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages-legales".
+ */
+export interface PagesLegales {
+  id: number;
+  /**
+   * Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.
+   */
+  cgv?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site, avec ses placeholders [À COMPLÉTER…].
+   */
+  mentionsLegales?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Remplace tout le corps de la page /confidentialite (chapeau compris). Vide = texte actuel du site.
+   */
+  confidentialite?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  footer?: {
+    /**
+     * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
+     */
+    adresse?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    texteDiffusion?: string | null;
+  };
+  /**
+   * Affichés dans le pied de page (cellule « Suivez-nous »). Aucun lien = pied de page inchangé.
+   */
+  reseauxSociaux?:
+    | {
+        label: string;
+        /**
+         * URL complète (https://…).
+         */
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  seo?: {
+    /**
+     * Titre de la page d’accueil et suffixe des titres de pages (« Page — Titre »). Vide = titre actuel.
+     */
+    titreParDefaut?: string | null;
+    /**
+     * Méta-description par défaut du site. Vide = description actuelle.
+     */
+    descriptionParDefaut?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique_select".
  */
 export interface ReglagesBoutiqueSelect<T extends boolean = true> {
   seuilAlerteStockBas?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "pages-legales_select".
- */
-export interface PagesLegalesSelect<T extends boolean = true> {
-  cgv?: T;
-  mentionsLegales?: T;
-  confidentialite?: T;
-  footer?:
-    | T
-    | {
-        adresse?: T;
-        texteDiffusion?: T;
-      };
-  reseauxSociaux?:
-    | T
-    | {
-        label?: T;
-        url?: T;
-        id?: T;
-      };
-  seo?:
-    | T
-    | {
-        titreParDefaut?: T;
-        descriptionParDefaut?: T;
-      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
@@ -1251,6 +1275,37 @@ export interface PageSouscriptionSelect<T extends boolean = true> {
         question?: T;
         reponse?: T;
         id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages-legales_select".
+ */
+export interface PagesLegalesSelect<T extends boolean = true> {
+  cgv?: T;
+  mentionsLegales?: T;
+  confidentialite?: T;
+  footer?:
+    | T
+    | {
+        adresse?: T;
+        texteDiffusion?: T;
+      };
+  reseauxSociaux?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  seo?:
+    | T
+    | {
+        titreParDefaut?: T;
+        descriptionParDefaut?: T;
       };
   updatedAt?: T;
   createdAt?: T;

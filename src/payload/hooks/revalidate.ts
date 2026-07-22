@@ -111,6 +111,17 @@ export const revalidateHomeAfterDelete: CollectionAfterDeleteHook = ({ req }) =>
   revalidateHome()
 }
 
+/** Hooks `rencontres` (agenda) : seule `/rencontres` lit cette collection. */
+export const revalidateRencontresAfterChange: CollectionAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidatePath('/rencontres')
+}
+
+export const revalidateRencontresAfterDelete: CollectionAfterDeleteHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidatePath('/rencontres')
+}
+
 /*
  * Hooks des globals « Contenus du site » (spec « éditeur de contenus ») :
  * chaque global ne nourrit que des chemins littéraux connus d'avance — on
