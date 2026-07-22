@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { FramedGrid } from "./framed-grid";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
@@ -21,11 +20,13 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * Ex. : 9 titres → aire 3 → 3×1 ; 14 → aire 4 → 2×2 ; 38 → aire 6 → 3×2 ;
  * 93 → aire 10 → 5×2 ; 295 → aire 17 (premier) → bande 17×1.
  *
- * Grille : le JIT ne compilant pas de classes dynamiques, les spans passent
- * par des maps littérales (bornées à 20 colonnes / 6 lignes) et le nombre de
- * colonnes lg — la plus grande largeur requise par les items — s'injecte via
- * la variable CSS `--mosaic-cols` (valeur inline, classe littérale). En
- * mobile : une colonne, chaque libellé est une bande pleine largeur.
+ * Grille : taille CHOISIE D'AVANCE — 10 colonnes en lg (unité ≈ 110 px dans
+ * le conteneur max-w-6xl : les petites cellules restent lisibles), plutôt
+ * qu'une grille dérivée du plus gros item qui écrasait l'unité. Les largeurs
+ * qui débordent sont plafonnées à la pleine largeur (aujourd'hui : seule
+ * « Tous les livres », aire 17, première → bande pleine largeur). Spans en
+ * maps littérales (JIT). En mobile : une colonne, chaque libellé est une
+ * bande pleine largeur.
  */
 
 /** Aire d'une cellule en unités de grille : arrondi de √(nb de titres). */
@@ -56,18 +57,9 @@ const COL_SPAN: Record<number, string> = {
   8: "lg:col-span-8",
   9: "lg:col-span-9",
   10: "lg:col-span-10",
-  11: "lg:col-span-11",
-  12: "lg:col-span-12",
-  13: "lg:col-span-[13]",
-  14: "lg:col-span-[14]",
-  15: "lg:col-span-[15]",
-  16: "lg:col-span-[16]",
-  17: "lg:col-span-[17]",
-  18: "lg:col-span-[18]",
-  19: "lg:col-span-[19]",
-  20: "lg:col-span-[20]",
 };
-const MAX_COLS = 20;
+/** Largeur de la grille lg, fixée d'avance (cf. docstring). */
+const MAX_COLS = 10;
 const ROW_SPAN: Record<number, string> = {
   1: "lg:row-span-1",
   2: "lg:row-span-2",
@@ -85,11 +77,10 @@ function spanFor(count: number) {
   return {
     cols,
     className: `${COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
-    // Le grand corps est réservé aux blocs à la fois hauts ET larges — dans
-    // une cellule étroite (≤ 2 colonnes d'une grille fine), un libellé long
-    // en grand corps déborde et se fait tronquer par l'overflow-hidden.
+    // Grand corps dans les blocs multi-lignes (l'unité de la grille 10 col
+    // est assez large), petit corps dans les bandes d'une ligne.
     textClass:
-      rows >= 2 && cols >= 3
+      rows >= 2
         ? "text-[clamp(13px,1.4vw,18px)]"
         : "text-[clamp(11px,1.1vw,14px)]",
   };
@@ -152,13 +143,11 @@ export function LibelleMosaic({
   className?: string;
 }) {
   const spans = items.map((item) => spanFor(item.count));
-  const gridCols = Math.max(...spans.map((s) => s.cols), 1);
   return (
     <FramedGrid
       as="nav"
       aria-label={ariaLabel}
-      style={{ "--mosaic-cols": String(gridCols) } as CSSProperties}
-      className={`grid-flow-row-dense auto-rows-[clamp(44px,4.5vw,60px)] grid-cols-1 lg:grid-cols-[repeat(var(--mosaic-cols),minmax(0,1fr))] ${className}`}
+      className={`grid-flow-row-dense auto-rows-[clamp(44px,4.5vw,60px)] grid-cols-1 lg:grid-cols-10 ${className}`}
     >
       {items.map((item, i) => {
         const span = spans[i];
