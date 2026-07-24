@@ -22,7 +22,7 @@ données ni le routage.
 
 ## Ubiquitous Language
 
-- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid` (grille), `Button` (CTA), `PageHero` (en-têtes page, titre + chapeau seuls), `LibelleMosaic` (l'UNIQUE rendu des libellés pour /catalogue ET /catalogue/[edition], ne jamais la re-inliner — deux vues derrière le switch client temporaire `libelle-view-switch` en attendant l'arbitrage client : rectangles simples alphabétiques / étages « cases variables » triés par taille, épaisseur ∝ 1/rang plancher 44px).
+- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid` (grille), `Button` (CTA), `PageHero` (en-têtes page, titre + chapeau seuls), `LibelleMosaic` (l'UNIQUE rendu des libellés pour /catalogue ET /catalogue/[edition], ne jamais la re-inliner — deux vues derrière le switch client temporaire `libelle-view-switch` en attendant l'arbitrage client : rectangles simples alphabétiques / étages « cases variables » triés par taille, corps décroissant par rang jusqu'à peine lisible, épaisseur pilotée par le texte, compte en coin — cibles < 44px assumées sur les étages profonds, entorse R7 actée client 24/07).
 
 ## Decisions
 
