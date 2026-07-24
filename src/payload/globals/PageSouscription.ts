@@ -20,7 +20,7 @@ import { revalidateSouscriptionAfterChange } from '../hooks/revalidate.ts'
  */
 
 const CONTREPARTIE_OPTIONS = DONATION_TIERS.map((tier) => ({
-  label: `${tier.amount} € — ${tier.title}`,
+  label: `${tier.amount.toLocaleString("fr-FR")} € — ${tier.title}`,
   value: tier.id,
 }))
 

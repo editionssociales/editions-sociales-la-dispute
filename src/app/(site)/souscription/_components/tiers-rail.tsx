@@ -329,7 +329,7 @@ export function TiersRail({
                     Montant libre
                   </span>{" "}
                   <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                    Contribuez à la hauteur de votre choix
+                    Contribuez à hauteur de votre choix
                   </span>
                 </h3>
                 <FreeAmountForm enabled={enabled} />
