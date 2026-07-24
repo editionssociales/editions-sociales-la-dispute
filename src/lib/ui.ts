@@ -29,6 +29,10 @@ export const FOCUS_RING_LIGHT_OUTER =
 export const FOCUS_RING_DARK =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
 
+/** Variante extérieure (décollée de 2px) du même anneau sombre. */
+export const FOCUS_RING_DARK_OUTER =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow";
+
 /**
  * Cellule inversante : fond clair au repos, inversion en ink à l'état actif —
  * et au survol quand elle est inactive. Recette partagée par les étiquettes de

@@ -32,6 +32,11 @@ type CoverLike = Pick<Cover, "width" | "height"> | null | undefined;
 const FALLBACK_W = 400;
 const FALLBACK_H = 600;
 
+export function coverAspectRatio(cover: CoverLike): string {
+  if (!cover || cover.width <= 0 || cover.height <= 0) return "2 / 3";
+  return `${cover.width} / ${cover.height}`;
+}
+
 /**
  * Plafond des dimensions passées à `next/image` : au-delà, le srcset généré
  * monte jusqu'à 2048/3840w alors que les couvertures s'affichent à ≤ ~400px
