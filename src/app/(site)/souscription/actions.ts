@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getStripe } from "@/lib/stripe";
@@ -21,6 +22,10 @@ export async function createDonationCheckout(formData: FormData) {
   });
 
   if ("error" in parsed) {
+    // Capturé en warning (même pattern que le webhook) : un flux de refus à
+    // 100 % le jour du lancement doit se voir dans le monitoring — l'erreur
+    // étant absorbée ici, `onRequestError` (instrumentation) ne la voit jamais.
+    Sentry.captureMessage(`Don refusé : ${parsed.error}`, { level: "warning" });
     // `?raison=montant` : la page d'erreur distingue un montant refusé par la
     // validation (bornes rappelées) d'un échec technique Stripe — ne concerne
     // que no-JS/POST directs, la validation native min/max couvre l'UI.
@@ -74,11 +79,18 @@ export async function createDonationCheckout(formData: FormData) {
       cancel_url: `${origin}/souscription#paliers`,
     });
     url = session.url;
-  } catch {
+  } catch (err) {
+    // Sans capture, un échec Stripe (clé mal posée, capability manquante,
+    // panne API) serait invisible du monitoring — même traitement que
+    // /api/checkout (route jumelle).
+    Sentry.captureException(err);
     redirect("/souscription/erreur");
   }
 
   // redirect() jette NEXT_REDIRECT : à garder hors du try/catch Stripe
-  // ci-dessus (sans quoi le catch l'avalerait).
-  redirect(url!);
+  // ci-dessus (sans quoi le catch l'avalerait). `session.url` est typée
+  // `string | null` : une session sans URL part vers le parcours d'erreur
+  // prévu, jamais vers l'invariant error de redirect(null).
+  if (!url) redirect("/souscription/erreur");
+  redirect(url);
 }

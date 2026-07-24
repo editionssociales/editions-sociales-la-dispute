@@ -83,16 +83,18 @@ export async function POST(req: Request): Promise<Response> {
     lines: encodeCheckoutLines(validation.lines),
   };
 
+  // Hissés hors du try : le catch doit pouvoir supprimer (best-effort) un
+  // coupon créé avant l'échec de la session — sinon il resterait orphelin
+  // dans le Dashboard Stripe.
+  const stripe = getStripe();
+  let couponId: string | undefined;
   try {
-    const stripe = getStripe();
-
     // Remise = un coupon Stripe créé à la volée (montant fixe, jamais un %) —
     // seul mécanisme Checkout pour une remise en euros arbitraire sur le
     // total de la session (plan §4 étape 8, point ouvert « création du
     // discount Stripe » tranché ainsi). Absent si aucune remise (livraison
     // offerte seule n'a pas besoin de coupon : elle se lit déjà dans le prix
     // de la ligne de port, à 0).
-    let couponId: string | undefined;
     if (totals.discountCents > 0) {
       const coupon = await stripe.coupons.create({
         amount_off: totals.discountCents,
@@ -147,6 +149,9 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ url: session.url });
   } catch (err) {
     Sentry.captureException(err);
+    // Best-effort : ne jamais laisser un coupon orphelin (l'échec de la
+    // suppression n'a pas à masquer l'erreur d'origine).
+    if (couponId) await stripe.coupons.del(couponId).catch(() => {});
     return Response.json({ error: "Le paiement est momentanément indisponible. Réessayez dans un instant." }, { status: 502 });
   }
 }

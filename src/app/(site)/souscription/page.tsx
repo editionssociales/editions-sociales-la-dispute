@@ -16,7 +16,13 @@ import { formatInt } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG } from "@/lib/accents";
 import { FOCUS_RING_DARK, FOCUS_RING_DARK_OUTER, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
-import { FREE_AMOUNT, deriveCampaign2026 } from "@/lib/donation-tiers";
+import {
+  CAMPAIGN_2026_PALIERS,
+  type DonationTierId,
+  FREE_AMOUNT,
+  deriveCampaign2026,
+} from "@/lib/donation-tiers";
+import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
 import { getPageSouscription } from "@/lib/site-content";
@@ -87,10 +93,22 @@ const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
 const OPENING_MICROCOPY = "Ouverture le 15 août";
 
 /**
+ * Recette du CTA de soumission (solid ink sur fond paper) — partagée par le
+ * formulaire montant libre et les cartes de paliers, même esprit qu'`INVERT`
+ * (`button.tsx`) : les CTA en `<form action>` ne recopient jamais la recette
+ * à la main. Le padding/marge propres à chaque emplacement restent chez
+ * l'appelant.
+ */
+const SUBMIT_CTA = `min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`;
+
+/**
  * Vidéo de présentation — ouvre le corps de texte (retour client
- * 2026-07-24). Aucune vidéo livrée à ce jour : renseigner ici l'URL d'embed
- * à réception ; en attendant, un placeholder au format vidéo tient la place
- * (jamais un vide).
+ * 2026-07-24). Aucune vidéo livrée à ce jour : renseigner ici l'URL YouTube
+ * brute à réception (watch, youtu.be, shorts ou déjà embed —
+ * `youTubeEmbedUrl` la normalise en youtube-nocookie, règle single-source de
+ * `src/lib/video.ts` ; si la vidéo n'est pas YouTube, étendre `video.ts`
+ * plutôt que d'inliner). En attendant, un placeholder au format vidéo tient
+ * la place (jamais un vide).
  */
 const CAMPAIGN_VIDEO_URL: string | null = null;
 
@@ -102,7 +120,7 @@ const CAMPAIGN_VIDEO_URL: string | null = null;
  * présente dans tous les montages) est un rectangle crème VIDE — la planche
  * n'est pas encore dessinée ; visuels à re-livrer par Clara.
  */
-const TIER_IMAGES: Record<string, StaticImageData> = {
+const TIER_IMAGES: Record<DonationTierId, StaticImageData> = {
   // Les deux premiers visuels sont recadrés à la source (trim sharp des
   // marges blanches du montage, l'ombre portée fait partie du cadrage) :
   // ils s'affichent en variante compacte, cf. `COMPACT_TIERS`.
@@ -123,44 +141,49 @@ const TIER_IMAGES: Record<string, StaticImageData> = {
  * l'illustration, réduite, vient se loger à droite du montant/intitulé pour
  * combler le vide, au lieu d'un bandeau pleine largeur.
  */
-const COMPACT_TIERS = new Set(["palier-15", "palier-35"]);
+const COMPACT_TIERS: ReadonlySet<string> = new Set<DonationTierId>(["palier-15", "palier-35"]);
 
 /**
- * Objectifs de la jauge (docx client, définitifs) — cellules encadrées après
- * le récit. La progression sauver → résister → construire est portée par la
- * barre d'accent (brick → ocher → bottle, même échelle que les sections du
- * récit) ; la cellule du sommet (« On construit », l'objectif plein) est la
- * seule inversée en ink.
+ * Vue de `TIER_IMAGES` indexable par chaîne (les ids venus du CMS sont des
+ * `string`) — fail-open conservé : un palier ajouté à `DONATION_TIERS` sans
+ * visuel rend une carte sans image, jamais un crash ; les typos de clés,
+ * elles, sont désormais bloquées à la compilation par `DonationTierId`.
  */
-const OBJECTIFS: {
-  montant: string;
-  titre: string;
-  desc: string;
-  accent: string;
-  sommet?: boolean;
-}[] = [
-  {
-    montant: "50 000 €",
-    titre: "On sauve les meubles",
+const TIER_IMAGE_LOOKUP: Partial<Record<string, StaticImageData>> = TIER_IMAGES;
+
+/**
+ * Objectifs de la jauge — cellules encadrées après le récit. Montants et
+ * titres dérivés de `CAMPAIGN_2026_PALIERS` (la table qui pilote la jauge —
+ * une révision client d'un palier ne se reporte qu'à un seul endroit) ;
+ * seuls les descriptifs (docx client, VERBATIM) et la présentation vivent
+ * ici. La progression sauver → résister → construire est portée par la barre
+ * d'accent (brick → ocher → bottle, même échelle que les sections du récit) ;
+ * la cellule du sommet (« On construit », l'objectif plein) est la seule
+ * inversée en ink.
+ */
+const OBJECTIF_EXTRAS: Record<number, { desc: string; accent: string; sommet?: boolean }> = {
+  50_000: {
     desc: "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
     accent: "bg-brick",
   },
-  {
-    montant: "80 000 €",
-    titre: "On résiste",
-    desc: "Nous pouvons absorber l'essentiel de la perte, mener à bien les projets déjà engagés et confirmer l'arrivée de Nicolas Vieillescazes dans l'équipe.",
+  80_000: {
+    desc: "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
     accent: "bg-ocher",
   },
-  {
-    montant: "100 000 €",
-    titre: "On construit",
+  100_000: {
     // TODO(contenu) : phrase possiblement tronquée dans le docx (le point
     // final manque) — conservée telle quelle.
     desc: "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
     accent: "bg-bottle",
     sommet: true,
   },
-];
+};
+
+const OBJECTIFS = CAMPAIGN_2026_PALIERS.map((p) => ({
+  value: p.value,
+  titre: p.label,
+  ...OBJECTIF_EXTRAS[p.value],
+}));
 
 // Étagère de l'ask : dimensions en pixels des dos de livres dessinés.
 const SPINES: { h: number; w: number }[] = [
@@ -271,7 +294,7 @@ function FreeAmountForm({ enabled }: { enabled: boolean }) {
         tone="dark"
         pendingLabel="Redirection…"
         ariaLabel="Contribuer — montant libre"
-        className={`min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
+        className={SUBMIT_CTA}
       >
         Contribuer
       </SubmitButton>
@@ -302,7 +325,9 @@ function HeroShelf({ books }: { books: Book[] }) {
       <div className="flex items-end gap-1.5">
         {SPINES.map((s, i) => {
           const book = books[i];
-          if (!book?.cover) {
+          // Garde locale (pas seulement le filtre de l'appelant) : cover ET
+          // edition requis pour un dos cliquable — sinon dos placeholder.
+          if (!book?.cover || !book.edition) {
             return (
               <div
                 key={i}
@@ -318,7 +343,7 @@ function HeroShelf({ books }: { books: Book[] }) {
             // déborderait de 20-36px ; ocher INTÉRIEUR contraste sur la
             // couverture sans jamais dépasser du dos (choix de cadrage d'origine).
             <Link
-              key={i}
+              key={book.id}
               href={`/catalogue/${book.edition}/${book.slug}`}
               className={`book3d${i < 2 ? " book3d--edge" : ""} relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] focus-visible:z-30 focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-[-3px]`}
               style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
@@ -389,7 +414,10 @@ function HeroShelf({ books }: { books: Book[] }) {
  * cellule forcée.
  */
 function MobileShelf({ books }: { books: Book[] }) {
-  const items = books.slice(0, MOBILE_SHELF_COUNT);
+  // Même invariant que HeroShelf : couverture + fiche interne requises.
+  const items = books
+    .filter((b) => b.cover && b.edition)
+    .slice(0, MOBILE_SHELF_COUNT);
   if (items.length === 0) return null;
   return (
     <div
@@ -446,6 +474,9 @@ export default async function SouscriptionPage() {
   // lancement (0 collecté), la jauge affiche honnêtement une campagne à 0
   // plutôt que de disparaître.
   const liveCampaign = campaign2026 ?? deriveCampaign2026({ collected: 0, contributors: 0 });
+  // Embed dérivé de l'URL brute (null si absente OU non reconnue) : jamais
+  // une iframe cassée en prod le jour où l'URL sera collée.
+  const videoEmbed = CAMPAIGN_VIDEO_URL ? youTubeEmbedUrl(CAMPAIGN_VIDEO_URL) : null;
   // Panne Stripe EN campagne (clé posée mais relecture des charges en échec,
   // `getCampaign2026` → null) : ne jamais afficher un faux 0 — le compteur
   // laisse place à une mention neutre et la barre n'est pas rendue
@@ -556,10 +587,10 @@ export default async function SouscriptionPage() {
                   qu'aucune vidéo n'est livrée, un placeholder au même format
                   tient la place (le bloc ne disparaît jamais). */}
               <Reveal>
-                {CAMPAIGN_VIDEO_URL ? (
+                {videoEmbed ? (
                   <div className="border-2 border-ink bg-ink">
                     <iframe
-                      src={CAMPAIGN_VIDEO_URL}
+                      src={videoEmbed}
                       title="La vidéo de la souscription"
                       className="aspect-video w-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -802,7 +833,7 @@ export default async function SouscriptionPage() {
                       <div aria-hidden="true" className={`h-2 ${o.accent}`} />
                       <div className="flex flex-1 flex-col gap-2 p-6">
                         <span className="font-sans text-3xl font-black italic">
-                          {o.montant}
+                          {formatInt(o.value)}&nbsp;€
                         </span>{" "}
                         <span className="font-sans text-base font-extrabold uppercase tracking-[.02em]">
                           {o.titre}
@@ -880,8 +911,20 @@ export default async function SouscriptionPage() {
                   const accentBg = BG[ACCENTS[i % 4]];
                   // Un palier ajouté à DONATION_TIERS sans visuel dans
                   // TIER_IMAGES rend une carte sans image, jamais un crash.
-                  const img = TIER_IMAGES[p.tier.id];
+                  const img = TIER_IMAGE_LOOKUP[p.tier.id];
                   const compact = COMPACT_TIERS.has(p.tier.id);
+                  // Même <h3> dans les deux variantes de carte (seule
+                  // l'enveloppe flex diffère) : hissé hors du ternaire.
+                  const heading = (
+                    <h3>
+                      <span className="block font-sans text-4xl font-black italic text-ink">
+                        {formatInt(p.tier.amount)}&nbsp;€
+                      </span>{" "}
+                      <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
+                        {p.tier.title}
+                      </span>
+                    </h3>
+                  );
                   return (
                     <Reveal key={p.tier.id} className="h-full">
                       <div className="relative flex h-full flex-col bg-paper">
@@ -905,14 +948,7 @@ export default async function SouscriptionPage() {
                                loge à droite du montant/intitulé (léger débord
                                vers le cadre, `-mr-2`), pas de bandeau. */
                             <div className="flex items-center justify-between gap-3">
-                              <h3>
-                                <span className="block font-sans text-4xl font-black italic text-ink">
-                                  {formatInt(p.tier.amount)}&nbsp;€
-                                </span>{" "}
-                                <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                                  {p.tier.title}
-                                </span>
-                              </h3>
+                              {heading}
                               {img && (
                                 <Image
                                   src={img}
@@ -924,14 +960,7 @@ export default async function SouscriptionPage() {
                               )}
                             </div>
                           ) : (
-                            <h3>
-                              <span className="block font-sans text-4xl font-black italic text-ink">
-                                {formatInt(p.tier.amount)}&nbsp;€
-                              </span>{" "}
-                              <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                                {p.tier.title}
-                              </span>
-                            </h3>
+                            heading
                           )}
                           {/* Lot en bandes pleine largeur (maquette PDF client) :
                               cadre ink 2px, une bande par ligne, séparateurs
@@ -942,7 +971,10 @@ export default async function SouscriptionPage() {
                               entre les deux lignes — un choix, pas un ajout. */}
                           <ul role="list" className="mt-4 flex-1 self-start w-full border-2 border-ink">
                             {p.items.map((item, j) => (
-                              <li key={item.texte}>
+                              // Index en clé : deux lignes au texte identique
+                              // sont saisissables dans /admin, et la liste
+                              // serveur n'est jamais réordonnée.
+                              <li key={j}>
                                 {j > 0 &&
                                   (item.alternative ? (
                                     <p className="-my-1.5 text-center font-sans text-sm font-medium italic leading-none text-ink">
@@ -971,7 +1003,7 @@ export default async function SouscriptionPage() {
                                 tone="dark"
                                 pendingLabel="Redirection…"
                                 ariaLabel={`Contribuer ${formatInt(p.tier.amount)} € — ${p.tier.title}`}
-                                className={`mt-3 min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
+                                className={`mt-3 ${SUBMIT_CTA}`}
                               >
                                 Contribuer
                               </SubmitButton>

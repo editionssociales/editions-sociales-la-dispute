@@ -34,7 +34,7 @@ export interface DonationTier {
  * dans le type pour la mécanique Stripe (`shipping_address_collection`),
  * mais vaut désormais `true` sur toute la table.
  */
-export const DONATION_TIERS: DonationTier[] = [
+export const DONATION_TIERS = [
   { id: "palier-15", amount: 15, title: "Coup de pouce", physical: true },
   { id: "palier-35", amount: 35, title: "Coup de main", physical: true },
   { id: "palier-50", amount: 50, title: "Camarade de lecture", physical: true },
@@ -44,7 +44,15 @@ export const DONATION_TIERS: DonationTier[] = [
   { id: "palier-300", amount: 300, title: "Camarade infatigable", physical: true },
   { id: "palier-500", amount: 500, title: "Camarade d'honneur", physical: true },
   { id: "palier-1000", amount: 1000, title: "Camarade pour la vie", physical: true },
-];
+] as const satisfies readonly DonationTier[];
+
+/**
+ * Union littérale des ids de paliers — permet aux tables keyées par palier
+ * (visuels, variantes de carte) d'être vérifiées en exhaustivité et en
+ * orthographe par le compilateur, au lieu d'un `Record<string, …>` où une
+ * typo ferait silencieusement disparaître un visuel.
+ */
+export type DonationTierId = (typeof DONATION_TIERS)[number]["id"];
 
 /** Bornes du montant libre (€) — anti card-testing / anti-fat-finger. */
 export const FREE_AMOUNT = { min: 5, max: 10_000 };
