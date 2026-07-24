@@ -14,13 +14,14 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * - « Rectangles simples » (défaut) : étiquettes uniformes dans l'ordre de
  *   `getFacets` (alphabétique), la recette `Tag` historique des filtres.
  * - « Cases variables » (spéc. Youri 2026-07-24, remplace la 1re version aux
- *   trous noirs) : ÉTAGES de cases d'épaisseur uniforme par étage, items
- *   triés par nombre de titres DÉCROISSANT (copie locale — l'ordre des
- *   facettes reste alphabétique en amont). L'étage i héberge i cases
- *   (1, 2, 3…), le dernier prend le reliquat (cases à parts égales) ;
- *   épaisseur et corps inversement proportionnels au rang de l'étage
- *   (`TIER_K / i`), plancher 44px (cible tactile R7) — les étages profonds
- *   se valent donc en hauteur, seule la typo continue de décroître.
+ *   trous noirs ; finitions du même jour) : ÉTAGES de cases d'épaisseur
+ *   uniforme par étage, items triés par nombre de titres DÉCROISSANT (copie
+ *   locale — l'ordre des facettes reste alphabétique en amont). L'étage i
+ *   héberge i cases (1, 2, 3…), le dernier prend le reliquat (cases à parts
+ *   égales) ; l'épaisseur n'est plus imposée : elle suit le corps du texte
+ *   (décroissant par rang, à peine lisible en bas — cf. `tierMetrics`),
+ *   « Tous les livres » reste donc une case fine à grand corps, et le compte
+ *   vit en coin bas-droit à corps fixe.
  *
  * Dans les deux vues, cellule active inversée noir/blanc (`invertingCell`).
  */
@@ -70,27 +71,30 @@ function tierRows<T>(items: T[]): T[][] {
   return rows;
 }
 
-/** Épaisseur de référence de l'étage 1 (px) — les suivants font TIER_K/i. */
-const TIER_K = 144;
-/** Plancher d'épaisseur : cible tactile R7 (44px ≈ min-h-11). */
-const TIER_MIN_H = 44;
-
 /**
  * Métriques d'un étage — calées sur son RANG (pas sur son nombre réel de
  * cases : un dernier étage incomplet resterait sinon plus épais que
- * l'avant-dernier). Corps 12 + 24/i : 36 → 24 → 20 → 18 → 17 → 16…, jamais
- * sous 12 ; corps mobile réduit (les mêmes étages tiennent sur 5-6 cases).
+ * l'avant-dernier). Finitions client 24/07 : plus AUCUNE épaisseur imposée —
+ * la hauteur d'une case = son corps + le padding uniforme (py-2), donc
+ * « Tous les livres » (36px) reste une case FINE malgré son grand corps, et
+ * les étages profonds descendent à peine lisible (corps 6 + 30/i :
+ * 36 → 21 → 16 → 14 → 12 → 11, plancher 10 ; mobile ×0,62, plancher 9).
+ * Les cases restent des cibles < 44px sur les étages profonds : entorse à
+ * R7 assumée par le client (densité voulue de la vue).
  */
 function tierMetrics(rank: number) {
-  const fontLg = Math.round(12 + 24 / rank);
+  const fontLg = Math.max(10, Math.round(6 + 30 / rank));
   return {
-    minH: Math.max(TIER_MIN_H, Math.round(TIER_K / rank)),
     fontLg,
-    fontSm: Math.max(11, Math.round(fontLg * 0.62)),
+    fontSm: Math.max(9, Math.round(fontLg * 0.62)),
   };
 }
 
-/** Case d'un étage — corps/épaisseur hérités de l'étage via variables CSS. */
+/**
+ * Case d'un étage — corps hérité de l'étage via variables CSS. Le compte de
+ * titres vit en COIN bas-droit, en absolu et à corps fixe : dans le flux du
+ * libellé, il décalait le centrage d'une case à l'autre.
+ */
 function TierCell({
   href,
   active,
@@ -106,13 +110,16 @@ function TierCell({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`flex min-h-[var(--h)] min-w-0 flex-1 items-center justify-center gap-x-2 px-3 py-2 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
+      className={`relative flex min-w-0 flex-1 items-center justify-center px-3 py-2 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
     >
       <span className="font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.05] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs)]">
         {label}
       </span>
-      <span className="whitespace-nowrap font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[12px]">
-        {count}
+      <span
+        aria-hidden="true"
+        className="absolute bottom-0.5 right-1.5 whitespace-nowrap font-sans text-[9px] font-bold opacity-60"
+      >
+        ({count})
       </span>
     </Link>
   );
@@ -170,7 +177,6 @@ export function LibelleMosaic({
                 className="flex gap-[2px]"
                 style={
                   {
-                    "--h": `${m.minH}px`,
                     "--fs": `${m.fontLg}px`,
                     "--fs-sm": `${m.fontSm}px`,
                   } as CSSProperties
