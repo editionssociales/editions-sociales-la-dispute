@@ -565,6 +565,10 @@ export interface Rencontre {
    */
   image?: (number | null) | Media;
   /**
+   * Coché : l’événement s’affiche en grande carte pleine largeur en tête de l’agenda (ex. braderie). Décoché : carte standard dans la grille 2-3 colonnes.
+   */
+  pleinCadre?: boolean | null;
+  /**
    * Texte libre — ex. « Gouverner les juges, Vincent Sizaire ; avec Marie Dosé et Fabrice Arfi ».
    */
   intervenants?: string | null;
@@ -912,6 +916,7 @@ export interface RencontresSelect<T extends boolean = true> {
   ville?: T;
   livre?: T;
   image?: T;
+  pleinCadre?: T;
   intervenants?: T;
   description?: T;
   updatedAt?: T;

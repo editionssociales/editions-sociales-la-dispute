@@ -13,6 +13,7 @@ import * as migration_20260719_105000_libelles from './20260719_105000_libelles'
 import * as migration_20260720_004500_pages_absorb_reglages_site from './20260720_004500_pages_absorb_reglages_site';
 import * as migration_20260722_223000_rencontres from './20260722_223000_rencontres';
 import * as migration_20260724_120000_fiche_presse_video_tdm from './20260724_120000_fiche_presse_video_tdm';
+import * as migration_20260724_121000_rencontres_plein_cadre from './20260724_121000_rencontres_plein_cadre';
 
 export const migrations = [
   {
@@ -89,5 +90,10 @@ export const migrations = [
     up: migration_20260724_120000_fiche_presse_video_tdm.up,
     down: migration_20260724_120000_fiche_presse_video_tdm.down,
     name: '20260724_120000_fiche_presse_video_tdm',
+  },
+  {
+    up: migration_20260724_121000_rencontres_plein_cadre.up,
+    down: migration_20260724_121000_rencontres_plein_cadre.down,
+    name: '20260724_121000_rencontres_plein_cadre',
   },
 ];

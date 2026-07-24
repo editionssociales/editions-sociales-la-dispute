@@ -83,13 +83,31 @@ export default async function RencontresPage() {
             </h2>
           </Reveal>
 
+          {/* Retour client 2026-07-23 : seuls les événements « grande
+              affiche » (`pleinCadre`, ex. braderie) gardent la carte héros
+              pleine largeur, en tête ; les autres s'affichent en grille 2-3
+              colonnes au même format que les rencontres passées (cadre
+              pointillé conservé — c'est lui qui distingue l'à-venir). */}
           {hasAVenir ? (
             <div className="mt-14 flex flex-col gap-10">
-              {aVenir.map((r, i) => (
-                <Reveal key={r.id} delay={i * 100}>
-                  <HeroCard rencontre={r} />
-                </Reveal>
-              ))}
+              {aVenir
+                .filter((r) => r.pleinCadre)
+                .map((r, i) => (
+                  <Reveal key={r.id} delay={i * 100}>
+                    <HeroCard rencontre={r} />
+                  </Reveal>
+                ))}
+              {aVenir.some((r) => !r.pleinCadre) && (
+                <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-3">
+                  {aVenir
+                    .filter((r) => !r.pleinCadre)
+                    .map((r, i) => (
+                      <Reveal key={r.id} delay={i * 80}>
+                        <PastCard rencontre={r} dashed />
+                      </Reveal>
+                    ))}
+                </div>
+              )}
             </div>
           ) : (
             <Reveal delay={80}>
@@ -344,21 +362,24 @@ function HeroCard({ rencontre }: { rencontre: Rencontre }) {
 }
 
 /**
- * Carte passée — grille `md:grid-cols-2` de l'appelant, carte TOUJOURS
- * verticale (zone visuelle en haut, corps en bas, à tout breakpoint — seule
- * la grille qui les contient devient 2 colonnes dès `md:`). Cadre PLEIN
- * (`border-ink`, pas pointillé) : distingue visuellement l'acquis du à-venir.
+ * Carte de grille — verticale (zone visuelle en haut, corps en bas, à tout
+ * breakpoint — seule la grille qui la contient devient 2-3 colonnes dès
+ * `md:`). Historiquement réservée aux rencontres passées ; depuis le retour
+ * client 2026-07-23 elle sert aussi aux à-venir sans « grande affiche » —
+ * `dashed` garde alors la sémantique de cadre du site : pointillé = à venir,
+ * PLEIN = acquis.
  */
-function PastCard({ rencontre }: { rencontre: Rencontre }) {
+function PastCard({ rencontre, dashed = false }: { rencontre: Rencontre; dashed?: boolean }) {
   const { titre, heure, date, lieu, ville, intervenants, description, livre } = rencontre;
+  const frame = dashed ? "border-dashed" : "";
   const visual = renderVisualZone(rencontre, {
-    zoneClassName: "h-[300px] border-b-2 border-ink",
+    zoneClassName: `h-[300px] border-b-2 border-ink ${frame}`,
     coverHeightClassName: "h-[260px]",
     imageSizes: "(min-width: 768px) 50vw, 100vw",
   });
 
   return (
-    <article className="relative flex flex-col border-2 border-ink bg-paper">
+    <article className={`relative flex flex-col border-2 border-ink bg-paper ${frame}`}>
       <DatePlaque date={date} heure={heure} small />
       {visual}
       <div className={`flex flex-1 flex-col gap-4 p-9 ${visual ? "" : "pt-20"}`}>

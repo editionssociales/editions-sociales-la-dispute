@@ -22,6 +22,7 @@ function event(id: number, date: string): Rencontre {
     lieu: "Librairie",
     ville: "Ville",
     description: "Description.",
+    pleinCadre: false,
     image: null,
     livre: null,
   };
