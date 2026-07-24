@@ -895,6 +895,7 @@ export default async function SouscriptionPage() {
                             src={img}
                             alt=""
                             sizes="(min-width: 1024px) 380px, 100vw"
+                            placeholder="blur"
                             className="block h-auto w-full mix-blend-multiply"
                           />
                         )}
@@ -917,6 +918,7 @@ export default async function SouscriptionPage() {
                                   src={img}
                                   alt=""
                                   sizes="(min-width: 1024px) 140px, 35vw"
+                                  placeholder="blur"
                                   className="-mr-2 block h-auto w-[35%] shrink-0 mix-blend-multiply"
                                 />
                               )}

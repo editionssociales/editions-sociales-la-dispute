@@ -48,7 +48,7 @@ export function Reveal({
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out motion-reduce:transition-none ${
+      className={`transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none ${
         hidden ? "translate-y-6 opacity-0" : "translate-y-0 opacity-100"
       } ${className}`}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}

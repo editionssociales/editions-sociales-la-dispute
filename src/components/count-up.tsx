@@ -4,7 +4,16 @@ import { useEffect, useState } from "react";
 import { formatInt } from "@/lib/format";
 import { useInView } from "@/hooks/use-in-view";
 
-/** Compteur animé : grimpe de 0 à `value` quand il devient visible. */
+/**
+ * Compteur animé : grimpe de 0 à `value` quand il devient visible.
+ *
+ * Boîte figée à la valeur finale (anti-CLS) : un sizer invisible porte
+ * `value` formatée pendant que l'overlay absolu anime — le nombre de
+ * chiffres qui varie ne re-wrappe jamais le paragraphe hôte, et
+ * `tabular-nums` supprime le jitter par chiffre. Séparation AT/visuel :
+ * l'animation est `aria-hidden` (un lecteur d'écran qui passe pendant les
+ * 1,6 s lirait un montant faux), un `sr-only` stable porte la valeur finale.
+ */
 export function CountUp({
   value,
   suffix = "",
@@ -40,9 +49,21 @@ export function CountUp({
   }, [inView, value, duration]);
 
   return (
-    <span ref={ref} className={className}>
-      {formatInt(display)}
-      {suffix}
+    <span ref={ref} className={`relative inline-block whitespace-nowrap tabular-nums ${className}`}>
+      {/* Sizer : fige la largeur à la valeur finale, jamais rendu aux AT. */}
+      <span className="invisible" aria-hidden="true">
+        {formatInt(value)}
+        {suffix}
+      </span>
+      {/* Valeur animée, purement visuelle. */}
+      <span aria-hidden="true" className="absolute inset-0">
+        {formatInt(display)}
+        {suffix}
+      </span>
+      <span className="sr-only">
+        {formatInt(value)}
+        {suffix}
+      </span>
     </span>
   );
 }

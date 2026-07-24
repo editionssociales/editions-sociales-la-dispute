@@ -48,10 +48,14 @@ export function Gauge({
             "linear-gradient(90deg, var(--color-navy) 0 25%, var(--color-bottle) 25% 50%, var(--color-ocher) 50% 75%, var(--color-brick) 75% 100%)",
         }}
       >
-        {/* Cache : recouvre la part non collectée, glisse vers la droite. */}
+        {/* Cache : recouvre la part non collectée, glisse vers la droite.
+            Animé en transform (composité GPU) plutôt qu'en `left`
+            (layout+paint à chaque frame) : translateX en % se réfère à la
+            largeur propre (= la barre entière), le débordement à droite est
+            clippé par l'overflow-hidden du parent. */}
         <div
-          className="absolute inset-y-0 right-0 bg-line transition-[left] duration-[1600ms] ease-out motion-reduce:transition-none"
-          style={{ left: filled ? `${pct}%` : "0%" }}
+          className="absolute inset-0 bg-line transition-transform duration-[1600ms] ease-out motion-reduce:transition-none"
+          style={{ transform: filled ? `translateX(${pct}%)` : "translateX(0)" }}
         />
         {markers.map((m) => (
           <div

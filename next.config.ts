@@ -231,6 +231,10 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // AVIF d'abord (gain typique 20-30 % sur les montages photo des
+    // contreparties et les couvertures Blob), repli WebP — encodage un peu
+    // plus lent au premier hit, mis en cache par l'optimiseur Vercel.
+    formats: ["image/avif", "image/webp"],
     // Couvertures affichées ≤ ~400px CSS : inutile de générer 1920/2048/3840w
     // (srcset gonflé, LCP/catalogue). 1080 couvre retina 2× sur une fiche 300–400px.
     deviceSizes: [384, 640, 750, 828, 1080],
