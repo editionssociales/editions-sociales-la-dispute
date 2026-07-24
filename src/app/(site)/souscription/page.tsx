@@ -215,12 +215,36 @@ const MOBILE_SHELF_COUNT = 8;
 
 export const metadata: Metadata = {
   title: "Souscription",
+  // ≤ 160 caractères (Google tronque au-delà) : crise + appel + fourchette.
   description:
-    "En 2027, Les Éditions sociales et La Dispute fêteront cent ans d'édition marxiste et critique — mais la faillite de leur distributeur Makassar menace leur activité. Une souscription pour traverser la crise et préserver notre indépendance, avec des contreparties de 15 à 1 000 €.",
+    "La faillite de notre distributeur menace 100 ans d’édition marxiste indépendante. Soutenez Les Éditions sociales et La Dispute — contreparties de 15 à 1 000 €.",
   alternates: { canonical: "/souscription" },
+  // Carte large : l'image vient du fichier `opengraph-image.jpg` colocalisé
+  // (convention Next — og:image/twitter:image générées sans toucher l'objet
+  // `openGraph` hérité du layout, cf. piège de fusion superficielle
+  // documenté dans src/app/CLAUDE.md).
+  twitter: { card: "summary_large_image" },
 };
 
 export const revalidate = 3600; // fenêtre ISR (contreparties lues dans Payload/Postgres)
+
+/**
+ * JSON-LD Organization + DonateAction — aide crawlers (et LLM-crawlers) à
+ * qualifier la page pendant la campagne. Constante FIGÉE construite en code,
+ * jamais de contenu CMS : hors de la règle SafeHtml (`src/app/CLAUDE.md`),
+ * qui vise le HTML éditorial injecté.
+ */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr";
+const JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Les Éditions sociales × La Dispute",
+  url: SITE_URL,
+  potentialAction: {
+    "@type": "DonateAction",
+    target: `${SITE_URL}/souscription`,
+  },
+});
 
 /**
  * Bouton Contribuer désactivé + microcopie d'ouverture — partagé par
@@ -486,6 +510,7 @@ export default async function SouscriptionPage() {
 
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       {/* Colonne principale (jauge, corps de texte, CTA final) — le rail des
           contreparties vit en frère de DOM, sur la droite de la page entière. */}
       <div className="min-w-0">
