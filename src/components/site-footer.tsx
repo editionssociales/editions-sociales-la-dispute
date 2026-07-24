@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
 import { NewsletterForm } from "@/components/newsletter-form";
-import { NAV_BOUTIQUE, NAV_HOUSES, NAV_SECTIONS } from "@/lib/nav";
+import { NAV_HOUSES, NAV_SECTIONS } from "@/lib/nav";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
@@ -62,11 +62,8 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
               </Link>
             </li>
           ))}
-          <li>
-            <Link href={NAV_BOUTIQUE.href} className={LINK_CLASS}>
-              {NAV_BOUTIQUE.label}
-            </Link>
-          </li>
+          {/* Plus de lien « Boutique » (retour client 2026-07-23) : la page
+              liste est supprimée, les goodies vivent au checkout du panier. */}
           <li>
             <Link href={AGENDA_HREF} className={LINK_CLASS}>
               Agenda

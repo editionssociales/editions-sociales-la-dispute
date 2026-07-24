@@ -100,14 +100,6 @@ export const NAV_HOUSES: NavHouse[] = [
 export const NAV_HOME: NavHouse = { label: "Accueil", href: "/" };
 
 /**
- * Entrée « Boutique » (chantier 3 §1) : source unique du href, consommée par
- * le footer et par le lien contextuel de `/catalogue` — elle n'a pas de
- * cellule dédiée dans le quadrillage du header (ce n'est pas une section de
- * navigation au sens `NAV_SECTIONS`, R2).
- */
-export const NAV_BOUTIQUE: NavHouse = { label: "Boutique", href: "/boutique" };
-
-/**
  * Sections actives d'après pathname + query : sur l'accueil les 4 restent
  * allumées ; sur une page de section, seule la cellule correspondante.
  */

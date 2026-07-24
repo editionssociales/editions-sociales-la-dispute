@@ -49,13 +49,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${base}/catalogue/${edition}/${slug}`,
   }));
 
-  const boutiqueEntries: MetadataRoute.Sitemap =
-    boutiqueOnly.length > 0
-      ? [
-          { url: `${base}/boutique` },
-          ...boutiqueOnly.map(({ slug }) => ({ url: `${base}/boutique/${slug}` })),
-        ]
-      : [];
+  // Pas de `/boutique` (liste) : redirection permanente vers `/panier`
+  // (retour client 2026-07-23) — seules les fiches articles restent des
+  // URLs de contenu.
+  const boutiqueEntries: MetadataRoute.Sitemap = boutiqueOnly.map(({ slug }) => ({
+    url: `${base}/boutique/${slug}`,
+  }));
 
   return [...staticEntries, ...bookEntries, ...boutiqueEntries];
 }
