@@ -57,25 +57,39 @@ export function Gauge({
           />
         ))}
       </div>
-      <div
-        className={`relative mt-2 h-10 text-xs ${tone === "dark" ? "text-paper/70" : "text-ink-soft"}`}
-      >
-        {markers.map((m) => {
-          const left = (m.value / max) * 100;
-          return (
-            <div
-              key={m.value}
-              className={`absolute top-0 ${left > 90 ? "-translate-x-full text-right" : "-translate-x-1/2 text-center"}`}
-              style={{ left: `${left}%` }}
-            >
+      {/* Libellés des paliers : l'overlay positionné en pourcentages fait se
+          chevaucher les derniers paliers (80/100 k€) sur un viewport étroit —
+          sous `sm`, les mêmes entrées passent en liste empilée, lisible à
+          320px ; l'overlay ne s'affiche qu'à partir de `sm`. */}
+      <div className={`mt-2 text-xs ${tone === "dark" ? "text-paper/70" : "text-ink-soft"}`}>
+        <ul className="flex flex-col gap-1 sm:hidden">
+          {markers.map((m) => (
+            <li key={m.value}>
               <span className={`font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
                 {formatInt(m.value)}&nbsp;€{m.reached && " ✓"}
-              </span>
-              <br />
-              <span className="whitespace-nowrap">{m.label}</span>
-            </div>
-          );
-        })}
+              </span>{" "}
+              {m.label}
+            </li>
+          ))}
+        </ul>
+        <div className="relative hidden h-10 sm:block">
+          {markers.map((m) => {
+            const left = (m.value / max) * 100;
+            return (
+              <div
+                key={m.value}
+                className={`absolute top-0 ${left > 90 ? "-translate-x-full text-right" : "-translate-x-1/2 text-center"}`}
+                style={{ left: `${left}%` }}
+              >
+                <span className={`font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
+                  {formatInt(m.value)}&nbsp;€{m.reached && " ✓"}
+                </span>
+                <br />
+                <span className="whitespace-nowrap">{m.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
