@@ -205,21 +205,23 @@ export const revalidate = 3600; // fenêtre ISR (contreparties lues dans Payload
  * (comportement R7 : CTA réellement `disabled`, jamais un bouton mort qui a
  * l'air cliquable). `className` porte la seule variation entre appelants (la
  * marge au-dessus de l'ensemble : `mt-3` en carte de palier, `mt-4` dans
- * `FreeAmountForm`).
+ * `FreeAmountForm`) ; `noteId`, unique par appelant, relie programmatiquement
+ * la microcopie au bouton désactivé (`aria-describedby` — un AT qui inspecte
+ * le bouton apprend pourquoi il l'est).
  */
-function ClosedCta({ className }: { className: string }) {
+function ClosedCta({ className, noteId }: { className: string; noteId: string }) {
   return (
     <div className={`flex flex-col items-start gap-1.5 ${className}`}>
       <Button
         type="button"
         variant="solid"
         disabled
-        aria-disabled="true"
+        aria-describedby={noteId}
         className="min-h-11 px-4 py-2.5 text-sm tracking-[.03em]"
       >
         Contribuer
       </Button>
-      <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
+      <p id={noteId} className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
         {OPENING_MICROCOPY}
       </p>
     </div>
@@ -236,13 +238,16 @@ function ClosedCta({ className }: { className: string }) {
  */
 function FreeAmountForm({ enabled }: { enabled: boolean }) {
   if (!enabled) {
-    return <ClosedCta className="mt-4" />;
+    return <ClosedCta className="mt-4" noteId="ouverture-libre" />;
   }
   return (
     <form action={createDonationCheckout} className="mt-4 flex flex-col gap-3">
       <label htmlFor="amount-libre" className="sr-only">
         Montant libre, en euros
       </label>
+      {/* Don en euros ENTIERS côté UI (step=1 + inputMode numeric) — choix
+          assumé : la tolérance décimale de `parseDonation` (virgule acceptée)
+          ne sert que les POST sans JS, jamais ce champ. */}
       <input
         id="amount-libre"
         name="amount"
@@ -251,10 +256,17 @@ function FreeAmountForm({ enabled }: { enabled: boolean }) {
         max={FREE_AMOUNT.max}
         step={1}
         inputMode="numeric"
+        autoComplete="transaction-amount"
+        aria-describedby="amount-libre-hint"
         placeholder="Montant en €"
         required
-        className={`min-h-11 w-full border-2 border-ink bg-paper px-4 py-3 font-sans text-sm font-semibold text-ink placeholder:text-ink/50 ${FOCUS_RING_LIGHT}`}
+        className={`min-h-11 w-full border-2 border-ink bg-paper px-4 py-3 font-sans text-sm font-semibold text-ink placeholder:text-muted ${FOCUS_RING_LIGHT}`}
       />
+      {/* Bornes visibles ET reliées au champ (WCAG 1.3.5 / UX) : sans elles,
+          la contrainte ne se découvre qu'au message de validation natif. */}
+      <p id="amount-libre-hint" className="font-sans text-xs text-muted">
+        De {FREE_AMOUNT.min} à {formatInt(FREE_AMOUNT.max)}&nbsp;€
+      </p>
       <SubmitButton
         tone="dark"
         pendingLabel="Redirection…"
@@ -381,7 +393,7 @@ function MobileShelf({ books }: { books: Book[] }) {
   if (items.length === 0) return null;
   return (
     <div
-      className="mt-10 grid grid-cols-4 items-start gap-[2px] bg-paper/15 p-[2px] lg:hidden"
+      className="mt-14 grid grid-cols-4 items-start gap-[2px] bg-paper/15 p-[2px] lg:hidden"
       role="group"
       aria-label="Dernières parutions"
     >
@@ -451,18 +463,23 @@ export default async function SouscriptionPage() {
             <div className="flex flex-col gap-[2px] bg-ink p-[2px] lg:flex-row">
               <div className="flex-1 bg-paper p-6 sm:p-8">
                 {liveCampaign.collected > 0 ? (
+                  /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
+                     supprime les blancs contenant un retour à la ligne — sans
+                     eux, AT/copier-coller lisent « Déjà11 014 €réunis ». Les
+                     nœuds espace entre items flex ne sont pas rendus : zéro
+                     impact visuel. */
                   <p className="flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
-                    Déjà
+                    Déjà{" "}
                     <CountUp
                       value={liveCampaign.collected}
-                      suffix=" €"
+                      suffix=" €"
                       className="font-sans text-lg font-black italic text-ink"
-                    />
-                    réunis auprès de
+                    />{" "}
+                    réunis auprès de{" "}
                     <CountUp
                       value={liveCampaign.contributors}
                       className="font-sans text-lg font-black italic text-ink"
-                    />
+                    />{" "}
                     contributeur·rices.
                   </p>
                 ) : (
@@ -554,18 +571,21 @@ export default async function SouscriptionPage() {
                   clipperait le livre déplié, qui déborde largement du bloc. */}
               <div className="bg-ink p-7 text-paper sm:p-9">
                 <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-paper sm:text-5xl">
-                  100 ans d&apos;édition marxiste : <span className="text-pop-yellow">aidez-nous à poursuivre l&apos;histoire.</span>
+                  100 ans d’édition marxiste : <span className="text-pop-yellow">aidez-nous à poursuivre l’histoire.</span>
                 </h1>
                 {/* Chemin mobile uniquement : en lg+, le rail sticky des
                     contreparties est déjà visible, l'ancre est redondante. */}
                 <a
                   href="#paliers"
-                  className={`mt-8 inline-block font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper lg:hidden ${FOCUS_RING_DARK}`}
+                  className={`mt-8 inline-flex min-h-11 items-center font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper lg:hidden ${FOCUS_RING_DARK}`}
                 >
                   Voir les contreparties ↓
                 </a>
 
-                <div className="mt-14" role="group" aria-label="Dernières parutions">
+                {/* `hidden lg:block` : sous lg la HeroShelf qu'il contient est déjà
+                    masquée — sans lui, un groupe nommé VIDE doublonnerait le
+                    `aria-label` de MobileShelf dans l'arbre d'accessibilité. */}
+                <div className="mt-14 hidden lg:block" role="group" aria-label="Dernières parutions">
                   <HeroShelf books={shelfBooks} />
                 </div>
                 <MobileShelf books={shelfBooks} />
@@ -585,28 +605,28 @@ export default async function SouscriptionPage() {
                   fatal ») en punchline bordée. */}
               <Reveal>
                 <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink">
-                  Édition indépendante et critique :{" "}
+                  Édition indépendante et critique :{" "}
                   <span className="uppercase tracking-[.02em] text-brick">danger maximal</span>
                 </h2>
                 <div className="mt-4 max-w-[70ch] space-y-4 text-[15px] leading-relaxed text-ink/70">
                   <p>
-                    En cette fin d&apos;été 2026, l&apos;édition de critique sociale fait
+                    En cette fin d’été 2026, l’édition de critique sociale fait
                     face à une des pires crises de son histoire. Des centaines de
                     maisons indépendantes sont menacées par la faillite de leur
                     distributeur Makassar qui disparaît avec des dettes importantes.
                   </p>
                   <p>
-                    Pour Les éditions sociales et La Dispute, c&apos;est plus de{" "}
+                    Pour Les éditions sociales et La Dispute, c’est plus de{" "}
                     <strong className="whitespace-nowrap font-sans text-[1.45em] font-black italic leading-none text-brick">
                       130&nbsp;000&nbsp;€
                     </strong>{" "}
                     de ventes en librairie que nous ne toucherons jamais
                     pour des livres dont nous avons pourtant payé des frais
-                    d&apos;impression et de maquette, ainsi que des avances de droits
-                    d&apos;auteur.
+                    d’impression et de maquette, ainsi que des avances de droits
+                    d’auteur.
                   </p>
                   <p className="border-l-4 border-brick pl-4 font-sans text-xl font-black italic leading-tight text-ink sm:text-2xl">
-                    Pour nos maisons, c&apos;est le genre de coup qui peut être fatal.
+                    Pour nos maisons, c’est le genre de coup qui peut être fatal.
                   </p>
                 </div>
               </Reveal>
@@ -624,21 +644,21 @@ export default async function SouscriptionPage() {
                 </h2>
                 <div className="mt-4 max-w-[70ch] space-y-4 text-[15px] leading-relaxed text-ink/70">
                   <p>
-                    La faillite de Makassar est le résultat d&apos;un marché de
-                    l&apos;édition où les grands groupes – Hachette, Editis,
-                    Média-Participations, Madrigall – détiennent à eux seuls près de{" "}
+                    La faillite de Makassar est le résultat d’un marché de
+                    l’édition où les grands groupes — Hachette, Editis,
+                    Média-Participations, Madrigall — détiennent à eux seuls près de{" "}
                     <strong className="whitespace-nowrap font-sans text-[1.45em] font-black italic leading-none text-navy">
                       90&nbsp;%
                     </strong>{" "}
                     de la production éditoriale et de la distribution. Ces
                     grands groupes font la course aux profits et imposent leur loi à
-                    tous, avec des conséquences néfastes pour l&apos;ensemble des
+                    tous, avec des conséquences néfastes pour l’ensemble des
                     acteurs indépendants mais aussi des lecteurices.
                   </p>
                   <p>
-                    C&apos;est parce que ces groupes existent que leurs propriétaires
+                    C’est parce que ces groupes existent que leurs propriétaires
                     peuvent se permettre de les utiliser pour mener leurs guerres
-                    idéologiques, comme on l&apos;a vu récemment avec Vincent Bolloré.
+                    idéologiques, comme on l’a vu récemment avec Vincent Bolloré.
                   </p>
                   <p>
                     Face à eux, nous devons aller à la racine en exigeant{" "}
@@ -676,7 +696,7 @@ export default async function SouscriptionPage() {
                     <span className="my-1 inline-block -rotate-2 whitespace-nowrap font-black italic text-5xl leading-[0.9] text-ocher-text sm:text-6xl">
                       100 ans
                     </span>{" "}
-                    d&apos;existence.
+                    d’existence.
                   </p>
                   <p className="border-l-4 border-ocher pl-4 font-sans text-lg font-bold leading-snug text-ink">
                     Cent ans de traductions de Marx et de livres marxistes et de
@@ -690,23 +710,23 @@ export default async function SouscriptionPage() {
                   <p>
                     Récemment, nous avons ouvert de nouveaux chantiers prometteurs
                     pour nos maisons en arrivant chez un nouveau
-                    diffuseur-distributeur, BLDD ; en lançant de nouvelles
-                    collections ; en partant à la rencontre des libraires partout
+                    diffuseur-distributeur, BLDD ; en lançant de nouvelles
+                    collections ; en partant à la rencontre des libraires partout
                     dans le pays.
                   </p>
                   <p>
-                    Mais notre équipe s&apos;agrandit aussi :{" "}
+                    Mais notre équipe s’agrandit aussi :{" "}
                     <strong className="font-semibold text-ink">
                       Nicolas Vieillescazes
                     </strong>
-                    , ancien directeur éditorial d&apos;Amsterdam, nous rejoint pour
+                    , ancien directeur éditorial d’Amsterdam, nous rejoint pour
                     renforcer les éditions sociales et La Dispute.
                   </p>
                   <p>
                     Tous ces choix portent leurs fruits mais la faillite de Makassar
                     nous frappe{" "}
                     <strong className="font-semibold text-ink">
-                      au moment où nous construisons l&apos;avenir
+                      au moment où nous construisons l’avenir
                     </strong>
                     .
                   </p>
@@ -725,7 +745,7 @@ export default async function SouscriptionPage() {
                 </h2>
                 <div className="mt-4 max-w-[62ch]">
                   <p className="font-sans text-lg font-medium leading-relaxed text-ink sm:text-xl">
-                    Nous voulons que notre histoire se poursuive ; c&apos;est pourquoi
+                    Nous voulons que notre histoire se poursuive ; c’est pourquoi
                     nous faisons appel à vous. En faisant un don, vous nous aiderez
                     à surmonter cette crise, à{" "}
                     <strong className="font-bold underline decoration-bottle decoration-4 underline-offset-4">
@@ -750,7 +770,7 @@ export default async function SouscriptionPage() {
                       <div className="flex flex-1 flex-col gap-2 p-6">
                         <span className="font-sans text-3xl font-black italic">
                           {o.montant}
-                        </span>
+                        </span>{" "}
                         <span className="font-sans text-base font-extrabold uppercase tracking-[.02em]">
                           {o.titre}
                         </span>
@@ -839,8 +859,8 @@ export default async function SouscriptionPage() {
                             <div className="flex items-center justify-between gap-3">
                               <h3>
                                 <span className="block font-sans text-4xl font-black italic text-ink">
-                                  {p.tier.amount}&nbsp;€
-                                </span>
+                                  {formatInt(p.tier.amount)}&nbsp;€
+                                </span>{" "}
                                 <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
                                   {p.tier.title}
                                 </span>
@@ -857,8 +877,8 @@ export default async function SouscriptionPage() {
                           ) : (
                             <h3>
                               <span className="block font-sans text-4xl font-black italic text-ink">
-                                {p.tier.amount}&nbsp;€
-                              </span>
+                                {formatInt(p.tier.amount)}&nbsp;€
+                              </span>{" "}
                               <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
                                 {p.tier.title}
                               </span>
@@ -871,7 +891,7 @@ export default async function SouscriptionPage() {
                               `site-content-core`) s'accroche à la précédente
                               SANS séparateur : un « ou » centré dans l'écart
                               entre les deux lignes — un choix, pas un ajout. */}
-                          <ul className="mt-4 flex-1 self-start w-full border-2 border-ink">
+                          <ul role="list" className="mt-4 flex-1 self-start w-full border-2 border-ink">
                             {p.items.map((item, j) => (
                               <li key={item.texte}>
                                 {j > 0 &&
@@ -901,14 +921,14 @@ export default async function SouscriptionPage() {
                               <SubmitButton
                                 tone="dark"
                                 pendingLabel="Redirection…"
-                                ariaLabel={`Contribuer ${p.tier.amount} € — ${p.tier.title}`}
+                                ariaLabel={`Contribuer ${formatInt(p.tier.amount)} € — ${p.tier.title}`}
                                 className={`mt-3 min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
                               >
                                 Contribuer
                               </SubmitButton>
                             </form>
                           ) : (
-                            <ClosedCta className="mt-3" />
+                            <ClosedCta className="mt-3" noteId={`ouverture-${p.tier.id}`} />
                           )}
                         </div>
                       </div>
@@ -929,7 +949,7 @@ export default async function SouscriptionPage() {
                       <h3>
                         <span className="block font-sans text-3xl font-black italic text-ink">
                           Montant libre
-                        </span>
+                        </span>{" "}
                         <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
                           Contribuez à la hauteur de votre choix
                         </span>

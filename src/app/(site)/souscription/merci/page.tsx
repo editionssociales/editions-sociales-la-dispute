@@ -74,10 +74,10 @@ export default async function MerciPage({
           {donation ? (
             <PageHero
               tone="system"
-              title={donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
+              title={donation.pending ? "Paiement en cours de confirmation" : "Merci pour votre don !"}
               intro={
                 donation.pending ? (
-                  "Votre paiement est en cours de confirmation — vous recevrez un reçu par email dès qu'il sera validé, sans action de votre part."
+                  "Votre paiement est en cours de confirmation — vous recevrez un reçu par email dès qu’il sera validé, sans action de votre part."
                 ) : (
                   <>
                     Votre don de{" "}
@@ -93,7 +93,7 @@ export default async function MerciPage({
           ) : (
             <PageHero
               tone="system"
-              title="Merci pour votre soutien !"
+              title="Merci pour votre soutien !"
               intro="Votre contribution a bien été prise en compte. Si le paiement a abouti, un reçu vous a été envoyé par email."
             />
           )}

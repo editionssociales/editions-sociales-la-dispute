@@ -29,8 +29,8 @@ export default function ErreurPage() {
           </div>
           <PageHero
             tone="system"
-            title="Le paiement n'a pas pu démarrer"
-            intro="Un problème technique a empêché l'ouverture de la page de paiement. Aucune somme n'a été prélevée. Vous pouvez réessayer, ou nous écrire si le problème persiste."
+            title="Le paiement n’a pas pu démarrer"
+            intro="Un problème technique a empêché l’ouverture de la page de paiement. Aucune somme n'a été prélevée. Vous pouvez réessayer, ou nous écrire si le problème persiste."
           />
           <div className="mt-8 flex flex-wrap gap-4">
             <Button

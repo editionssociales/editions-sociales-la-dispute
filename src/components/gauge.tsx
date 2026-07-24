@@ -37,7 +37,11 @@ export function Gauge({
 
   return (
     <div ref={ref} className={className}>
+      {/* Alternative programmatique (a11y) : la pile de <div> anonymes
+          n'expose sinon ni la nature de jauge ni le taux de remplissage. */}
       <div
+        role="img"
+        aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
         className="relative h-4 overflow-hidden rounded-full"
         style={{
           background:
@@ -62,11 +66,19 @@ export function Gauge({
           sous `sm`, les mêmes entrées passent en liste empilée, lisible à
           320px ; l'overlay ne s'affiche qu'à partir de `sm`. */}
       <div className={`mt-2 text-xs ${tone === "dark" ? "text-paper/70" : "text-ink-soft"}`}>
-        <ul className="flex flex-col gap-1 sm:hidden">
+        {/* role="list" : le preflight Tailwind pose list-style:none, ce qui
+            fait retirer la sémantique de liste par Safari/VoiceOver. */}
+        <ul role="list" className="flex flex-col gap-1 sm:hidden">
           {markers.map((m) => (
             <li key={m.value}>
               <span className={`font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
-                {formatInt(m.value)}&nbsp;€{m.reached && " ✓"}
+                {formatInt(m.value)}&nbsp;€
+                {m.reached && (
+                  <>
+                    <span aria-hidden="true"> ✓</span>
+                    <span className="sr-only"> (palier atteint)</span>
+                  </>
+                )}
               </span>{" "}
               {m.label}
             </li>
@@ -82,7 +94,13 @@ export function Gauge({
                 style={{ left: `${left}%` }}
               >
                 <span className={`font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
-                  {formatInt(m.value)}&nbsp;€{m.reached && " ✓"}
+                  {formatInt(m.value)}&nbsp;€
+                  {m.reached && (
+                    <>
+                      <span aria-hidden="true"> ✓</span>
+                      <span className="sr-only"> (palier atteint)</span>
+                    </>
+                  )}
                 </span>
                 <br />
                 <span className="whitespace-nowrap">{m.label}</span>
