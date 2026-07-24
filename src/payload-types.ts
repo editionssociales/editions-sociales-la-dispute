@@ -205,6 +205,52 @@ export interface Book {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Citations affichées dans l’onglet « La presse en parle » de la fiche. Aucune citation ni vidéo = pas d’onglet.
+   */
+  presse?:
+    | {
+        /**
+         * Sans guillemets — ils sont ajoutés à l’affichage.
+         */
+        citation: string;
+        /**
+         * Ex. « Mediapart ».
+         */
+        source: string;
+        /**
+         * Texte libre, ex. « 10 juin 2026 ».
+         */
+        date?: string | null;
+        /**
+         * Article en ligne (facultatif).
+         */
+        lien?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * URL YouTube (watch, youtu.be ou embed) — intégrée sous les citations de l’onglet « La presse en parle ».
+   */
+  video?: string | null;
+  /**
+   * Affichée dans l’onglet « Table des matières » de la fiche ; le PDF téléversé plus haut reste proposé en lien.
+   */
+  tableMatieres?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   dateParution: string;
   aParaitre?: boolean | null;
   /**
@@ -519,6 +565,10 @@ export interface Rencontre {
    */
   image?: (number | null) | Media;
   /**
+   * Coché : l’événement s’affiche en grande carte pleine largeur en tête de l’agenda (ex. braderie). Décoché : carte standard dans la grille 2-3 colonnes.
+   */
+  pleinCadre?: boolean | null;
+  /**
    * Texte libre — ex. « Gouverner les juges, Vincent Sizaire ; avec Marie Dosé et Fabrice Arfi ».
    */
   intervenants?: string | null;
@@ -674,6 +724,17 @@ export interface BooksSelect<T extends boolean = true> {
   extraitPdf?: T;
   presentation?: T;
   plusLoin?: T;
+  presse?:
+    | T
+    | {
+        citation?: T;
+        source?: T;
+        date?: T;
+        lien?: T;
+        id?: T;
+      };
+  video?: T;
+  tableMatieres?: T;
   dateParution?: T;
   aParaitre?: T;
   isbn?: T;
@@ -855,6 +916,7 @@ export interface RencontresSelect<T extends boolean = true> {
   ville?: T;
   livre?: T;
   image?: T;
+  pleinCadre?: T;
   intervenants?: T;
   description?: T;
   updatedAt?: T;

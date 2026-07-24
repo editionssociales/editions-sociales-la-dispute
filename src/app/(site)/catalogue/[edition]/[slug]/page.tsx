@@ -6,7 +6,9 @@ import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { LibelleTag } from "@/components/libelle-tag";
 import { BuyLinksList } from "@/components/buy-links";
+import { BookTabs, type BookTab } from "@/components/book-tabs";
 import { FramedGrid } from "@/components/framed-grid";
+import { youTubeEmbedUrl } from "@/lib/video";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { getReglagesSite } from "@/lib/site-content";
 import { formatDateFr } from "@/lib/format";
@@ -187,6 +189,85 @@ export default async function BookPage({
   };
   const bookJsonLdScript = JSON.stringify(bookJsonLd).replace(/</g, "\\u003c");
 
+  // Onglets de la fiche (maquette client « essai page de livre »,
+  // 2026-07-23) : « La presse en parle » (citations + vidéo YouTube) et
+  // « Table des matières » (richText, sinon lien vers le PDF téléversé).
+  // Aucun contenu = pas de bloc d'onglets du tout.
+  const videoEmbed = book.videoUrl ? youTubeEmbedUrl(book.videoUrl) : null;
+  const tabs: BookTab[] = [];
+  if (book.press.length > 0 || videoEmbed) {
+    tabs.push({
+      id: "presse",
+      label: "La presse en parle",
+      panel: (
+        <div className="flex flex-col gap-6">
+          {book.press.length > 0 && (
+            <ul className="flex flex-col gap-4">
+              {book.press.map((q, i) => (
+                <li key={i} className="text-[15px] leading-relaxed text-ink/80">
+                  {/* Maquette : la citation elle-même est le lien (soulignée)
+                      quand un article est renseigné. */}
+                  {q.url ? (
+                    <a
+                      href={q.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`font-serif italic text-ink underline decoration-1 underline-offset-2 hover:decoration-2 ${FOCUS_RING_LIGHT}`}
+                    >
+                      «&nbsp;{q.quote}&nbsp;»
+                    </a>
+                  ) : (
+                    <span className="font-serif italic text-ink">
+                      «&nbsp;{q.quote}&nbsp;»
+                    </span>
+                  )}{" "}
+                  <span className="font-sans text-sm font-bold text-ink">
+                    {q.source}
+                    {q.date ? `, ${q.date}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {videoEmbed && (
+            <div className="border-2 border-ink bg-paper-2">
+              <iframe
+                src={videoEmbed}
+                title={`Vidéo — ${book.title}`}
+                className="aspect-video w-full"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          )}
+        </div>
+      ),
+    });
+  }
+  if (book.tocHtml || book.tocUrl) {
+    tabs.push({
+      id: "table-des-matieres",
+      label: "Table des matières",
+      panel: book.tocHtml ? (
+        <div
+          className="prose-book max-w-none"
+          dangerouslySetInnerHTML={{ __html: book.tocHtml }}
+        />
+      ) : (
+        <a
+          href={book.tocUrl!}
+          target="_blank"
+          rel="noreferrer"
+          className={`inline-flex min-h-11 items-center border-2 border-ink bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+        >
+          Table des matières (PDF)
+        </a>
+      ),
+    });
+  }
+
   return (
     <Container className="bg-paper py-12 sm:py-16">
       <script
@@ -299,6 +380,12 @@ export default async function BookPage({
                 className="prose-book max-w-none"
                 dangerouslySetInnerHTML={{ __html: book.furtherReading }}
               />
+            </section>
+          )}
+
+          {tabs.length > 0 && (
+            <section className="mt-10">
+              <BookTabs tabs={tabs} />
             </section>
           )}
         </article>

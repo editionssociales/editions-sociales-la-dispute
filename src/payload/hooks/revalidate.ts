@@ -143,10 +143,12 @@ export const revalidatePagesLegalesAfterChange: GlobalAfterChangeHook = ({ req }
   revalidatePath('/', 'layout')
 }
 
-/** Hook `page-a-propos` : seule la page À propos lit ce global. */
+/** Hook `page-a-propos` : lu par les pages maisons `/editions/[slug]`
+ *  (l'ex-page commune `/a-propos` est une redirection sans contenu). */
 export const revalidateAProposAfterChange: GlobalAfterChangeHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
-  revalidatePath('/a-propos')
+  revalidatePath('/editions/editions-sociales')
+  revalidatePath('/editions/la-dispute')
 }
 
 /** Hook `page-souscription` : seule la page Souscription lit ce global. */

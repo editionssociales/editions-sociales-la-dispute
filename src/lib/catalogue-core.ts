@@ -250,5 +250,8 @@ export function buildNativeBookDetail(
     furtherReading: raw.furtherReadingHtml ? sanitizeCms(raw.furtherReadingHtml) : null,
     tocUrl: raw.tocUrl,
     excerptUrl: raw.excerptUrl,
+    press: raw.press ?? [],
+    videoUrl: raw.videoUrl ?? null,
+    tocHtml: raw.tocHtml ? sanitizeCms(raw.tocHtml) : null,
   };
 }

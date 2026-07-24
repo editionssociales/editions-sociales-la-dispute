@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Cover } from "@/lib/cover";
-import { formatDateFr } from "@/lib/format";
 import type { NouveauteBook } from "@/lib/nouveaute-book";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
@@ -38,12 +37,25 @@ const prefersReducedMotion = () =>
  * centrale zoomée et opaque, les latérales reculent et s'estompent, sans
  * aucune rotation ni perspective. On mesure le `<li>` (jamais mis à l'échelle →
  * mesure stable) et on applique la transform à son enfant interne, sur
- * l'événement `scroll` (throttlé en rAF). Le rail est mémoïsé : changer la
- * légende ne re-rend jamais les images. Couvertures au ratio réel (hauteur
+ * l'événement `scroll` (throttlé en rAF). Couvertures au ratio réel (hauteur
  * commune, largeur variable) ; marges d'extrémité ajustées pour centrer la
  * 1re / la dernière.
+ *
+ * COUVERTURES SEULES (retour client 2026-07-23) : plus aucune légende
+ * titre/auteur/date sous le rail — le titre et l'auteur restent portés par
+ * l'`aria-label` de chaque lien. Flèches et sortie « Tout le catalogue »
+ * sont désactivables par prop (la vitrine les masque, la vue « à paraître »
+ * garde les flèches).
  */
-export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
+export function NouveautesCarousel({
+  books,
+  showArrows = true,
+  showCatalogueLink = true,
+}: {
+  books: NouveauteBook[];
+  showArrows?: boolean;
+  showCatalogueLink?: boolean;
+}) {
   const n = books.length;
 
   const trackRef = useRef<HTMLUListElement>(null);
@@ -57,7 +69,6 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   // Dernier z-index appliqué par carte : on n'écrit le z-index que lorsqu'il
   // change (le changer à chaque frame force un recalcul d'empilement inutile).
   const zRef = useRef<number[]>([]);
-  const [active, setActive] = useState(0);
 
   /** Ajuste les marges de début/fin pour que la 1re et la dernière couverture
    *  (largeurs variables) puissent se centrer dans le viewport. */
@@ -75,7 +86,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
 
   /** Applique l'échelle/opacité/z-index à chaque couverture selon la distance
    *  de sa carte au centre du viewport, et retient l'indice le plus centré
-   *  (légende). */
+   *  (cible des flèches). */
   const paint = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
@@ -117,10 +128,7 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
       }
     });
 
-    if (nearest !== activeRef.current) {
-      activeRef.current = nearest;
-      setActive(nearest);
-    }
+    activeRef.current = nearest;
   }, []);
 
   const schedulePaint = useCallback(() => {
@@ -168,7 +176,6 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     applyEndPadding();
     const initialIndex = n > 1 ? 1 : 0;
     activeRef.current = initialIndex;
-    setActive(initialIndex);
     centerCard(initialIndex, true);
     schedulePaint();
     const onResize = () => {
@@ -254,9 +261,8 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
     }
   }, []);
 
-  // Rail mémoïsé : indépendant de `active`, jamais re-rendu quand la légende
-  // change (sinon tout le rail d'images se reconcilierait à chaque carte
-  // franchie pendant un défilement → saccades).
+  // Rail mémoïsé : jamais re-rendu par les re-renders du parent (le rail
+  // d'images ne doit pas se reconcilier pendant un défilement → saccades).
   const rail = useMemo(
     () => (
       <ul
@@ -303,75 +309,54 @@ export function NouveautesCarousel({ books }: { books: NouveauteBook[] }) {
   );
 
   if (n === 0) return null;
-  const current = books[((active % n) + n) % n];
 
   return (
     <section aria-label="Nouveautés" className="relative">
       {/* Épure minimaliste : plus de titre de section ni de rangée dédiée —
-          flèches et sortie catalogue sont SUPERPOSÉES au cadre du carrousel,
-          coin supérieur droit (z au-dessus des cartes, dont le z-index peint
-          monte à 100) : les couvertures rétrécissent près des bords, le coin
-          reste visuellement libre. Aucun espace vertical réservé. */}
-      <div className="absolute right-[clamp(16px,4vw,64px)] top-0 z-[120] flex items-end justify-end gap-4">
-        <div className="flex flex-none flex-col items-end gap-1">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              aria-label="Couverture précédente"
-              onClick={() => step(-1)}
-              className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              aria-label="Couverture suivante"
-              onClick={() => step(1)}
-              className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
-            >
-              →
-            </button>
+          flèches et sortie catalogue (quand demandées) sont SUPERPOSÉES au
+          cadre du carrousel, coin supérieur droit (z au-dessus des cartes,
+          dont le z-index peint monte à 100) : les couvertures rétrécissent
+          près des bords, le coin reste visuellement libre. Aucun espace
+          vertical réservé. */}
+      {(showArrows || showCatalogueLink) && (
+        <div className="absolute right-[clamp(16px,4vw,64px)] top-0 z-[120] flex items-end justify-end gap-4">
+          <div className="flex flex-none flex-col items-end gap-1">
+            {showArrows && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  aria-label="Couverture précédente"
+                  onClick={() => step(-1)}
+                  className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  aria-label="Couverture suivante"
+                  onClick={() => step(1)}
+                  className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
+                >
+                  →
+                </button>
+              </div>
+            )}
+            {/* Sortie discrète du carrousel, à proximité des flèches — même
+                patron que les liens secondaires existants (`min-h-11`, anneau
+                de focus, soulignement sobre ; ex. « Retirer » du panier). */}
+            {showCatalogueLink && (
+              <Link
+                href="/catalogue"
+                className={`inline-flex min-h-11 items-center gap-1 px-2 -mx-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink-soft underline decoration-1 underline-offset-2 hover:text-ink ${FOCUS_RING_LIGHT}`}
+              >
+                Tout le catalogue <span aria-hidden="true">→</span>
+              </Link>
+            )}
           </div>
-          {/* Sortie discrète du carrousel, à proximité des flèches — même
-              patron que les liens secondaires existants (`min-h-11`, anneau
-              de focus, soulignement sobre ; ex. « Retirer » du panier). */}
-          <Link
-            href="/catalogue"
-            className={`inline-flex min-h-11 items-center gap-1 px-2 -mx-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink-soft underline decoration-1 underline-offset-2 hover:text-ink ${FOCUS_RING_LIGHT}`}
-          >
-            Tout le catalogue <span aria-hidden="true">→</span>
-          </Link>
         </div>
-      </div>
+      )}
 
       {rail}
-
-      {/* Légende du livre centré — remplace les étiquettes sur les couvertures.
-          aria-live pour les lecteurs d'écran quand la carte active change. */}
-      <div
-        aria-live="polite"
-        className="mx-auto mt-[clamp(14px,2vw,26px)] min-h-[68px] max-w-[42ch] px-6 text-center"
-      >
-        {current.upcoming && (
-          <span className="inline-flex border-b-2 border-r-2 border-ink bg-pop-orange px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
-            À paraître
-          </span>
-        )}
-        <p className="mt-1 font-serif text-[clamp(19px,2vw,26px)] font-semibold leading-tight text-ink">
-          {current.title}
-        </p>
-        {current.author && (
-          <p className="mt-1 text-sm text-ink-soft">{current.author}</p>
-        )}
-        {/* Un livre à paraître n'a pas encore de prix ni de disponibilité —
-            sa date de parution est l'information qui compte (vue « à
-            paraître » de /catalogue notamment). */}
-        {current.upcoming && formatDateFr(current.publishedAt) && (
-          <p className="mt-1 text-sm font-bold text-ink-soft">
-            {formatDateFr(current.publishedAt)}
-          </p>
-        )}
-      </div>
     </section>
   );
 }

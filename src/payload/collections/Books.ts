@@ -351,6 +351,76 @@ export const Books: CollectionConfig = {
                 disableListColumn: true,
               },
             },
+            // Onglets de la fiche publique (maquette client « essai page de
+            // livre », 2026-07-23) : citations presse + vidéo dans l'onglet
+            // « La presse en parle », table des matières en texte dans
+            // l'onglet « Table des matières ». Aucun contenu = pas d'onglet.
+            {
+              name: 'presse',
+              type: 'array',
+              label: 'La presse en parle',
+              labels: {
+                singular: 'Citation presse',
+                plural: 'Citations presse',
+              },
+              admin: {
+                disableListColumn: true,
+                description:
+                  'Citations affichées dans l’onglet « La presse en parle » de la fiche. Aucune citation ni vidéo = pas d’onglet.',
+              },
+              fields: [
+                {
+                  name: 'citation',
+                  type: 'textarea',
+                  required: true,
+                  label: 'Citation',
+                  admin: { description: 'Sans guillemets — ils sont ajoutés à l’affichage.' },
+                },
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'source',
+                      type: 'text',
+                      required: true,
+                      label: 'Source',
+                      admin: { width: '40%', description: 'Ex. « Mediapart ».' },
+                    },
+                    {
+                      name: 'date',
+                      type: 'text',
+                      label: 'Date',
+                      admin: { width: '30%', description: 'Texte libre, ex. « 10 juin 2026 ».' },
+                    },
+                    {
+                      name: 'lien',
+                      type: 'text',
+                      label: 'Lien (URL)',
+                      admin: { width: '30%', description: 'Article en ligne (facultatif).' },
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              name: 'video',
+              type: 'text',
+              label: 'Vidéo YouTube (URL)',
+              admin: {
+                description:
+                  'URL YouTube (watch, youtu.be ou embed) — intégrée sous les citations de l’onglet « La presse en parle ».',
+              },
+            },
+            {
+              name: 'tableMatieres',
+              type: 'richText',
+              label: 'Table des matières (texte)',
+              admin: {
+                disableListColumn: true,
+                description:
+                  'Affichée dans l’onglet « Table des matières » de la fiche ; le PDF téléversé plus haut reste proposé en lien.',
+              },
+            },
             {
               type: 'row',
               fields: [

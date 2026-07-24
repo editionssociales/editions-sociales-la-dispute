@@ -1,48 +1,30 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { FramedGrid } from "./framed-grid";
+import { LibelleViewSwitch } from "./libelle-view-switch";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
 
 /**
- * Mosaïque pondérée des libellés du catalogue — LA vue « GEME » retenue par
- * le client (20/07) pour toutes les vues catalogue, sur le quadrillage
- * brutaliste noir 2px, cellule active inversée noir/blanc. Extraite de
- * /catalogue/[edition] pour vivre UNE fois — consommée par /catalogue ET
- * /catalogue/[edition] ; l'ordre des items vient de `getFacets`
- * (alphabétique — arbitrage client 22/07 : mosaïque « désordonnée » assumée,
- * pas de tri par taille), la grille dense comble ce qu'elle peut, les trous
- * restants sont acceptés.
+ * Vue des libellés du catalogue — l'UNIQUE rendu des libellés, consommé par
+ * /catalogue ET /catalogue/[edition]. L'ordre des items vient de `getFacets`
+ * (alphabétique — arbitrage client 22/07 : pas de tri par taille).
  *
- * Loi de taille (client, 22/07 au soir, amendée 23/07) : l'AIRE d'une
- * cellule, en unités de grille (minimum 1), est `round(√(nb de titres))`,
- * posée comme un produit colonnes × lignes aux facteurs les plus proches
- * possibles — la paire de diviseurs la plus « carrée ». Une aire PREMIÈRE
- * ≥ 5 reçoit **+1** (elle devient paire, donc factorisable en bloc — trop
- * de bandes sinon) ; les aires 2 et 3 restent en ligne (ou colonne) simple.
+ * Retour client 2026-07-23 (« ça prend trop de place ») : la grande mosaïque
+ * en grille pondérée (vue « GEME », historique git de ce fichier) est
+ * remplacée par DEUX vues en liste horizontale, entre lesquelles un switch
+ * client TEMPORAIRE (`LibelleViewSwitch`) permet de basculer le temps que le
+ * client compare et tranche :
  *
- * ORIENTATION (client 23/07, remplace « grand facteur toujours horizontal ») :
- * décidée par le MOT LE PLUS LONG du libellé, seuil fixe
- * `VERTICAL_MAX_WORD = 9` — un mot court tient dans une cellule étroite →
- * grand facteur à la VERTICALE (portrait) ; un mot long exige de la largeur
- * → grand facteur à l'HORIZONTALE (paysage). Ex. : « Écologie » (8) →
- * 1×3 portrait ; « Actualité & interventions » (13) → paysage — la bande
- * 3×1 est INTERDITE (client 23/07, trop étirée) et retombe en 2×1 ;
- * « Marxisme & économie politique » (« politique » = 9) → 2×5 portrait ;
- * « État, droit & institutions » (12) → 3×2 paysage.
+ * - « Rectangles simples » (défaut) : étiquettes uniformes, la recette `Tag`
+ *   historique des filtres — `{nom} (n)` sur le quadrillage brutaliste.
+ * - « Cases variables » : même liste horizontale, mais corps et padding de
+ *   chaque case croissent avec le rayon — par TRANCHES de carrés parfaits de
+ *   l'aire `round(√(nb titres))` (la loi de taille de l'ex-mosaïque,
+ *   conservée) : k = floor(√aire), progression fixe par tranche, plafonnée
+ *   au lisible. Les cases d'une même rangée s'étirent à la hauteur de la
+ *   plus grande (align-items par défaut du flex) : pas de trous noirs.
  *
- * Grille : taille CHOISIE D'AVANCE — 10 colonnes en lg (unité ≈ 110 px dans
- * le conteneur max-w-6xl : les petites cellules restent lisibles), plutôt
- * qu'une grille dérivée du plus gros item qui écrasait l'unité. Les largeurs
- * qui débordent sont plafonnées à la pleine largeur (aujourd'hui : seule
- * « Tous les livres », aire 17, première → bande pleine largeur). Spans en
- * maps littérales (JIT). RESPONSIVE (client 23/07 : « garder une forme
- * similaire même sur mobile », amendé : garder aussi la DIVERSITÉ des
- * formes) : sous lg la grille passe à 5 colonnes et chaque cellule garde LA
- * MÊME factorisation qu'en lg, simplement plafonnée à 5 de large — les
- * cellules occupent donc une part de largeur double, mais leurs formes
- * restent différenciées (2×2, 3×2, 4×2, 5×2, bandes 3×1…) au lieu de se
- * normaliser en carrés de base et pleines largeurs. Hauteurs de rangées
- * identiques aux deux tailles.
+ * Dans les deux vues, cellule active inversée noir/blanc (`invertingCell`).
  */
 
 function isPrime(n: number) {
@@ -55,8 +37,9 @@ function isPrime(n: number) {
 
 /**
  * Aire d'une cellule en unités de grille : arrondi de √(nb de titres) —
- * +1 sur les aires premières ≥ 5 pour les rendre factorisables en bloc
- * (amendement client 23/07 : trop de bandes d'une ligne sinon).
+ * +1 sur les aires premières ≥ 5 (héritage de la loi de taille mosaïque,
+ * conservé pour que les tranches restent identiques à ce que le client a
+ * déjà vu).
  */
 function cellArea(count: number) {
   const area = Math.max(1, Math.round(Math.sqrt(Math.max(0, count))));
@@ -64,119 +47,16 @@ function cellArea(count: number) {
 }
 
 /**
- * Factorisation la plus « carrée » : [lignes, colonnes], lignes = plus grand
- * diviseur ≤ √n. Un nombre premier ne laisse que [1, p] — la « ligne simple ».
+ * Poids compact d'un libellé : k = floor(√aire) (tranches de carrés
+ * parfaits — aires 1-3 → k=1, 4-8 → k=2, 9-15 → k=3…), corps et paddings en
+ * progression fixe par tranche, plafonnés au lisible.
  */
-function closestFactors(n: number): [number, number] {
-  for (let rows = Math.floor(Math.sqrt(n)); rows >= 2; rows--) {
-    if (n % rows === 0) return [rows, n / rows];
-  }
-  return [1, n];
-}
-
-/** Spans littéraux (le JIT ne compile pas `col-span-${n}`). */
-const LG_COL_SPAN: Record<number, string> = {
-  1: "lg:col-span-1",
-  2: "lg:col-span-2",
-  3: "lg:col-span-3",
-  4: "lg:col-span-4",
-  5: "lg:col-span-5",
-  6: "lg:col-span-6",
-  7: "lg:col-span-7",
-  8: "lg:col-span-8",
-  9: "lg:col-span-9",
-  10: "lg:col-span-10",
-};
-/** Largeur de la grille lg, fixée d'avance (cf. docstring). */
-const MAX_COLS = 10;
-/** Spans mobile (grille 5 colonnes sous lg). */
-const BASE_COL_SPAN: Record<number, string> = {
-  1: "col-span-1",
-  2: "col-span-2",
-  3: "col-span-3",
-  4: "col-span-4",
-  5: "col-span-5",
-};
-const BASE_MAX_COLS = 5;
-/** Hauteurs identiques à toutes les tailles — pas de variante lg. */
-const ROW_SPAN: Record<number, string> = {
-  1: "row-span-1",
-  2: "row-span-2",
-  3: "row-span-3",
-  4: "row-span-4",
-  5: "row-span-5",
-  6: "row-span-6",
-};
-const MAX_ROWS = 6;
-
-/**
- * Seuil fixe d'orientation : mot le plus long ≤ 9 caractères → portrait
- * (le libellé tient dans une cellule étroite), sinon paysage.
- */
-const VERTICAL_MAX_WORD = 9;
-
-function maxWordLength(name: string) {
-  const words = name.match(/[\p{L}]+/gu) ?? [];
-  return words.reduce((max, w) => Math.max(max, w.length), 0);
-}
-
-/**
- * Hyphénation « light » (client 23/07) : césure UNIQUEMENT si le mot le plus
- * long du libellé déborde une ligne entière de sa cellule — sinon retour à la
- * ligne sans tiret. Le CSS seul ne sait pas l'exprimer (hyphens-auto césure
- * aussi pour équilibrer) : on estime par cellule, largeur de mot ≈
- * chars × 0,72 × corps (capitale grasse Inter ≈ 0,72 em), contre
- * colonnes × unité − padding. Unités mesurées paddings déduits : lg ≈ 108 px
- * (conteneur max-w-6xl, sm:px-8), mobile ≈ 66 px (375px, px-5) ;
- * overflow-wrap:break-word reste le garde-fou des cas limites.
- */
-const UNIT_LG = 108;
-const UNIT_SM = 66;
-const CHAR_RATIO = 0.72;
-const CELL_PAD_X = 26;
-
-function overflowsLine(maxWord: number, cols: number, font: number, unit: number) {
-  return maxWord * CHAR_RATIO * font > cols * unit - CELL_PAD_X;
-}
-
-function spanFor(count: number, name: string) {
-  const area = cellArea(count);
-  const [small, large] = closestFactors(area);
-  const maxWord = maxWordLength(name);
-  const portrait = maxWord <= VERTICAL_MAX_WORD;
-  let cols = Math.min(portrait ? small : large, MAX_COLS);
-  const rows = Math.min(portrait ? large : small, MAX_ROWS);
-  // Forme 3×1 interdite (client 23/07) : bande trop étirée, retombe en 2×1
-  // (seule entorse à l'aire exacte ; le calcul de césure suit les colonnes
-  // finales).
-  if (rows === 1 && cols === 3) cols = 2;
-  // Mobile : même factorisation, plafonnée à la grille de 5 — la diversité
-  // des formes prime sur la proportion à l'écran (amendement client 23/07 :
-  // la division par deux normalisait 95 % des cellules en carrés de base).
-  const baseCols = Math.min(cols, BASE_MAX_COLS);
-  // Corps = fonction STRICTE de l'aire seule, par TRANCHES de carrés
-  // parfaits (client 23/07) : tranche k = floor(√aire) — aires 1-3 → k=1,
-  // 4-8 → k=2, 9-15 → k=3, 16-24 → k=4, etc. Progression fixe par tranche
-  // (+5 px lg, +3 px mobile), PLAFONNÉE au lisible (40/26 px) pour
-  // anticiper des rayons de milliers de titres.
-  const fontSm = Math.min(11 + 3 * Math.floor(Math.sqrt(area)), 26);
-  const fontLg = Math.min(15 + 5 * Math.floor(Math.sqrt(area)), 40);
+function compactTier(count: number) {
+  const k = Math.floor(Math.sqrt(cellArea(count)));
   return {
-    cols,
-    className: `${BASE_COL_SPAN[baseCols]} ${LG_COL_SPAN[cols]} ${ROW_SPAN[rows]}`,
-    fontSm,
-    fontLg,
-    // Hyphénation light : césure seulement là où le mot le plus long déborde
-    // une ligne entière de la cellule, par point de rupture.
-    hyphenClass: `${
-      overflowsLine(maxWord, baseCols, fontSm, UNIT_SM)
-        ? "hyphens-auto"
-        : "hyphens-none"
-    } ${
-      overflowsLine(maxWord, cols, fontLg, UNIT_LG)
-        ? "lg:hyphens-auto"
-        : "lg:hyphens-none"
-    }`,
+    font: Math.min(11 + 4 * k, 27),
+    padY: Math.min(5 + 3 * k, 17),
+    padX: Math.min(10 + 4 * k, 24),
   };
 }
 
@@ -187,25 +67,15 @@ export interface LibelleMosaicItem {
   count: number;
 }
 
-/** Cellule de la mosaïque — inversion noir/blanc à l'état actif. */
-function ThemeCell({
+/** Étiquette uniforme — la recette `Tag` historique des filtres, en lien. */
+function SimpleCell({
   href,
   active,
-  span,
-  fontSm,
-  fontLg,
-  hyphenClass,
   label,
   count,
 }: {
   href: string;
   active: boolean;
-  span: string;
-  /** Corps du libellé (px), fonction stricte de l'aire — mobile / lg. */
-  fontSm: number;
-  fontLg: number;
-  /** hyphens-auto/none par point de rupture (hyphénation light). */
-  hyphenClass: string;
   label: string;
   count: number;
 }) {
@@ -213,18 +83,49 @@ function ThemeCell({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      style={{ "--fs-sm": `${fontSm}px`, "--fs-lg": `${fontLg}px` } as CSSProperties}
-      className={`relative flex flex-col justify-end gap-1 overflow-hidden px-[13px] py-[9px] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${span} ${invertingCell(active)}`}
+      className={`whitespace-nowrap px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-[.03em] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
     >
-      <span
-        className={`font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.02] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs-lg)] ${hyphenClass}`}
-      >
+      {label} <span className="opacity-60">({count})</span>
+    </Link>
+  );
+}
+
+/** Case pondérée de la vue compacte — corps/padding par tranche d'aire. */
+function CompactCell({
+  href,
+  active,
+  label,
+  count,
+  font,
+  padY,
+  padX,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+  count: number;
+  font: number;
+  padY: number;
+  padX: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      style={
+        {
+          "--fs": `${font}px`,
+          "--py": `${padY}px`,
+          "--px": `${padX}px`,
+        } as CSSProperties
+      }
+      className={`flex items-baseline gap-2 px-[var(--px)] py-[var(--py)] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
+    >
+      <span className="font-sans text-[length:var(--fs)] font-black uppercase leading-none tracking-[.01em]">
         {label}
       </span>
-      {/* Compte partout (client 23/07, revient sur le masquage des bandes),
-          corps réduit de 25 % (13→10 / 17→13). */}
-      <span className="whitespace-nowrap font-sans text-[9px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[12px]">
-        {count} titres
+      <span className="whitespace-nowrap font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60">
+        {count}
       </span>
     </Link>
   );
@@ -245,30 +146,44 @@ export function LibelleMosaic({
   ariaLabel: string;
   className?: string;
 }) {
-  const spans = items.map((item) => spanFor(item.count, item.name));
+  const isActive = (item: LibelleMosaicItem) =>
+    (item.slug ?? undefined) === activeLibelle;
+
   return (
-    <FramedGrid
-      as="nav"
-      aria-label={ariaLabel}
-      className={`grid-flow-row-dense auto-rows-[clamp(76px,6.5vw,88px)] grid-cols-5 lg:grid-cols-10 ${className}`}
-    >
-      {items.map((item, i) => {
-        const span = spans[i];
-        const active = (item.slug ?? undefined) === activeLibelle;
-        return (
-          <ThemeCell
-            key={item.slug ?? "all"}
-            href={hrefFor(item.slug)}
-            active={active}
-            span={span.className}
-            fontSm={span.fontSm}
-            fontLg={span.fontLg}
-            hyphenClass={span.hyphenClass}
-            label={item.name}
-            count={item.count}
-          />
-        );
-      })}
-    </FramedGrid>
+    <LibelleViewSwitch
+      className={className}
+      simple={
+        <FramedGrid as="nav" flow="flex" aria-label={ariaLabel}>
+          {items.map((item) => (
+            <SimpleCell
+              key={item.slug ?? "all"}
+              href={hrefFor(item.slug)}
+              active={isActive(item)}
+              label={item.name}
+              count={item.count}
+            />
+          ))}
+        </FramedGrid>
+      }
+      compact={
+        <FramedGrid as="nav" flow="flex" aria-label={ariaLabel}>
+          {items.map((item) => {
+            const tier = compactTier(item.count);
+            return (
+              <CompactCell
+                key={item.slug ?? "all"}
+                href={hrefFor(item.slug)}
+                active={isActive(item)}
+                label={item.name}
+                count={item.count}
+                font={tier.font}
+                padY={tier.padY}
+                padX={tier.padX}
+              />
+            );
+          })}
+        </FramedGrid>
+      }
+    />
   );
 }

@@ -64,10 +64,9 @@ const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
 /**
  * Monogrammes maisons de la rangée mobile — carrés sur l'accent de la maison
  * (R3 : navy = Éditions sociales, brick = La Dispute), inversion accent↔paper
- * au survol. Clefs = labels de `NAV_HOUSES` (les deux hrefs pointent
- * désormais vers la même page commune `/a-propos`, ce qui les rend impropres
- * à servir de clef — le label, lui, reste unique), classes littérales
- * (contrat JIT) ; le nom complet reste porté par l'`aria-label`.
+ * au survol. Clefs = labels de `NAV_HOUSES` (clef stable, indépendante des
+ * hrefs — désormais les pages maisons `/editions/[slug]`), classes
+ * littérales (contrat JIT) ; le nom complet reste porté par l'`aria-label`.
  */
 const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string }> = {
   "La Dispute": {

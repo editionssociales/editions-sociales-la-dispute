@@ -141,6 +141,16 @@ export const Rencontres: CollectionConfig = {
       ],
     },
     {
+      name: 'pleinCadre',
+      type: 'checkbox',
+      label: 'Grande affiche (pleine largeur)',
+      defaultValue: false,
+      admin: {
+        description:
+          'Coché : l’événement s’affiche en grande carte pleine largeur en tête de l’agenda (ex. braderie). Décoché : carte standard dans la grille 2-3 colonnes.',
+      },
+    },
+    {
       name: 'intervenants',
       type: 'text',
       label: 'Livre, auteurs, intervenants',

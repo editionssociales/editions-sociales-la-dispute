@@ -47,6 +47,8 @@ export interface Rencontre {
   /** Image dédiée si renseignée, sinon couverture du livre lié, sinon `null`. */
   image: RencontreImage | null;
   livre: RencontreLivre | null;
+  /** Grande affiche pleine largeur (carte héros) plutôt que carte de grille. */
+  pleinCadre: boolean;
 }
 
 export interface RencontresSplit {
@@ -110,6 +112,7 @@ export function rencontreFromDoc(doc: PayloadRencontre): Rencontre {
     description: doc.description,
     image,
     livre,
+    pleinCadre: Boolean(doc.pleinCadre),
   };
 }
 

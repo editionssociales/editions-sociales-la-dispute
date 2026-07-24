@@ -133,6 +133,23 @@ export function payloadBookToRawBook(doc: PayloadBook): RawBook {
     furtherReadingHtml: plusLoin,
     tocUrl: mediaUrl(doc.tablePdf),
     excerptUrl: mediaUrl(doc.extraitPdf),
+    // Onglets de la fiche (2026-07-23) : une citation sans texte ou sans
+    // source (rangée en cours de saisie) est ignorée plutôt que rendue vide.
+    press: (doc.presse ?? []).flatMap((p) => {
+      const quote = p.citation?.trim();
+      const source = p.source?.trim();
+      if (!quote || !source) return [];
+      return [
+        {
+          quote,
+          source,
+          date: p.date?.trim() || null,
+          url: p.lien?.trim() || null,
+        },
+      ];
+    }),
+    videoUrl: doc.video?.trim() || null,
+    tocHtml: lexicalToHtml(doc.tableMatieres) || null,
     commerce: toCommerce(doc.commerce),
   };
 }
