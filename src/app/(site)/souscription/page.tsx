@@ -471,13 +471,29 @@ export default async function SouscriptionPage() {
                           <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
                             {p.tier.title}
                           </span>
-                          <ul className="mt-4 flex-1 space-y-2 text-sm text-ink/70">
-                            {p.items.map((item) => (
-                              <li key={item} className="flex gap-2.5">
-                                <span
-                                  className={`mt-1.5 h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
-                                />
-                                {item}
+                          {/* Lot en bandes pleine largeur (maquette PDF client) :
+                              cadre ink 2px, une bande par ligne, séparateurs
+                              porteurs d'un « + » (le lot s'additionne). Une
+                              ligne `alternative` (règle « ou » de
+                              `site-content-core`) s'accroche à la précédente
+                              SANS séparateur, préfixée « ou » : un choix,
+                              pas un ajout. */}
+                          <ul className="mt-4 flex-1 self-start w-full border-2 border-ink">
+                            {p.items.map((item, j) => (
+                              <li key={item.texte}>
+                                {j > 0 && !item.alternative && (
+                                  <div aria-hidden="true" className="relative h-[2px] bg-ink">
+                                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-paper px-1.5 font-sans text-sm font-black leading-none text-ink">
+                                      +
+                                    </span>
+                                  </div>
+                                )}
+                                <p className="px-3 py-2.5 text-center font-sans text-sm font-bold leading-snug text-ink">
+                                  {item.alternative && (
+                                    <span className="font-medium italic">ou </span>
+                                  )}
+                                  {item.texte}
+                                </p>
                               </li>
                             ))}
                           </ul>

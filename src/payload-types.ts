@@ -1089,6 +1089,9 @@ export interface PageSouscription {
           | 'palier-300'
           | 'palier-500'
           | 'palier-1000';
+        /**
+         * Une ligne par élément. Une ligne commençant par « ou » devient une alternative à la précédente (affichée « ou … », sans séparateur « + »).
+         */
         items?:
           | {
               texte: string;

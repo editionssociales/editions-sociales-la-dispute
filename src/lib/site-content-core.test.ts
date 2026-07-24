@@ -273,10 +273,20 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
       15, 35, 50, 75, 100, 200, 300, 500, 1000,
     ]);
     // Un lot verrouillé au hasard (iso-rendu du PDF client « contreparties dans l'ordre »).
-    expect(merged.contreparties[0].items).toEqual(["Une planche de stickers"]);
+    expect(merged.contreparties[0].items).toEqual([
+      { texte: "Une planche de stickers", alternative: false },
+    ]);
     expect(merged.contreparties[1].items).toEqual([
-      "Manifeste du parti communiste",
-      "Une planche de stickers",
+      { texte: "Manifeste du parti communiste", alternative: false },
+      { texte: "Une planche de stickers", alternative: false },
+    ]);
+    // Règle « ou » sur les défauts : la bande alternative du PDF (préfixe
+    // retiré du texte, flag posé — le rendu repose le « ou »).
+    expect(merged.contreparties[2].items).toEqual([
+      { texte: "Découvrir l'antifascisme", alternative: false },
+      { texte: "Contre l'écologie de guerre", alternative: true },
+      { texte: "Un tote bag", alternative: false },
+      { texte: "Une planche de stickers", alternative: false },
     ]);
   });
 
@@ -301,7 +311,30 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
     const [carte] = merged.contreparties;
     expect(carte.tier.amount).toBe(35);
     expect(carte.tier.title).toBe("Coup de main");
-    expect(carte.items).toEqual(["Un livre au choix"]);
+    expect(carte.items).toEqual([{ texte: "Un livre au choix", alternative: false }]);
+  });
+
+  it("règle « ou » sur une saisie back-office : préfixe (insensible à la casse) retiré, flag posé — « Ouvrage » n'est pas un « ou »", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      contreparties: [
+        {
+          tierId: "palier-50",
+          items: [
+            { texte: "Un premier livre" },
+            { texte: "ou un second livre" },
+            { texte: "Ou un troisième" },
+            { texte: "Ouvrage sans alternative" },
+          ],
+        },
+      ],
+    });
+    expect(merged.contreparties[0].items).toEqual([
+      { texte: "Un premier livre", alternative: false },
+      { texte: "un second livre", alternative: true },
+      { texte: "un troisième", alternative: true },
+      { texte: "Ouvrage sans alternative", alternative: false },
+    ]);
   });
 
   it("entrée dont le palier a disparu de la table → ignorée ; toutes invalides → défauts", () => {
@@ -322,6 +355,8 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
       contreparties: [{ tierId: "palier-15", items: [{ texte: "Un seul lot" }] }],
     });
     expect(merged.contreparties).toHaveLength(1);
-    expect(merged.contreparties[0].items).toEqual(["Un seul lot"]);
+    expect(merged.contreparties[0].items).toEqual([
+      { texte: "Un seul lot", alternative: false },
+    ]);
   });
 });

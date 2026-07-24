@@ -231,6 +231,28 @@ export function mergePageAPropos(
 /* ------------------------------------------------------------------ */
 
 /**
+ * Une ligne du lot d'une contrepartie. `alternative` = ligne « ou … » : un
+ * choix avec la ligne précédente (rendue préfixée « ou », sans séparateur).
+ */
+export interface ContrepartieItem {
+  texte: string;
+  alternative: boolean;
+}
+
+/**
+ * Règle « ou » (maquette PDF client) — énoncée ICI une seule fois, pour les
+ * défauts ci-dessous comme pour les saisies back-office : une ligne qui
+ * commence par le mot « ou » est une alternative à la précédente. Le préfixe
+ * est retiré du texte, le rendu le repose (`souscription/page.tsx`).
+ */
+function parseContrepartieItem(texte: string): ContrepartieItem {
+  const alternative = /^ou\s+(.+)$/i.exec(texte);
+  return alternative
+    ? { texte: alternative[1], alternative: true }
+    : { texte, alternative: false };
+}
+
+/**
  * Carte de contrepartie : `tier` est TOUJOURS résolu depuis `DONATION_TIERS`
  * (la table qui pilote Stripe via `parseDonation`) — le back-office ne
  * choisit qu'un `tierId`, jamais un montant. Une entrée dont le palier a
@@ -239,7 +261,7 @@ export function mergePageAPropos(
  */
 export interface ContrepartieSouscription {
   tier: DonationTier;
-  items: string[];
+  items: ContrepartieItem[];
 }
 
 /**
@@ -264,7 +286,8 @@ function tierObligatoire(id: string): DonationTier {
 
 /**
  * Contreparties définitives de la campagne 2026 (PDF client « contreparties
- * dans l'ordre », livraison Clara du 2026-07-24), extraites **verbatim**.
+ * dans l'ordre », livraison Clara du 2026-07-24), extraites **verbatim** —
+ * une ligne par bande du PDF, les alternatives portées par la règle « ou ».
  * Les tests verrouillent ces valeurs (iso-rendu).
  */
 const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
@@ -280,7 +303,8 @@ const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
     {
       tier: tierObligatoire("palier-50"),
       items: [
-        "Découvrir l'antifascisme ou Contre l'écologie de guerre",
+        "Découvrir l'antifascisme",
+        "ou Contre l'écologie de guerre",
         "Un tote bag",
         "Une planche de stickers",
       ],
@@ -297,7 +321,8 @@ const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
     {
       tier: tierObligatoire("palier-100"),
       items: [
-        "Gaza, génocide annoncé ou Fascisme et dictature",
+        "Gaza, génocide annoncé",
+        "ou Fascisme et dictature",
         "Un tote bag",
         "Une planche de stickers",
       ],
@@ -310,7 +335,8 @@ const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
       // harmonisé ici avec le titre réel du livre.
       tier: tierObligatoire("palier-200"),
       items: [
-        "Décoloniser le marxisme et L'État et la révolution citoyenne — ou Découvrir Luxemburg et Clara Zetkin",
+        "Décoloniser le marxisme et L'État et la révolution citoyenne",
+        "ou Découvrir Luxemburg et Clara Zetkin",
         "Un tote bag",
         "Une planche de stickers",
       ],
@@ -340,12 +366,13 @@ const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
     {
       tier: tierObligatoire("palier-1000"),
       items: [
-        "Une sélection de 15 Découvrir ou 5 livres de la GEME",
+        "Une sélection de 15 Découvrir",
+        "ou 5 livres de la GEME",
         "Un tote bag",
         "Une planche de stickers",
       ],
     },
-  ],
+  ].map((carte) => ({ ...carte, items: carte.items.map(parseContrepartieItem) })),
 };
 
 /**
@@ -361,7 +388,7 @@ export function mergePageSouscription(
     if (!tier) return [];
     const items = (entry.items ?? []).flatMap((item) => {
       const texte = item.texte?.trim();
-      return texte ? [texte] : [];
+      return texte ? [parseContrepartieItem(texte)] : [];
     });
     return [{ tier, items }];
   });

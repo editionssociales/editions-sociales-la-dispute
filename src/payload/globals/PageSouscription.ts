@@ -71,6 +71,10 @@ export const PageSouscription: GlobalConfig = {
             singular: 'Élément',
             plural: 'Éléments',
           },
+          admin: {
+            description:
+              'Une ligne par élément. Une ligne commençant par « ou » devient une alternative à la précédente (affichée « ou … », sans séparateur « + »).',
+          },
           fields: [
             {
               name: 'texte',
