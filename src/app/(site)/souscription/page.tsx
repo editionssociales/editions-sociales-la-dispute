@@ -90,6 +90,9 @@ const CAMPAIGN_VIDEO_URL: string | null = null;
  * n'est pas encore dessinée ; visuels à re-livrer par Clara.
  */
 const TIER_IMAGES: Record<string, StaticImageData> = {
+  // Les deux premiers visuels sont recadrés à la source (trim sharp des
+  // marges blanches du montage, l'ombre portée fait partie du cadrage) :
+  // ils s'affichent en variante compacte, cf. `COMPACT_TIERS`.
   "palier-15": coupDePouceImg,
   "palier-35": coupDeMainImg,
   "palier-50": camaradeDeLectureImg,
@@ -100,6 +103,14 @@ const TIER_IMAGES: Record<string, StaticImageData> = {
   "palier-500": camaradeDHonneurImg,
   "palier-1000": camaradePourLaVieImg,
 };
+
+/**
+ * Cartes compactes (retour client 2026-07-24) : les petits lots (un sticker,
+ * un livre) n'ont pas à occuper la même hauteur que les grands montages —
+ * l'illustration, réduite, vient se loger à droite du montant/intitulé pour
+ * combler le vide, au lieu d'un bandeau pleine largeur.
+ */
+const COMPACT_TIERS = new Set(["palier-15", "palier-35"]);
 
 /** Objectifs de la jauge (docx client, définitifs) — cellules encadrées après le récit. */
 const OBJECTIFS: { montant: string; titre: string; desc: string }[] = [
@@ -448,6 +459,7 @@ export default async function SouscriptionPage() {
                   // Un palier ajouté à DONATION_TIERS sans visuel dans
                   // TIER_IMAGES rend une carte sans image, jamais un crash.
                   const img = TIER_IMAGES[p.tier.id];
+                  const compact = COMPACT_TIERS.has(p.tier.id);
                   return (
                     <Reveal key={p.tier.id} className="h-full">
                       <div className="relative flex h-full flex-col bg-paper">
@@ -456,7 +468,7 @@ export default async function SouscriptionPage() {
                             fond le blanc dans le `bg-paper` (blanc cassé) du site,
                             les ombres portées restent correctes. Décoratif : la
                             liste textuelle des items porte l'information (alt vide). */}
-                        {img && (
+                        {img && !compact && (
                           <Image
                             src={img}
                             alt=""
@@ -465,12 +477,38 @@ export default async function SouscriptionPage() {
                           />
                         )}
                         <div className="flex flex-1 flex-col p-6">
-                          <span className="font-sans text-4xl font-black italic text-ink">
-                            {p.tier.amount}&nbsp;€
-                          </span>
-                          <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                            {p.tier.title}
-                          </span>
+                          {compact ? (
+                            /* Variante compacte : l'illustration réduite se
+                               loge à droite du montant/intitulé (léger débord
+                               vers le cadre, `-mr-2`), pas de bandeau. */
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <span className="block font-sans text-4xl font-black italic text-ink">
+                                  {p.tier.amount}&nbsp;€
+                                </span>
+                                <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
+                                  {p.tier.title}
+                                </span>
+                              </div>
+                              {img && (
+                                <Image
+                                  src={img}
+                                  alt=""
+                                  sizes="(min-width: 1024px) 140px, 35vw"
+                                  className="-mr-2 block h-auto w-[35%] shrink-0 mix-blend-multiply"
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <span className="font-sans text-4xl font-black italic text-ink">
+                                {p.tier.amount}&nbsp;€
+                              </span>
+                              <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
+                                {p.tier.title}
+                              </span>
+                            </>
+                          )}
                           {/* Lot en bandes pleine largeur (maquette PDF client) :
                               cadre ink 2px, une bande par ligne, séparateurs
                               porteurs d'un « + » (le lot s'additionne). Une
