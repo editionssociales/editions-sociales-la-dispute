@@ -6,7 +6,7 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
 /**
  * Bascule TEMPORAIRE entre les deux vues des libellés du catalogue (retour
  * client 2026-07-23) : « rectangles simples » (liste uniforme, défaut) vs
- * « cases variables » (liste compacte pondérée). Le client compare les deux
+ * « cases variables » (étages pondérés). Le client compare les deux
  * en preview et tranche — retirer ce switch (et la vue perdante) une fois
  * l'arbitrage rendu. Les deux vues sont rendues côté serveur et passées en
  * props : ce sliver client ne porte que l'état de bascule.
