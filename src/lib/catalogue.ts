@@ -7,7 +7,6 @@ import {
   buildNativeBookDetail,
   buildNativeCatalogue,
   computeFacets,
-  countByEdition,
   newReleases,
   queryBooks,
 } from "./catalogue-core";
@@ -20,7 +19,7 @@ export type { CatalogueView } from "./browse";
  *
  * Câble l'adaptateur pg au cœur pur (`catalogue-core`) et dédoublonne les
  * chargements par requête (`cache`). L'API publique — `getBooks`, `getFacets`,
- * `getBook`, `getNewReleases`, `countBooks` — est inchangée pour les pages.
+ * `getBook`, `getNewReleases` — est inchangée pour les pages.
  *
  * L'axe WordPress/WooCommerce (adaptateur http, Store API, flags
  * `CATALOGUE_SOURCE`/`COMMERCE_NATIVE`) a été retiré à la coupure OVH :
@@ -67,10 +66,6 @@ export async function getBooks(filters: BookFilters = {}): Promise<Book[]> {
 
 export async function getNewReleases(limit = 8): Promise<Book[]> {
   return newReleases(await getBooks({ sort: "recent" }), limit);
-}
-
-export async function countBooks(edition?: EditionSlug): Promise<number> {
-  return countByEdition(await getAllBooks(), edition);
 }
 
 export async function getFacets(

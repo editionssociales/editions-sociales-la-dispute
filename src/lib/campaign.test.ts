@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  CAMPAIGN_2024,
-  deriveGauge,
-  deriveStats,
-  type CampaignFacts,
-  type GaugeFacts,
-} from "./campaign";
+import { deriveGauge, type GaugeFacts } from "./campaign";
 
 const gaugeFacts = (over: Partial<GaugeFacts> = {}): GaugeFacts => ({
   collected: 30000,
@@ -15,13 +9,6 @@ const gaugeFacts = (over: Partial<GaugeFacts> = {}): GaugeFacts => ({
     { value: 25000, label: "A" },
     { value: 50000, label: "B" },
   ],
-  ...over,
-});
-
-const facts = (over: Partial<CampaignFacts> = {}): CampaignFacts => ({
-  ...gaugeFacts(),
-  messages: 10,
-  durationDays: 20,
   ...over,
 });
 
@@ -46,25 +33,5 @@ describe("deriveGauge", () => {
     const c = deriveGauge(gaugeFacts());
     expect(c).not.toHaveProperty("stats");
     expect(c).not.toHaveProperty("messages");
-  });
-});
-
-describe("deriveStats (rétrospective — campagne terminée uniquement)", () => {
-  it("expose 4 tuiles, dont le pourcentage dérivé et la durée réelle", () => {
-    const stats = deriveStats(facts());
-    expect(stats).toHaveLength(4);
-    expect(stats[2]).toMatchObject({ value: 60, suffix: " %" });
-    expect(stats[0].label).toContain("20 jours");
-    expect(stats[3]).toMatchObject({ value: 10, label: "messages de soutien" });
-  });
-});
-
-describe("CAMPAIGN_2024 (résultats réels)", () => {
-  it("dérive 170 %, plafond 100 000 €, deux paliers franchis sur trois", () => {
-    expect(CAMPAIGN_2024.percentOfGoal).toBe(170);
-    expect(CAMPAIGN_2024.gauge.max).toBe(100000);
-    expect(CAMPAIGN_2024.gauge.value).toBe(85305);
-    expect(CAMPAIGN_2024.gauge.markers.map((m) => m.reached)).toEqual([true, true, false]);
-    expect(CAMPAIGN_2024.stats).toHaveLength(4);
   });
 });

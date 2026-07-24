@@ -1,11 +1,12 @@
 /**
  * Domaine « campagne / paliers » — pur, sans I/O ni rendu.
  *
- * Deux dérivations aux besoins distincts : `deriveGauge` (jauge + compteurs —
- * tout ce qu'une campagne **en cours** peut honnêtement afficher) et
- * `deriveStats` (tuiles rétrospectives — messages, durée — qui n'ont de sens
- * que pour une campagne **terminée**). Les séparer évite d'inventer des faits
- * neutres pour remplir une interface trop large.
+ * `deriveGauge` : jauge + compteurs — tout ce qu'une campagne **en cours**
+ * peut honnêtement afficher. Le volet rétrospectif 2024 (`deriveStats`,
+ * `CAMPAIGN_2024`) a été supprimé avec la section « En 2024, vous avez sauvé
+ * nos maisons » de /souscription (livraison campagne 2026 du 2026-07-24,
+ * consigne client : rien qui ne soit un extrait des documents fournis) —
+ * historique dans git au besoin.
  */
 
 /** Un palier de collecte (montant + intitulé). */
@@ -25,22 +26,9 @@ export interface GaugeFacts {
   paliers: Palier[];
 }
 
-/** Faits complets d'une campagne TERMINÉE — seuls eux autorisent les tuiles de stats. */
-export interface CampaignFacts extends GaugeFacts {
-  messages: number;
-  durationDays: number;
-}
-
 /** Palier projeté avec son état atteint/non atteint. */
 export interface GaugeMarker extends Palier {
   reached: boolean;
-}
-
-/** Une tuile de statistique (valeur animée + suffixe + libellé). */
-export interface CampaignStat {
-  value: number;
-  suffix: string;
-  label: string;
 }
 
 /** Vue-modèle de jauge, consommée par `<Gauge>` et les compteurs. */
@@ -77,36 +65,3 @@ export function deriveGauge(facts: GaugeFacts): CampaignGauge {
     },
   };
 }
-
-/** Tuiles rétrospectives (gabarit 2024) — exige les faits d'une campagne terminée. */
-export function deriveStats(facts: CampaignFacts): CampaignStat[] {
-  const { percentOfGoal } = deriveGauge(facts);
-  return [
-    { value: facts.collected, suffix: " €", label: `collectés en ${facts.durationDays} jours` },
-    { value: facts.contributors, suffix: "", label: "contributeur·rices" },
-    { value: percentOfGoal, suffix: " %", label: "de l'objectif initial" },
-    { value: facts.messages, suffix: "", label: "messages de soutien" },
-  ];
-}
-
-/**
- * Résultats finaux de la campagne Ulule 2024 « Sauvez les Éditions sociales et
- * La Dispute » (source : API Ulule).
- */
-const FACTS_2024: CampaignFacts = {
-  collected: 85305,
-  goal: 50000,
-  contributors: 958,
-  messages: 419,
-  durationDays: 39,
-  paliers: [
-    { value: 50000, label: "Survie" },
-    { value: 75000, label: "Consolidation" },
-    { value: 100000, label: "Déploiement" },
-  ],
-};
-
-export const CAMPAIGN_2024 = {
-  ...deriveGauge(FACTS_2024),
-  stats: deriveStats(FACTS_2024),
-};

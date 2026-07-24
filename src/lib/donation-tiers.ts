@@ -106,9 +106,8 @@ export const CAMPAIGN_2026_PALIERS: Palier[] = [
 /**
  * Vue-modèle de la campagne 2026 « en cours » — **uniquement** ce qu'une jauge
  * vivante peut afficher honnêtement : `deriveGauge` (`campaign.ts`) ne connaît
- * ni `messages` ni `durationDays`, les tuiles rétrospectives du gabarit 2024
- * (`deriveStats`) n'existent donc tout simplement pas pour la campagne en
- * cours — plus de faits neutres à inventer ni de champ à écarter.
+ * ni messages ni durée — rien de rétrospectif, pas de faits neutres à
+ * inventer ni de champ à écarter.
  */
 export type Campaign2026 = CampaignGauge;
 

@@ -129,7 +129,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/souscription" },
 };
 
-export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
+export const revalidate = 3600; // fenêtre ISR (contreparties lues dans Payload/Postgres)
 
 /**
  * Formulaire « montant libre » — rendu deux fois (bloc d'ask, CTA final) avec
@@ -445,6 +445,9 @@ export default async function SouscriptionPage() {
                 {content.contreparties.map((p, i) => {
                   // Paliers de don : les 4 accents de marque, jamais le cycle pop (R2/R3).
                   const accentBg = BG[ACCENTS[i % 4]];
+                  // Un palier ajouté à DONATION_TIERS sans visuel dans
+                  // TIER_IMAGES rend une carte sans image, jamais un crash.
+                  const img = TIER_IMAGES[p.tier.id];
                   return (
                     <Reveal key={p.tier.id} className="h-full">
                       <div className="relative flex h-full flex-col bg-paper">
@@ -453,12 +456,14 @@ export default async function SouscriptionPage() {
                             fond le blanc dans le `bg-paper` (blanc cassé) du site,
                             les ombres portées restent correctes. Décoratif : la
                             liste textuelle des items porte l'information (alt vide). */}
-                        <Image
-                          src={TIER_IMAGES[p.tier.id]}
-                          alt=""
-                          sizes="(min-width: 1024px) 380px, 100vw"
-                          className="block h-auto w-full mix-blend-multiply"
-                        />
+                        {img && (
+                          <Image
+                            src={img}
+                            alt=""
+                            sizes="(min-width: 1024px) 380px, 100vw"
+                            className="block h-auto w-full mix-blend-multiply"
+                          />
+                        )}
                         <div className="flex flex-1 flex-col p-6">
                           <span className="font-sans text-4xl font-black italic text-ink">
                             {p.tier.amount}&nbsp;€

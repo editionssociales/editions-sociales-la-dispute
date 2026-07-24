@@ -33,18 +33,6 @@ const FALLBACK_W = 400;
 const FALLBACK_H = 600;
 
 /**
- * Chaîne `aspect-ratio` CSS au ratio RÉEL de la couverture (dimensions de la
- * base de données). À utiliser quand la géométrie CSS doit épouser exactement
- * la proportion de la couverture — typiquement la face 3D de l'étagère, dont
- * la largeur se déduit alors de sa hauteur à chaque instant : l'objet adopte
- * le format EXACT de la couverture, sans jamais la recadrer.
- */
-export function coverAspectRatio(cover: CoverLike): string {
-  if (!cover || cover.width <= 0 || cover.height <= 0) return "2 / 3";
-  return `${cover.width} / ${cover.height}`;
-}
-
-/**
  * Plafond des dimensions passées à `next/image` : au-delà, le srcset généré
  * monte jusqu'à 2048/3840w alors que les couvertures s'affichent à ≤ ~400px
  * CSS (carrousel, grille, fiche). On conserve le ratio, on borne le grand côté.

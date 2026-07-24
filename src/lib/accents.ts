@@ -14,10 +14,3 @@ export const ACCENT_BG: Record<Accent, string> = {
   brick: "bg-brick",
 };
 
-export const ACCENT_TEXT: Record<Accent, string> = {
-  navy: "text-navy",
-  bottle: "text-bottle",
-  // Ocre assombri pour le texte : l'ocre vif échoue au contraste AA sur paper.
-  ocher: "text-ocher-text",
-  brick: "text-brick",
-};
