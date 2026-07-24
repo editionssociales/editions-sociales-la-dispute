@@ -103,12 +103,11 @@ describe("createDonationCheckout — palier fixe", () => {
     expect(lastBody?.get("line_items[0][price_data][unit_amount]")).toBe("1500");
   });
 
-  it("palier mécène (pas d'envoi postal) → aucune collecte d'adresse", async () => {
-    await expect(createDonationCheckout(form({ tierId: "mecene-500" }))).rejects.toThrow(
+  it("tous les paliers collectent l'adresse (plus de mécènes sans envoi) — vérifié sur le plus grand", async () => {
+    await expect(createDonationCheckout(form({ tierId: "palier-1000" }))).rejects.toThrow(
       "NEXT_REDIRECT:https://checkout.stripe.com/c/pay/cs_test_1",
     );
-    const keys = [...(lastBody?.keys() ?? [])];
-    expect(keys.some((k) => k.startsWith("shipping_address_collection"))).toBe(false);
+    expect(lastBody?.get("shipping_address_collection[allowed_countries][0]")).toBe("FR");
   });
 });
 

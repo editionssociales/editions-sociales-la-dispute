@@ -1,10 +1,11 @@
 /**
  * Domaine « paliers de don » — pur, sans I/O (convention `src/lib/CLAUDE.md`).
  *
- * Table de référence des contreparties/mécènes de la souscription 2026 (reprise
- * des données en dur de `souscription/page.tsx`) + validation serveur d'un don :
- * un palier voit son montant **dérivé de cette table**, jamais du client ; un
- * montant libre est borné et converti en centimes ici, une fois pour toutes.
+ * Table de référence des contreparties de la souscription 2026 (livraison
+ * définitive Clara, docx/xlsx/PDF du 2026-07-24) + validation serveur d'un
+ * don : un palier voit son montant **dérivé de cette table**, jamais du
+ * client ; un montant libre est borné et converti en centimes ici, une fois
+ * pour toutes.
  */
 
 import { deriveGauge, type CampaignGauge, type Palier } from "./campaign";
@@ -26,22 +27,23 @@ export interface DonationTier {
 }
 
 /**
- * Paliers de la souscription 2026 — 8 contreparties (15→300 €, envoi postal)
- * + 2 mécènes (500/1000 €, contact direct, pas d'envoi). Provisoires : reprise
- * des montants/titres 2024 actuellement en dur dans `souscription/page.tsx`,
- * remplacés à réception des contenus définitifs (E10).
+ * Paliers de la souscription 2026 — livraison définitive de la campagne
+ * (Clara, docx/xlsx/PDF du 2026-07-24) : 9 paliers, TOUS avec contrepartie
+ * physique (adresse de livraison Stripe collectée systématiquement). Il n'y
+ * a plus de mécènes sans envoi (contrairement à 2024) : `physical` reste
+ * dans le type pour la mécanique Stripe (`shipping_address_collection`),
+ * mais vaut désormais `true` sur toute la table.
  */
 export const DONATION_TIERS: DonationTier[] = [
-  { id: "palier-15", amount: 15, title: "Le coup de pouce", physical: true },
-  { id: "palier-35", amount: 35, title: "Petit mais irremplaçable", physical: true },
-  { id: "palier-50", amount: 50, title: "L'essentiel", physical: true },
-  { id: "palier-75", amount: 75, title: "L'indispensable", physical: true },
-  { id: "palier-100", amount: 100, title: "L'incontournable", physical: true },
-  { id: "palier-150", amount: 150, title: "Le très grand format", physical: true },
-  { id: "palier-200", amount: 200, title: "Les nouveautés", physical: true },
-  { id: "palier-300", amount: 300, title: "Le grand lot", physical: true },
-  { id: "mecene-500", amount: 500, title: "La rencontre", physical: false },
-  { id: "mecene-1000", amount: 1000, title: "L'intégrale", physical: false },
+  { id: "palier-15", amount: 15, title: "Coup de pouce", physical: true },
+  { id: "palier-35", amount: 35, title: "Coup de main", physical: true },
+  { id: "palier-50", amount: 50, title: "Camarade de lecture", physical: true },
+  { id: "palier-75", amount: 75, title: "Camarade fidèle", physical: true },
+  { id: "palier-100", amount: 100, title: "Camarade de lutte", physical: true },
+  { id: "palier-200", amount: 200, title: "Camarade de la première heure", physical: true },
+  { id: "palier-300", amount: 300, title: "Camarade infatigable", physical: true },
+  { id: "palier-500", amount: 500, title: "Camarade d'honneur", physical: true },
+  { id: "palier-1000", amount: 1000, title: "Camarade pour la vie", physical: true },
 ];
 
 /** Bornes du montant libre (€) — anti card-testing / anti-fat-finger. */
@@ -91,14 +93,14 @@ export function parseDonation(input: {
   return { amountMinor: eurosToCents(value) };
 }
 
-/** Objectif provisoire de la campagne 2026 (€) — remplacé à réception des contenus (E10). */
+/** Objectif de la campagne 2026 (€) — docx client, définitif. */
 export const CAMPAIGN_2026_GOAL = 50_000;
 
-/** Paliers de jauge provisoires 2026 (repris de 2024) — remplacés en E10. */
+/** Paliers de jauge 2026 (docx client, définitifs). */
 export const CAMPAIGN_2026_PALIERS: Palier[] = [
-  { value: 50_000, label: "Survie" },
-  { value: 75_000, label: "Consolidation" },
-  { value: 100_000, label: "Déploiement" },
+  { value: 50_000, label: "On sauve les meubles" },
+  { value: 80_000, label: "On résiste" },
+  { value: 100_000, label: "On construit" },
 ];
 
 /**

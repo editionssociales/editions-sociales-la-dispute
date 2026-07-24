@@ -16,10 +16,9 @@ describe("CAMPAIGN_KEY", () => {
 });
 
 describe("DONATION_TIERS", () => {
-  it("10 paliers : 8 contreparties physiques + 2 mécènes sans envoi", () => {
-    expect(DONATION_TIERS).toHaveLength(10);
-    expect(DONATION_TIERS.filter((t) => t.physical)).toHaveLength(8);
-    expect(DONATION_TIERS.filter((t) => !t.physical)).toHaveLength(2);
+  it("9 paliers, tous avec contrepartie physique (plus de mécènes sans envoi)", () => {
+    expect(DONATION_TIERS).toHaveLength(9);
+    expect(DONATION_TIERS.every((t) => t.physical)).toBe(true);
   });
 
   it("ids uniques", () => {
@@ -27,10 +26,22 @@ describe("DONATION_TIERS", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("montants tous positifs, mécènes = 500 et 1000 €", () => {
+  it("montants et ids exacts, dans l'ordre d'affichage", () => {
+    expect(DONATION_TIERS.map((t) => ({ id: t.id, amount: t.amount }))).toEqual([
+      { id: "palier-15", amount: 15 },
+      { id: "palier-35", amount: 35 },
+      { id: "palier-50", amount: 50 },
+      { id: "palier-75", amount: 75 },
+      { id: "palier-100", amount: 100 },
+      { id: "palier-200", amount: 200 },
+      { id: "palier-300", amount: 300 },
+      { id: "palier-500", amount: 500 },
+      { id: "palier-1000", amount: 1000 },
+    ]);
+  });
+
+  it("montants tous positifs", () => {
     for (const t of DONATION_TIERS) expect(t.amount).toBeGreaterThan(0);
-    const mecenes = DONATION_TIERS.filter((t) => !t.physical).map((t) => t.amount);
-    expect(mecenes.sort((a, b) => a - b)).toEqual([500, 1000]);
   });
 });
 

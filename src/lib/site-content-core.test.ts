@@ -255,46 +255,36 @@ describe("mergePageAPropos — global vide ⇒ page actuelle, verbatim", () => {
   });
 });
 
-describe("mergePageSouscription — global vide ⇒ page actuelle, verbatim", () => {
-  it("global absent → héros par défaut exact (insécables du JSX d'origine compris)", () => {
+describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut, verbatim", () => {
+  it("global absent → 9 contreparties dérivées de DONATION_TIERS, dans l'ordre d'affichage", () => {
     const merged = mergePageSouscription(null);
-    expect(merged.herosTitre).toBe("En 2024, vous avez sauvé nos maisons");
-    expect(merged.herosIntro).toBe(
-      "En deux semaines, la campagne « Sauvez les Éditions sociales et La Dispute » atteignait les 50\u00a0000\u00a0€ nécessaires pour sortir la tête de l'eau. À l'arrivée, l'objectif était dépassé de loin. Cette solidarité a tout changé — et cette nouvelle souscription en écrit la suite.",
-    );
-  });
-
-  it("global absent → cinq chantiers, accents de la séquence actuelle (navy, brick, bottle, ocher, navy)", () => {
-    const merged = mergePageSouscription(null);
-    expect(merged.chantiers.map((c) => c.titre)).toEqual([
-      "Consolider l'équipe",
-      "Réimprimer les épuisés",
-      "Passer au numérique",
-      "Sillonner les librairies",
-      "Achever ce site",
-    ]);
-    expect(merged.chantiers.map((c) => c.accent)).toEqual([
-      "navy",
-      "brick",
-      "bottle",
-      "ocher",
-      "navy",
-    ]);
-  });
-
-  it("global absent → 8 contreparties + 2 mécènes dérivés de DONATION_TIERS, badge sur le 50 €", () => {
-    const merged = mergePageSouscription(null);
-    expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      15, 35, 50, 75, 100, 150, 200, 300,
-    ]);
-    expect(merged.contreparties.filter((c) => c.populaire).map((c) => c.tier.id)).toEqual([
+    expect(merged.contreparties.map((c) => c.tier.id)).toEqual([
+      "palier-15",
+      "palier-35",
       "palier-50",
+      "palier-75",
+      "palier-100",
+      "palier-200",
+      "palier-300",
+      "palier-500",
+      "palier-1000",
     ]);
-    expect(merged.contreparties.map((c) => c.soutiens2024)).toEqual([
-      108, 69, 257, 27, 63, 24, 15, 9,
+    expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
+      15, 35, 50, 75, 100, 200, 300, 500, 1000,
     ]);
-    expect(merged.mecenes.map((m) => m.tier.amount)).toEqual([500, 1000]);
-    expect(merged.faq).toHaveLength(4);
+    // Un lot verrouillé au hasard (iso-rendu du PDF client « contreparties dans l'ordre »).
+    expect(merged.contreparties[0].items).toEqual(["Une planche de stickers"]);
+    expect(merged.contreparties[1].items).toEqual([
+      "Manifeste du parti communiste",
+      "Une planche de stickers",
+    ]);
+  });
+
+  it("global absent ou document jamais rempli (array vide) → mêmes 9 cartes par défaut", () => {
+    expect(mergePageSouscription(undefined)).toEqual(mergePageSouscription(null));
+    expect(mergePageSouscription({ id: 1, contreparties: [] })).toEqual(
+      mergePageSouscription(null),
+    );
   });
 
   it("le montant et l'intitulé d'une contrepartie saisie viennent TOUJOURS de la table", () => {
@@ -304,17 +294,14 @@ describe("mergePageSouscription — global vide ⇒ page actuelle, verbatim", ()
         {
           tierId: "palier-35",
           items: [{ texte: " Un livre au choix " }, { texte: "  " }],
-          soutiens2024: 12,
-          populaire: true,
         },
       ],
     });
     expect(merged.contreparties).toHaveLength(1);
     const [carte] = merged.contreparties;
     expect(carte.tier.amount).toBe(35);
-    expect(carte.tier.title).toBe("Petit mais irremplaçable");
+    expect(carte.tier.title).toBe("Coup de main");
     expect(carte.items).toEqual(["Un livre au choix"]);
-    expect(carte.populaire).toBe(true);
   });
 
   it("entrée dont le palier a disparu de la table → ignorée ; toutes invalides → défauts", () => {
@@ -322,26 +309,19 @@ describe("mergePageSouscription — global vide ⇒ page actuelle, verbatim", ()
       id: 1,
       // Palier retiré de DONATION_TIERS après saisie (dérive de table) :
       // présentation seulement, l'entrée est ignorée sans casser la page.
-      contreparties: [
-        { tierId: "palier-disparu" as never, items: [], soutiens2024: 1, populaire: false },
-      ],
+      contreparties: [{ tierId: "palier-disparu" as never, items: [] }],
     });
     expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      15, 35, 50, 75, 100, 150, 200, 300,
+      15, 35, 50, 75, 100, 200, 300, 500, 1000,
     ]);
   });
 
-  it("chaque bloc retombe indépendamment sur son défaut", () => {
+  it("un array rempli remplace entièrement le défaut (pas de fusion partielle)", () => {
     const merged = mergePageSouscription({
       id: 1,
-      heros: { titre: "Souscription 2026", intro: null },
-      chantiers: [],
-      faq: [{ question: "Q ?", reponse: "R." }],
+      contreparties: [{ tierId: "palier-15", items: [{ texte: "Un seul lot" }] }],
     });
-    expect(merged.herosTitre).toBe("Souscription 2026");
-    expect(merged.herosIntro).toContain("En deux semaines");
-    expect(merged.chantiers).toHaveLength(5);
-    expect(merged.faq).toEqual([{ q: "Q ?", a: "R." }]);
-    expect(merged.mecenes).toHaveLength(2);
+    expect(merged.contreparties).toHaveLength(1);
+    expect(merged.contreparties[0].items).toEqual(["Un seul lot"]);
   });
 });
