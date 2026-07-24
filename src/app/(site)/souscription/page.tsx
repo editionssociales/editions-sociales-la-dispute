@@ -1,48 +1,20 @@
 import type { Metadata } from "next";
-import type { Book } from "@/lib/types";
-import Image, { type StaticImageData } from "next/image";
-import Link from "next/link";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
-import { SubmitButton } from "@/components/submit-button";
-import { ShelfLock } from "@/components/shelf-lock";
-import { ShelfCover } from "@/components/shelf-cover";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
-import { BookCover, coverAspectRatio } from "@/lib/cover";
 import { formatInt } from "@/lib/format";
-import { ACCENTS, ACCENT_BG as BG } from "@/lib/accents";
-import { FOCUS_RING_DARK, FOCUS_RING_DARK_OUTER, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
-import {
-  CAMPAIGN_2026_PALIERS,
-  type DonationTierId,
-  FREE_AMOUNT,
-  deriveCampaign2026,
-} from "@/lib/donation-tiers";
+import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
 import { getPageSouscription } from "@/lib/site-content";
-import { createDonationCheckout } from "./actions";
-
-// Visuels de contreparties (9 montages produits, fond blanc, sans texte) —
-// assets de campagne pilotés par la table `DONATION_TIERS` (code), donc
-// versionnés dans le repo et importés STATIQUEMENT plutôt que via la
-// collection Media : le pattern « bloc CMS vide = défaut en code » interdit
-// de faire dépendre le rendu par défaut d'uploads en base. `next/image`
-// optimise à la volée depuis l'import statique (`StaticImageData`).
-import coupDePouceImg from "./_contreparties/coup-de-pouce.jpg";
-import coupDeMainImg from "./_contreparties/coup-de-main.jpg";
-import camaradeDeLectureImg from "./_contreparties/camarade-de-lecture.jpg";
-import camaradeFideleImg from "./_contreparties/camarade-fidele.jpg";
-import camaradeDeLutteImg from "./_contreparties/camarade-de-lutte.jpg";
-import camaradeDeLaPremiereHeureImg from "./_contreparties/camarade-de-la-premiere-heure.jpg";
-import camaradeInfatigableImg from "./_contreparties/camarade-infatigable.jpg";
-import camaradeDHonneurImg from "./_contreparties/camarade-d-honneur.jpg";
-import camaradePourLaVieImg from "./_contreparties/camarade-pour-la-vie.jpg";
+import { HeroShelf, MobileShelf } from "./_components/shelf";
+import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
 
 /**
  * Page /souscription — livraison définitive de la campagne 2026 (Clara,
@@ -74,7 +46,14 @@ import camaradePourLaVieImg from "./_contreparties/camarade-pour-la-vie.jpg";
  * objectifs de jauge, CTA final — ; contreparties éditables en rail sticky à
  * droite de la PAGE ENTIÈRE (`#paliers`, hors du corps de texte), clôturé
  * par la carte « montant libre » (le formulaire ne vit plus ni dans l'ask ni
- * dans le CTA final). Seul le bloc
+ * dans le CTA final).
+ *
+ * Découpage (routes fines, `src/app/CLAUDE.md`) : cette page garde la jauge,
+ * le récit verbatim, les objectifs et la composition ; l'étagère 3D + son
+ * repli mobile vivent dans `_components/shelf.tsx`, le rail des contreparties
+ * complet (visuels, formulaires Stripe, état pré-ouverture) dans
+ * `_components/tiers-rail.tsx` — modules colocalisés privés (préfixe `_`,
+ * hors routing App Router), tous composants serveur. Seul le bloc
  * `contreparties` est éditable dans /admin (global `page-souscription`) :
  * lu via `getPageSouscription`, bloc vide = contenu par défaut de
  * `lib/site-content-core.ts`. Montant et intitulé des paliers restent
@@ -83,23 +62,11 @@ import camaradePourLaVieImg from "./_contreparties/camarade-pour-la-vie.jpg";
  */
 
 /**
- * Contreparties (R2/R3) : cycle des 4 accents de marque, jamais la palette
- * pop (réservée nav/statut). `POP_BG` ne reste ici que pour le liseré de
- * statut du CTA final (décoration ponctuelle, hors paliers).
+ * Liseré du CTA final (R2/R3) : `POP_BG` ne sert que cette décoration
+ * ponctuelle — les paliers du rail cyclent, eux, les 4 accents de marque,
+ * jamais la palette pop (réservée nav/statut).
  */
 const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
-
-/** Microcopie honnête (R7) : le paiement n'ouvre qu'à cette date, jamais un CTA muet. */
-const OPENING_MICROCOPY = "Ouverture le 15 août";
-
-/**
- * Recette du CTA de soumission (solid ink sur fond paper) — partagée par le
- * formulaire montant libre et les cartes de paliers, même esprit qu'`INVERT`
- * (`button.tsx`) : les CTA en `<form action>` ne recopient jamais la recette
- * à la main. Le padding/marge propres à chaque emplacement restent chez
- * l'appelant.
- */
-const SUBMIT_CTA = `min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`;
 
 /**
  * Vidéo de présentation — ouvre le corps de texte (retour client
@@ -111,45 +78,6 @@ const SUBMIT_CTA = `min-h-11 inline-flex items-center justify-center gap-2 borde
  * la place (jamais un vide).
  */
 const CAMPAIGN_VIDEO_URL: string | null = null;
-
-/**
- * Visuel par palier (PDF client, montages produits fond blanc) — keyé par
- * id de `DONATION_TIERS`.
- *
- * TODO(visuel) : le visuel « coup de pouce » (et la planche de stickers
- * présente dans tous les montages) est un rectangle crème VIDE — la planche
- * n'est pas encore dessinée ; visuels à re-livrer par Clara.
- */
-const TIER_IMAGES: Record<DonationTierId, StaticImageData> = {
-  // Les deux premiers visuels sont recadrés à la source (trim sharp des
-  // marges blanches du montage, l'ombre portée fait partie du cadrage) :
-  // ils s'affichent en variante compacte, cf. `COMPACT_TIERS`.
-  "palier-15": coupDePouceImg,
-  "palier-35": coupDeMainImg,
-  "palier-50": camaradeDeLectureImg,
-  "palier-75": camaradeFideleImg,
-  "palier-100": camaradeDeLutteImg,
-  "palier-200": camaradeDeLaPremiereHeureImg,
-  "palier-300": camaradeInfatigableImg,
-  "palier-500": camaradeDHonneurImg,
-  "palier-1000": camaradePourLaVieImg,
-};
-
-/**
- * Cartes compactes (retour client 2026-07-24) : les petits lots (un sticker,
- * un livre) n'ont pas à occuper la même hauteur que les grands montages —
- * l'illustration, réduite, vient se loger à droite du montant/intitulé pour
- * combler le vide, au lieu d'un bandeau pleine largeur.
- */
-const COMPACT_TIERS: ReadonlySet<string> = new Set<DonationTierId>(["palier-15", "palier-35"]);
-
-/**
- * Vue de `TIER_IMAGES` indexable par chaîne (les ids venus du CMS sont des
- * `string`) — fail-open conservé : un palier ajouté à `DONATION_TIERS` sans
- * visuel rend une carte sans image, jamais un crash ; les typos de clés,
- * elles, sont désormais bloquées à la compilation par `DonationTierId`.
- */
-const TIER_IMAGE_LOOKUP: Partial<Record<string, StaticImageData>> = TIER_IMAGES;
 
 /**
  * Objectifs de la jauge — cellules encadrées après le récit. Montants et
@@ -185,34 +113,6 @@ const OBJECTIFS = CAMPAIGN_2026_PALIERS.map((p) => ({
   ...OBJECTIF_EXTRAS[p.value],
 }));
 
-// Étagère de l'ask : dimensions en pixels des dos de livres dessinés.
-const SPINES: { h: number; w: number }[] = [
-  { h: 88, w: 24 },
-  { h: 120, w: 32 },
-  { h: 72, w: 20 },
-  { h: 132, w: 28 },
-  { h: 96, w: 36 },
-  { h: 148, w: 24 },
-  { h: 108, w: 28 },
-  { h: 84, w: 20 },
-  { h: 136, w: 32 },
-  { h: 100, w: 24 },
-  { h: 116, w: 28 },
-];
-const SHELF_GAP = 6; // = gap-1.5 entre les dos
-/**
- * Hauteur uniforme (px) du livre déplié au survol. Les dos gardent leur
- * hauteur variée au repos (l'étagère), mais tous les livres atteignent cette
- * hauteur une fois sortis — grand format, pour bien présenter la couverture.
- * Voir --bh dans .book3d-inner (globals.css).
- */
-const BOOK_HOVER_H = 320;
-
-/** Nombre de couvertures dans le repli mobile (grille 2×4, R7 — l'étagère 3D
- *  ne peut pas disparaître sous `lg` sur une page dont le trafic de campagne
- *  sera majoritairement mobile). */
-const MOBILE_SHELF_COUNT = 8;
-
 export const metadata: Metadata = {
   title: "Souscription",
   // ≤ 160 caractères (Google tronque au-delà) : crise + appel + fourchette.
@@ -246,236 +146,6 @@ const JSON_LD = JSON.stringify({
   },
 });
 
-/**
- * Bouton Contribuer désactivé + microcopie d'ouverture — partagé par
- * `FreeAmountForm` et les cartes de paliers avant l'ouverture des dons
- * (comportement R7 : CTA réellement `disabled`, jamais un bouton mort qui a
- * l'air cliquable). `className` porte la seule variation entre appelants (la
- * marge au-dessus de l'ensemble : `mt-3` en carte de palier, `mt-4` dans
- * `FreeAmountForm`) ; `noteId`, unique par appelant, relie programmatiquement
- * la microcopie au bouton désactivé (`aria-describedby` — un AT qui inspecte
- * le bouton apprend pourquoi il l'est).
- */
-function ClosedCta({ className, noteId }: { className: string; noteId: string }) {
-  return (
-    <div className={`flex flex-col items-start gap-1.5 ${className}`}>
-      <Button
-        type="button"
-        variant="solid"
-        disabled
-        aria-describedby={noteId}
-        className="min-h-11 px-4 py-2.5 text-sm tracking-[.03em]"
-      >
-        Contribuer
-      </Button>
-      <p id={noteId} className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
-        {OPENING_MICROCOPY}
-      </p>
-    </div>
-  );
-}
-
-/**
- * Formulaire « montant libre » — rendu une seule fois, dans la carte qui
- * clôt la liste des contreparties (retour client 2026-07-24 : plus ni dans
- * l'ask ni dans le CTA final). Avant ouverture, `ClosedCta` porte le
- * comportement R7 ; une fois ouvert, `SubmitButton` (`useFormStatus`)
- * distingue l'état pendant la redirection Stripe de l'état bloqué. Recette
- * visuelle alignée sur les cartes de paliers (fond paper, bouton solid).
- */
-function FreeAmountForm({ enabled }: { enabled: boolean }) {
-  if (!enabled) {
-    return <ClosedCta className="mt-4" noteId="ouverture-libre" />;
-  }
-  return (
-    <form action={createDonationCheckout} className="mt-4 flex flex-col gap-3">
-      <label htmlFor="amount-libre" className="sr-only">
-        Montant libre, en euros
-      </label>
-      {/* Don en euros ENTIERS côté UI (step=1 + inputMode numeric) — choix
-          assumé : la tolérance décimale de `parseDonation` (virgule acceptée)
-          ne sert que les POST sans JS, jamais ce champ. */}
-      <input
-        id="amount-libre"
-        name="amount"
-        type="number"
-        min={FREE_AMOUNT.min}
-        max={FREE_AMOUNT.max}
-        step={1}
-        inputMode="numeric"
-        autoComplete="transaction-amount"
-        aria-describedby="amount-libre-hint"
-        placeholder="Montant en €"
-        required
-        className={`min-h-11 w-full border-2 border-ink bg-paper px-4 py-3 font-sans text-sm font-semibold text-ink placeholder:text-muted ${FOCUS_RING_LIGHT}`}
-      />
-      {/* Bornes visibles ET reliées au champ (WCAG 1.3.5 / UX) : sans elles,
-          la contrainte ne se découvre qu'au message de validation natif. */}
-      <p id="amount-libre-hint" className="font-sans text-xs text-muted">
-        De {FREE_AMOUNT.min} à {formatInt(FREE_AMOUNT.max)}&nbsp;€
-      </p>
-      <SubmitButton
-        tone="dark"
-        pendingLabel="Redirection…"
-        ariaLabel="Contribuer — montant libre"
-        className={SUBMIT_CTA}
-      >
-        Contribuer
-      </SubmitButton>
-    </form>
-  );
-}
-
-/**
- * Étagère de l'ask : chaque dos dessiné porte une parution récente réelle. Au
- * survol ou au focus clavier, le livre sort du rayon en 3D : il pivote sur
- * l'arête de sa reliure (bord droit du dos) pour présenter sa couverture,
- * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
- * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
- * apparaissent en typo nue sous la barre de l'étagère. CSS pur, aucun JS
- * client. Depuis l'itération maquette 2026-07, l'étagère vit DANS le bloc ink
- * de l'ask (colonne récit) : la couverture dépliée peut recouvrir
- * temporairement le texte au-dessus — même comportement que dans l'ex-héros,
- * où elle glissait vers la colonne de texte.
- */
-function HeroShelf({ books }: { books: Book[] }) {
-  // Décalage de chaque dos par rapport au bord gauche de l'étagère, pour
-  // ancrer le bloc de texte au même endroit quel que soit le dos survolé.
-  const leftOffsets = SPINES.map((_, i) =>
-    SPINES.slice(0, i).reduce((acc, s) => acc + s.w + SHELF_GAP, 0),
-  );
-  return (
-    <ShelfLock className="hidden lg:block">
-      <div className="flex items-end gap-1.5">
-        {SPINES.map((s, i) => {
-          const book = books[i];
-          // Garde locale (pas seulement le filtre de l'appelant) : cover ET
-          // edition requis pour un dos cliquable — sinon dos placeholder.
-          if (!book?.cover || !book.edition) {
-            return (
-              <div
-                key={i}
-                aria-hidden="true"
-                className={`shrink-0 ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both]`}
-                style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
-              />
-            );
-          }
-          return (
-            // Anneau focus fait main (exception R5) : les dos font 20-36px de
-            // large, un anneau EXTÉRIEUR pop-yellow (FOCUS_RING_DARK_OUTER) y
-            // déborderait de 20-36px ; ocher INTÉRIEUR contraste sur la
-            // couverture sans jamais dépasser du dos (choix de cadrage d'origine).
-            <Link
-              key={book.id}
-              href={`/catalogue/${book.edition}/${book.slug}`}
-              className={`book3d${i < 2 ? " book3d--edge" : ""} relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] focus-visible:z-30 focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-[-3px]`}
-              style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
-            >
-              <span className="sr-only">
-                {book.title}
-                {book.authors[0] ? `, ${book.authors[0].name}` : ""}
-              </span>
-              {/* Titre, auteur, collection — fondu sous la barre de l'étagère.
-                  Affiché quand le dos est ouvert (classe is-open pilotée par
-                  ShelfLock) ou au focus clavier ; cf. .book3d-cap (globals.css). */}
-              <span
-                className="book3d-cap pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 motion-reduce:transition-none"
-                style={{ left: -leftOffsets[i], top: "calc(100% + 16px)" }}
-                aria-hidden="true"
-              >
-                <span className="block font-serif text-sm font-semibold text-paper">
-                  {book.title}
-                </span>
-                {book.authors.length > 0 && (
-                  <span className="block text-sm text-paper/70">
-                    {book.authors.map((a) => a.name).join(", ")}
-                  </span>
-                )}
-                {book.libelles.length > 0 && (
-                  <span className="mt-0.5 block text-xs tracking-wide text-paper/50">
-                    {book.libelles.map((l) => l.name).join(" · ")}
-                  </span>
-                )}
-              </span>
-              {/* Sortie 3D : le dos pivote sur son arête de reliure pour présenter sa couverture */}
-              <div
-                className="book3d-inner"
-                style={
-                  {
-                    "--w": `${s.w}px`,
-                    "--h": `${s.h}px`,
-                    "--bh": `${BOOK_HOVER_H}px`,
-                  } as React.CSSProperties
-                }
-              >
-                <div className={`book3d-spine ${BG[ACCENTS[i % 4]]}`} />
-                {/* La face couverture adopte le format exact de l'image : ratio
-                    DB au rendu serveur, ratio réel dès le chargement. */}
-                <ShelfCover
-                  url={book.cover.url}
-                  ratio={coverAspectRatio(book.cover)}
-                />
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-      <div className="h-1.5 bg-paper/25" />
-      {/* Zone réservée sous la barre : l'encart titre/auteur/collection du dos
-          ouvert s'y affiche (positionné en absolu depuis chaque lien). */}
-      <div aria-hidden="true" className="h-20" />
-    </ShelfLock>
-  );
-}
-
-/**
- * Repli mobile de l'étagère (sous `lg`, où `HeroShelf` est masquée) : une
- * grille 2×4 de vraies couvertures cliquables plutôt qu'un simple texte —
- * l'atout le plus travaillé de la page ne peut pas disparaître pour la
- * majorité du trafic de la campagne. Toujours via `BookCover` : jamais
- * recadrée (`src/components/CLAUDE.md`), donc pas de grille à hauteur de
- * cellule forcée.
- */
-function MobileShelf({ books }: { books: Book[] }) {
-  // Même invariant que HeroShelf : couverture + fiche interne requises.
-  const items = books
-    .filter((b) => b.cover && b.edition)
-    .slice(0, MOBILE_SHELF_COUNT);
-  if (items.length === 0) return null;
-  return (
-    <div
-      className="mt-14 grid grid-cols-4 items-start gap-[2px] bg-paper/15 p-[2px] lg:hidden"
-      role="group"
-      aria-label="Dernières parutions"
-    >
-      {items.map((book) => (
-        <Link
-          key={book.id}
-          href={`/catalogue/${book.edition}/${book.slug}`}
-          // Anneau EXTÉRIEUR (R5) : posé sur le fond ink du bloc d'ask, pas
-          // sur la couverture elle-même — pop-yellow y contraste, et l'anneau
-          // ne recouvre jamais l'image.
-          className={`group relative block bg-paper-2 ${FOCUS_RING_DARK_OUTER}`}
-        >
-          <span className="sr-only">
-            {book.title}
-            {book.authors[0] ? `, ${book.authors[0].name}` : ""}
-          </span>
-          <BookCover
-            cover={book.cover}
-            title={book.title}
-            alt=""
-            fit="width"
-            sizes="25vw"
-            className="block h-auto w-full transition-opacity group-hover:opacity-90 group-focus-within:opacity-90 motion-reduce:transition-none"
-          />
-        </Link>
-      ))}
-    </div>
-  );
-}
-
 export default async function SouscriptionPage() {
   // Interrupteur de la phase dons (E1) : tant que `STRIPE_SECRET_KEY` est
   // absente, la page reste en iso-rendu (CTA honnêtement désactivés, R7).
@@ -491,8 +161,9 @@ export default async function SouscriptionPage() {
     // fait JAMAIS tomber la page de dons.
     getNewReleases(18).catch(() => []),
   ]);
-  // L'étagère de l'ask porte de vraies parutions : couverture + fiche interne requises.
-  const shelfBooks = releases.filter((b) => b.cover && b.edition).slice(0, SPINES.length);
+  // L'étagère de l'ask porte de vraies parutions : couverture + fiche interne
+  // requises (les étagères re-vérifient et plafonnent elles-mêmes).
+  const shelfBooks = releases.filter((b) => b.cover && b.edition);
   // Jauge 2026 TOUJOURS visible (point le plus urgent du site) : avant
   // l'ouverture des dons (pas de clé Stripe → `null`), ou juste après le
   // lancement (0 collecté), la jauge affiche honnêtement une campagne à 0
@@ -514,99 +185,99 @@ export default async function SouscriptionPage() {
       {/* Colonne principale (jauge, corps de texte, CTA final) — le rail des
           contreparties vit en frère de DOM, sur la droite de la page entière. */}
       <div className="min-w-0">
-      {/* La collecte en direct OUVRE la page — jauge 2026 vivante + objectif.
-          Pas de séparation horizontale sous la jauge (retour client
-          2026-07-24) : elle enchaîne directement sur le corps. N'affiche que
-          ce qu'une campagne en cours peut honnêtement montrer (collecté net +
-          contributeurs). Fenêtre de fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
-      <section className="bg-paper">
-        <Container className="py-12 sm:py-16">
-          <Reveal>
-            <div className="flex flex-col gap-[2px] bg-ink p-[2px] lg:flex-row">
-              <div className="flex-1 bg-paper p-6 sm:p-8">
-                {outage ? (
-                  <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
-                    La collecte est en cours — le total s’affichera de nouveau
-                    dans quelques minutes.
+        {/* La collecte en direct OUVRE la page — jauge 2026 vivante + objectif.
+            Pas de séparation horizontale sous la jauge (retour client
+            2026-07-24) : elle enchaîne directement sur le corps. N'affiche que
+            ce qu'une campagne en cours peut honnêtement montrer (collecté net +
+            contributeurs). Fenêtre de fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
+        <section className="bg-paper">
+          <Container className="py-12 sm:py-16">
+            <Reveal>
+              <div className="flex flex-col gap-[2px] bg-ink p-[2px] lg:flex-row">
+                <div className="flex-1 bg-paper p-6 sm:p-8">
+                  {outage ? (
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
+                      La collecte est en cours — le total s’affichera de nouveau
+                      dans quelques minutes.
+                    </p>
+                  ) : !enabled ? (
+                    /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
+                       annoncer la date plutôt qu'un « soyez les premier·ères »
+                       contradictoire avec des boutons morts. */
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
+                      La souscription ouvre le 15 août — découvrez déjà les
+                      contreparties.
+                    </p>
+                  ) : liveCampaign.collected > 0 ? (
+                    /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
+                       supprime les blancs contenant un retour à la ligne — sans
+                       eux, AT/copier-coller lisent « Déjà11 014 €réunis ». Les
+                       nœuds espace entre items flex ne sont pas rendus : zéro
+                       impact visuel. */
+                    <p className="flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
+                      Déjà{" "}
+                      <CountUp
+                        value={liveCampaign.collected}
+                        suffix=" €"
+                        className="font-sans text-lg font-black italic text-ink"
+                      />{" "}
+                      réunis auprès de{" "}
+                      <CountUp
+                        value={liveCampaign.contributors}
+                        className="font-sans text-lg font-black italic text-ink"
+                      />{" "}
+                      contributeur·rices.
+                    </p>
+                  ) : (
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
+                      Campagne tout juste lancée — soyez les premier·ères à
+                      contribuer.
+                    </p>
+                  )}
+                  {!outage && (
+                    <Gauge
+                      className="mt-6"
+                      value={liveCampaign.gauge.value}
+                      max={liveCampaign.gauge.max}
+                      markers={liveCampaign.gauge.markers}
+                    />
+                  )}
+                </div>
+                <div className="flex flex-col justify-center bg-ink p-6 text-paper sm:p-8 lg:w-64">
+                  <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
+                    Objectif
                   </p>
-                ) : !enabled ? (
-                  /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
-                     annoncer la date plutôt qu'un « soyez les premier·ères »
-                     contradictoire avec des boutons morts. */
-                  <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
-                    La souscription ouvre le 15 août — découvrez déjà les
-                    contreparties.
+                  <p className="mt-2 font-sans text-4xl font-black italic">
+                    {formatInt(liveCampaign.goal)}&nbsp;€
                   </p>
-                ) : liveCampaign.collected > 0 ? (
-                  /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
-                     supprime les blancs contenant un retour à la ligne — sans
-                     eux, AT/copier-coller lisent « Déjà11 014 €réunis ». Les
-                     nœuds espace entre items flex ne sont pas rendus : zéro
-                     impact visuel. */
-                  <p className="flex flex-wrap items-baseline gap-x-2 text-[15px] leading-relaxed text-ink/70">
-                    Déjà{" "}
-                    <CountUp
-                      value={liveCampaign.collected}
-                      suffix=" €"
-                      className="font-sans text-lg font-black italic text-ink"
-                    />{" "}
-                    réunis auprès de{" "}
-                    <CountUp
-                      value={liveCampaign.contributors}
-                      className="font-sans text-lg font-black italic text-ink"
-                    />{" "}
-                    contributeur·rices.
-                  </p>
-                ) : (
-                  <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
-                    Campagne tout juste lancée — soyez les premier·ères à
-                    contribuer.
-                  </p>
-                )}
-                {!outage && (
-                  <Gauge
-                    className="mt-6"
-                    value={liveCampaign.gauge.value}
-                    max={liveCampaign.gauge.max}
-                    markers={liveCampaign.gauge.markers}
-                  />
-                )}
+                  {/* CTA de la jauge (retour client 2026-07-24) : renvoie vers
+                      la liste des contreparties, le paiement se joue là-bas. La
+                      flèche « ↓ » distingue cette ancre de défilement des
+                      boutons de PAIEMENT du rail (libellé « Contribuer » nu). */}
+                  <Button
+                    href="#paliers"
+                    variant="invert"
+                    aria-label="Contribuer — voir les contreparties"
+                    className="mt-5 self-start px-6 py-3 text-sm font-extrabold tracking-[.03em]"
+                  >
+                    Contribuer&nbsp;↓
+                  </Button>
+                  {!enabled && (
+                    <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/70">
+                      {OPENING_MICROCOPY}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col justify-center bg-ink p-6 text-paper sm:p-8 lg:w-64">
-                <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
-                  Objectif
-                </p>
-                <p className="mt-2 font-sans text-4xl font-black italic">
-                  {formatInt(liveCampaign.goal)}&nbsp;€
-                </p>
-                {/* CTA de la jauge (retour client 2026-07-24) : renvoie vers
-                    la liste des contreparties, le paiement se joue là-bas. La
-                    flèche « ↓ » distingue cette ancre de défilement des
-                    boutons de PAIEMENT du rail (libellé « Contribuer » nu). */}
-                <Button
-                  href="#paliers"
-                  variant="invert"
-                  aria-label="Contribuer — voir les contreparties"
-                  className="mt-5 self-start px-6 py-3 text-sm font-extrabold tracking-[.03em]"
-                >
-                  Contribuer&nbsp;↓
-                </Button>
-                {!enabled && (
-                  <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/70">
-                    {OPENING_MICROCOPY}
-                  </p>
-                )}
-              </div>
-            </div>
-          </Reveal>
-        </Container>
-      </section>
+            </Reveal>
+          </Container>
+        </section>
 
-      {/* Corps de texte — ouvert par le slot vidéo, puis l'ask 2026, le
-          récit et les objectifs. Les contreparties n'y sont plus : elles
-          vivent dans le rail `#paliers`, à droite de la page entière. */}
-      <section className="border-b-2 border-ink bg-paper">
-        <Container className="py-16 sm:py-20">
+        {/* Corps de texte — ouvert par le slot vidéo, puis l'ask 2026, le
+            récit et les objectifs. Les contreparties n'y sont plus : elles
+            vivent dans le rail `#paliers`, à droite de la page entière. */}
+        <section className="border-b-2 border-ink bg-paper">
+          <Container className="py-16 sm:py-20">
             <div className="flex flex-col gap-14">
               {/* Vidéo de présentation — OUVRE le corps de texte ; tant
                   qu'aucune vidéo n'est livrée, un placeholder au même format
@@ -874,199 +545,35 @@ export default async function SouscriptionPage() {
                 ))}
               </FramedGrid>
             </div>
+          </Container>
+        </section>
 
-        </Container>
-      </section>
-
-      {/* CTA final — phrase de clôture du docx, verbatim. Le montant libre
-          vivant désormais en clôture du rail, le CTA y renvoie simplement. */}
-      <section className="bg-ink text-paper">
-        <div className="grid grid-cols-4" aria-hidden="true">
-          {POP_BG.map((c) => (
-            <div key={c} className={`h-1.5 ${c}`} />
-          ))}
-        </div>
-        <Container className="flex flex-col items-start gap-6 py-16 sm:py-20 md:flex-row md:items-center md:justify-between">
-          <h2 className="max-w-2xl font-sans text-3xl font-black italic leading-[1.05] sm:text-4xl">
-            Vous nous permettrez de continuer à publier les livres qui
-            imaginent la fin du capitalisme plutôt que la fin du monde.
-          </h2>
-          <Button
-            href="#paliers"
-            variant="invert"
-            aria-label="Contribuer — voir les contreparties"
-            className="shrink-0 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
-          >
-            Contribuer&nbsp;↓
-          </Button>
-        </Container>
-      </section>
+        {/* CTA final — phrase de clôture du docx, verbatim. Le montant libre
+            vivant désormais en clôture du rail, le CTA y renvoie simplement. */}
+        <section className="bg-ink text-paper">
+          <div className="grid grid-cols-4" aria-hidden="true">
+            {POP_BG.map((c) => (
+              <div key={c} className={`h-1.5 ${c}`} />
+            ))}
+          </div>
+          <Container className="flex flex-col items-start gap-6 py-16 sm:py-20 md:flex-row md:items-center md:justify-between">
+            <h2 className="max-w-2xl font-sans text-3xl font-black italic leading-[1.05] sm:text-4xl">
+              Vous nous permettrez de continuer à publier les livres qui
+              imaginent la fin du capitalisme plutôt que la fin du monde.
+            </h2>
+            <Button
+              href="#paliers"
+              variant="invert"
+              aria-label="Contribuer — voir les contreparties"
+              className="shrink-0 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
+            >
+              Contribuer&nbsp;↓
+            </Button>
+          </Container>
+        </section>
       </div>
 
-      {/* Rail contreparties — module autonome sur la droite de la PAGE
-          ENTIÈRE (retour client 2026-07-24), plus une colonne du corps de
-          texte : ancré au défilement, borné à la hauteur du viewport sous le
-          header, avec sa propre barre de scroll — fine et TOUJOURS visible
-          (les overlay scrollbars macOS masquaient toute affordance sur ~10
-          cartes de profondeur), sans `overscroll-contain` pour laisser le
-          scroll chaîner vers la page en butée. Les 9 cartes sont
-          uniformes ; la carte « montant libre » clôt la liste. Sur mobile,
-          le rail suit toute la colonne principale (l'ancre `#paliers` y
-          mène — `scroll-mt-24` à tous les breakpoints, le header mobile fait
-          ~96px). */}
-      <aside
-        id="paliers"
-        aria-label="Contreparties"
-        className="border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 lg:print:static lg:print:max-h-none lg:print:overflow-visible"
-      >
-        <div className="px-5 py-4 sm:px-8 sm:py-6">
-              {/* Signalement du montant libre : la carte vit en CLÔTURE du
-                  rail (position actée client) — sans cette ancre, l'option la
-                  plus demandée d'une souscription resterait indécouvrable
-                  avant d'avoir déroulé les 9 paliers. */}
-              <a
-                href="#montant-libre"
-                className={`inline-flex min-h-11 items-center font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-ink ${FOCUS_RING_LIGHT}`}
-              >
-                Ou donnez un montant libre ↓
-              </a>
-              <FramedGrid className="mt-2 grid-cols-1">
-                {content.contreparties.map((p, i) => {
-                  // Paliers de don : les 4 accents de marque, jamais le cycle pop (R2/R3).
-                  const accentBg = BG[ACCENTS[i % 4]];
-                  // Un palier ajouté à DONATION_TIERS sans visuel dans
-                  // TIER_IMAGES rend une carte sans image, jamais un crash.
-                  const img = TIER_IMAGE_LOOKUP[p.tier.id];
-                  const compact = COMPACT_TIERS.has(p.tier.id);
-                  // Même <h3> dans les deux variantes de carte (seule
-                  // l'enveloppe flex diffère) : hissé hors du ternaire.
-                  const heading = (
-                    <h3>
-                      <span className="block font-sans text-4xl font-black italic text-ink">
-                        {formatInt(p.tier.amount)}&nbsp;€
-                      </span>{" "}
-                      <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                        {p.tier.title}
-                      </span>
-                    </h3>
-                  );
-                  return (
-                    <Reveal key={p.tier.id} className="h-full">
-                      <div className="relative flex h-full flex-col bg-paper">
-                        <div aria-hidden="true" className={`h-2 ${accentBg}`} />
-                        {/* Montage produit sur fond blanc pur — `mix-blend-multiply`
-                            fond le blanc dans le `bg-paper` (blanc cassé) du site,
-                            les ombres portées restent correctes. Décoratif : la
-                            liste textuelle des items porte l'information (alt vide). */}
-                        {img && !compact && (
-                          <Image
-                            src={img}
-                            alt=""
-                            sizes="(min-width: 1024px) 380px, 100vw"
-                            placeholder="blur"
-                            className="block h-auto w-full mix-blend-multiply"
-                          />
-                        )}
-                        <div className="flex flex-1 flex-col p-6">
-                          {compact ? (
-                            /* Variante compacte : l'illustration réduite se
-                               loge à droite du montant/intitulé (léger débord
-                               vers le cadre, `-mr-2`), pas de bandeau. */
-                            <div className="flex items-center justify-between gap-3">
-                              {heading}
-                              {img && (
-                                <Image
-                                  src={img}
-                                  alt=""
-                                  sizes="(min-width: 1024px) 140px, 35vw"
-                                  placeholder="blur"
-                                  className="-mr-2 block h-auto w-[35%] shrink-0 mix-blend-multiply"
-                                />
-                              )}
-                            </div>
-                          ) : (
-                            heading
-                          )}
-                          {/* Lot en bandes pleine largeur (maquette PDF client) :
-                              cadre ink 2px, une bande par ligne, séparateurs
-                              porteurs d'un « + » (le lot s'additionne). Une
-                              ligne `alternative` (règle « ou » de
-                              `site-content-core`) s'accroche à la précédente
-                              SANS séparateur : un « ou » centré dans l'écart
-                              entre les deux lignes — un choix, pas un ajout. */}
-                          <ul role="list" className="mt-4 flex-1 self-start w-full border-2 border-ink">
-                            {p.items.map((item, j) => (
-                              // Index en clé : deux lignes au texte identique
-                              // sont saisissables dans /admin, et la liste
-                              // serveur n'est jamais réordonnée.
-                              <li key={j}>
-                                {j > 0 &&
-                                  (item.alternative ? (
-                                    <p className="-my-1.5 text-center font-sans text-sm font-medium italic leading-none text-ink">
-                                      ou
-                                    </p>
-                                  ) : (
-                                    <div aria-hidden="true" className="relative h-[2px] bg-ink">
-                                      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-paper px-1.5 font-sans text-sm font-black leading-none text-ink">
-                                        +
-                                      </span>
-                                    </div>
-                                  ))}
-                                <p className="px-3 py-2.5 text-center font-sans text-sm font-bold leading-snug text-ink">
-                                  {item.texte}
-                                </p>
-                              </li>
-                            ))}
-                          </ul>
-                          {enabled ? (
-                            <form
-                              action={createDonationCheckout}
-                              className="contents"
-                            >
-                              <input type="hidden" name="tierId" value={p.tier.id} />
-                              <SubmitButton
-                                tone="dark"
-                                pendingLabel="Redirection…"
-                                ariaLabel={`Contribuer ${formatInt(p.tier.amount)} € — ${p.tier.title}`}
-                                className={`mt-3 ${SUBMIT_CTA}`}
-                              >
-                                Contribuer
-                              </SubmitButton>
-                            </form>
-                          ) : (
-                            <ClosedCta className="mt-3" noteId={`ouverture-${p.tier.id}`} />
-                          )}
-                        </div>
-                      </div>
-                    </Reveal>
-                  );
-                })}
-                {/* Carte de clôture — montant libre (retour client
-                    2026-07-24) : le formulaire à montant personnalisé vit
-                    tout en bas de la liste, après les 9 paliers, et
-                    poursuit le cycle des 4 accents de marque. */}
-                <Reveal className="h-full">
-                  <div id="montant-libre" className="flex h-full flex-col bg-paper">
-                    <div
-                      aria-hidden="true"
-                      className={`h-2 ${BG[ACCENTS[content.contreparties.length % 4]]}`}
-                    />
-                    <div className="flex flex-1 flex-col p-6">
-                      <h3>
-                        <span className="block font-sans text-3xl font-black italic text-ink">
-                          Montant libre
-                        </span>{" "}
-                        <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                          Contribuez à la hauteur de votre choix
-                        </span>
-                      </h3>
-                      <FreeAmountForm enabled={enabled} />
-                    </div>
-                  </div>
-                </Reveal>
-              </FramedGrid>
-        </div>
-      </aside>
+      <TiersRail content={content} enabled={enabled} />
     </div>
   );
 }
