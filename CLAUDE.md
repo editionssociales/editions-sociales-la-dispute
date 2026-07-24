@@ -39,8 +39,8 @@ Does NOT own : le schéma SQL `public` (réservé — p. ex. dons) ; la jauge de
 
 ## Verification
 
-- `pnpm typecheck` · `lint` · `test` · `knip` (exports/fichiers/dépendances morts) — rejoués sur chaque PR ; `pnpm generate:types` après tout changement de schéma Payload.
-- `pnpm build` : hermétique (Postgres uniquement) — exercé par le preview Vercel à chaque PR.
+- `pnpm typecheck` · `lint` · `test` · `knip` (exports/fichiers/dépendances morts) — rejoués sur chaque PR ; `pnpm generate:types` après tout changement de schéma Payload. La CI joue `tsc` SANS `next build` : les déclarations de modules image vivent dans `src/image-types.d.ts` (`next-env.d.ts` est gitignoré, généré au build).
+- `pnpm build` : hermétique (Postgres uniquement) — plus aucun preview Vercel sur PR (constat 2026-07-24) : le build ne s'exerce qu'au déploiement prod du merge (`vercel-build` = migrate:prod + next build ; un échec laisse l'ancien déploiement en ligne).
 
 ## Child Index
 
