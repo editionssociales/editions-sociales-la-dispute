@@ -42,7 +42,7 @@ export function Gauge({
       <div
         role="img"
         aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
-        className="relative h-4 overflow-hidden rounded-full"
+        className="relative h-4 overflow-hidden"
         style={{
           background:
             "linear-gradient(90deg, var(--color-navy) 0 25%, var(--color-bottle) 25% 50%, var(--color-ocher) 50% 75%, var(--color-brick) 75% 100%)",
@@ -57,7 +57,9 @@ export function Gauge({
           <div
             key={m.value}
             className="absolute inset-y-0 w-0.5 bg-paper"
-            style={{ left: `${(m.value / max) * 100}%` }}
+            // Borné : le palier sommet (value === max) tomberait sinon à
+            // left:100 %, entièrement clippé par overflow-hidden (0.125rem = w-0.5).
+            style={{ left: `min(${(m.value / max) * 100}%, calc(100% - 0.125rem))` }}
           />
         ))}
       </div>

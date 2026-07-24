@@ -307,7 +307,7 @@ function HeroShelf({ books }: { books: Book[] }) {
               <div
                 key={i}
                 aria-hidden="true"
-                className={`shrink-0 rounded-t-sm ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both]`}
+                className={`shrink-0 ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both]`}
                 style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
               />
             );
@@ -372,7 +372,7 @@ function HeroShelf({ books }: { books: Book[] }) {
           );
         })}
       </div>
-      <div className="h-1.5 rounded bg-paper/25" />
+      <div className="h-1.5 bg-paper/25" />
       {/* Zone réservée sous la barre : l'encart titre/auteur/collection du dos
           ouvert s'y affiche (positionné en absolu depuis chaque lien). */}
       <div aria-hidden="true" className="h-20" />
@@ -569,7 +569,7 @@ export default async function SouscriptionPage() {
                     />
                   </div>
                 ) : (
-                  <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-ink bg-ink text-paper">
+                  <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-ink bg-ink text-paper print:hidden">
                     {/* SVG plutôt que le caractère ▶ : Effra ne couvre pas les
                         glyphes géométriques, le rendu retombait sur la fonte
                         système (forme et centrage variables selon l'OS). */}
@@ -850,16 +850,20 @@ export default async function SouscriptionPage() {
       {/* Rail contreparties — module autonome sur la droite de la PAGE
           ENTIÈRE (retour client 2026-07-24), plus une colonne du corps de
           texte : ancré au défilement, borné à la hauteur du viewport sous le
-          header, avec sa propre barre de scroll. Les 9 cartes sont
+          header, avec sa propre barre de scroll — fine et TOUJOURS visible
+          (les overlay scrollbars macOS masquaient toute affordance sur ~10
+          cartes de profondeur), sans `overscroll-contain` pour laisser le
+          scroll chaîner vers la page en butée. Les 9 cartes sont
           uniformes ; la carte « montant libre » clôt la liste. Sur mobile,
           le rail suit toute la colonne principale (l'ancre `#paliers` y
-          mène). */}
+          mène — `scroll-mt-24` à tous les breakpoints, le header mobile fait
+          ~96px). */}
       <aside
         id="paliers"
         aria-label="Contreparties"
-        className="border-t-2 border-ink bg-paper lg:sticky lg:top-24 lg:scroll-mt-24 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:border-l-2 lg:border-t-0"
+        className="border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 lg:print:static lg:print:max-h-none lg:print:overflow-visible"
       >
-        <div className="p-4 sm:p-6">
+        <div className="px-5 py-4 sm:px-8 sm:py-6">
               {/* Signalement du montant libre : la carte vit en CLÔTURE du
                   rail (position actée client) — sans cette ancre, l'option la
                   plus demandée d'une souscription resterait indécouvrable

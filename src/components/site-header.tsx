@@ -256,7 +256,10 @@ function SoutenirCell({ compact, placement }: { compact: boolean; placement: str
         <span className="whitespace-nowrap leading-none text-[clamp(15px,4.5vw,28px)]">
           Nous soutenir
         </span>
-        <span className="flex-none leading-none text-[clamp(17px,5vw,30px)]">→</span>
+        {/* Flèche masquée sous ~430px : à 375px, libellé + flèche (~172px)
+            débordaient de la cellule (~151px) et la flèche passait sous la
+            cellule panier (mesuré en live) ; le libellé seul tient à 320px. */}
+        <span className="flex-none leading-none text-[clamp(17px,5vw,30px)] max-[429px]:hidden">→</span>
       </span>
 
       {/* Flèche du calque déployé : ancrée au coin bas-droit de la cellule, contre le

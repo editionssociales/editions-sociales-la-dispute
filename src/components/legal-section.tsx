@@ -9,11 +9,14 @@ import type { SafeHtml } from "@/lib/cms-html";
  * chaque page ; seule la structure est possédée ici — la prochaine page
  * légale (CGU ?) naît profonde au lieu d'être copiée-collée.
  *
- * Rythme vertical (R6/0.6) — un seul couple de padding de section fermé pour
- * tout le site : `py-12 sm:py-16` ici et sur les pages listing (catalogue,
- * boutique, editions…) ; `py-16 sm:py-20` sur les pages éditoriales (a-propos,
- * héros plein cadre `/editions/[slug]`…), cf. `PageHero`. Toute nouvelle
- * section choisit l'une des deux, jamais une troisième valeur.
+ * Rythme vertical (R6/0.6) — échelle fermée à trois couples de padding de
+ * section pour tout le site : `py-12 sm:py-16` ici et sur les pages listing
+ * (catalogue, boutique, editions…) ; `py-16 sm:py-20` sur les pages
+ * éditoriales (a-propos, héros plein cadre `/editions/[slug]`…), cf.
+ * `PageHero` ; `py-20 sm:py-28` sur les pages système/tunnel (souscription
+ * merci·erreur, `/merci`, `/newsletter/confirmation` — cf. `PageHero`
+ * tone=system). Toute nouvelle section choisit l'un des trois, jamais une
+ * quatrième valeur.
  */
 
 const H2_CLASS =
