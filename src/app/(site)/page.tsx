@@ -1,18 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Container } from "@/components/container";
-import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { Reveal } from "@/components/reveal";
-import { CountUp } from "@/components/count-up";
 import { NouveautesCarousel } from "@/components/nouveautes-carousel";
-import { NAV_ACCENT_BG } from "@/components/nav-accent";
 import { getActiveHighlight } from "@/lib/highlight";
-import { getNewReleases, countBooks } from "@/lib/catalogue";
-import { EDITION_LIST } from "@/lib/editions";
-import { ACCENT_BG } from "@/lib/accents";
-import { NAV_BOUTIQUE, NAV_SECTIONS } from "@/lib/nav";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { getNewReleases } from "@/lib/catalogue";
 import { toNouveauteBooks } from "@/lib/nouveaute-book";
 
 export const metadata: Metadata = {
@@ -41,63 +33,24 @@ const HIGHLIGHT_EDGE: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [releases, highlight, counts] = await Promise.all([
+  const [releases, highlight] = await Promise.all([
     getNewReleases(12),
     getActiveHighlight(),
-    Promise.all(EDITION_LIST.map((e) => countBooks(e.slug))),
   ]);
   const books = toNouveauteBooks(releases);
 
   return (
     <div className="bg-paper pb-[clamp(38px,6vw,76px)] pt-[clamp(20px,3vw,36px)]">
-      {/* Épure minimaliste (chantier « épure ») : le héros de marque plein
-          cadre a été retiré — la vitrine ouvre directement sur le carrousel
-          Nouveautés. Le h1 unique de la page devient invisible (a11y/SEO
-          seuls) puisqu'aucune section ne porte plus ce rôle visuellement. */}
+      {/* Vitrine réduite aux couvertures seules (retour client 2026-07-23,
+          référence La fabrique) : ni flèches, ni sortie catalogue, ni légende
+          titre/auteur — et plus aucune section sous le carrousel (les blocs
+          maisons et la mosaïque de nav ont été retirés). Le h1 unique de la
+          page reste invisible (a11y/SEO seuls). Seul le bandeau Highlight
+          survit : contenu ponctuel piloté depuis /admin, rien n'est rendu
+          sans entrée active. */}
       <h1 className="sr-only">Les Éditions sociales × La Dispute</h1>
 
-      <NouveautesCarousel books={books} />
-
-      {/* Les deux maisons (chantier 4 §2) — pattern déjà éprouvé de
-          /editions (Reveal + CountUp + barre d'accent + CTA), rapatrié entre
-          le carrousel et les bandeaux : l'accueil n'est plus la seule page
-          du site sans Reveal ni CountUp, et l'équilibre entre les deux
-          maisons devient visible dès la vitrine. */}
-      <Container className="mt-[clamp(48px,7vw,88px)]">
-        <FramedGrid className="sm:grid-cols-2">
-          {EDITION_LIST.map((edition, i) => (
-            <Reveal key={edition.slug} delay={i * 120} className="h-full">
-              <section className="flex h-full flex-col bg-paper p-7 sm:p-8">
-                <span
-                  aria-hidden="true"
-                  className={`block h-[6px] w-16 ${ACCENT_BG[edition.accent]}`}
-                />
-                <h2 className="mt-5 font-sans text-2xl font-black italic uppercase leading-[0.98] text-ink">
-                  {edition.name}
-                </h2>
-                <p className="mt-3 text-[15px] font-bold leading-snug text-ink/80">
-                  {edition.tagline}
-                </p>
-                <p className="mt-6 flex items-baseline gap-2">
-                  <CountUp
-                    value={counts[i]}
-                    className="font-sans text-3xl font-black italic text-ink"
-                  />
-                  <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
-                    titres au catalogue
-                  </span>
-                </p>
-                <Button
-                  href={`/catalogue/${edition.slug}`}
-                  className="mt-6 w-fit px-5 py-3 text-[13px] tracking-[.04em]"
-                >
-                  Découvrir
-                </Button>
-              </section>
-            </Reveal>
-          ))}
-        </FramedGrid>
-      </Container>
+      <NouveautesCarousel books={books} showArrows={false} showCatalogueLink={false} />
 
       {/* Mise en avant ponctuelle (E6bis / PR #29) : une seule entrée active à
           la fois (collection Highlight — l'ex-bandeau souscription codé en dur
@@ -161,41 +114,6 @@ export default async function HomePage() {
             </Reveal>
           </Container>
         ))}
-
-      {/* Mosaïque pop de pied de page (chantier 4 §4, R2) : les 4 sections
-          du quadrillage du header (mêmes hrefs/couleurs, `lib/nav` +
-          `components/nav-accent`) + Boutique (hors palette pop — pas une
-          section de nav au sens `NAV_SECTIONS`, chantier 3 §1) — la palette
-          pop boucle entre header et pied de page, redevient un système de
-          nav plutôt qu'un décor de bandeau. */}
-      <Container className="mt-[clamp(30px,4.5vw,60px)]">
-        <Reveal>
-          <nav aria-label="Parcourir par section">
-            <FramedGrid as="ul" className="grid-cols-2 sm:grid-cols-5">
-              {NAV_SECTIONS.map((section) => (
-                <li key={section.id} className="contents">
-                  <Link
-                    href={section.href}
-                    className={`flex min-h-11 items-center justify-between gap-2 px-5 py-6 font-sans text-sm font-extrabold uppercase tracking-[.04em] text-black transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${NAV_ACCENT_BG[section.id]} ${FOCUS_RING_LIGHT}`}
-                  >
-                    {section.label}
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                </li>
-              ))}
-              <li className="contents">
-                <Link
-                  href={NAV_BOUTIQUE.href}
-                  className={`col-span-2 flex min-h-11 items-center justify-between gap-2 bg-ink px-5 py-6 font-sans text-sm font-extrabold uppercase tracking-[.04em] text-paper transition-colors hover:bg-paper hover:text-ink motion-reduce:transition-none sm:col-span-1 ${FOCUS_RING_DARK}`}
-                >
-                  {NAV_BOUTIQUE.label}
-                  <span aria-hidden="true">→</span>
-                </Link>
-              </li>
-            </FramedGrid>
-          </nav>
-        </Reveal>
-      </Container>
     </div>
   );
 }
