@@ -6,59 +6,24 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
 
 /**
  * Vue des libellés du catalogue — l'UNIQUE rendu des libellés, consommé par
- * /catalogue ET /catalogue/[edition]. L'ordre des items vient de `getFacets`
- * (alphabétique — arbitrage client 22/07 : pas de tri par taille).
+ * /catalogue ET /catalogue/[edition]. Deux vues derrière le switch client
+ * TEMPORAIRE (`LibelleViewSwitch`), le temps que le client compare et
+ * tranche (retour 2026-07-23 : la grande mosaïque en grille prenait trop de
+ * place — elle vit dans l'historique git de ce fichier) :
  *
- * Retour client 2026-07-23 (« ça prend trop de place ») : la grande mosaïque
- * en grille pondérée (vue « GEME », historique git de ce fichier) est
- * remplacée par DEUX vues en liste horizontale, entre lesquelles un switch
- * client TEMPORAIRE (`LibelleViewSwitch`) permet de basculer le temps que le
- * client compare et tranche :
- *
- * - « Rectangles simples » (défaut) : étiquettes uniformes, la recette `Tag`
- *   historique des filtres — `{nom} (n)` sur le quadrillage brutaliste.
- * - « Cases variables » : même liste horizontale, mais corps et padding de
- *   chaque case croissent avec le rayon — par TRANCHES de carrés parfaits de
- *   l'aire `round(√(nb titres))` (la loi de taille de l'ex-mosaïque,
- *   conservée) : k = floor(√aire), progression fixe par tranche, plafonnée
- *   au lisible. Les cases d'une même rangée s'étirent à la hauteur de la
- *   plus grande (align-items par défaut du flex) : pas de trous noirs.
+ * - « Rectangles simples » (défaut) : étiquettes uniformes dans l'ordre de
+ *   `getFacets` (alphabétique), la recette `Tag` historique des filtres.
+ * - « Cases variables » (spéc. Youri 2026-07-24, remplace la 1re version aux
+ *   trous noirs) : ÉTAGES de cases d'épaisseur uniforme par étage, items
+ *   triés par nombre de titres DÉCROISSANT (copie locale — l'ordre des
+ *   facettes reste alphabétique en amont). L'étage i héberge i cases
+ *   (1, 2, 3…), le dernier prend le reliquat (cases à parts égales) ;
+ *   épaisseur et corps inversement proportionnels au rang de l'étage
+ *   (`TIER_K / i`), plancher 44px (cible tactile R7) — les étages profonds
+ *   se valent donc en hauteur, seule la typo continue de décroître.
  *
  * Dans les deux vues, cellule active inversée noir/blanc (`invertingCell`).
  */
-
-function isPrime(n: number) {
-  if (n < 2) return false;
-  for (let d = 2; d * d <= n; d++) {
-    if (n % d === 0) return false;
-  }
-  return true;
-}
-
-/**
- * Aire d'une cellule en unités de grille : arrondi de √(nb de titres) —
- * +1 sur les aires premières ≥ 5 (héritage de la loi de taille mosaïque,
- * conservé pour que les tranches restent identiques à ce que le client a
- * déjà vu).
- */
-function cellArea(count: number) {
-  const area = Math.max(1, Math.round(Math.sqrt(Math.max(0, count))));
-  return area >= 5 && isPrime(area) ? area + 1 : area;
-}
-
-/**
- * Poids compact d'un libellé : k = floor(√aire) (tranches de carrés
- * parfaits — aires 1-3 → k=1, 4-8 → k=2, 9-15 → k=3…), corps et paddings en
- * progression fixe par tranche, plafonnés au lisible.
- */
-function compactTier(count: number) {
-  const k = Math.floor(Math.sqrt(cellArea(count)));
-  return {
-    font: Math.min(11 + 4 * k, 27),
-    padY: Math.min(5 + 3 * k, 17),
-    padX: Math.min(10 + 4 * k, 24),
-  };
-}
 
 export interface LibelleMosaicItem {
   name: string;
@@ -90,41 +55,63 @@ function SimpleCell({
   );
 }
 
-/** Case pondérée de la vue compacte — corps/padding par tranche d'aire. */
-function CompactCell({
+/* ---------------- Vue « cases variables » en étages ---------------- */
+
+/**
+ * Répartition en étages : l'étage i (1-indexé) héberge i cases ; le dernier
+ * étage prend simplement le reliquat (ses cases se partagent la largeur à
+ * parts égales — jamais de trou).
+ */
+function tierRows<T>(items: T[]): T[][] {
+  const rows: T[][] = [];
+  for (let start = 0, size = 1; start < items.length; start += size, size++) {
+    rows.push(items.slice(start, start + size));
+  }
+  return rows;
+}
+
+/** Épaisseur de référence de l'étage 1 (px) — les suivants font TIER_K/i. */
+const TIER_K = 144;
+/** Plancher d'épaisseur : cible tactile R7 (44px ≈ min-h-11). */
+const TIER_MIN_H = 44;
+
+/**
+ * Métriques d'un étage — calées sur son RANG (pas sur son nombre réel de
+ * cases : un dernier étage incomplet resterait sinon plus épais que
+ * l'avant-dernier). Corps 12 + 24/i : 36 → 24 → 20 → 18 → 17 → 16…, jamais
+ * sous 12 ; corps mobile réduit (les mêmes étages tiennent sur 5-6 cases).
+ */
+function tierMetrics(rank: number) {
+  const fontLg = Math.round(12 + 24 / rank);
+  return {
+    minH: Math.max(TIER_MIN_H, Math.round(TIER_K / rank)),
+    fontLg,
+    fontSm: Math.max(11, Math.round(fontLg * 0.62)),
+  };
+}
+
+/** Case d'un étage — corps/épaisseur hérités de l'étage via variables CSS. */
+function TierCell({
   href,
   active,
   label,
   count,
-  font,
-  padY,
-  padX,
 }: {
   href: string;
   active: boolean;
   label: string;
   count: number;
-  font: number;
-  padY: number;
-  padX: number;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      style={
-        {
-          "--fs": `${font}px`,
-          "--py": `${padY}px`,
-          "--px": `${padX}px`,
-        } as CSSProperties
-      }
-      className={`flex items-baseline gap-2 px-[var(--px)] py-[var(--py)] transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
+      className={`flex min-h-[var(--h)] min-w-0 flex-1 items-center justify-center gap-x-2 px-3 py-2 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
     >
-      <span className="font-sans text-[length:var(--fs)] font-black uppercase leading-none tracking-[.01em]">
+      <span className="font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.05] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs)]">
         {label}
       </span>
-      <span className="whitespace-nowrap font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60">
+      <span className="whitespace-nowrap font-sans text-[10px] font-bold uppercase tracking-[.05em] opacity-60 lg:text-[12px]">
         {count}
       </span>
     </Link>
@@ -149,6 +136,14 @@ export function LibelleMosaic({
   const isActive = (item: LibelleMosaicItem) =>
     (item.slug ?? undefined) === activeLibelle;
 
+  // Tri par taille de catalogue décroissant, égalités à l'alphabétique —
+  // copie locale : `items` (ordre alphabétique de getFacets) sert tel quel
+  // à la vue simple.
+  const byCount = [...items].sort(
+    (a, b) => b.count - a.count || a.name.localeCompare(b.name, "fr"),
+  );
+  const rows = tierRows(byCount);
+
   return (
     <LibelleViewSwitch
       className={className}
@@ -166,20 +161,31 @@ export function LibelleMosaic({
         </FramedGrid>
       }
       compact={
-        <FramedGrid as="nav" flow="flex" aria-label={ariaLabel}>
-          {items.map((item) => {
-            const tier = compactTier(item.count);
+        <FramedGrid as="nav" aria-label={ariaLabel} className="grid-cols-1">
+          {rows.map((row, i) => {
+            const m = tierMetrics(i + 1);
             return (
-              <CompactCell
-                key={item.slug ?? "all"}
-                href={hrefFor(item.slug)}
-                active={isActive(item)}
-                label={item.name}
-                count={item.count}
-                font={tier.font}
-                padY={tier.padY}
-                padX={tier.padX}
-              />
+              <div
+                key={i}
+                className="flex gap-[2px]"
+                style={
+                  {
+                    "--h": `${m.minH}px`,
+                    "--fs": `${m.fontLg}px`,
+                    "--fs-sm": `${m.fontSm}px`,
+                  } as CSSProperties
+                }
+              >
+                {row.map((item) => (
+                  <TierCell
+                    key={item.slug ?? "all"}
+                    href={hrefFor(item.slug)}
+                    active={isActive(item)}
+                    label={item.name}
+                    count={item.count}
+                  />
+                ))}
+              </div>
             );
           })}
         </FramedGrid>
