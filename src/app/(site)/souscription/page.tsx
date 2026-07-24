@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Image, { type StaticImageData } from "next/image";
 import { Container } from "@/components/container";
 import { FramedGrid } from "@/components/framed-grid";
-import { Button, INVERT } from "@/components/button";
+import { Button } from "@/components/button";
 import { SubmitButton } from "@/components/submit-button";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG } from "@/lib/accents";
-import { FOCUS_RING_DARK } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
 import { FREE_AMOUNT, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { getCampaign2026 } from "@/lib/donations";
@@ -51,12 +51,15 @@ import camaradePourLaVieImg from "./_contreparties/camarade-pour-la-vie.jpg";
  * intact (`deriveGauge` est le socle commun 2024/2026), seul son usage sur
  * cette page disparaît.
  *
- * Ce qui reste, dans l'ordre du DOM : jauge de collecte en direct (pleine
- * largeur, TOUJOURS visible) ; slot vidéo masqué tant qu'aucune vidéo n'est
- * livrée ; corps deux colonnes — récit figé en code à gauche (ask, quatre
- * sections narratives, objectifs de jauge), contreparties éditables en
- * aside sticky à droite (`#paliers`), récit premier dans le DOM (mobile :
- * h1 et pitch au-dessus des cartes) ; CTA final pleine largeur. Seul le bloc
+ * Ce qui reste, dans l'ordre du DOM (retour client 2026-07-24) : colonne
+ * principale — jauge de collecte en direct (TOUJOURS visible, CTA
+ * « Contribuer » ancré vers `#paliers`, sans séparation sous la jauge),
+ * corps de texte ouvert par le slot vidéo (placeholder tant qu'aucune vidéo
+ * n'est livrée) puis ask, quatre sections narratives, objectifs de jauge,
+ * CTA final — ; contreparties éditables en rail sticky à droite de la PAGE
+ * ENTIÈRE (`#paliers`, hors du corps de texte), clôturé par la carte
+ * « montant libre » (le formulaire ne vit plus ni dans l'ask ni dans le CTA
+ * final). Seul le bloc
  * `contreparties` est éditable dans /admin (global `page-souscription`) :
  * lu via `getPageSouscription`, bloc vide = contenu par défaut de
  * `lib/site-content-core.ts`. Montant et intitulé des paliers restent
@@ -75,9 +78,10 @@ const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
 const OPENING_MICROCOPY = "Ouverture le 15 août";
 
 /**
- * Vidéo de campagne — le bloc pleine largeur de la maquette 2026-07. Aucune
- * vidéo livrée à ce jour : renseigner ici l'URL d'embed à réception ; le
- * bloc reste masqué tant que `null`.
+ * Vidéo de présentation — ouvre le corps de texte (retour client
+ * 2026-07-24). Aucune vidéo livrée à ce jour : renseigner ici l'URL d'embed
+ * à réception ; en attendant, un placeholder au format vidéo tient la place
+ * (jamais un vide).
  */
 const CAMPAIGN_VIDEO_URL: string | null = null;
 
@@ -112,17 +116,31 @@ const TIER_IMAGES: Record<string, StaticImageData> = {
  */
 const COMPACT_TIERS = new Set(["palier-15", "palier-35"]);
 
-/** Objectifs de la jauge (docx client, définitifs) — cellules encadrées après le récit. */
-const OBJECTIFS: { montant: string; titre: string; desc: string }[] = [
+/**
+ * Objectifs de la jauge (docx client, définitifs) — cellules encadrées après
+ * le récit. La progression sauver → résister → construire est portée par la
+ * barre d'accent (brick → ocher → bottle, même échelle que les sections du
+ * récit) ; la cellule du sommet (« On construit », l'objectif plein) est la
+ * seule inversée en ink.
+ */
+const OBJECTIFS: {
+  montant: string;
+  titre: string;
+  desc: string;
+  accent: string;
+  sommet?: boolean;
+}[] = [
   {
     montant: "50 000 €",
     titre: "On sauve les meubles",
     desc: "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+    accent: "bg-brick",
   },
   {
     montant: "80 000 €",
     titre: "On résiste",
     desc: "Nous pouvons absorber l'essentiel de la perte, mener à bien les projets déjà engagés et confirmer l'arrivée de Nicolas Vieillescazes dans l'équipe.",
+    accent: "bg-ocher",
   },
   {
     montant: "100 000 €",
@@ -130,6 +148,8 @@ const OBJECTIFS: { montant: string; titre: string; desc: string }[] = [
     // TODO(contenu) : phrase possiblement tronquée dans le docx (le point
     // final manque) — conservée telle quelle.
     desc: "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+    accent: "bg-bottle",
+    sommet: true,
   },
 ];
 
@@ -143,39 +163,41 @@ export const metadata: Metadata = {
 export const revalidate = 3600; // fenêtre ISR (contreparties lues dans Payload/Postgres)
 
 /**
- * Formulaire « montant libre » — rendu deux fois (bloc d'ask, CTA final) avec
- * le même comportement (R7) : avant ouverture, CTA réellement `disabled` +
- * microcopie « Ouverture le 15 août » (jamais un bouton mort qui a l'air
- * cliquable) ; une fois ouvert, `SubmitButton` (`useFormStatus`) distingue
- * l'état pendant la redirection Stripe de l'état bloqué.
+ * Formulaire « montant libre » — rendu une seule fois, dans la carte qui
+ * clôt la liste des contreparties (retour client 2026-07-24 : plus ni dans
+ * l'ask ni dans le CTA final). Comportement R7 : avant ouverture, CTA
+ * réellement `disabled` + microcopie « Ouverture le 15 août » (jamais un
+ * bouton mort qui a l'air cliquable) ; une fois ouvert, `SubmitButton`
+ * (`useFormStatus`) distingue l'état pendant la redirection Stripe de l'état
+ * bloqué. Recette visuelle alignée sur les cartes de paliers (fond paper,
+ * bouton solid).
  */
-function FreeAmountForm({ enabled, idSuffix }: { enabled: boolean; idSuffix: string }) {
+function FreeAmountForm({ enabled }: { enabled: boolean }) {
   if (!enabled) {
     return (
-      <div className="flex flex-col items-start gap-1.5">
+      <div className="mt-4 flex flex-col items-start gap-1.5">
         <Button
           type="button"
-          variant="invert"
+          variant="solid"
           disabled
           aria-disabled="true"
-          className="shrink-0 gap-2 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
+          className="px-4 py-2.5 text-sm tracking-[.03em]"
         >
           Contribuer
         </Button>
-        <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/60">
+        <p className="font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-muted">
           {OPENING_MICROCOPY}
         </p>
       </div>
     );
   }
-  const inputId = `amount-${idSuffix}`;
   return (
-    <form action={createDonationCheckout} className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <label htmlFor={inputId} className="sr-only">
+    <form action={createDonationCheckout} className="mt-4 flex flex-col gap-3">
+      <label htmlFor="amount-libre" className="sr-only">
         Montant libre, en euros
       </label>
       <input
-        id={inputId}
+        id="amount-libre"
         name="amount"
         type="number"
         min={FREE_AMOUNT.min}
@@ -184,12 +206,12 @@ function FreeAmountForm({ enabled, idSuffix }: { enabled: boolean; idSuffix: str
         inputMode="numeric"
         placeholder="Montant en €"
         required
-        className={`w-36 border-2 border-paper bg-ink px-4 py-3.5 font-sans text-sm font-semibold text-paper placeholder:text-paper/50 ${FOCUS_RING_DARK}`}
+        className={`w-full border-2 border-ink bg-paper px-4 py-3 font-sans text-sm font-semibold text-ink placeholder:text-ink/50 ${FOCUS_RING_LIGHT}`}
       />
       <SubmitButton
-        tone="light"
+        tone="dark"
         pendingLabel="Redirection…"
-        className={`inline-flex shrink-0 items-center gap-2 border-2 px-7 py-3.5 font-sans text-sm font-extrabold uppercase tracking-[.03em] transition-colors motion-reduce:transition-none ${INVERT}`}
+        className={`inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`}
       >
         Contribuer
       </SubmitButton>
@@ -215,12 +237,16 @@ export default async function SouscriptionPage() {
   const liveCampaign = campaign2026 ?? deriveCampaign2026({ collected: 0, contributors: 0 });
 
   return (
-    <>
-      {/* La collecte en direct OUVRE la page — jauge 2026 vivante + objectif,
-          pleine largeur. N'affiche que ce qu'une campagne en cours peut
-          honnêtement montrer (collecté net + contributeurs). Fenêtre de
-          fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
-      <section className="border-b-2 border-ink bg-paper">
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+      {/* Colonne principale (jauge, corps de texte, CTA final) — le rail des
+          contreparties vit en frère de DOM, sur la droite de la page entière. */}
+      <div className="min-w-0">
+      {/* La collecte en direct OUVRE la page — jauge 2026 vivante + objectif.
+          Pas de séparation horizontale sous la jauge (retour client
+          2026-07-24) : elle enchaîne directement sur le corps. N'affiche que
+          ce qu'une campagne en cours peut honnêtement montrer (collecté net +
+          contributeurs). Fenêtre de fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
+      <section className="bg-paper">
         <Container className="py-12 sm:py-16">
           <Reveal>
             <div className="flex flex-col gap-[2px] bg-ink p-[2px] lg:flex-row">
@@ -260,44 +286,62 @@ export default async function SouscriptionPage() {
                 <p className="mt-2 font-sans text-4xl font-black italic">
                   {formatInt(liveCampaign.goal)}&nbsp;€
                 </p>
+                {/* CTA de la jauge (retour client 2026-07-24) : renvoie vers
+                    la liste des contreparties, le paiement se joue là-bas. */}
+                <Button
+                  href="#paliers"
+                  variant="invert"
+                  className="mt-5 self-start px-6 py-3 text-sm font-extrabold tracking-[.03em]"
+                >
+                  Contribuer
+                </Button>
               </div>
             </div>
           </Reveal>
         </Container>
       </section>
 
-      {/* Vidéo de campagne — le bloc pleine largeur de la maquette ; absent
-          tant qu'aucune vidéo n'est livrée. */}
-      {CAMPAIGN_VIDEO_URL && (
-        <section className="border-b-2 border-ink bg-paper">
-          <Container className="py-12 sm:py-16">
-            <Reveal>
-              <div className="border-2 border-ink bg-ink">
-                <iframe
-                  src={CAMPAIGN_VIDEO_URL}
-                  title="La vidéo de la souscription"
-                  className="aspect-video w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
-              </div>
-            </Reveal>
-          </Container>
-        </section>
-      )}
-
-      {/* Corps en deux colonnes : récit à gauche — ouvert par l'ask 2026 —,
-          contreparties empilées à droite. Le récit est premier dans le DOM :
-          sur mobile, h1 et pitch restent au-dessus des cartes de paliers. */}
+      {/* Corps de texte — ouvert par le slot vidéo, puis l'ask 2026, le
+          récit et les objectifs. Les contreparties n'y sont plus : elles
+          vivent dans le rail `#paliers`, à droite de la page entière. */}
       <section className="border-b-2 border-ink bg-paper">
         <Container className="py-16 sm:py-20">
-          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-            {/* Colonne récit : l'ask, le récit, les objectifs */}
             <div className="flex flex-col gap-14">
+              {/* Vidéo de présentation — OUVRE le corps de texte ; tant
+                  qu'aucune vidéo n'est livrée, un placeholder au même format
+                  tient la place (le bloc ne disparaît jamais). */}
+              <Reveal>
+                {CAMPAIGN_VIDEO_URL ? (
+                  <div className="border-2 border-ink bg-ink">
+                    <iframe
+                      src={CAMPAIGN_VIDEO_URL}
+                      title="La vidéo de la souscription"
+                      className="aspect-video w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-ink bg-ink text-paper">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-16 w-16 items-center justify-center border-2 border-paper pl-1 font-sans text-2xl"
+                    >
+                      ▶
+                    </span>
+                    <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
+                      La vidéo de la souscription — bientôt
+                    </p>
+                  </div>
+                )}
+              </Reveal>
+
               {/* L'ask 2026 — même traitement typographique que l'ancien h1
                   (précédent acté sur cette page) : Effra, italique, gras.
+                  Le formulaire montant libre n'est plus ici (il clôt la liste
+                  des contreparties), seule l'ancre y mène.
                   TODO(contenu) : le docx s'intitule « Slogans » (pluriel)
                   mais n'en livre qu'un — d'autres variantes pourraient
                   arriver. */}
@@ -305,21 +349,30 @@ export default async function SouscriptionPage() {
                 <h1 className="font-sans text-4xl font-black italic leading-[0.98] text-paper">
                   100 ans d&apos;édition marxiste : <span className="text-pop-yellow">aidez-nous à poursuivre l&apos;histoire.</span>
                 </h1>
-                <div className="mt-8">
-                  <FreeAmountForm enabled={enabled} idSuffix="hero" />
-                  <a
-                    href="#paliers"
-                    className={`mt-3 inline-block font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper ${FOCUS_RING_DARK}`}
-                  >
-                    Voir les contreparties ↓
-                  </a>
-                </div>
+                <a
+                  href="#paliers"
+                  className={`mt-8 inline-block font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper ${FOCUS_RING_DARK}`}
+                >
+                  Voir les contreparties ↓
+                </a>
               </div>
 
-              {/* Section 1 — la crise */}
+              {/* Récit — mise en forme par registre (texte du docx VERBATIM,
+                  seule la composition varie) : chaque section porte un accent
+                  de marque selon son contenu — crise = brick (le langage
+                  d'alerte du site, cf. panier), bataille politique = navy,
+                  héritage centenaire = ocher (`text-ocher-text`, la variante
+                  lisible sur paper), appel = bottle. Les phrases-slogans du
+                  docx passent en display Effra black italic ; le descriptif
+                  reste en corps 15px/ink-70. Jamais de palette pop ici (R2). */}
+
+              {/* Section 1 — la crise : « danger maximal » crié en brick,
+                  le montant perdu scalé dans la phrase, la chute (« coup
+                  fatal ») en punchline bordée. */}
               <Reveal>
                 <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink">
-                  Édition indépendante et critique : danger maximal
+                  Édition indépendante et critique :{" "}
+                  <span className="uppercase text-brick">danger maximal</span>
                 </h2>
                 <div className="mt-4 max-w-[70ch] space-y-4 text-[15px] leading-relaxed text-ink/70">
                   <p>
@@ -329,27 +382,41 @@ export default async function SouscriptionPage() {
                     distributeur Makassar qui disparaît avec des dettes importantes.
                   </p>
                   <p>
-                    Pour Les éditions sociales et La Dispute, c&apos;est plus de
-                    130 000 € de ventes en librairie que nous ne toucherons jamais
+                    Pour Les éditions sociales et La Dispute, c&apos;est plus de{" "}
+                    <strong className="whitespace-nowrap font-sans text-[1.45em] font-black italic leading-none text-brick">
+                      130&nbsp;000&nbsp;€
+                    </strong>{" "}
+                    de ventes en librairie que nous ne toucherons jamais
                     pour des livres dont nous avons pourtant payé des frais
                     d&apos;impression et de maquette, ainsi que des avances de droits
                     d&apos;auteur.
                   </p>
-                  <p>Pour nos maisons, c&apos;est le genre de coup qui peut être fatal.</p>
+                  <p className="border-l-4 border-brick pl-4 font-sans text-xl font-black italic leading-tight text-ink sm:text-2xl">
+                    Pour nos maisons, c&apos;est le genre de coup qui peut être fatal.
+                  </p>
                 </div>
               </Reveal>
 
-              {/* Section 2 — la bataille matérielle */}
+              {/* Section 2 — la bataille matérielle : le titre EST un slogan
+                  (« guerre matérielle » souligné navy), le 90 % des groupes
+                  scalé dans la phrase, la chute — « un devoir politique » —
+                  surlignée au marqueur navy inversé. */}
               <Reveal>
                 <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink">
-                  La guerre culturelle est aussi une guerre matérielle
+                  La guerre culturelle est aussi une{" "}
+                  <span className="underline decoration-navy decoration-4 underline-offset-4">
+                    guerre matérielle
+                  </span>
                 </h2>
                 <div className="mt-4 max-w-[70ch] space-y-4 text-[15px] leading-relaxed text-ink/70">
                   <p>
                     La faillite de Makassar est le résultat d&apos;un marché de
                     l&apos;édition où les grands groupes – Hachette, Editis,
-                    Média-Participations, Madrigall – détiennent à eux seuls près de
-                    90 % de la production éditoriale et de la distribution. Ces
+                    Média-Participations, Madrigall – détiennent à eux seuls près de{" "}
+                    <strong className="whitespace-nowrap font-sans text-[1.45em] font-black italic leading-none text-navy">
+                      90&nbsp;%
+                    </strong>{" "}
+                    de la production éditoriale et de la distribution. Ces
                     grands groupes font la course aux profits et imposent leur loi à
                     tous, avec des conséquences néfastes pour l&apos;ensemble des
                     acteurs indépendants mais aussi des lecteurices.
@@ -360,30 +427,48 @@ export default async function SouscriptionPage() {
                     idéologiques, comme on l&apos;a vu récemment avec Vincent Bolloré.
                   </p>
                   <p>
-                    Face à eux, nous devons aller à la racine en exigeant la fin de
-                    la propriété privée des moyens de production culturelle et des
-                    infrastructures de distribution.
+                    Face à eux, nous devons aller à la racine en exigeant{" "}
+                    <strong className="font-semibold text-ink">
+                      la fin de la propriété privée des moyens de production
+                      culturelle et des infrastructures de distribution
+                    </strong>
+                    .
                   </p>
-                  <p>
+                  <p className="font-sans text-xl font-black italic leading-snug text-ink sm:text-2xl">
                     Et, parce que la bataille des idées est aussi une guerre
-                    matérielle, soutenir les éditeurs indépendants est un devoir
-                    politique.
+                    matérielle, soutenir les éditeurs indépendants est{" "}
+                    {/* `whitespace-nowrap` : un marqueur coupé en fin de ligne
+                        chevaucherait la ligne du dessus (leading serré des
+                        displays) — le marqueur passe à la ligne entier. */}
+                    <span className="whitespace-nowrap bg-navy px-2 text-paper">
+                      un devoir politique
+                    </span>
+                    .
                   </p>
                 </div>
               </Reveal>
 
-              {/* Section 3 — les maisons, cent ans */}
+              {/* Section 3 — les maisons, cent ans : le « 100 ans » géant et
+                  légèrement penché (énergie affiche/sticker de la campagne),
+                  l'anaphore « Cent ans de… » composée en litanie bordée
+                  ocher ; le reste (chantiers, équipe) demeure descriptif. */}
               <Reveal>
                 <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink">
                   Les éditions sociales et La Dispute
                 </h2>
                 <div className="mt-4 max-w-[70ch] space-y-4 text-[15px] leading-relaxed text-ink/70">
-                  <p>En 2027, nos maisons fêteront leurs 100 ans d&apos;existence.</p>
-                  <p>
+                  <p className="font-sans text-xl font-bold leading-snug text-ink">
+                    En 2027, nos maisons fêteront leurs{" "}
+                    <span className="inline-block -rotate-2 whitespace-nowrap font-black italic text-5xl leading-[0.9] text-ocher-text sm:text-6xl">
+                      100 ans
+                    </span>{" "}
+                    d&apos;existence.
+                  </p>
+                  <p className="border-l-4 border-ocher pl-4 font-sans text-lg font-bold leading-snug text-ink">
                     Cent ans de traductions de Marx et de livres marxistes et de
                     formation militante.
                   </p>
-                  <p>
+                  <p className="border-l-4 border-ocher pl-4 font-sans text-lg font-bold leading-snug text-ink">
                     Cent ans de publications exigeantes, pour éclairer les
                     transformations du capitalisme, des classes sociales, mener la
                     critique féministe et faire vivre le débat à gauche.
@@ -396,28 +481,43 @@ export default async function SouscriptionPage() {
                     dans le pays.
                   </p>
                   <p>
-                    Mais notre équipe s&apos;agrandit aussi : Nicolas Vieillescazes,
-                    ancien directeur éditorial d&apos;Amsterdam, nous rejoint pour
+                    Mais notre équipe s&apos;agrandit aussi :{" "}
+                    <strong className="font-semibold text-ink">
+                      Nicolas Vieillescazes
+                    </strong>
+                    , ancien directeur éditorial d&apos;Amsterdam, nous rejoint pour
                     renforcer les éditions sociales et La Dispute.
                   </p>
                   <p>
                     Tous ces choix portent leurs fruits mais la faillite de Makassar
-                    nous frappe au moment où nous construisons l&apos;avenir.
+                    nous frappe{" "}
+                    <strong className="font-semibold text-ink">
+                      au moment où nous construisons l&apos;avenir
+                    </strong>
+                    .
                   </p>
                 </div>
               </Reveal>
 
-              {/* Section 4 — l'appel */}
+              {/* Section 4 — l'appel : adresse directe, donc tout en display —
+                  titre scalé avec « de vous » au marqueur bottle, paragraphe
+                  unique agrandi (c'est l'ask du récit, pas un descriptif). */}
               <Reveal>
-                <h2 className="font-sans text-3xl font-black italic leading-[0.98] text-ink">
-                  Nous avons besoin de vous
+                <h2 className="font-sans text-4xl font-black italic leading-[0.98] text-ink sm:text-5xl">
+                  Nous avons besoin{" "}
+                  <span className="whitespace-nowrap bg-bottle px-2 text-paper">
+                    de vous
+                  </span>
                 </h2>
-                <div className="mt-4 max-w-[70ch] space-y-4 text-[15px] leading-relaxed text-ink/70">
-                  <p>
+                <div className="mt-5 max-w-[62ch]">
+                  <p className="font-sans text-lg font-medium leading-relaxed text-ink sm:text-xl">
                     Nous voulons que notre histoire se poursuive ; c&apos;est pourquoi
                     nous faisons appel à vous. En faisant un don, vous nous aiderez
-                    à surmonter cette crise, à préserver notre indépendance et à
-                    poursuivre un travail éditorial engagé, exigeant et
+                    à surmonter cette crise, à{" "}
+                    <strong className="font-bold underline decoration-bottle decoration-4 underline-offset-4">
+                      préserver notre indépendance
+                    </strong>{" "}
+                    et à poursuivre un travail éditorial engagé, exigeant et
                     indispensable.
                   </p>
                 </div>
@@ -429,29 +529,68 @@ export default async function SouscriptionPage() {
               <FramedGrid className="grid-cols-1 sm:grid-cols-3">
                 {OBJECTIFS.map((o) => (
                   <Reveal key={o.titre} className="h-full">
-                    <div className="flex h-full flex-col gap-2 bg-paper p-6">
-                      <span className="font-sans text-3xl font-black italic text-ink">
-                        {o.montant}
-                      </span>
-                      <span className="font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                        {o.titre}
-                      </span>
-                      <p className="mt-1 text-sm leading-relaxed text-ink/70">{o.desc}</p>
+                    <div
+                      className={`flex h-full flex-col ${o.sommet ? "bg-ink text-paper" : "bg-paper text-ink"}`}
+                    >
+                      <div aria-hidden="true" className={`h-2 ${o.accent}`} />
+                      <div className="flex flex-1 flex-col gap-2 p-6">
+                        <span className="font-sans text-3xl font-black italic">
+                          {o.montant}
+                        </span>
+                        <span className="font-sans text-base font-extrabold uppercase tracking-[.02em]">
+                          {o.titre}
+                        </span>
+                        <p
+                          className={`mt-1 text-sm leading-relaxed ${o.sommet ? "text-paper/70" : "text-ink/70"}`}
+                        >
+                          {o.desc}
+                        </p>
+                      </div>
                     </div>
                   </Reveal>
                 ))}
               </FramedGrid>
             </div>
 
-            {/* Colonne contreparties — ancrée au défilement, bornée à la
-                hauteur du viewport sous le header, avec sa propre barre de
-                scroll pour parcourir les paliers sans quitter le récit de
-                gauche. Les 9 cartes sont uniformes (plus de carte inversée
-                pour les grands paliers). */}
-            <aside
-              id="paliers"
-              className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain"
-            >
+        </Container>
+      </section>
+
+      {/* CTA final — phrase de clôture du docx, verbatim. Le montant libre
+          vivant désormais en clôture du rail, le CTA y renvoie simplement. */}
+      <section className="bg-ink text-paper">
+        <div className="grid grid-cols-4" aria-hidden="true">
+          {POP_BG.map((c) => (
+            <div key={c} className={`h-1.5 ${c}`} />
+          ))}
+        </div>
+        <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
+          <h2 className="max-w-2xl font-sans text-2xl font-black italic leading-[1.05] sm:text-3xl">
+            Vous nous permettrez de continuer à publier les livres qui
+            imaginent la fin du capitalisme plutôt que la fin du monde.
+          </h2>
+          <Button
+            href="#paliers"
+            variant="invert"
+            className="shrink-0 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
+          >
+            Contribuer
+          </Button>
+        </Container>
+      </section>
+      </div>
+
+      {/* Rail contreparties — module autonome sur la droite de la PAGE
+          ENTIÈRE (retour client 2026-07-24), plus une colonne du corps de
+          texte : ancré au défilement, borné à la hauteur du viewport sous le
+          header, avec sa propre barre de scroll. Les 9 cartes sont
+          uniformes ; la carte « montant libre » clôt la liste. Sur mobile,
+          le rail suit toute la colonne principale (l'ancre `#paliers` y
+          mène). */}
+      <aside
+        id="paliers"
+        className="border-t-2 border-ink bg-paper lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:border-l-2 lg:border-t-0"
+      >
+        <div className="p-4 sm:p-6">
               <FramedGrid className="grid-cols-1">
                 {content.contreparties.map((p, i) => {
                   // Paliers de don : les 4 accents de marque, jamais le cycle pop (R2/R3).
@@ -573,36 +712,30 @@ export default async function SouscriptionPage() {
                     </Reveal>
                   );
                 })}
+                {/* Carte de clôture — montant libre (retour client
+                    2026-07-24) : le formulaire à montant personnalisé vit
+                    tout en bas de la liste, après les 9 paliers, et
+                    poursuit le cycle des 4 accents de marque. */}
+                <Reveal className="h-full">
+                  <div className="flex h-full flex-col bg-paper">
+                    <div
+                      aria-hidden="true"
+                      className={`h-2 ${BG[ACCENTS[content.contreparties.length % 4]]}`}
+                    />
+                    <div className="flex flex-1 flex-col p-6">
+                      <span className="font-sans text-3xl font-black italic text-ink">
+                        Montant libre
+                      </span>
+                      <span className="mt-1 font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
+                        Contribuez à la hauteur de votre choix
+                      </span>
+                      <FreeAmountForm enabled={enabled} />
+                    </div>
+                  </div>
+                </Reveal>
               </FramedGrid>
-            </aside>
-          </div>
-        </Container>
-      </section>
-
-      {/* CTA final — phrase de clôture du docx, verbatim. */}
-      <section className="bg-ink text-paper">
-        <div className="grid grid-cols-4" aria-hidden="true">
-          {POP_BG.map((c) => (
-            <div key={c} className={`h-1.5 ${c}`} />
-          ))}
         </div>
-        <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
-          <h2 className="max-w-2xl font-sans text-2xl font-black italic leading-[1.05] sm:text-3xl">
-            Vous nous permettrez de continuer à publier les livres qui
-            imaginent la fin du capitalisme plutôt que la fin du monde.
-          </h2>
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <FreeAmountForm enabled={enabled} idSuffix="final" />
-            <Button
-              href="#paliers"
-              variant="invert"
-              className="shrink-0 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
-            >
-              Choisir un palier
-            </Button>
-          </div>
-        </Container>
-      </section>
-    </>
+      </aside>
+    </div>
   );
 }
