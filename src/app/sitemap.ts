@@ -19,12 +19,12 @@ const STATIC_PATHS = [
   "/catalogue",
   "/catalogue/editions-sociales",
   "/catalogue/la-dispute",
-  // Pas de `/editions`/`/editions/[slug]` : ces routes sont désormais des
-  // redirections permanentes vers `/a-propos` (chantier agenda/à-propos,
-  // 2026-07, cf. `src/app/(site)/editions/`) — les lister au sitemap
-  // ferait indexer des URLs qui ne servent jamais de contenu propre.
+  // Pages de présentation par maison (retour client 2026-07-23). Pas de
+  // `/editions` (index) ni de `/a-propos` : redirections permanentes vers
+  // l'accueil — les lister ferait indexer des URLs sans contenu propre.
+  "/editions/editions-sociales",
+  "/editions/la-dispute",
   "/souscription",
-  "/a-propos",
   "/rencontres",
   "/contact",
   "/mentions-legales",

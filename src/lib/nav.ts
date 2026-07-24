@@ -81,17 +81,15 @@ export interface NavHouse {
 }
 
 /**
- * Les deux maisons de la navbar (cellules pleine largeur). Chantier
- * agenda/à-propos (2026-07) : `/editions/[slug]` est devenu un contenu mort
- * (redirection permanente vers `/a-propos`, cf. ce dossier) — les deux
- * entrées pointent donc directement vers la page commune, labels inchangés.
- * Les deux hrefs sont désormais IDENTIQUES : les consommateurs qui indexaient
- * par href (`MAISON_MONOGRAM` du header, `key` du footer) doivent indexer par
- * `label` à la place (unique, lui).
+ * Les deux maisons de la navbar (cellules pleine largeur). Retour client
+ * 2026-07-23 : chaque maison mène à SA page de présentation
+ * `/editions/[slug]` — la page commune `/a-propos` est supprimée (redirigée
+ * vers l'accueil). Les consommateurs (`MAISON_MONOGRAM` du header, `key` du
+ * footer) continuent d'indexer par `label`.
  */
 export const NAV_HOUSES: NavHouse[] = [
-  { label: "La Dispute", href: "/a-propos" },
-  { label: "Les Éditions sociales", href: "/a-propos" },
+  { label: "La Dispute", href: "/editions/la-dispute" },
+  { label: "Les Éditions sociales", href: "/editions/editions-sociales" },
 ];
 
 /**

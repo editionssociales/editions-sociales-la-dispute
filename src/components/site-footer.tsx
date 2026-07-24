@@ -54,9 +54,8 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
       <nav aria-label="Explorer" className="mt-1">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           {NAV_HOUSES.map((house) => (
-            // Clef = label : les deux hrefs pointent désormais vers la même
-            // page commune `/a-propos` (`lib/nav.ts`), ce qui les rend
-            // impropres à servir de clef React.
+            // Clef = label (convention posée quand les deux hrefs étaient
+            // identiques ; le label reste la clef stable de `NAV_HOUSES`).
             <li key={house.label}>
               <Link href={house.href} className={LINK_CLASS}>
                 {house.label}
@@ -76,13 +75,11 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
         </ul>
       </nav>
 
+      {/* « À propos » a disparu de cette liste : la page commune est
+          supprimée (retour client 2026-07-23), les pages maisons de la nav
+          « Explorer » ci-dessus portent désormais la présentation. */}
       <nav aria-label="Pratique" className="mt-2">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          <li>
-            <Link href="/a-propos" className={LINK_CLASS}>
-              À propos
-            </Link>
-          </li>
           <li>
             <Link href="/panier" className={LINK_CLASS}>
               Panier
