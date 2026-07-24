@@ -79,10 +79,12 @@ une page par erreur.
   moins un) ; titre et description par défaut utilisés par Google.
 - **Page À propos** : les textes du haut de page, la citation, la
   présentation des deux maisons, et des sections libres.
-- **Page Souscription** : les textes de la page de dons (chantiers,
-  contreparties, mécènes, questions fréquentes). **Les montants ne se
-  modifient pas ici** : ils sont calés sur les paliers de paiement définis
-  ailleurs, vous ne touchez que le texte qui les accompagne.
+- **Page Souscription** : le contenu des neuf cartes de contreparties (15 à
+  1 000 €) — le lot associé à chaque palier. Le récit de la page (texte de
+  campagne, objectifs, visuels) n'est pas éditable ici, il vient du code.
+  **Les montants ne se modifient pas ici** : ils sont calés sur les paliers
+  de paiement définis ailleurs, vous ne touchez que le texte qui les
+  accompagne.
 
 - **Mise en avant** (bandeau ponctuel sur l'accueil, menu **Mises en avant**) :
   donnez un titre, un texte court, des dates de début/fin, cochez « Actif ».
