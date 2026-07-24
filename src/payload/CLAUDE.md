@@ -22,4 +22,4 @@ Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : 
 ## Verification
 
 - `pnpm generate:types` après tout changement de schéma (collections/globals/fields) — `access.ts` le signale : tant que `payload-types.ts` n'est pas généré, les comparaisons de rôle ne sont pas vérifiées par le compilateur.
-- Migrations versionnées, jamais de `push` en prod (cf. CLAUDE.md racine).
+- Migrations versionnées, jamais de `push` en prod (cf. CLAUDE.md racine). `payload migrate:create` est inutilisable sur ce repo (snapshots drizzle obsolètes) : migrations écrites À LA MAIN sur le modèle des précédentes — convention arrays sous collection versionnée : table `_<coll>_v_version_<field>` avec `id serial` + `_uuid varchar` (l'array principal garde `id varchar`), colonnes nullable quand la collection a des drafts.
