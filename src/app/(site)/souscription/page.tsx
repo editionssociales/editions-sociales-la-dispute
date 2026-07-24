@@ -446,6 +446,12 @@ export default async function SouscriptionPage() {
   // lancement (0 collecté), la jauge affiche honnêtement une campagne à 0
   // plutôt que de disparaître.
   const liveCampaign = campaign2026 ?? deriveCampaign2026({ collected: 0, contributors: 0 });
+  // Panne Stripe EN campagne (clé posée mais relecture des charges en échec,
+  // `getCampaign2026` → null) : ne jamais afficher un faux 0 — le compteur
+  // laisse place à une mention neutre et la barre n'est pas rendue
+  // (l'objectif, lui, reste vrai). L'ISR (1 h) peut prolonger cet état
+  // quelques minutes après le retour de Stripe.
+  const outage = enabled && campaign2026 === null;
 
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
@@ -462,7 +468,20 @@ export default async function SouscriptionPage() {
           <Reveal>
             <div className="flex flex-col gap-[2px] bg-ink p-[2px] lg:flex-row">
               <div className="flex-1 bg-paper p-6 sm:p-8">
-                {liveCampaign.collected > 0 ? (
+                {outage ? (
+                  <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
+                    La collecte est en cours — le total s’affichera de nouveau
+                    dans quelques minutes.
+                  </p>
+                ) : !enabled ? (
+                  /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
+                     annoncer la date plutôt qu'un « soyez les premier·ères »
+                     contradictoire avec des boutons morts. */
+                  <p className="max-w-md text-[15px] leading-relaxed text-ink/70">
+                    La souscription ouvre le 15 août — découvrez déjà les
+                    contreparties.
+                  </p>
+                ) : liveCampaign.collected > 0 ? (
                   /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
                      supprime les blancs contenant un retour à la ligne — sans
                      eux, AT/copier-coller lisent « Déjà11 014 €réunis ». Les
@@ -488,12 +507,14 @@ export default async function SouscriptionPage() {
                     contribuer.
                   </p>
                 )}
-                <Gauge
-                  className="mt-6"
-                  value={liveCampaign.gauge.value}
-                  max={liveCampaign.gauge.max}
-                  markers={liveCampaign.gauge.markers}
-                />
+                {!outage && (
+                  <Gauge
+                    className="mt-6"
+                    value={liveCampaign.gauge.value}
+                    max={liveCampaign.gauge.max}
+                    markers={liveCampaign.gauge.markers}
+                  />
+                )}
               </div>
               <div className="flex flex-col justify-center bg-ink p-6 text-paper sm:p-8 lg:w-64">
                 <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
@@ -503,15 +524,22 @@ export default async function SouscriptionPage() {
                   {formatInt(liveCampaign.goal)}&nbsp;€
                 </p>
                 {/* CTA de la jauge (retour client 2026-07-24) : renvoie vers
-                    la liste des contreparties, le paiement se joue là-bas. */}
+                    la liste des contreparties, le paiement se joue là-bas. La
+                    flèche « ↓ » distingue cette ancre de défilement des
+                    boutons de PAIEMENT du rail (libellé « Contribuer » nu). */}
                 <Button
                   href="#paliers"
                   variant="invert"
                   aria-label="Contribuer — voir les contreparties"
                   className="mt-5 self-start px-6 py-3 text-sm font-extrabold tracking-[.03em]"
                 >
-                  Contribuer
+                  Contribuer&nbsp;↓
                 </Button>
+                {!enabled && (
+                  <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/70">
+                    {OPENING_MICROCOPY}
+                  </p>
+                )}
               </div>
             </div>
           </Reveal>
@@ -542,13 +570,18 @@ export default async function SouscriptionPage() {
                   </div>
                 ) : (
                   <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-ink bg-ink text-paper">
+                    {/* SVG plutôt que le caractère ▶ : Effra ne couvre pas les
+                        glyphes géométriques, le rendu retombait sur la fonte
+                        système (forme et centrage variables selon l'OS). */}
                     <span
                       aria-hidden="true"
-                      className="flex h-16 w-16 items-center justify-center border-2 border-paper pl-1 font-sans text-2xl"
+                      className="flex h-16 w-16 items-center justify-center border-2 border-paper"
                     >
-                      ▶
+                      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
+                        <path d="M6 4 L20 12 L6 20 Z" />
+                      </svg>
                     </span>
-                    <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
+                    <p className="px-4 text-center font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
                       La vidéo de la souscription — bientôt
                     </p>
                   </div>
@@ -808,7 +841,7 @@ export default async function SouscriptionPage() {
             aria-label="Contribuer — voir les contreparties"
             className="shrink-0 px-7 py-3.5 text-sm font-extrabold tracking-[.03em]"
           >
-            Contribuer
+            Contribuer&nbsp;↓
           </Button>
         </Container>
       </section>
@@ -827,7 +860,17 @@ export default async function SouscriptionPage() {
         className="border-t-2 border-ink bg-paper lg:sticky lg:top-24 lg:scroll-mt-24 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:border-l-2 lg:border-t-0"
       >
         <div className="p-4 sm:p-6">
-              <FramedGrid className="grid-cols-1">
+              {/* Signalement du montant libre : la carte vit en CLÔTURE du
+                  rail (position actée client) — sans cette ancre, l'option la
+                  plus demandée d'une souscription resterait indécouvrable
+                  avant d'avoir déroulé les 9 paliers. */}
+              <a
+                href="#montant-libre"
+                className={`inline-flex min-h-11 items-center font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-ink ${FOCUS_RING_LIGHT}`}
+              >
+                Ou donnez un montant libre ↓
+              </a>
+              <FramedGrid className="mt-2 grid-cols-1">
                 {content.contreparties.map((p, i) => {
                   // Paliers de don : les 4 accents de marque, jamais le cycle pop (R2/R3).
                   const accentBg = BG[ACCENTS[i % 4]];
@@ -940,7 +983,7 @@ export default async function SouscriptionPage() {
                     tout en bas de la liste, après les 9 paliers, et
                     poursuit le cycle des 4 accents de marque. */}
                 <Reveal className="h-full">
-                  <div className="flex h-full flex-col bg-paper">
+                  <div id="montant-libre" className="flex h-full flex-col bg-paper">
                     <div
                       aria-hidden="true"
                       className={`h-2 ${BG[ACCENTS[content.contreparties.length % 4]]}`}

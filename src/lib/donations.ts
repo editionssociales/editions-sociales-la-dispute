@@ -79,7 +79,10 @@ export const getDonationTotals = cache(async (): Promise<DonationCharge[]> => {
 /**
  * Vue-modèle de la campagne 2026 en cours, consommée par `/souscription`.
  * `null` sur **toute** erreur (clé absente, Stripe indisponible, réponse
- * malformée) — la page dégrade en masquant la section jauge, jamais en plantant.
+ * malformée) — jamais un plantage. La page distingue alors deux cas : avant
+ * l'ouverture (`donationsEnabled()` faux), jauge honnêtement à 0 ; en
+ * campagne (clé posée), panne Stripe → compteur remplacé par une mention
+ * neutre et barre non rendue, jamais un faux 0.
  */
 export async function getCampaign2026(): Promise<Campaign2026 | null> {
   try {

@@ -2,19 +2,35 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
+import { formatInt } from "@/lib/format";
+import { FREE_AMOUNT } from "@/lib/donation-tiers";
 
 /**
- * Page statique de repli quand `createDonationCheckout` (E3) échoue à créer
- * la session Stripe (clé absente, Stripe indisponible, erreur réseau) — la
- * page `/souscription` elle-même ne devient jamais dynamique ni ne plante.
- * Jamais indexée.
+ * Page de repli quand `createDonationCheckout` (E3) échoue — la page
+ * `/souscription` elle-même ne plante jamais. Elle lit `raison` dans
+ * `searchParams` (Promise en Next 16 — rendu dynamique, assumé pour une page
+ * d'erreur) pour distinguer un montant refusé par la validation serveur
+ * (`?raison=montant`, bornes rappelées) d'un vrai échec technique (clé
+ * absente, Stripe indisponible, erreur réseau). Jamais indexée.
  */
 export const metadata: Metadata = {
   title: "Paiement indisponible",
   robots: { index: false, follow: false },
 };
 
-export default function ErreurPage() {
+export default async function ErreurPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ raison?: string }>;
+}) {
+  const { raison } = await searchParams;
+  // Bornes importées de `FREE_AMOUNT` (jamais de littéraux) : le message ne
+  // peut pas diverger de la validation de `parseDonation`.
+  const intro =
+    raison === "montant"
+      ? `Le montant saisi n’a pas pu être accepté — un don libre va de ${FREE_AMOUNT.min} à ${formatInt(FREE_AMOUNT.max)} €. Aucune somme n’a été prélevée.`
+      : "Un problème technique a empêché l’ouverture de la page de paiement. Aucune somme n’a été prélevée. Vous pouvez réessayer, ou nous écrire si le problème persiste.";
+
   return (
     <>
       {/* Issue sémantique (R3) : brick = échec — seule page de ce parcours
@@ -27,11 +43,7 @@ export default function ErreurPage() {
               !
             </span>
           </div>
-          <PageHero
-            tone="system"
-            title="Le paiement n’a pas pu démarrer"
-            intro="Un problème technique a empêché l’ouverture de la page de paiement. Aucune somme n'a été prélevée. Vous pouvez réessayer, ou nous écrire si le problème persiste."
-          />
+          <PageHero tone="system" title="Le paiement n’a pas pu démarrer" intro={intro} />
           <div className="mt-8 flex flex-wrap gap-4">
             <Button
               href="/souscription#paliers"
@@ -40,11 +52,10 @@ export default function ErreurPage() {
             >
               Réessayer
             </Button>
-            <Button
-              href="mailto:contact@editionssociales.fr"
-              variant="outline"
-              className="px-6 py-3 text-sm tracking-[.03em]"
-            >
+            {/* Page /contact (formulaire fonctionnel) plutôt qu'un mailto en
+                dur vers une boîte dont rien ne garantit l'existence (migration
+                DNS/OVH en cours) : jamais un deuxième échec d'affilée. */}
+            <Button href="/contact" variant="outline" className="px-6 py-3 text-sm tracking-[.03em]">
               Nous écrire
             </Button>
           </div>

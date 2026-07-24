@@ -147,6 +147,6 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ url: session.url });
   } catch (err) {
     Sentry.captureException(err);
-    return Response.json({ error: "Le paiement est momentanément indisponible, réessayez." }, { status: 502 });
+    return Response.json({ error: "Le paiement est momentanément indisponible. Réessayez dans un instant." }, { status: 502 });
   }
 }

@@ -21,7 +21,10 @@ export async function createDonationCheckout(formData: FormData) {
   });
 
   if ("error" in parsed) {
-    redirect("/souscription/erreur");
+    // `?raison=montant` : la page d'erreur distingue un montant refusé par la
+    // validation (bornes rappelées) d'un échec technique Stripe — ne concerne
+    // que no-JS/POST directs, la validation native min/max couvre l'UI.
+    redirect("/souscription/erreur?raison=montant");
   }
 
   // Origine absolue pour les URL de retour Stripe : `NEXT_PUBLIC_SITE_URL`

@@ -82,10 +82,14 @@ export default async function MerciPage({
                   <>
                     Votre don de{" "}
                     <strong className="font-bold text-ink">
-                      {donation.amount.toLocaleString("fr-FR")}&nbsp;€
+                      {donation.amount.toLocaleString("fr-FR", {
+                        // Centimes forcés dès que le montant n'est pas entier
+                        // (POST direct décimal) : « 42,50 € », jamais « 42,5 € ».
+                        minimumFractionDigits: Number.isInteger(donation.amount) ? 0 : 2,
+                      })}&nbsp;€
                     </strong>{" "}
-                    — {donation.tierTitle} — a bien été enregistré. Un reçu vous a été
-                    envoyé par email.
+                    — {donation.tierTitle} — a bien été enregistré. Stripe vous
+                    enverra un reçu par email.
                   </>
                 )
               }
@@ -94,7 +98,7 @@ export default async function MerciPage({
             <PageHero
               tone="system"
               title="Merci pour votre soutien !"
-              intro="Votre contribution a bien été prise en compte. Si le paiement a abouti, un reçu vous a été envoyé par email."
+              intro="Votre contribution a bien été prise en compte. Si le paiement a abouti, Stripe vous enverra un reçu par email."
             />
           )}
           <div className="mt-8 flex flex-wrap gap-4">
