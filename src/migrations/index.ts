@@ -12,6 +12,7 @@ import * as migration_20260719_074211_highlight_couleur_cta from './20260719_074
 import * as migration_20260719_105000_libelles from './20260719_105000_libelles';
 import * as migration_20260720_004500_pages_absorb_reglages_site from './20260720_004500_pages_absorb_reglages_site';
 import * as migration_20260722_223000_rencontres from './20260722_223000_rencontres';
+import * as migration_20260724_120000_fiche_presse_video_tdm from './20260724_120000_fiche_presse_video_tdm';
 
 export const migrations = [
   {
@@ -83,5 +84,10 @@ export const migrations = [
     up: migration_20260722_223000_rencontres.up,
     down: migration_20260722_223000_rencontres.down,
     name: '20260722_223000_rencontres',
+  },
+  {
+    up: migration_20260724_120000_fiche_presse_video_tdm.up,
+    down: migration_20260724_120000_fiche_presse_video_tdm.down,
+    name: '20260724_120000_fiche_presse_video_tdm',
   },
 ];

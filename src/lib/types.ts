@@ -80,6 +80,18 @@ export interface Book {
   purchaseMode?: PurchaseMode;
 }
 
+/** Citation presse de la fiche livre (onglet « La presse en parle »). */
+export interface PressQuote {
+  /** Citation en texte nu, sans guillemets (ajoutés à l'affichage). */
+  quote: string;
+  /** Média source (ex. « Mediapart »). */
+  source: string;
+  /** Date en texte libre (ex. « 10 juin 2026 »). */
+  date: string | null;
+  /** Lien vers l'article (facultatif). */
+  url: string | null;
+}
+
 /** Un livre avec ses champs de détail (fiche). */
 export interface BookDetail extends Book {
   /** Présentation (HTML nettoyé, ex-`post_content`). */
@@ -90,6 +102,12 @@ export interface BookDetail extends Book {
   tocUrl: string | null;
   /** Extrait choisi (PDF). */
   excerptUrl: string | null;
+  /** Citations presse (onglet « La presse en parle ») — `[]` si aucune. */
+  press: PressQuote[];
+  /** URL YouTube intégrée sous les citations presse. */
+  videoUrl: string | null;
+  /** Table des matières en texte (HTML nettoyé, onglet fiche). */
+  tocHtml: SafeHtml | null;
 }
 
 /** Filtres appliqués au catalogue. */

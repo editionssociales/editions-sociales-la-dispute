@@ -1,4 +1,4 @@
-import type { Cover, EditionSlug, Term } from "./types";
+import type { Cover, EditionSlug, PressQuote, Term } from "./types";
 
 /**
  * Port du catalogue + formes brutes neutres.
@@ -47,6 +47,14 @@ export interface RawBook {
   tocUrl: string | null;
   /** Extrait choisi (PDF), URL prête à l'emploi. */
   excerptUrl: string | null;
+  /**
+   * Onglets de la fiche (maquette 2026-07-23) : citations presse, URL
+   * YouTube, table des matières en HTML (sanitisée en aval). Optionnels —
+   * même raison que `commerce` : ne pas casser les fixtures minimales.
+   */
+  press?: PressQuote[];
+  videoUrl?: string | null;
+  tocHtml?: string | null;
   /**
    * Données de vente (Payload, groupe `commerce` des `books`) — absent sur
    * une fixture minimale : `NO_COMMERCE` (jamais vendable) s'applique alors
