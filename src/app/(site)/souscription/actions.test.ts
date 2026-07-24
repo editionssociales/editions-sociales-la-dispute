@@ -35,7 +35,9 @@ vi.mock("@/lib/stripe", async () => {
   return { donationsEnabled: () => true, getStripe: () => client };
 });
 
-process.env.NEXT_PUBLIC_SITE_URL = "https://www.exemple.test";
+// `vi.stubEnv` (auto-restauré) plutôt qu'une mutation de process.env au
+// scope module, qui fuirait vers les autres fichiers de test du worker.
+vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://www.exemple.test");
 
 const { createDonationCheckout } = await import("./actions");
 
@@ -60,7 +62,10 @@ afterEach(() => {
   lastBody = null;
   checkoutCalls = 0;
 });
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+  vi.unstubAllEnvs();
+});
 
 const form = (entries: Record<string, string>): FormData => {
   const fd = new FormData();
@@ -112,17 +117,20 @@ describe("createDonationCheckout — palier fixe", () => {
 });
 
 describe("createDonationCheckout — montant libre", () => {
-  it("virgule décimale acceptée, converti en centimes, tier=libre", async () => {
+  it("virgule décimale acceptée, converti en centimes, tier=libre, PAS de collecte d'adresse", async () => {
     await expect(createDonationCheckout(form({ amount: "42,50" }))).rejects.toThrow(
       "NEXT_REDIRECT:https://checkout.stripe.com/c/pay/cs_test_1",
     );
     expect(lastBody?.get("line_items[0][price_data][unit_amount]")).toBe("4250");
     expect(lastBody?.get("metadata[tier]")).toBe("libre");
+    // Sans palier (pas de contrepartie physique), aucune adresse demandée —
+    // seul comportement piloté par `parsed.tier?.physical`.
+    expect(lastBody?.get("shipping_address_collection[allowed_countries][0]")).toBeNull();
   });
 
-  it("montant hors bornes → /souscription/erreur sans appeler Stripe", async () => {
+  it("montant hors bornes → /souscription/erreur?raison=montant sans appeler Stripe", async () => {
     await expect(createDonationCheckout(form({ amount: "3" }))).rejects.toThrow(
-      "NEXT_REDIRECT:/souscription/erreur",
+      "NEXT_REDIRECT:/souscription/erreur?raison=montant",
     );
     expect(checkoutCalls).toBe(0);
   });
@@ -133,6 +141,17 @@ describe("createDonationCheckout — Stripe en échec", () => {
     server.use(
       http.post("https://api.stripe.com/v1/checkout/sessions", () =>
         HttpResponse.json({ error: { message: "boom" } }, { status: 400 }),
+      ),
+    );
+    await expect(createDonationCheckout(form({ tierId: "palier-50" }))).rejects.toThrow(
+      "NEXT_REDIRECT:/souscription/erreur",
+    );
+  });
+
+  it("session créée sans URL → /souscription/erreur, jamais redirect(null)", async () => {
+    server.use(
+      http.post("https://api.stripe.com/v1/checkout/sessions", () =>
+        HttpResponse.json({ id: "cs_test_1", url: null }),
       ),
     );
     await expect(createDonationCheckout(form({ tierId: "palier-50" }))).rejects.toThrow(

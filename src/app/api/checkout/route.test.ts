@@ -32,6 +32,10 @@ vi.mock("@/lib/commerce-source", () => ({
   getPromoCodeRecord: async (code: string) => promoCodes[code] ?? null,
 }));
 
+// Mock paramétrable : `stripeEnabled` pilote `donationsEnabled()` pour
+// exercer la garde 503 (clé absente), figée à `true` partout ailleurs.
+let stripeEnabled = true;
+
 vi.mock("@/lib/stripe", async () => {
   const Stripe = (await import("stripe")).default;
   const client = new Stripe("sk_test_composition", {
@@ -40,10 +44,12 @@ vi.mock("@/lib/stripe", async () => {
       globalThis.fetch(...args),
     ),
   });
-  return { donationsEnabled: () => true, getStripe: () => client };
+  return { donationsEnabled: () => stripeEnabled, getStripe: () => client };
 });
 
-process.env.NEXT_PUBLIC_SITE_URL = "https://www.exemple.test";
+// `vi.stubEnv` (auto-restauré) plutôt qu'une mutation de process.env au
+// scope module, qui fuirait vers les autres fichiers de test du worker.
+vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://www.exemple.test");
 
 const { POST } = await import("./route");
 
@@ -76,7 +82,10 @@ afterEach(() => {
   couponCalls = 0;
   sessionCalls = 0;
 });
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+  vi.unstubAllEnvs();
+});
 
 function book(overrides: Partial<FakeBook> = {}): FakeBook {
   return {
@@ -107,6 +116,17 @@ beforeEach(() => {
   vi.clearAllMocks();
   books = { 12: book() };
   promoCodes = {};
+  stripeEnabled = true;
+});
+
+describe("POST /api/checkout — garde Stripe", () => {
+  it("clé Stripe absente → 503 avant toute lecture du corps, jamais d'appel Stripe", async () => {
+    stripeEnabled = false;
+    const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
+    expect(res.status).toBe(503);
+    expect(sessionCalls).toBe(0);
+    expect(couponCalls).toBe(0);
+  });
 });
 
 describe("POST /api/checkout — validation du corps", () => {
@@ -241,6 +261,28 @@ describe("POST /api/checkout — code promo", () => {
     expect(res.status).toBe(200);
     expect(couponCalls).toBe(0);
   });
+
+  it("échec de création du coupon Stripe → 502, jamais de session créée", async () => {
+    promoCodes.AGREG2027 = {
+      id: 3,
+      code: "AGREG2027",
+      type: "fixed_cart",
+      amount: 5,
+      minCart: null,
+      expiresAt: null,
+      active: true,
+    };
+    server.use(
+      http.post("https://api.stripe.com/v1/coupons", () =>
+        HttpResponse.json({ error: { message: "boom" } }, { status: 500 }),
+      ),
+    );
+    const res = await POST(
+      request({ lines: [{ id: 12, qty: 2 }], zone: "FR", promoCode: "AGREG2027" }),
+    );
+    expect(res.status).toBe(502);
+    expect(sessionCalls).toBe(0);
+  });
 });
 
 describe("POST /api/checkout — session Stripe (cas nominal)", () => {
@@ -285,6 +327,16 @@ describe("POST /api/checkout — session Stripe (cas nominal)", () => {
     server.use(
       http.post("https://api.stripe.com/v1/checkout/sessions", () =>
         HttpResponse.json({ error: { message: "boom" } }, { status: 400 }),
+      ),
+    );
+    const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
+    expect(res.status).toBe(502);
+  });
+
+  it("session créée sans URL → 502 (garde explicite de la route)", async () => {
+    server.use(
+      http.post("https://api.stripe.com/v1/checkout/sessions", () =>
+        HttpResponse.json({ id: "cs_test_1", url: null }),
       ),
     );
     const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
