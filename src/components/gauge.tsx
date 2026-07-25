@@ -83,58 +83,82 @@ export function Gauge({
 
   return (
     <div ref={ref} className={className}>
-      {/* Réserve mobile : les paliers de rang pair montent AU-DESSUS de la
-          barre (voir plus bas), et n'occupent aucune place — le padding la
-          leur garde. Dès `sm`, tous les libellés redescendent. */}
-      <div className="relative pt-16 sm:pt-0">
-        {/* Ombre dure (R8, recette des couvertures de carrousel) peinte par un
-            calque jumeau masqué à l'identique : elle épouse donc les
-            pointillés de la queue au lieu de s'arrêter net. */}
-        <div
-          aria-hidden="true"
-          className={`absolute inset-x-0 top-16 h-4 translate-x-2 translate-y-2 sm:top-0 ${dark ? "bg-paper/30" : "bg-ink"}`}
-          style={MASK_STYLE}
-        />
-        {/* Alternative programmatique (a11y) : la pile de <div> anonymes
-            n'expose sinon ni la nature de jauge ni le taux de remplissage. */}
-        <div
-          role="img"
-          aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
-          // Barre ORANGE d'un bout à l'autre (retour Youri 25/07, remplace les
-          // quatre blocs navy/bottle/ocher/brick) : ocher est l'orange de la
-          // charte (R3, accent d'attente) — lisible sur ink comme sur paper.
-          className="relative h-4 overflow-hidden bg-ocher"
-          style={MASK_STYLE}
-        >
-          {/* Cache : recouvre la part non collectée, glisse vers la droite.
-              Animé en transform (composité GPU) plutôt qu'en `left`
-              (layout+paint à chaque frame) : translateX en % se réfère à la
-              largeur propre (= la barre entière), le débordement à droite est
-              clippé par l'overflow-hidden du parent. */}
+      {/* Réserve du haut : les paliers de rang pair montent AU-DESSUS de la
+          barre (voir plus bas) en position absolue — ils n'occupent aucune
+          place, le padding la leur garde (un cran plus haut dès `sm`, où leur
+          corps double). */}
+      <div className="pt-16 sm:pt-20">
+        {/* Boîte de la barre : hauteur DOUBLÉE (32px, retour Youri 26/07) —
+            l'ombre dure s'y superpose au lieu de vivre en absolu dans le
+            conteneur, la géométrie ne dépend plus de la réserve mobile. */}
+        <div className="relative h-8">
+          {/* Ombre dure (R8, recette des couvertures de carrousel) peinte par un
+              calque jumeau masqué à l'identique : elle épouse donc les
+              pointillés de la queue au lieu de s'arrêter net. */}
           <div
-            className="absolute inset-0 bg-line transition-transform duration-[1600ms] ease-out motion-reduce:transition-none"
-            style={{ transform: filled ? `translateX(${pct}%)` : "translateX(0)" }}
+            aria-hidden="true"
+            className={`absolute inset-0 translate-x-2 translate-y-2 ${dark ? "bg-paper/30" : "bg-ink"}`}
+            style={MASK_STYLE}
           />
-          {markers.map((m) => (
+          {/* Alternative programmatique (a11y) : la pile de <div> anonymes
+              n'expose sinon ni la nature de jauge ni le taux de remplissage. */}
+          <div
+            role="img"
+            aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
+            // Barre ORANGE d'un bout à l'autre (retour Youri 25/07, remplace les
+            // quatre blocs navy/bottle/ocher/brick) : ocher est l'orange de la
+            // charte (R3, accent d'attente) — lisible sur ink comme sur paper.
+            className="relative h-full overflow-hidden bg-ocher"
+            style={MASK_STYLE}
+          >
+            {/* Cache : recouvre la part non collectée, glisse vers la droite.
+                Animé en transform (composité GPU) plutôt qu'en `left`
+                (layout+paint à chaque frame) : translateX en % se réfère à la
+                largeur propre (= la barre entière), le débordement à droite est
+                clippé par l'overflow-hidden du parent. */}
             <div
-              key={m.value}
-              className="absolute inset-y-0 w-0.5 bg-paper"
-              // Le sommet (value === max) tombe à ≈83,3 % : plus aucun trait
-              // n'approche le bord clippé de la barre.
-              style={{ left: `${(m.value / span) * 100}%` }}
+              className="absolute inset-0 bg-line transition-transform duration-[1600ms] ease-out motion-reduce:transition-none"
+              style={{ transform: filled ? `translateX(${pct}%)` : "translateX(0)" }}
             />
-          ))}
+            {markers.map((m) => (
+              <div
+                key={m.value}
+                className="absolute inset-y-0 w-0.5 bg-paper"
+                // Le sommet (value === max) tombe à ≈83,3 % : plus aucun trait
+                // n'approche le bord clippé de la barre.
+                style={{ left: `${(m.value / span) * 100}%` }}
+              />
+            ))}
+          </div>
         </div>
-        {/* Libellés des paliers : MÊME disposition à toutes les largeurs —
-            chacun centré sur son trait (retour Youri 26/07, remplace la liste
-            empilée qui était la vue mobile). Sous `sm`, un palier sur deux
-            passe AU-DESSUS de la barre : le décalage vertical, plus une boîte
-            étroite au texte qui se replie, évite le chevauchement des voisins
-            à 320px. Les items restent dans l'ordre des paliers dans le DOM
-            (un seul jeu de nœuds, pas de doublon caché) : l'ordre de lecture
-            suit la campagne, pas la bande d'affichage. */}
+        {/* Libellés des paliers : chacun centré sur son trait, et UN PALIER
+            SUR DEUX AU-DESSUS de la barre — à toutes les largeurs (retour
+            Youri 26/07, l'alternance n'était d'abord que mobile). C'est elle
+            qui autorise le corps doublé : les abscisses étant en
+            POURCENTAGES, l'écart entre deux traits se resserre avec la barre,
+            et le plus étroit (80 k€ → 100 k€, 16,7 % de la barre) ne peut pas
+            tenir deux montants à 36px. En alternant, ces deux-là ne se
+            croisent plus jamais et la seule contrainte devient l'écart entre
+            paliers de MÊME bande (50 k€ → 100 k€, 41,7 %) — deux fois et demie
+            plus large que ce qu'il faut, même à `lg` tout juste franchi, où le
+            rail des contreparties emporte 380px d'un coup et où la barre est
+            au plus court.
+
+            Les items restent dans l'ordre des paliers dans le DOM (un seul
+            jeu de nœuds, pas de doublon caché) : l'ordre de lecture suit la
+            campagne, pas la bande d'affichage.
+
+            Aucune gouttière entre la barre et ses libellés (retour Youri
+            26/07) : `mt-2` = les 8px de l'ombre portée, les libellés du bas
+            posent donc sur l'ombre, et ceux du haut (`mb-10` = 8px d'ombre +
+            32px de barre) affleurent le bord supérieur de la barre.
+
+            Corps doublé à `sm` (18→36px pour le montant, 12→24px pour
+            l'intitulé). Le mobile garde 20/14px : sous `sm` l'écart entre
+            paliers de même bande ne vaut plus que 117px à 320px de large, et
+            « 100 000+ € » insécable mesure déjà 167px à 36px de corps. */}
         <div
-          className={`relative mt-3 h-16 text-[11px] leading-tight sm:h-12 sm:text-xs ${
+          className={`relative mt-2 h-16 leading-tight sm:h-20 ${
             dark ? "text-paper/80 sm:text-paper/70" : "text-ink-soft"
           }`}
         >
@@ -143,13 +167,13 @@ export function Gauge({
             return (
               <div
                 key={m.value}
-                className={`absolute w-24 -translate-x-1/2 text-center sm:top-0 sm:mb-0 sm:w-auto ${
-                  up ? "bottom-full mb-10 sm:bottom-auto" : "top-0"
+                className={`absolute w-28 -translate-x-1/2 text-center text-sm sm:w-auto sm:text-2xl ${
+                  up ? "bottom-full mb-10" : "top-0"
                 }`}
                 style={{ left: `${(m.value / span) * 100}%` }}
               >
                 <span
-                  className={`block whitespace-nowrap text-sm font-semibold tabular-nums sm:text-lg ${
+                  className={`block whitespace-nowrap text-xl font-semibold tabular-nums sm:text-4xl ${
                     dark ? "text-paper" : "text-ink"
                   }`}
                 >
