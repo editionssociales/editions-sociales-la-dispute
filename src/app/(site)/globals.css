@@ -95,6 +95,42 @@ h1, h2, h3, h4 {
   }
 }
 
+/* Course de la jauge de collecte (/souscription) : cache de la masse
+   restante ET curseur, qui partagent la même animation et la même `--tx`
+   (position finale, en % de la largeur de barre) — cf. `gauge.tsx`.
+   Keyframes plutôt qu'une simple transition pour la garniture d'arrivée :
+   la masse dépasse d'un demi-cran puis se rétracte sec, sans jamais déplacer
+   l'instant d'atterrissage. */
+@keyframes gauge-sweep {
+  0% {
+    transform: translateX(0);
+    /* easeOutCubic EXACT du rAF de `<CountUp>` (1-(1-p)³) : le compteur
+       monumental et la barre suivent la même loi de vitesse. */
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  /* 1450 ms sur 1600 : dépassement d'un demi-cran (0,6 % de la barre, quelques
+     px — dépassement transitoire assumé, jamais amplifié)… */
+  90.625% {
+    transform: translateX(calc(var(--tx) + 0.6%));
+    /* …puis rétraction SEC (easeInCubic : elle tient, puis claque). */
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  }
+  /* Arrivée EXACTEMENT à 1600 ms, sur la frame d'impact où le compteur
+     affiche son total. */
+  100% {
+    transform: translateX(var(--tx));
+  }
+}
+.gauge-sweep {
+  animation: gauge-sweep 1600ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gauge-sweep {
+    /* Téléportation : la position finale reste portée en style inline. */
+    animation: none;
+  }
+}
+
 /* Animations de la page de souscription (étagère du héro). */
 /*
  * Étagère du héro (page souscription) : sortie de rayon 3D au survol/focus

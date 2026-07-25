@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import { formatInt } from "@/lib/format";
 import { useInView } from "@/hooks/use-in-view";
+import { useImpactFrame } from "@/components/impact-frame";
 
 /**
- * Compteur animé : grimpe de 0 à `value` quand il devient visible.
+ * Compteur animé : grimpe de 0 à `value` quand il devient visible — ou, sous
+ * `<ImpactFrame>`, au signal PARTAGÉ du bloc, pour atterrir sur la même frame
+ * que la jauge (`duration` et easeOutCubic communs). Hors provider, rien ne
+ * change : le compteur garde son propre observer.
  *
  * Boîte figée à la valeur finale (anti-CLS) : un sizer invisible porte
  * `value` formatée pendant que l'overlay absolu anime — le nombre de
@@ -25,7 +29,11 @@ export function CountUp({
   duration?: number;
   className?: string;
 }) {
-  const [ref, inView] = useInView<HTMLSpanElement>({ threshold: 0.4 });
+  const [ref, ownInView] = useInView<HTMLSpanElement>({ threshold: 0.4 });
+  // Déclencheur partagé quand le compteur est monté dans un `<ImpactFrame>`
+  // (`null` sinon) : `??` et pas `||`, un `false` partagé doit gagner.
+  const shared = useImpactFrame();
+  const inView = shared ?? ownInView;
   // SSR = valeur finale (bots/no-JS lisent le vrai nombre, jamais « 0 ») ;
   // l'animation 0 → valeur ne s'exécute que côté client, à l'entrée en vue.
   const [display, setDisplay] = useState(value);
