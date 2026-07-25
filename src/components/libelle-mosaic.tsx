@@ -99,8 +99,9 @@ const FONT_BASE_LG = 120;
 const FONT_BASE_SM = 60;
 const THICK_BASE_LG = 300;
 const THICK_BASE_SM = 150;
-const COUNT_BASE_LG = 192;
-const COUNT_BASE_SM = 96;
+/** 192 et 96 abattus de 10 % (retour Youri 25/07). */
+const COUNT_BASE_LG = 172.8;
+const COUNT_BASE_SM = 86.4;
 /** Abattement du seul rang 1 (« Tous les livres »), −30 % : corps ET compte. */
 const TIER1_FONT_RATIO = 0.7;
 
@@ -217,11 +218,13 @@ function TierCell({
       </span>
       {/* Nombre NU, sans parenthèses (retour Youri 25/07) : il n'annote plus
           un libellé au fil du texte, il vit seul dans son coin. Interligne
-          serré et collé à l'angle — au corps qu'il porte désormais, `leading-
-          none` laisserait un talon de descendante sous le chiffre. */}
+          serré — au corps qu'il porte désormais, `leading-none` laisserait un
+          talon de descendante sous le chiffre — et marge d'angle en `em` :
+          elle suit le chiffre, sinon les étages profonds la verraient enfler
+          en proportion d'eux-mêmes. */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-[.08em] right-1 whitespace-nowrap font-sans text-[length:var(--fsc-sm)] font-bold leading-[.78] opacity-25 lg:text-[length:var(--fsc)]"
+        className="pointer-events-none absolute bottom-[.14em] right-[.18em] whitespace-nowrap font-sans text-[length:var(--fsc-sm)] font-bold leading-[.78] opacity-20 lg:text-[length:var(--fsc)]"
       >
         {count}
       </span>
