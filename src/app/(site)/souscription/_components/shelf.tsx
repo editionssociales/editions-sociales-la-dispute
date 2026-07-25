@@ -139,7 +139,7 @@ export function MobileShelf({ books }: { books: Book[] }) {
       // Pas de marge propre : la disposition est l'affaire de l'appelant
       // (convention primitives, src/components/CLAUDE.md) — c'est le bandeau
       // séparateur de page.tsx qui porte les espacements.
-      className="grid grid-cols-4 items-start gap-[2px] bg-ink/15 p-[2px] lg:hidden"
+      className="grid grid-cols-4 items-start gap-[2px] bg-ink p-[2px] lg:hidden"
       role="group"
       aria-label="Dernières parutions"
     >
