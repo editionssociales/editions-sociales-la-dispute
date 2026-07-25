@@ -156,8 +156,8 @@ function buildCutMask(cuts: readonly string[]): CSSProperties {
  * positions et jouer l'effet de révélation.
  *
  * `tone` recolore l'ombre et le curseur — la barre elle-même porte des teintes
- * FIXES (ocher, cache `line`, trait de coupe ink, contour navy), lisibles sur
- * les deux fonds : `"light"` (défaut, ombre navy) pour une jauge posée sur
+ * FIXES (ocher, cache `line`, trait de coupe et contour ink), lisibles sur
+ * les deux fonds : `"light"` (défaut, ombre ink) pour une jauge posée sur
  * paper — c'est le cas du héros de `/souscription` depuis l'inversion des fonds
  * du 26/07 ; `"dark"` (ombre paper translucide) pour une jauge posée sur ink.
  *
@@ -222,12 +222,11 @@ export function Gauge({
         {/* Ombre dure (R8, recette des couvertures de carrousel) peinte par un
             calque jumeau masqué à l'identique : elle épouse donc les pointillés
             de la queue ET les coupures de paliers au lieu de s'arrêter net.
-            NAVY en light (retour Youri 26/07, « colore-le en bleu, pareil pour
-            l'ombre ») : exception assumée à l'ombre ink de R8 — sur cette barre,
-            l'accent maison porte à la fois le contour et sa retombée. */}
+            INK en light, comme partout (le navy essayé le 26/07 a été repris le
+            jour même — retour Youri) : la barre rentre dans le rang de R8. */}
         <div
           aria-hidden="true"
-          className={`absolute inset-0 translate-x-2 translate-y-2 ${dark ? "bg-paper/30" : "bg-navy"}`}
+          className={`absolute inset-0 translate-x-2 translate-y-2 ${dark ? "bg-paper/30" : "bg-ink"}`}
           style={maskStyle}
         />
         {/* Alternative programmatique (a11y) : la pile de <div> anonymes
@@ -257,35 +256,34 @@ export function Gauge({
                 Enfant du cache : le même translateX l'emporte, gratuitement.
                 En ink dans les DEUX tones, comme le curseur qui la coiffe : le
                 cache est `line` partout, et ink est la seule teinte qui tranche
-                à la fois sur lui et sur l'ocher qu'il borde à gauche — le navy
-                du contour, lui, resterait lu comme une démarcation de palier. */}
+                à la fois sur lui et sur l'ocher qu'il borde à gauche. */}
             <div className="absolute inset-y-0 left-0 w-0.5 bg-ink" />
           </div>
-          {/* CONTOUR navy des morceaux de barre (retour Youri 26/07 : « ajoute
-              le contour noir habituel des objets ombrés aux morceaux de la
-              barre. Colore-le en bleu »). Il vit À L'INTÉRIEUR de l'élément
-              masqué — donc tronçonné par les coupures et estompé dans les
-              tirets de la queue, ce qui est le rendu voulu, « comme à la fin »
-              — et APRÈS le cache dans le DOM : sans z-index, l'ordre de
-              peinture suffit, et le contour reste visible aussi bien sur la
-              part `line` que sur la part ocher.
+          {/* CONTOUR ink des morceaux de barre — le « contour noir habituel des
+              objets ombrés » (retour Youri 26/07 ; le navy essayé le même jour
+              a été repris). Il vit À L'INTÉRIEUR de l'élément masqué — donc
+              tronçonné par les coupures et estompé dans les tirets de la queue,
+              ce qui est le rendu voulu, « comme à la fin » — et APRÈS le cache
+              dans le DOM : sans z-index, l'ordre de peinture suffit, et le
+              contour reste visible aussi bien sur la part `line` que sur la
+              part ocher.
               Pas de bord DROIT : la barre ne s'arrête pas, elle se dissout dans
               la queue. */}
-          <div className="absolute inset-x-0 top-0 h-[2px] bg-navy" />
-          <div className="absolute inset-x-0 bottom-0 h-[2px] bg-navy" />
-          <div className="absolute inset-y-0 left-0 w-[2px] bg-navy" />
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-ink" />
+          <div className="absolute inset-x-0 bottom-0 h-[2px] bg-ink" />
+          <div className="absolute inset-y-0 left-0 w-[2px] bg-ink" />
           {/* Deux montants par coupure, collés aux LÈVRES de la fente de 8px
               (donc à `X − 6px` et `X + 4px`, largeur 2px) : chaque morceau est
               cerné de ses quatre côtés, sauf à l'extrême droite de la barre. */}
           {cuts.flatMap((x) => [
             <div
               key={`${x}-g`}
-              className="absolute inset-y-0 w-[2px] bg-navy"
+              className="absolute inset-y-0 w-[2px] bg-ink"
               style={{ left: `calc(${x} - ${CUT_HALF_PX + EDGE_PX}px)` }}
             />,
             <div
               key={`${x}-d`}
-              className="absolute inset-y-0 w-[2px] bg-navy"
+              className="absolute inset-y-0 w-[2px] bg-ink"
               style={{ left: `calc(${x} + ${CUT_HALF_PX}px)` }}
             />,
           ])}

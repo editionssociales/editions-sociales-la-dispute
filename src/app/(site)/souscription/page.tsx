@@ -15,7 +15,7 @@ import { getPageSouscription } from "@/lib/site-content";
 import { CollecteTicker } from "./_components/collecte-ticker";
 import { HeroShelf, MobileShelf } from "./_components/shelf";
 import { BottomSheet } from "@/components/bottom-sheet";
-import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
+import { TiersRail } from "./_components/tiers-rail";
 
 /**
  * Page /souscription — livraison définitive de la campagne 2026 (Clara,
@@ -53,8 +53,9 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * réintégrée dans l'ask (voir plus bas), avec de vraies parutions 2026.
  *
  * Ce qui reste, dans l'ordre du DOM (retour client 2026-07-24) : colonne
- * principale — jauge de collecte en direct (TOUJOURS visible, CTA
- * « Contribuer » ancré vers `#paliers`), corps de texte ouvert par le slot
+ * principale — jauge de collecte en direct (TOUJOURS visible, sans CTA
+ * propre depuis le 26/07 — rail et feuille mobile portent l'entrée vers le
+ * paiement), corps de texte ouvert par le slot
  * vidéo (placeholder tant qu'aucune vidéo n'est livrée) puis ask — h1, lien
  * d'ancre mobile vers `#paliers`, étagère 3D des dernières parutions
  * (preuve matérielle du slogan, 3D en lg+, repli en grille de couvertures
@@ -258,9 +259,9 @@ export default async function SouscriptionPage() {
       <div className="min-w-0">
         {/* 1 ▪ La collecte en direct OUVRE la page — compteur de lutte
             monumental sur bloc paper pleine largeur (inversion paper↔ink avec
-            le bloc vidéo, retour Youri 26/07), CTA d'ancre à sa droite,
-            jauge 2026 vivante en demi-droite (l'objectif vit dans ses
-            abscisses — plus de module « Objectif » séparé). N'affiche que ce
+            le bloc vidéo, retour Youri 26/07), jauge 2026 vivante en
+            demi-droite, nue (plus de module « Objectif », plus d'abscisses,
+            plus de CTA d'ancre — retours Youri 25-26/07). N'affiche que ce
             qu'une campagne en cours peut honnêtement montrer (collecté net +
             contributeurs). Fenêtre de fraîcheur ~1–3 min, voir
             `src/app/CLAUDE.md`. */}
@@ -273,77 +274,58 @@ export default async function SouscriptionPage() {
                   et la barre se posent alors sur la même frame. Le fondu du
                   `Reveal` garde, lui, son propre seuil. */}
               <ImpactFrame>
-                {/* Rangée compteur + CTA (maquette 25/07) : le CTA d'ancre
-                    occupe l'espace vide au-dessus à droite de la barre, calé
-                    sur la base du compteur. Il renvoie vers la liste des
-                    contreparties, le paiement se joue là-bas ; la flèche
-                    « ↓ » le distingue des boutons de PAIEMENT du rail
-                    (libellé « Contribuer » nu, retour client 2026-07-24).
-                    L'ex-module « Objectif » a disparu (25/07) : redondant
-                    avec l'abscisse 100 000 € de la jauge. */}
-                <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
-                  <div className="min-w-0">
-                    {outage ? (
-                      <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                        La collecte est en cours — le total s’affichera de nouveau
-                        dans quelques minutes.
-                      </p>
-                    ) : !enabled ? (
-                      /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
-                         annoncer la date plutôt qu'un « soyez les premier·ères »
-                         contradictoire avec des boutons morts. */
-                      <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                        La souscription ouvre le 15 août — découvrez déjà les
-                        contreparties.
-                      </p>
-                    ) : liveCampaign.collected > 0 ? (
-                      /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
-                         supprime les blancs contenant un retour à la ligne — sans
-                         eux, AT/copier-coller lisent « 11 014 €réunis ». Les
-                         nœuds espace entre spans `block` ne sont pas rendus : zéro
-                         impact visuel. La phrase reste UN SEUL <p> (ordre de
-                         lecture intact), seuls les spans posent les échelles.
-                         Le surtitre « Déjà » est supprimé (25/07, retour Youri) :
-                         le compteur ouvre directement le bloc. */
-                      <p className="text-lg leading-snug text-ink-soft">
-                        <span className="block">
-                          <CountUp
-                            value={liveCampaign.collected}
-                            suffix=" €"
-                            className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-ink lg:text-[clamp(56px,9vw,128px)]"
-                          />
-                        </span>{" "}
-                        <span className="mt-4 block">
-                          réunis auprès de{" "}
-                          <CountUp
-                            value={liveCampaign.contributors}
-                            className="font-sans text-2xl font-black italic text-ink"
-                          />{" "}
-                          contributeur·rices.
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                        Campagne tout juste lancée — soyez les premier·ères à
-                        contribuer.
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Button
-                      href="#paliers"
-                      variant="solid"
-                      aria-label="Contribuer — voir les contreparties"
-                      className="px-6 py-3 text-sm font-extrabold tracking-[.03em]"
-                    >
-                      Contribuer&nbsp;↓
-                    </Button>
-                    {!enabled && (
-                      <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-ink-soft">
-                        {OPENING_MICROCOPY}
-                      </p>
-                    )}
-                  </div>
+                {/* Le compteur seul ouvre le bloc : le CTA d'ancre
+                    « Contribuer ↓ » qui occupait sa droite est supprimé
+                    (retour Youri 26/07) — le rail des contreparties et la
+                    feuille de bas d'écran mobile portent seuls l'entrée vers
+                    le paiement. L'ex-module « Objectif » avait déjà disparu
+                    (25/07). */}
+                <div className="min-w-0">
+                  {outage ? (
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
+                      La collecte est en cours — le total s’affichera de nouveau
+                      dans quelques minutes.
+                    </p>
+                  ) : !enabled ? (
+                    /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
+                       annoncer la date plutôt qu'un « soyez les premier·ères »
+                       contradictoire avec des boutons morts. */
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
+                      La souscription ouvre le 15 août — découvrez déjà les
+                      contreparties.
+                    </p>
+                  ) : liveCampaign.collected > 0 ? (
+                    /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
+                       supprime les blancs contenant un retour à la ligne — sans
+                       eux, AT/copier-coller lisent « 11 014 €réunis ». Les
+                       nœuds espace entre spans `block` ne sont pas rendus : zéro
+                       impact visuel. La phrase reste UN SEUL <p> (ordre de
+                       lecture intact), seuls les spans posent les échelles.
+                       Le surtitre « Déjà » est supprimé (25/07, retour Youri) :
+                       le compteur ouvre directement le bloc. */
+                    <p className="text-lg leading-snug text-ink-soft">
+                      <span className="block">
+                        <CountUp
+                          value={liveCampaign.collected}
+                          suffix=" €"
+                          className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-ink lg:text-[clamp(56px,9vw,128px)]"
+                        />
+                      </span>{" "}
+                      <span className="mt-4 block">
+                        réunis auprès de{" "}
+                        <CountUp
+                          value={liveCampaign.contributors}
+                          className="font-sans text-2xl font-black italic text-ink"
+                        />{" "}
+                        contributeur·rices.
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
+                      Campagne tout juste lancée — soyez les premier·ères à
+                      contribuer.
+                    </p>
+                  )}
                 </div>
                 {/* La barre SOULIGNE le bloc du compteur (26/07) au lieu de
                     flotter sous lui : elle appartient au chiffre. La jauge
