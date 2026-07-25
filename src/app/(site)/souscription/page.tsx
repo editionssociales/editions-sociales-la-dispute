@@ -696,8 +696,12 @@ export default async function SouscriptionPage() {
                 Vous nous permettrez de continuer à publier les livres qui
                 imaginent
               </span>{" "}
-              <span className="my-4 block text-[clamp(40px,10vw,96px)] leading-[1.1] lg:text-[clamp(40px,7vw,96px)]">
-                <span className="box-decoration-clone bg-bottle px-3">la fin du capitalisme</span>
+              {/* Pavé bloc (w-fit) plutôt que fond inline : le fond d'un span
+                  inline se peint à la hauteur de la zone de contenu de la
+                  fonte et déborde un leading serré — il mordait les deux
+                  lignes voisines (constat harnais 2026-07-25). */}
+              <span className="my-5 block w-fit bg-bottle px-3 py-1 text-[clamp(40px,10vw,96px)] leading-[1.05] lg:text-[clamp(40px,7vw,96px)]">
+                la fin du capitalisme
               </span>{" "}
               <span className="block max-w-[36ch] text-xl leading-snug text-paper/70 sm:text-2xl">
                 plutôt que la fin du monde.
