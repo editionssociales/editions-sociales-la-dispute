@@ -33,10 +33,11 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * spans stylés), récit en quatre sections-bandeaux full-bleed
  * (brick/navy/ocher/bottle — la seule bande hazard de la page coiffe
  * « danger maximal »), objectifs en escalier typographique sous ombre dure
- * (R8), CTA final en opposition d'échelle. Interdits d'arbitrage : aucun
- * texte ajouté (pas de numéros de section, pas de légende), pas de lettres
- * au trait (-webkit-text-stroke), pas de compression scaleX, pop réservé au
- * liseré final. Les displays géants sont en clamp() (variantes `lg:` : la
+ * (R8) clos par la chute du docx et le CTA final (sur paper, sans bandeau —
+ * retour Youri 25/07). Interdits d'arbitrage : aucun texte ajouté (pas de
+ * numéros de section, pas de légende), pas de lettres au trait
+ * (-webkit-text-stroke), pas de compression scaleX, aucune palette pop sur
+ * cette page. Les displays géants sont en clamp() (variantes `lg:` : la
  * colonne perd 380px au profit du rail, la pente vw doit se resserrer).
  *
  * Sections de l'ancienne maquette (campagne Ulule 2024) supprimées à
@@ -75,13 +76,6 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * dérivés de `DONATION_TIERS` (la table qui pilote Stripe) : la présentation
  * est éditable, jamais le paiement.
  */
-
-/**
- * Liseré du CTA final (R2/R3) : `POP_BG` ne sert que cette décoration
- * ponctuelle — les paliers du rail cyclent, eux, les 4 accents de marque,
- * jamais la palette pop (réservée nav/statut).
- */
-const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
 
 /**
  * Vidéo de présentation — ouvre le corps de texte (retour client
@@ -694,7 +688,8 @@ export default async function SouscriptionPage() {
             barres pleine largeur empilées (hairlines ink) sous ombre dure
             (R8), montant qui grossit d'une marche à l'autre, sommet inversé
             ink. Pas de titre de section au-dessus, la jauge d'ouverture
-            porte déjà « Objectif » : les barres parlent d'elles-mêmes. */}
+            porte déjà « Objectif » : les barres parlent d'elles-mêmes. La
+            section se clôt sur la chute du récit et le CTA final. */}
         <section className="mt-16 sm:mt-24">
           <Container>
             <Reveal>
@@ -732,47 +727,36 @@ export default async function SouscriptionPage() {
                 ))}
               </div>
             </Reveal>
+
+            {/* Chute du docx (verbatim) + CTA final : ils closent la section
+                des objectifs (retour Youri 25/07) — plus de section propre à
+                bandeau ink liseré pop, plus de changement de fond ni de gap.
+                La phrase coule d'un seul trait (aucun span `block` : les
+                retours à la ligne forcés de l'ancienne opposition d'échelle
+                sont retirés) et « la fin du capitalisme » n'est plus qu'un
+                SOULIGNEMENT bottle — plus de surlignage, plus de display
+                géant. UN SEUL <h2>. Le montant libre vivant en clôture du
+                rail, le CTA y renvoie simplement. */}
+            <Reveal>
+              <h2 className="mt-12 max-w-[38ch] font-sans text-[clamp(24px,5vw,40px)] font-black italic leading-[1.15] text-ink sm:mt-16">
+                Vous nous permettrez de continuer à publier les livres qui
+                imaginent{" "}
+                <span className="underline decoration-bottle decoration-4 underline-offset-4">
+                  la fin du capitalisme
+                </span>{" "}
+                plutôt que la fin du monde.
+              </h2>
+              <Button
+                href="#paliers"
+                aria-label="Contribuer — voir les contreparties"
+                className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
+              >
+                Contribuer&nbsp;↓
+              </Button>
+            </Reveal>
           </Container>
         </section>
 
-        {/* 6 ▪ CTA final — phrase de clôture du docx, verbatim, en
-            opposition d'échelle pure (greffe « Spécimen ») : corps modéré
-            paper/70, « la fin du capitalisme » seul en display géant au
-            marqueur bottle. UN SEUL <h2>, spans stylés. Le montant libre
-            vivant désormais en clôture du rail, le CTA y renvoie simplement. */}
-        <section className="mt-16 bg-ink text-paper sm:mt-24">
-          <div className="grid grid-cols-4" aria-hidden="true">
-            {POP_BG.map((c) => (
-              <div key={c} className={`h-1.5 ${c}`} />
-            ))}
-          </div>
-          <Container className="py-16 sm:py-20">
-            <h2 className="font-sans font-black italic">
-              <span className="block max-w-[36ch] text-xl leading-snug text-paper/70 sm:text-2xl">
-                Vous nous permettrez de continuer à publier les livres qui
-                imaginent
-              </span>{" "}
-              {/* Pavé bloc (w-fit) plutôt que fond inline : le fond d'un span
-                  inline se peint à la hauteur de la zone de contenu de la
-                  fonte et déborde un leading serré — il mordait les deux
-                  lignes voisines (constat harnais 2026-07-25). */}
-              <span className="my-5 block w-fit bg-bottle px-3 py-1 text-[clamp(40px,10vw,96px)] leading-[1.05] lg:text-[clamp(40px,7vw,96px)]">
-                la fin du capitalisme
-              </span>{" "}
-              <span className="block max-w-[36ch] text-xl leading-snug text-paper/70 sm:text-2xl">
-                plutôt que la fin du monde.
-              </span>
-            </h2>
-            <Button
-              href="#paliers"
-              variant="invert"
-              aria-label="Contribuer — voir les contreparties"
-              className="mt-10 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-12"
-            >
-              Contribuer&nbsp;↓
-            </Button>
-          </Container>
-        </section>
       </div>
 
       {/* Téléphone : le rail devient une feuille de bas d'écran, déroulée au
