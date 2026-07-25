@@ -7,8 +7,14 @@ import { useImpactFrame } from "@/components/impact-frame";
 
 type Marker = { value: number; label: string; reached: boolean };
 
-/** La barre s'étend 20 % au-delà de l'objectif (demi-droite). */
-const OVERSHOOT = 1.2;
+/**
+ * La barre s'étend 20 % au-delà de l'objectif (demi-droite). Exporté avec
+ * `MASK_STYLE` : le liseré de collecte fixé au viewport
+ * (`souscription/_components/collecte-ticker.tsx`) rejoue EXACTEMENT le même
+ * empan et la même queue — deux recettes séparées dériveraient au premier
+ * changement d'objectif.
+ */
+export const OVERSHOOT = 1.2;
 
 /**
  * Fraction de l'objectif où la barre part en pointillés (≈ 105 000 € pour un
@@ -39,20 +45,14 @@ const MASK = `linear-gradient(#000,#000) left top / ${SOLID_PCT}% 100% no-repeat
 /** Le masque s'applique à l'élément ENTIER, box-shadow comprise : l'ombre dure
  *  est donc peinte par un calque jumeau décalé, jamais par `box-shadow` (elle
  *  serait rognée hors de la boîte, donc invisible). */
-const MASK_STYLE = { mask: MASK, WebkitMask: MASK } as const;
+export const MASK_STYLE = { mask: MASK, WebkitMask: MASK } as const;
 
 /**
- * Jauge de collecte : un aplat ocher porte la barre entière ; un cache se
- * retire vers la droite à l'entrée dans le viewport pour révéler la part
- * collectée.
- *
- * Charge INVERSÉE (26/07) : sur paper, ce cache est un aplat `ink` — le
- * reste-à-collecter est une MASSE que l'ocher grignote, jamais un rail vide ;
- * à 0 € (état du lancement, 15 août) la barre est un monolithe combatif.
- * `tone="dark"` garde son cache `line` : sur fond ink, une masse ink ne dirait
- * rien. Conséquence assumée : les traits de paliers (paper, peints APRÈS le
- * cache) ressortent désormais sur la masse — les jalons restent lisibles
- * devant le front.
+ * Jauge de collecte : un aplat ocher porte la barre entière ; un cache couleur
+ * `line` se retire vers la droite à l'entrée dans le viewport pour révéler la
+ * part collectée. Ce cache est `line` dans LES DEUX tones (retour client
+ * 26/07, revert de l'inversion de charge du 25/07 : un cache ink fusionnait
+ * avec l'ombre dure du calque jumeau, la barre n'avait plus de contour).
  *
  * Deux marques suivent ce front, et une seule course les porte (`--tx`) :
  * le TRAIT DE COUPE soudé au bord gauche du cache — il vit DANS la barre,
@@ -72,11 +72,12 @@ const MASK_STYLE = { mask: MASK, WebkitMask: MASK } as const;
  * atteints) est dérivée en amont par `lib/campaign` ; la jauge ne fait que
  * peindre des positions et jouer l'effet de révélation.
  *
- * `tone` recolore le texte, l'ombre et la charge du cache : `"light"` (défaut,
- * texte ink, ombre ink, masse ink) pour une jauge posée sur paper — c'est le
- * cas du héros de `/souscription` depuis l'inversion des fonds du 26/07 ;
- * `"dark"` (texte et ombre paper, masse line) pour une jauge posée sur ink.
- * L'ocher, lui, est fixe : il est lisible sur les deux fonds.
+ * `tone` recolore le texte, l'ombre et le curseur — la barre elle-même porte
+ * des teintes FIXES (ocher, cache `line`, traits et trait de coupe), lisibles
+ * sur les deux fonds : `"light"` (défaut, texte et ombre ink) pour une jauge
+ * posée sur paper — c'est le cas du héros de `/souscription` depuis
+ * l'inversion des fonds du 26/07 ; `"dark"` (texte et ombre paper) pour une
+ * jauge posée sur ink.
  *
  * Sous `<ImpactFrame>`, la course part au signal PARTAGÉ du bloc plutôt qu'à
  * l'entrée en vue de la jauge seule : compteur monumental et barre atterrissent
@@ -109,7 +110,7 @@ export function Gauge({
   const dark = tone === "dark";
   // Course UNIQUE du cache et du curseur : même `--tx`, même animation — les
   // deux calques sont verrouillés frame à frame, aucune dérive possible entre
-  // le front de la masse et la marque qui le désigne. `--tx` sert aux
+  // le front du cache et la marque qui le désigne. `--tx` sert aux
   // keyframes (`gauge-sweep`, globals.css), `transform` porte l'état final —
   // c'est lui qui s'applique seul sous `prefers-reduced-motion`
   // (téléportation) comme avant le signal.
@@ -117,7 +118,7 @@ export function Gauge({
     "--tx": `${pct}%`,
     transform: filled ? `translateX(${pct}%)` : "translateX(0)",
   } as CSSProperties;
-  // À 0 € rien ne se retire : pas d'animation du tout, sans quoi le monolithe
+  // À 0 € rien ne se retire : pas d'animation du tout, sans quoi la barre
   // « respirerait » du seul demi-cran de garniture. Le curseur reste posé à
   // l'origine.
   const sweepClass = filled && pct > 0 ? "gauge-sweep" : "";
@@ -152,22 +153,22 @@ export function Gauge({
             className="relative h-full overflow-hidden bg-ocher"
             style={MASK_STYLE}
           >
-            {/* Cache : la MASSE du reste-à-collecter, qui glisse vers la
-                droite. Animé en transform (composité GPU) plutôt qu'en `left`
+            {/* Cache : recouvre la part non collectée, glisse vers la droite.
+                Animé en transform (composité GPU) plutôt qu'en `left`
                 (layout+paint à chaque frame) : translateX en % se réfère à la
                 largeur propre (= la barre entière), le débordement à droite est
                 clippé par l'overflow-hidden du parent. */}
             <div
-              className={`absolute inset-0 ${dark ? "bg-line" : "bg-ink"} ${sweepClass}`}
+              className={`absolute inset-0 bg-line ${sweepClass}`}
               style={sweepStyle}
             >
-              {/* Front de coupe : la lame posée sur le bord de la masse —
-                  c'est l'affordance à 0 %, elle dit que le monolithe est
-                  entamable. Enfant du cache : le même translateX l'emporte,
-                  gratuitement. Teinte toujours INVERSE du cache (paper sur
-                  masse ink, ink sur masse line) : le trait doit trancher des
-                  deux côtés, ocher à gauche et masse à droite. */}
-              <div className={`absolute inset-y-0 left-0 w-0.5 ${dark ? "bg-ink" : "bg-paper"}`} />
+              {/* Front de coupe : la lame posée sur le bord du cache — c'est
+                  l'affordance à 0 %, elle dit que la barre est entamable.
+                  Enfant du cache : le même translateX l'emporte, gratuitement.
+                  En ink dans les DEUX tones : le cache est `line` partout, et
+                  ink est la seule teinte qui tranche à la fois sur lui et sur
+                  l'ocher qu'il borde à gauche. */}
+              <div className="absolute inset-y-0 left-0 w-0.5 bg-ink" />
             </div>
             {markers.map((m) => (
               <div
@@ -188,15 +189,16 @@ export function Gauge({
               affleurent ce bord au pixel (calage 26/07), il n'y a pas d'autre
               budget.
 
-              Bicolore, deux triangles concentriques (bordures CSS, aplats
-              R8, zéro radius) : le corps prend la teinte du front de coupe
-              (paper en light) et le liseré la teinte opposée. Aucune couleur
-              seule ne tient les trois fonds qu'il traverse — ocher à gauche du
-              front, masse à droite, et paper nu quand le front entre dans la
-              queue en pointillés (> 105 k€) ; l'aplat porte deux d'entre eux,
-              le liseré le troisième. À 0 % la moitié gauche du curseur passe
-              hors de la barre : sur l'origine d'un monolithe ink, c'est le
-              liseré qui l'y tient. */}
+              Triangle en bordures CSS (aplat R8, zéro radius). En light, les
+              trois fonds qu'il traverse sont tous CLAIRS — ocher à gauche du
+              front, cache `line` à droite, paper nu au-dessus de la barre et
+              quand le front entre dans la queue en pointillés (> 105 k€) : un
+              aplat ink SEUL y est la marque la plus dense, alors qu'un cœur
+              paper l'ajourerait sur le `line` (revert du 26/07 : le bicolore
+              n'était rendu nécessaire que par la masse ink). En dark, l'ink ne
+              tient plus au-dessus de la barre (fond ink) : le triangle passe
+              en paper et REPREND un cœur ink, seule teinte qui tranche à la
+              fois sur l'ocher et sur le `line`. */}
           <div
             aria-hidden="true"
             className={`pointer-events-none absolute inset-x-0 top-0 ${sweepClass}`}
@@ -207,11 +209,9 @@ export function Gauge({
                 dark ? "border-t-paper" : "border-t-ink"
               }`}
             />
-            <span
-              className={`absolute left-[-5px] top-0 h-0 w-0 border-l-[5px] border-r-[5px] border-t-8 border-l-transparent border-r-transparent ${
-                dark ? "border-t-ink" : "border-t-paper"
-              }`}
-            />
+            {dark && (
+              <span className="absolute left-[-5px] top-0 h-0 w-0 border-l-[5px] border-r-[5px] border-t-8 border-l-transparent border-r-transparent border-t-ink" />
+            )}
           </div>
         </div>
         {/* Libellés des paliers : chacun centré sur son trait, et UN PALIER
