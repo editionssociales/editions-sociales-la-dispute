@@ -28,9 +28,10 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  *
  * Refonte « Placard » (2026-07-25, maquette gagnante du panel de design —
  * affiche militante) : la COLONNE PRINCIPALE est recomposée en affiche,
- * texte client inchangé à l'octet. Compteur monumental sur bloc ink
- * d'ouverture, ask éclaté en trois échelles (le h1 reste UN SEUL <h1>,
- * spans stylés), récit en quatre sections-bandeaux full-bleed
+ * texte client inchangé à l'octet. Compteur monumental sur bloc paper
+ * d'ouverture (l'aplat ink a glissé sur le bloc vidéo qui suit, retour Youri
+ * 26/07 — l'affiche s'ouvre clair et bascule au noir sur la vidéo), ask
+ * éclaté en trois échelles (le h1 reste UN SEUL <h1>, spans stylés), récit en quatre sections-bandeaux full-bleed
  * (brick/navy/ocher/bottle — la seule bande hazard de la page coiffe
  * « danger maximal »), objectifs en escalier typographique sous ombre dure
  * (R8) clos par la chute du docx et le CTA final (sur paper, sans bandeau —
@@ -229,13 +230,14 @@ export default async function SouscriptionPage() {
           à garder en phase avec `site-header.tsx`). */}
       <div className="min-w-0">
         {/* 1 ▪ La collecte en direct OUVRE la page — compteur de lutte
-            monumental sur bloc ink pleine largeur, CTA d'ancre à sa droite,
+            monumental sur bloc paper pleine largeur (inversion paper↔ink avec
+            le bloc vidéo, retour Youri 26/07), CTA d'ancre à sa droite,
             jauge 2026 vivante en demi-droite (l'objectif vit dans ses
             abscisses — plus de module « Objectif » séparé). N'affiche que ce
             qu'une campagne en cours peut honnêtement montrer (collecté net +
             contributeurs). Fenêtre de fraîcheur ~1–3 min, voir
             `src/app/CLAUDE.md`. */}
-        <section className="bg-ink text-paper">
+        <section className="bg-paper text-ink">
           <Container className="py-12 sm:py-16">
             <Reveal>
               {/* Rangée compteur + CTA (maquette 25/07) : le CTA d'ancre
@@ -249,7 +251,7 @@ export default async function SouscriptionPage() {
               <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
                 <div className="min-w-0">
                   {outage ? (
-                    <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
                       La collecte est en cours — le total s’affichera de nouveau
                       dans quelques minutes.
                     </p>
@@ -257,7 +259,7 @@ export default async function SouscriptionPage() {
                     /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
                        annoncer la date plutôt qu'un « soyez les premier·ères »
                        contradictoire avec des boutons morts. */
-                    <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
                       La souscription ouvre le 15 août — découvrez déjà les
                       contreparties.
                     </p>
@@ -270,25 +272,25 @@ export default async function SouscriptionPage() {
                        lecture intact), seuls les spans posent les échelles.
                        Le surtitre « Déjà » est supprimé (25/07, retour Youri) :
                        le compteur ouvre directement le bloc. */
-                    <p className="text-lg leading-snug text-paper/80">
+                    <p className="text-lg leading-snug text-ink-soft">
                       <span className="block">
                         <CountUp
                           value={liveCampaign.collected}
                           suffix=" €"
-                          className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-paper lg:text-[clamp(56px,9vw,128px)]"
+                          className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-ink lg:text-[clamp(56px,9vw,128px)]"
                         />
                       </span>{" "}
                       <span className="mt-4 block">
                         réunis auprès de{" "}
                         <CountUp
                           value={liveCampaign.contributors}
-                          className="font-sans text-2xl font-black italic text-paper"
+                          className="font-sans text-2xl font-black italic text-ink"
                         />{" "}
                         contributeur·rices.
                       </span>
                     </p>
                   ) : (
-                    <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
+                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
                       Campagne tout juste lancée — soyez les premier·ères à
                       contribuer.
                     </p>
@@ -297,14 +299,14 @@ export default async function SouscriptionPage() {
                 <div>
                   <Button
                     href="#paliers"
-                    variant="invert"
+                    variant="solid"
                     aria-label="Contribuer — voir les contreparties"
                     className="px-6 py-3 text-sm font-extrabold tracking-[.03em]"
                   >
                     Contribuer&nbsp;↓
                   </Button>
                   {!enabled && (
-                    <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-paper/70">
+                    <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-ink-soft">
                       {OPENING_MICROCOPY}
                     </p>
                   )}
@@ -313,7 +315,7 @@ export default async function SouscriptionPage() {
               {!outage && (
                 <Gauge
                   className="mt-10 sm:mt-12"
-                  tone="dark"
+                  tone="light"
                   value={liveCampaign.gauge.value}
                   max={liveCampaign.gauge.max}
                   markers={liveCampaign.gauge.markers}
@@ -322,7 +324,7 @@ export default async function SouscriptionPage() {
             </Reveal>
           </Container>
           {/* Liseré pop en pied de bloc : la seule décoration pop de la page,
-              posée sur la couture ink → paper. Décoratif pur (aria-hidden). */}
+              posée sur la couture paper → ink. Décoratif pur (aria-hidden). */}
           <div className="grid grid-cols-4" aria-hidden="true">
             {POP_BG.map((c) => (
               <div key={c} className={`h-1.5 ${c}`} />
@@ -333,12 +335,17 @@ export default async function SouscriptionPage() {
         {/* 2 ▪ Vidéo de présentation — OUVRE le corps de texte ; tant
             qu'aucune vidéo n'est livrée, un placeholder au même format tient
             la place (le bloc ne disparaît jamais). Cadre hachuré à ombre
-            dure (R8, recette littérale). */}
-        <section className="bg-paper">
-          <Container className="pt-14 sm:pt-16">
+            dure (R8, recette littérale), INVERSÉ : depuis l'échange des fonds
+            avec le bloc de collecte (retour Youri 26/07) la vidéo est posée
+            sur ink — bordure et ombre passent donc en paper, et la hachure du
+            placeholder en ink/navy. Le bloc porte sa propre gouttière basse
+            (un aplat de couleur ne peut pas s'appuyer sur le padding de la
+            section suivante, restée sur paper). */}
+        <section className="bg-ink text-paper">
+          <Container className="py-14 sm:py-16">
             <Reveal>
               {videoEmbed ? (
-                <div className="border-2 border-ink bg-ink shadow-[8px_8px_0_0_#17140f]">
+                <div className="border-2 border-paper bg-ink shadow-[8px_8px_0_0_#faf7f2]">
                   <iframe
                     src={videoEmbed}
                     title="La vidéo de la souscription"
@@ -350,19 +357,19 @@ export default async function SouscriptionPage() {
                   />
                 </div>
               ) : (
-                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-ink bg-[repeating-linear-gradient(-45deg,var(--color-paper-2)_0_14px,var(--color-paper)_14px_28px)] shadow-[8px_8px_0_0_#17140f] print:hidden">
+                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-navy)_14px_28px)] shadow-[8px_8px_0_0_#faf7f2] print:hidden">
                   {/* SVG plutôt que le caractère ▶ : Effra ne couvre pas les
                       glyphes géométriques, le rendu retombait sur la fonte
                       système (forme et centrage variables selon l'OS). */}
                   <span
                     aria-hidden="true"
-                    className="flex h-16 w-16 items-center justify-center border-2 border-ink bg-paper text-ink"
+                    className="flex h-16 w-16 items-center justify-center border-2 border-paper bg-paper text-ink"
                   >
                     <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
                       <path d="M6 4 L20 12 L6 20 Z" />
                     </svg>
                   </span>
-                  <p className="px-4 text-center font-sans text-xs font-extrabold uppercase tracking-[.22em] text-ink/70">
+                  <p className="px-4 text-center font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/80">
                     La vidéo de la souscription — bientôt
                   </p>
                 </div>
