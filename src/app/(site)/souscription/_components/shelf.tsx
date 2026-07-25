@@ -29,16 +29,6 @@ const SPINES: { h: number; w: number }[] = [
   { h: 100, w: 24 },
   { h: 116, w: 28 },
 ];
-const SHELF_GAP = 6; // = gap-1.5 entre les dos
-
-/**
- * Hauteur du plus grand dos. Les dos sont alignés par le BAS (`items-end`) :
- * un `bottom` constant place donc le cartouche à la même ordonnée quel que
- * soit le dos survolé — un `bottom: calc(100% + …)` suivrait la hauteur propre
- * de chaque dos et ferait sauter le bloc de texte d'un livre à l'autre.
- */
-const SHELF_MAX_H = Math.max(...SPINES.map((s) => s.h));
-
 /**
  * Hauteur uniforme (px) du livre déplié au survol. Les dos gardent leur
  * hauteur variée au repos (l'étagère), mais tous les livres atteignent cette
@@ -58,13 +48,13 @@ const MOBILE_SHELF_COUNT = 7;
  * survol ou au focus clavier, le livre sort du rayon en 3D : il pivote sur
  * l'arête de sa reliure (bord droit du dos) pour présenter sa couverture,
  * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
- * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
- * apparaissent en typo nue AU-DESSUS des dos, dans la bande réservée en tête
- * (retour Youri 25/07 — l'encart vivait sous la barre). CSS pur, aucun JS
- * client. L'étagère vit sous le titre de l'ask, sur fond paper (maquette
- * 25/07) : la couverture dépliée peut recouvrir temporairement le titre
- * au-dessus — même comportement que dans l'ex-héros, où elle glissait vers
- * la colonne de texte.
+ * -78deg, cf. .book3d* dans globals.css). La couverture dépliée se suffit :
+ * l'encart titre/auteur/collection qui l'accompagnait est supprimé (retour
+ * Youri 25/07) — titre et auteur restent portés par le nom accessible du
+ * lien (`sr-only`). CSS pur, aucun JS client. L'étagère vit sous le titre de
+ * l'ask, sur fond paper (maquette 25/07) : la couverture dépliée peut
+ * recouvrir temporairement le titre au-dessus — même comportement que dans
+ * l'ex-héros, où elle glissait vers la colonne de texte.
  *
  * `trailing` : contenu posé SUR le rayon, dans l'espace libre à droite du
  * dernier dos (la place des prochains livres) — l'ask y met la demande du
@@ -72,16 +62,8 @@ const MOBILE_SHELF_COUNT = 7;
  * charge de l'appelant (convention primitives).
  */
 export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: ReactNode }) {
-  // Décalage de chaque dos par rapport au bord gauche de l'étagère, pour
-  // ancrer le bloc de texte au même endroit quel que soit le dos survolé.
-  const leftOffsets = SPINES.map((_, i) =>
-    SPINES.slice(0, i).reduce((acc, s) => acc + s.w + SHELF_GAP, 0),
-  );
   return (
     <ShelfLock className="hidden lg:block">
-      {/* Zone réservée AU-DESSUS des dos : l'encart titre/auteur/collection du
-          dos ouvert s'y affiche (positionné en absolu depuis chaque lien). */}
-      <div aria-hidden="true" className="h-20" />
       <div className="flex items-end gap-1.5">
         {SPINES.map((s, i) => {
           const book = books[i];
@@ -111,29 +93,6 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
               <span className="sr-only">
                 {book.title}
                 {book.authors[0] ? `, ${book.authors[0].name}` : ""}
-              </span>
-              {/* Titre, auteur, collection — fondu AU-DESSUS de l'étagère
-                  (retour Youri 25/07, l'encart vivait sous la barre).
-                  Affiché quand le dos est ouvert (classe is-open pilotée par
-                  ShelfLock) ou au focus clavier ; cf. .book3d-cap (globals.css). */}
-              <span
-                className="book3d-cap pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 motion-reduce:transition-none"
-                style={{ left: -leftOffsets[i], bottom: SHELF_MAX_H + 16 }}
-                aria-hidden="true"
-              >
-                <span className="block font-serif text-sm font-semibold text-ink">
-                  {book.title}
-                </span>
-                {book.authors.length > 0 && (
-                  <span className="block text-sm text-ink/70">
-                    {book.authors.map((a) => a.name).join(", ")}
-                  </span>
-                )}
-                {book.libelles.length > 0 && (
-                  <span className="mt-0.5 block text-xs tracking-wide text-ink/50">
-                    {book.libelles.map((l) => l.name).join(" · ")}
-                  </span>
-                )}
               </span>
               {/* Sortie 3D : le dos pivote sur son arête de reliure pour présenter sa couverture */}
               <div

@@ -461,8 +461,7 @@ export default async function SouscriptionPage() {
             fatal ») en bandeau ink liseré brick. Marge réduite au minimum
             (25/07, retour Youri) : seule cette occurrence — juste après
             l'ask/étagère — perd le rythme mt-16/mt-24 commun aux autres
-            transitions de section ; le h-20 de HeroShelf (réserve du
-            cartouche titre/auteur au survol) reste intouché, fonctionnel. */}
+            transitions de section. */}
         <section className="mt-4 sm:mt-6">
           <Reveal>
             <h2 className="font-sans font-black italic text-ink">

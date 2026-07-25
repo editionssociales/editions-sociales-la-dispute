@@ -206,14 +206,9 @@ h1, h2, h3, h4 {
 .book3d:focus-visible .book3d-cover {
   box-shadow: -14px 18px 30px rgb(0 0 0 / 0.25);
 }
-/* Livre ouvert : passe au-dessus des voisins et révèle son cartouche
-   titre/auteur/collection (fondu). Idem au focus clavier. */
+/* Livre ouvert : passe au-dessus de ses voisins. */
 .book3d.is-open {
   z-index: 30;
-}
-.book3d.is-open .book3d-cap,
-.book3d:focus-visible .book3d-cap {
-  opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
   .book3d-inner,
