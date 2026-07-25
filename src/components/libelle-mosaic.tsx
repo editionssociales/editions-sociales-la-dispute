@@ -41,29 +41,35 @@ function tierRows<T>(items: T[]): T[][] {
 }
 
 /**
- * Métriques d'un étage — calées sur son RANG (pas sur son nombre réel de
- * cases : un dernier étage incomplet resterait sinon plus épais que
- * l'avant-dernier). Plus AUCUNE épaisseur imposée : la hauteur d'une case =
- * son corps + le padding uniforme (py-2), donc « Tous les livres » reste une
- * case FINE malgré son grand corps.
+ * Métriques d'un étage — corps EXACTEMENT proportionnel à l'inverse de son
+ * NOMBRE DE CASES (36/n, arrondi au dixième ; retour Youri 25/07, remplace le
+ * calage sur le rang). Les cases d'un étage se partageant sa largeur à parts
+ * égales, le corps suit donc la largeur d'une case : plus il y a de cases,
+ * plus elles sont étroites, plus le texte est petit.
  *
- * Décroissance PURE en 36/rang (retour Youri 25/07) : le terme constant
- * « 6 + » et les planchers (10px desktop, 9px mobile) écrasaient la pente —
- * les six étages réels sortaient à 36-21-16-14-12-11, quasi identiques en
- * bas, et le plancher mobile bloquait net à 9px dès l'étage 4. Sans eux :
- * 36-18-12-9-7,2-6 (mobile ×0,62 → 22,3-11,2-7,4-5,6-4,5-3,7), zéro plancher.
- * Corps FRACTIONNAIRES (1 décimale) et non entiers : sous ~8px, l'arrondi
- * remettait des étages à égalité (7×0,62 et 6×0,62 tombaient tous deux sur
- * 4px) — soit très exactement la pente écrasée qu'on vient de corriger.
- * Le compte en coin suit le corps de l'étage (`--fsc`) plafonné à 9px, sinon
- * il devient plus gros que le libellé qu'il annote sur les étages profonds.
- * Les cases restent des cibles < 44px sur les étages profonds : entorse à
- * R7 assumée par le client (densité voulue de la vue).
+ * Conséquence assumée : un DERNIER étage incomplet (reliquat) revient à la
+ * taille de l'étage de même nombre de cases — avec 19 libellés, les étages
+ * font 1-2-3-4-5-4 cases, donc 36-18-12-9-7,2-9px. C'est le prix de la règle
+ * demandée ; le calage sur le rang, qui gardait une pente strictement
+ * décroissante, est dans l'historique git.
+ *
+ * Ni terme constant ni plancher (auparavant `6 + 30/rang`, planchers 10px
+ * desktop et 9px mobile) : ils écrasaient la pente en bas (36-21-16-14-12-11,
+ * et le plancher mobile bloquait net à 9px dès l'étage 4). Corps
+ * FRACTIONNAIRES et non entiers : sous ~8px, l'arrondi à l'unité remettait
+ * des étages à égalité — soit la pente écrasée qu'on vient de corriger.
+ *
+ * Plus AUCUNE épaisseur imposée : la hauteur d'une case = son corps + le
+ * padding uniforme (py-2), donc « Tous les livres » reste une case FINE
+ * malgré son grand corps. Le compte en coin suit le corps de l'étage
+ * (`--fsc`) plafonné à 9px, sinon il devient plus gros que le libellé qu'il
+ * annote sur les étages profonds. Les cases restent des cibles < 44px sur
+ * ces étages : entorse à R7 assumée par le client (densité voulue de la vue).
  */
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-function tierMetrics(rank: number) {
-  const fontLg = round1(36 / rank);
+function tierMetrics(cases: number) {
+  const fontLg = round1(36 / cases);
   const fontSm = round1(fontLg * 0.62);
   return {
     fontLg,
@@ -141,7 +147,7 @@ export function LibelleMosaic({
       className={`grid-cols-1 ${className}`}
     >
       {rows.map((row, i) => {
-        const m = tierMetrics(i + 1);
+        const m = tierMetrics(row.length);
         return (
           <div
             key={i}

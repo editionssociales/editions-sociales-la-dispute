@@ -49,12 +49,36 @@ const SORTS = BOOK_SORTS.map((s) => ({ value: s, label: SORT_LABELS[s] }));
 const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-ink";
 
 /**
- * Cellule de choix à LIBELLÉ FIXE (« Auteurs », « Tri ») : le `<select>`
+ * Chevron de menu déroulant. Rendu en SVG et NON par un glyphe (▾) : Effra ne
+ * couvre pas les formes géométriques, le caractère retombait sur la fonte
+ * système — forme et centrage variables selon l'OS (même piège que la flèche
+ * de lecture du placeholder vidéo de /souscription). Triangle plein à angles
+ * vifs, zéro arrondi (R8).
+ */
+function ChevronGlyph() {
+  return (
+    <svg
+      viewBox="0 0 10 6"
+      className="h-[6px] w-[10px] shrink-0"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M0 0 L5 6 L10 0 Z" />
+    </svg>
+  );
+}
+
+/**
+ * Cellule de choix à LIBELLÉ FIXE (« Auteur », « Tri ») : le `<select>`
  * natif est étiré en absolu par-dessus la puce, transparent. Sans ce
  * montage, la cellule prendrait la largeur intrinsèque de sa plus LONGUE
  * option (un nom d'auteur entier) et son texte changerait à chaque
  * sélection — les deux défauts que corrige le retour Youri 25/07. Hors flux,
  * le select ne dicte plus rien : la cellule se règle sur son seul libellé.
+ *
+ * Le chevron est REDESSINÉ ici : masquer le select masquait aussi la flèche
+ * native, seule affordance qui distingue une cellule déroulante d'un simple
+ * bouton (retour Youri 25/07).
  *
  * Le `<select>` reste l'élément interactif (menu natif, clavier, nom
  * accessible par `aria-label`) ; la puce visible est décorative. L'anneau de
@@ -80,8 +104,12 @@ function SelectCell({
     <div
       className={`relative flex cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px]`}
     >
-      <span aria-hidden="true" className="whitespace-nowrap px-3.5 py-2.5">
+      <span
+        aria-hidden="true"
+        className="flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5"
+      >
         {label}
+        <ChevronGlyph />
       </span>
       <select
         aria-label={ariaLabel}
@@ -290,7 +318,7 @@ export function CatalogueFilters({
         </label>
 
         <SelectCell
-          label="Auteurs"
+          label="Auteur"
           ariaLabel="Auteur"
           value={filters.author ?? ""}
           onChange={(v) => setFilter("author", v)}

@@ -23,7 +23,7 @@ données ni le routage.
 
 ## Ubiquitous Language
 
-- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid` (grille), `Button` (CTA), `PageHero` (en-têtes page, titre + chapeau seuls), `LibelleMosaic` (l'UNIQUE rendu des libellés pour /catalogue ET /catalogue/[edition], ne jamais la re-inliner — vue unique « cases variables » depuis l'arbitrage client 25/07, qui a supprimé le switch temporaire et la vue « rectangles simples » : étages triés par taille, corps en 36/rang SANS plancher ni terme constant — tout plancher réintroduit écrase la pente en bas —, épaisseur pilotée par le texte, compte en coin plafonné au corps de l'étage — cibles < 44px assumées sur les étages profonds, entorse R7 actée client 24/07).
+- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid` (grille), `Button` (CTA), `PageHero` (en-têtes page, titre + chapeau seuls), `LibelleMosaic` (l'UNIQUE rendu des libellés pour /catalogue ET /catalogue/[edition], ne jamais la re-inliner — vue unique « cases variables » depuis l'arbitrage client 25/07, qui a supprimé le switch temporaire et la vue « rectangles simples » : étages triés par taille, corps en 36/NOMBRE DE CASES de l'étage (le corps suit donc la largeur d'une case ; un dernier étage incomplet revient à la taille de l'étage de même largeur — assumé) SANS plancher ni terme constant — tout plancher réintroduit écrase la pente en bas —, épaisseur pilotée par le texte, compte en coin plafonné au corps de l'étage — cibles < 44px assumées sur les étages profonds, entorse R7 actée client 24/07).
 
 ## Decisions
 
