@@ -13,10 +13,11 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  *
  * ÉTAGES de cases, items triés par nombre de titres DÉCROISSANT (copie
  * locale — l'ordre des facettes reste alphabétique en amont). L'étage i
- * héberge i cases (1, 2, 3…), le dernier prend le reliquat (cases à parts
- * égales) ; l'épaisseur n'est jamais imposée : elle suit le corps du texte,
- * qui décroît fortement par rang (cf. `tierMetrics`). « Tous les livres »
- * reste donc une case fine à grand corps, et le compte vit en coin bas-droit.
+ * héberge i cases jusqu'à un PLAFOND de quatre (cf. `tierRows`), et la
+ * largeur d'une case n'est pas une part égale : elle suit le span horizontal
+ * de son propre libellé (cf. `labelSpan`). Les autres métriques décroissent
+ * avec le rang, chacune sur sa loi (cf. `tierMetrics`). « Tous les livres »
+ * reste une case fine à grand corps, et le compte vit en coin bas-droit.
  * Cellule active inversée noir/blanc (`invertingCell`).
  */
 
@@ -28,14 +29,28 @@ export interface LibelleMosaicItem {
 }
 
 /**
- * Répartition en étages : l'étage i (1-indexé) héberge i cases ; le dernier
- * étage prend simplement le reliquat (ses cases se partagent la largeur à
- * parts égales — jamais de trou).
+ * Nombre maximum de cases sur un même étage (retour Youri 25/07). Au-delà de
+ * quatre, la case devient trop étroite pour son corps : le libellé passe à
+ * trois lignes ou plus et se fait clipper par la hauteur imposée de l'étage.
+ */
+const MAX_TIER_CELLS = 4;
+
+/**
+ * Répartition en étages : l'étage i (1-indexé) héberge i cases, PLAFONNÉES à
+ * `MAX_TIER_CELLS` — la pyramide 1-2-3-4 puis des étages de quatre. Le dernier
+ * étage prend simplement le reliquat (jamais de trou : les largeurs se
+ * répartissent au prorata des libellés, cf. `labelSpan`).
  */
 function tierRows<T>(items: T[]): T[][] {
   const rows: T[][] = [];
-  for (let start = 0, size = 1; start < items.length; start += size, size++) {
+  let start = 0;
+  for (
+    let size = 1;
+    start < items.length;
+    size = Math.min(size + 1, MAX_TIER_CELLS)
+  ) {
     rows.push(items.slice(start, start + size));
+    start += size;
   }
   return rows;
 }
@@ -45,7 +60,7 @@ function tierRows<T>(items: T[]): T[][] {
  * propre loi (retour Youri 25/07). Desktop et mobile ont des bases propres,
  * le mobile valant la moitié du desktop ; tout est arrondi au dixième.
  *
- * - corps : `BASE / (rang + 1)` → 60-40-30-24-20-17,1 px en desktop.
+ * - corps : `BASE / (rang + 1)` → 42-40-30-24-20-17,1 px en desktop.
  *   Le `+ 1` au dénominateur est le point du réglage : il fait décroître le
  *   texte MOINS VITE que l'épaisseur (en `1/rang`), donc les cases s'aplatis-
  *   sent plus qu'elles ne rapetissent — le libellé reste lisible en bas.
@@ -56,18 +71,21 @@ function tierRows<T>(items: T[]): T[][] {
  * - épaisseur : `BASE / rang`, SAUF ce même étage 1, laissé en hauteur
  *   automatique : c'est la bannière du catalogue, elle se règle sur son
  *   propre corps.
- * - compte en coin : `BASE / rang`, comme l'épaisseur. Il ne suit plus le
- *   corps du libellé sous plafond (ancien `min(9px, corps)`) mais décroît de
- *   son côté ; il reste partout plus petit que le libellé qu'il annote, le
- *   corps décroissant désormais plus lentement que lui.
+ * - compte en coin : `BASE / (rang + 2)`, la pente la plus douce des trois —
+ *   il ne suit plus le corps du libellé sous plafond (ancien `min(9px,
+ *   corps)`) mais vit sa vie de chiffre. Le rang 1 porte le MÊME abattement
+ *   que le corps, pour que la bannière reste d'un seul bloc. Base assez haute
+ *   pour que le nombre passe DEVANT le libellé en taille : c'est le parti pris
+ *   du 25/07, le chiffre est le sujet et le libellé sa légende.
  *
  * Imposer la hauteur retire la latitude du padding vertical : les cases des
  * étages 2+ passent en `py-0` + `overflow-hidden`, sinon `py-2` (16px)
  * mangerait à lui seul l'essentiel des étages profonds.
  *
- * Le calage sur le NOMBRE DE CASES (essayé le même jour) est écarté : un
- * dernier étage incomplet — 19 libellés donnent 1-2-3-4-5-4 cases — revenait
- * à la taille de l'étage de même largeur et cassait la décroissance.
+ * Le calage sur le NOMBRE DE CASES (essayé le même jour) est écarté, et le
+ * plafond de `MAX_TIER_CELLS` le condamne définitivement : les étages du bas
+ * comptent tous quatre cases — 19 libellés donnent 1-2-3-4-4-4-1 — ils
+ * seraient donc tous à la même taille, décroissance à plat.
  *
  * Ni plancher ni terme constant AJOUTÉ au numérateur (auparavant
  * `6 + 30/rang`, planchers 10px desktop et 9px mobile) : ils écrasaient la
@@ -81,9 +99,9 @@ const FONT_BASE_LG = 120;
 const FONT_BASE_SM = 60;
 const THICK_BASE_LG = 300;
 const THICK_BASE_SM = 150;
-const COUNT_BASE_LG = 24;
-const COUNT_BASE_SM = 12;
-/** Abattement du seul rang 1 (« Tous les livres »), −30 %. */
+const COUNT_BASE_LG = 192;
+const COUNT_BASE_SM = 96;
+/** Abattement du seul rang 1 (« Tous les livres »), −30 % : corps ET compte. */
 const TIER1_FONT_RATIO = 0.7;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -91,11 +109,12 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 function tierMetrics(rank: number) {
   const abattement = rank === 1 ? TIER1_FONT_RATIO : 1;
   return {
-    // Corps : en 1/(rang + 1), décroissance plus lente que le reste.
+    // Corps : en 1/(rang + 1), décroissance plus lente que l'épaisseur.
     fontLg: round1((FONT_BASE_LG / (rank + 1)) * abattement),
     fontSm: round1((FONT_BASE_SM / (rank + 1)) * abattement),
-    countLg: round1(COUNT_BASE_LG / rank),
-    countSm: round1(COUNT_BASE_SM / rank),
+    // Compte : en 1/(rang + 2), la pente la plus douce des trois.
+    countLg: round1((COUNT_BASE_LG / (rank + 2)) * abattement),
+    countSm: round1((COUNT_BASE_SM / (rank + 2)) * abattement),
     // Étage 1 (« Tous les livres ») : hauteur automatique, jamais imposée.
     thickLg: rank === 1 ? null : round1(THICK_BASE_LG / rank),
     thickSm: rank === 1 ? null : round1(THICK_BASE_SM / rank),
@@ -130,6 +149,32 @@ function truncateWords(label: string) {
 }
 
 /**
+ * Span horizontal d'un libellé, en caractères — la LARGEUR de la case lui est
+ * proportionnelle (retour Youri 25/07 : plus de parts égales sur un étage).
+ *
+ * Le libellé est posé sur DEUX LIGNES au maximum : le span est donc la plus
+ * courte des largeurs atteignables, soit `min` sur toutes les coupures de MOT
+ * du `max` des deux lignes — la coupure équilibrée, celle que `text-balance`
+ * produit au rendu. Un libellé d'un seul mot occupe forcément sa longueur.
+ *
+ * Le comptage au caractère suffit : le corps est le même pour toutes les cases
+ * d'un étage, et deux lignes écrasent déjà l'écart entre libellés (un rapport
+ * 20/4 sur les longueurs brutes retombe à ~10/4 sur les spans) — assez pour
+ * qu'une case ne devienne jamais un filet. Pas de mesure typographique fine :
+ * il s'agit de proportions entre voisines, pas d'un ajustement au pixel.
+ */
+function labelSpan(label: string) {
+  const words = label.split(" ");
+  let best = label.length;
+  for (let i = 1; i < words.length; i++) {
+    const left = words.slice(0, i).join(" ").length;
+    const right = words.slice(i).join(" ").length;
+    best = Math.min(best, Math.max(left, right));
+  }
+  return best;
+}
+
+/**
  * Case d'un étage — corps et compte hérités de l'étage via variables CSS. Le
  * compte de titres vit en COIN bas-droit et en ABSOLU : dans le flux du
  * libellé, il décalait le centrage d'une case à l'autre.
@@ -156,20 +201,27 @@ function TierCell({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`relative flex min-w-0 flex-1 items-center justify-center overflow-hidden px-3 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${fixedHeight ? "" : "py-2"} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
+      // `basis-0` + `flexGrow` = largeur au PRORATA du span (cf. `labelSpan`).
+      style={{ flexGrow: labelSpan(short) }}
+      className={`relative flex min-w-0 shrink basis-0 items-center justify-center overflow-hidden px-3 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${fixedHeight ? "" : "py-2"} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
     >
       {short !== label && <span className="sr-only">{label}</span>}
       <span
         aria-hidden={short === label ? undefined : "true"}
-        className="font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.05] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs)]"
+        // `relative z-[1]` : au corps qu'il porte, le compte du coin mord sur
+        // la fin du libellé — c'est le LIBELLÉ qui passe devant, le chiffre
+        // reste le filigrane de sa case.
+        className="relative z-[1] text-balance font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.05] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs)]"
       >
         {short}
       </span>
       {/* Nombre NU, sans parenthèses (retour Youri 25/07) : il n'annote plus
-          un libellé au fil du texte, il vit seul dans son coin. */}
+          un libellé au fil du texte, il vit seul dans son coin. Interligne
+          serré et collé à l'angle — au corps qu'il porte désormais, `leading-
+          none` laisserait un talon de descendante sous le chiffre. */}
       <span
         aria-hidden="true"
-        className="absolute bottom-0.5 right-1.5 whitespace-nowrap font-sans text-[length:var(--fsc-sm)] font-bold leading-none opacity-60 lg:text-[length:var(--fsc)]"
+        className="pointer-events-none absolute -bottom-[.08em] right-1 whitespace-nowrap font-sans text-[length:var(--fsc-sm)] font-bold leading-[.78] opacity-25 lg:text-[length:var(--fsc)]"
       >
         {count}
       </span>
