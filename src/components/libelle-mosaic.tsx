@@ -41,46 +41,48 @@ function tierRows<T>(items: T[]): T[][] {
 }
 
 /**
- * Métriques d'un étage — corps ET épaisseur EXACTEMENT proportionnels à
- * l'inverse du RANG de l'étage (retour Youri 25/07) :
+ * Métriques d'un étage — toutes décroissantes avec son RANG, chacune sur sa
+ * propre loi (retour Youri 25/07). Desktop et mobile ont des bases propres,
+ * le mobile valant la moitié du desktop ; tout est arrondi au dixième.
  *
- * - corps : `80 / rang` en desktop, `40 / rang` en mobile (arrondis au
- *   dixième) → 80-40-26,7-20-16-13,3 px et 40-20-13,3-10-8-6,7 px.
+ * - corps : `BASE / (rang + 1)` → 60-40-30-24-20-17,1 px en desktop.
+ *   Le `+ 1` au dénominateur est le point du réglage : il fait décroître le
+ *   texte MOINS VITE que l'épaisseur (en `1/rang`), donc les cases s'aplatis-
+ *   sent plus qu'elles ne rapetissent — le libellé reste lisible en bas.
  *   SEULE exception, l'étage 1 (« Tous les livres ») porte 30 % de moins
  *   (`TIER1_FONT_RATIO`) : sa case est une bannière pleine largeur, le corps
  *   de formule y était démesuré. La réduction est locale au rang 1 — la
  *   formule des autres étages n'en est jamais affectée.
- * - épaisseur : `240 / rang` en desktop, `120 / rang` en mobile, SAUF ce même
- *   étage 1, laissé en hauteur automatique : c'est la bannière du catalogue,
- *   elle se règle sur son propre corps.
+ * - épaisseur : `BASE / rang`, SAUF ce même étage 1, laissé en hauteur
+ *   automatique : c'est la bannière du catalogue, elle se règle sur son
+ *   propre corps.
+ * - compte en coin : `BASE / rang`, comme l'épaisseur. Il ne suit plus le
+ *   corps du libellé sous plafond (ancien `min(9px, corps)`) mais décroît de
+ *   son côté ; il reste partout plus petit que le libellé qu'il annote, le
+ *   corps décroissant désormais plus lentement que lui.
  *
- * Les deux paliers ont leurs PROPRES bases (et non plus un facteur mobile
- * appliqué au desktop) : les quatre valeurs sont posées telles quelles par le
- * client. Le rapport épaisseur/corps y reste constant — 3 des deux côtés —,
- * ce qui laisse partout la même marge autour du libellé. Imposer la hauteur
- * retire la latitude du padding vertical : les cases des étages 2+ passent en
- * `py-0` + `overflow-hidden`, sinon `py-2` (16px) mangerait à lui seul
- * l'essentiel des étages profonds.
+ * Imposer la hauteur retire la latitude du padding vertical : les cases des
+ * étages 2+ passent en `py-0` + `overflow-hidden`, sinon `py-2` (16px)
+ * mangerait à lui seul l'essentiel des étages profonds.
  *
  * Le calage sur le NOMBRE DE CASES (essayé le même jour) est écarté : un
  * dernier étage incomplet — 19 libellés donnent 1-2-3-4-5-4 cases — revenait
  * à la taille de l'étage de même largeur et cassait la décroissance.
  *
- * Ni terme constant ni plancher (auparavant `6 + 30/rang`, planchers 10px
- * desktop et 9px mobile) : ils écrasaient la pente en bas, et le plancher
- * mobile bloquait net à 9px dès l'étage 4. Corps FRACTIONNAIRES et non
- * entiers : sous ~8px, l'arrondi à l'unité remettait des étages à égalité —
- * soit la pente écrasée qu'on vient de corriger.
- *
- * Le compte en coin suit le corps de l'étage (`--fsc`) plafonné à 9px, sinon
- * il devient plus gros que le libellé qu'il annote sur les étages profonds.
- * Les cases restent des cibles < 44px sur ces étages : entorse à R7 assumée
- * par le client (densité voulue de la vue).
+ * Ni plancher ni terme constant AJOUTÉ au numérateur (auparavant
+ * `6 + 30/rang`, planchers 10px desktop et 9px mobile) : ils écrasaient la
+ * pente en bas, et le plancher mobile bloquait net à 9px dès l'étage 4.
+ * Valeurs FRACTIONNAIRES et non entières : sous ~8px, l'arrondi à l'unité
+ * remettait des étages à égalité — soit la pente écrasée qu'on vient de
+ * corriger. Les cases restent des cibles < 44px sur les étages profonds :
+ * entorse à R7 assumée par le client (densité voulue de la vue).
  */
-const FONT_BASE_LG = 80;
-const FONT_BASE_SM = 40;
-const THICK_BASE_LG = 240;
-const THICK_BASE_SM = 120;
+const FONT_BASE_LG = 120;
+const FONT_BASE_SM = 60;
+const THICK_BASE_LG = 300;
+const THICK_BASE_SM = 150;
+const COUNT_BASE_LG = 24;
+const COUNT_BASE_SM = 12;
 /** Abattement du seul rang 1 (« Tous les livres »), −30 %. */
 const TIER1_FONT_RATIO = 0.7;
 
@@ -88,13 +90,12 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 function tierMetrics(rank: number) {
   const abattement = rank === 1 ? TIER1_FONT_RATIO : 1;
-  const fontLg = round1((FONT_BASE_LG / rank) * abattement);
-  const fontSm = round1((FONT_BASE_SM / rank) * abattement);
   return {
-    fontLg,
-    fontSm,
-    countLg: Math.min(9, fontLg),
-    countSm: Math.min(8, fontSm),
+    // Corps : en 1/(rang + 1), décroissance plus lente que le reste.
+    fontLg: round1((FONT_BASE_LG / (rank + 1)) * abattement),
+    fontSm: round1((FONT_BASE_SM / (rank + 1)) * abattement),
+    countLg: round1(COUNT_BASE_LG / rank),
+    countSm: round1(COUNT_BASE_SM / rank),
     // Étage 1 (« Tous les livres ») : hauteur automatique, jamais imposée.
     thickLg: rank === 1 ? null : round1(THICK_BASE_LG / rank),
     thickSm: rank === 1 ? null : round1(THICK_BASE_SM / rank),
@@ -129,8 +130,8 @@ function truncateWords(label: string) {
 }
 
 /**
- * Case d'un étage — corps hérité de l'étage via variables CSS. Le compte de
- * titres vit en COIN bas-droit, en absolu et à corps fixe : dans le flux du
+ * Case d'un étage — corps et compte hérités de l'étage via variables CSS. Le
+ * compte de titres vit en COIN bas-droit et en ABSOLU : dans le flux du
  * libellé, il décalait le centrage d'une case à l'autre.
  *
  * `fixedHeight` : l'étage impose sa hauteur (tous sauf « Tous les livres »).
@@ -164,11 +165,13 @@ function TierCell({
       >
         {short}
       </span>
+      {/* Nombre NU, sans parenthèses (retour Youri 25/07) : il n'annote plus
+          un libellé au fil du texte, il vit seul dans son coin. */}
       <span
         aria-hidden="true"
-        className="absolute bottom-0.5 right-1.5 whitespace-nowrap font-sans text-[length:var(--fsc-sm)] font-bold opacity-60 lg:text-[length:var(--fsc)]"
+        className="absolute bottom-0.5 right-1.5 whitespace-nowrap font-sans text-[length:var(--fsc-sm)] font-bold leading-none opacity-60 lg:text-[length:var(--fsc)]"
       >
-        ({count})
+        {count}
       </span>
     </Link>
   );
