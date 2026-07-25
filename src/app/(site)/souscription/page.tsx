@@ -12,6 +12,7 @@ import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
 import { getPageSouscription } from "@/lib/site-content";
 import { HeroShelf, MobileShelf } from "./_components/shelf";
+import { BottomSheet } from "@/components/bottom-sheet";
 import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
 
 /**
@@ -773,7 +774,14 @@ export default async function SouscriptionPage() {
         </section>
       </div>
 
-      <TiersRail content={content} enabled={enabled} />
+      {/* Téléphone : le rail devient une feuille de bas d'écran, déroulée au
+          chargement, repliable au glissé en bandeau « Contribuer » (les CTA
+          d'ancre `#paliers`/`#montant-libre` la redéploient). À `lg+`,
+          `BottomSheet` est transparent : le rail redevient l'item de grille
+          sticky de la colonne 380px. */}
+      <BottomSheet label="Contribuer" anchors={["paliers", "montant-libre"]}>
+        <TiersRail content={content} enabled={enabled} />
+      </BottomSheet>
     </div>
   );
 }
