@@ -36,8 +36,16 @@ import { FOCUS_RING_DARK } from "@/lib/ui";
  * panneau.
  */
 
-/** Hauteur du bandeau, seule partie visible replié (`h-14`, cible R7 ≥ 44px). */
-const HANDLE_PX = 56;
+/**
+ * Hauteur du bandeau, seule partie visible replié (`3.5rem`, cible R7 ≥ 44px)
+ * — PLUS l'encoche basse de l'appareil (`safe-area-inset-bottom`) : sur iPhone,
+ * la barre d'accueil recouvre les ~34 derniers pixels d'un élément `bottom-0`,
+ * et le libellé « Contribuer » du bandeau replié passait dessous. Le bouton
+ * grandit d'autant (son contenu reste centré dans les 3.5rem du haut, la zone
+ * d'encoche n'est qu'un aplat), et la course de repli suit la même formule —
+ * les deux DOIVENT rester en phase, d'où la mesure du bandeau en px au geste.
+ */
+const HANDLE_H = "calc(3.5rem + env(safe-area-inset-bottom))";
 
 /** Sous le point de rupture `lg` de Tailwind (1024px) exclusivement. */
 const MOBILE_QUERY = "(max-width: 1023.98px)";
@@ -61,23 +69,28 @@ function ChevronGlyph() {
 export function BottomSheet({
   label,
   anchors = [],
+  autoOpenDelayMs = 0,
   children,
 }: {
   /** Libellé du bandeau — c'est aussi le nom accessible du bouton. */
   label: string;
   /** Ids d'ancre de la page qui doivent déplier la feuille (sans `#`). */
   anchors?: string[];
+  /** Temps de pose, bandeau replié visible, avant le déroulé automatique. */
+  autoOpenDelayMs?: number;
   children: ReactNode;
 }) {
   const mobile = useMediaQuery(MOBILE_QUERY);
-  // Déroulée par défaut au chargement (priorité aux contreparties, maquette
-  // 25/07) ; le repli est un geste de l'utilisateur, jamais l'état initial.
-  const [open, setOpen] = useState(true);
+  // La feuille NAÎT REPLIÉE et se déroule seule après `autoOpenDelayMs` : le
+  // chargement montre d'abord le bandeau-bouton « Contribuer », puis le
+  // déroulé se joue à l'écran (au lieu d'être déjà fini au premier paint).
+  const [open, setOpen] = useState(false);
   // Décalage vertical EN COURS de glissé (px, 0 = déroulée) ; `null` hors
   // geste — la position est alors portée par les classes, donc animée.
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLButtonElement>(null);
   // Le geste vit dans un ref (`last` = dernier décalage appliqué) : la
   // décision d'aimantation le lit à la levée du doigt sans passer par l'état,
   // dont les mises à jour sont asynchrones.
@@ -90,7 +103,21 @@ export function BottomSheet({
   } | null>(null);
   /** Un glissé vient de se terminer → le `click` qui suit ne doit pas rebasculer. */
   const dragged = useRef(false);
+  /** L'utilisateur a pris la main → le déroulé automatique est annulé. */
+  const userActed = useRef(false);
   const panelId = useId();
+
+  // Déroulé automatique différé. `setState` dans un minuteur, pas dans le corps
+  // de l'effet : c'est un événement externe (le temps), pas une dérivation du
+  // rendu. Un appui ou un glissé avant l'échéance l'emporte — la feuille ne
+  // doit jamais se rouvrir dans le dos de quelqu'un qui vient de la replier.
+  useEffect(() => {
+    if (!mobile) return;
+    const id = window.setTimeout(() => {
+      if (!userActed.current) setOpen(true);
+    }, autoOpenDelayMs);
+    return () => window.clearTimeout(id);
+  }, [mobile, autoOpenDelayMs]);
 
   // Réserve la hauteur du bandeau replié en bas du DOCUMENT : le pied de site
   // vit dans le layout, hors de portée d'un espaceur rendu ici — sans ça, ses
@@ -98,7 +125,7 @@ export function BottomSheet({
   useEffect(() => {
     if (!mobile) return;
     const previous = document.body.style.paddingBottom;
-    document.body.style.paddingBottom = `${HANDLE_PX}px`;
+    document.body.style.paddingBottom = HANDLE_H;
     return () => {
       document.body.style.paddingBottom = previous;
     };
@@ -146,8 +173,13 @@ export function BottomSheet({
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       const sheet = sheetRef.current;
       if (!sheet) return;
+      userActed.current = true;
       // Course utile = tout sauf le bandeau, qui reste toujours visible.
-      const max = Math.max(0, sheet.offsetHeight - HANDLE_PX);
+      // Bandeau MESURÉ (l'encoche basse ne se connaît qu'au rendu) : la
+      // course de glissé doit s'arrêter exactement là où la classe de repli
+      // s'arrête, sinon le geste et l'aimantation divergent.
+      const handlePx = handleRef.current?.offsetHeight ?? 56;
+      const max = Math.max(0, sheet.offsetHeight - handlePx);
       const base = open ? 0 : max;
       gesture.current = { startY: event.clientY, base, max, moved: false, last: base };
       // Capture : le doigt peut sortir du bandeau sans perdre le geste.
@@ -181,6 +213,7 @@ export function BottomSheet({
   }, []);
 
   const onClick = useCallback(() => {
+    userActed.current = true;
     // Le `click` de fin de glissé ne doit pas annuler l'aimantation ; l'appui
     // simple (et le clavier, qui n'émet que `click`) bascule.
     if (dragged.current) {
@@ -204,7 +237,11 @@ export function BottomSheet({
         dragging
           ? ""
           : "transition-transform duration-300 ease-out motion-reduce:transition-none"
-      } ${!dragging && !open ? "translate-y-[calc(100%-3.5rem)]" : ""}`}
+      } ${
+        !dragging && !open
+          ? "translate-y-[calc(100%-3.5rem-env(safe-area-inset-bottom))]"
+          : ""
+      }`}
       // Position PENDANT le geste : le doigt mène, aucune transition ne s'interpose.
       style={dragging ? { transform: `translateY(${dragOffset}px)` } : undefined}
     >
@@ -217,9 +254,15 @@ export function BottomSheet({
         onPointerMove={onPointerMove}
         onPointerUp={endGesture}
         onPointerCancel={endGesture}
+        ref={handleRef}
+        // Hauteur en style inline : la MÊME expression sert ici et dans la
+        // classe de repli (`HANDLE_H`, source unique). Le padding bas laisse
+        // l'encoche de l'appareil en aplat sous le libellé, qui reste centré
+        // dans les 3.5rem du haut.
+        style={{ height: HANDLE_H, paddingBottom: "env(safe-area-inset-bottom)" }}
         // touch-none : le navigateur ne doit pas voler le geste vertical pour
         // défiler la page pendant qu'on tire la feuille.
-        className={`flex h-14 w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-ink text-paper hover:bg-pop-yellow hover:text-ink ${FOCUS_RING_DARK} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
+        className={`flex w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-ink text-paper hover:bg-pop-yellow hover:text-ink ${FOCUS_RING_DARK} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
       >
         {/* Poignée (grip) — barre pleine aux angles droits (R8), à la couleur
             du texte pour survivre à l'inversion au survol. */}

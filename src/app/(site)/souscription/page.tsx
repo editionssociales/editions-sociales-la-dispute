@@ -449,8 +449,10 @@ export default async function SouscriptionPage() {
 
         {/* 4 ▪ Récit — quatre sections-bandeaux (texte du docx VERBATIM,
             seule la composition varie) : chaque h2 reste UN SEUL <h2> —
-            kicker en corps modéré sur paper, chute en display géant sur
-            bandeau plein full-bleed à l'accent de la section — crise = brick
+            kicker en corps modéré ET chute en display géant DANS le même
+            bandeau plein full-bleed à l'accent de la section (25/07, retour
+            Youri : plus de kicker isolé sur paper — texte paper sur le
+            bandeau, AA large tenu : brick ≈5,4:1, navy ≈12:1) — crise = brick
             (le langage d'alerte du site, cf. panier), bataille politique =
             navy, héritage centenaire = ocher (texte ink, AA ≈5,5:1), appel =
             bottle en crescendo. Le descriptif reste en corps 15-17px/ink-70,
@@ -465,19 +467,17 @@ export default async function SouscriptionPage() {
             transitions de section. */}
         <section className="mt-4 sm:mt-6">
           <Reveal>
-            <h2 className="font-sans font-black italic text-ink">
-              <span
-                className={`${SPAN_CONTAINER} text-xl uppercase leading-tight tracking-[.04em] sm:text-2xl`}
-              >
-                Édition indépendante et critique :
-              </span>{" "}
-              <span className="mt-5 block bg-brick text-paper">
+            <h2 className="font-sans font-black italic text-paper">
+              <span className="block bg-brick">
                 <span aria-hidden="true" className={`block h-3 ${HAZARD_BG}`} />
-                <span
-                  className={`${SPAN_CONTAINER} py-7 text-[clamp(44px,11vw,110px)] uppercase leading-[0.82] tracking-[-0.02em] sm:py-9 lg:text-[clamp(44px,8vw,110px)]`}
-                >
-                  <span className="block">danger</span>{" "}
-                  <span className="block">maximal</span>
+                <span className={`${SPAN_CONTAINER} py-7 sm:py-9`}>
+                  <span className="block text-xl uppercase leading-tight tracking-[.04em] sm:text-2xl">
+                    Édition indépendante et critique :
+                  </span>{" "}
+                  <span className="mt-4 block text-[clamp(44px,11vw,110px)] uppercase leading-[0.82] tracking-[-0.02em] sm:mt-5 lg:text-[clamp(44px,8vw,110px)]">
+                    <span className="block">danger</span>{" "}
+                    <span className="block">maximal</span>
+                  </span>
                 </span>
               </span>
             </h2>
@@ -511,23 +511,23 @@ export default async function SouscriptionPage() {
           </Reveal>
         </section>
 
-        {/* Section 2 — la bataille matérielle : la chute du titre sur
-            bandeau navy, le 90 % en exergue inline, « la fin de la propriété
+        {/* Section 2 — la bataille matérielle : tout le titre (kicker
+            compris) sur bandeau navy, le 90 % en exergue inline, « la fin de la propriété
             privée… » et « un devoir politique » en marquages navy (padding
             vertical nul + leading du paragraphe hôte : le marqueur ne
             percute jamais la ligne précédente). */}
         <section className="mt-16 sm:mt-24">
           <Reveal>
-            <h2 className="font-sans font-black italic text-ink">
-              <span className={`${SPAN_CONTAINER} text-xl leading-tight sm:text-2xl`}>
-                La guerre culturelle est aussi une
-              </span>{" "}
-              <span className="mt-5 block bg-navy text-paper">
-                <span
-                  className={`${SPAN_CONTAINER} py-7 text-[clamp(44px,11vw,110px)] uppercase leading-[0.82] tracking-[-0.02em] sm:py-9 lg:text-[clamp(44px,8vw,110px)]`}
-                >
-                  <span className="block">guerre</span>{" "}
-                  <span className="block">matérielle</span>
+            <h2 className="font-sans font-black italic text-paper">
+              <span className="block bg-navy">
+                <span className={`${SPAN_CONTAINER} py-7 sm:py-9`}>
+                  <span className="block text-xl leading-tight sm:text-2xl">
+                    La guerre culturelle est aussi une
+                  </span>{" "}
+                  <span className="mt-4 block text-[clamp(44px,11vw,110px)] uppercase leading-[0.82] tracking-[-0.02em] sm:mt-5 lg:text-[clamp(44px,8vw,110px)]">
+                    <span className="block">guerre</span>{" "}
+                    <span className="block">matérielle</span>
+                  </span>
                 </span>
               </span>
             </h2>
@@ -779,7 +779,11 @@ export default async function SouscriptionPage() {
           d'ancre `#paliers`/`#montant-libre` la redéploient). À `lg+`,
           `BottomSheet` est transparent : le rail redevient l'item de grille
           sticky de la colonne 380px. */}
-      <BottomSheet label="Contribuer" anchors={["paliers", "montant-libre"]}>
+      <BottomSheet
+        label="Contribuer"
+        anchors={["paliers", "montant-libre"]}
+        autoOpenDelayMs={1000}
+      >
         <TiersRail content={content} enabled={enabled} />
       </BottomSheet>
     </div>
