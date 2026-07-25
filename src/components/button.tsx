@@ -9,7 +9,8 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * cette recette. L'anneau de focus dépend du fond AU REPOS de chaque variante
  * (R5) : SOLID démarre sur ink → anneau sombre (pop-yellow) ; OUTLINE démarre
  * sur paper → anneau clair (ink) ; HOUSE démarre sur navy/brick (accent
- * sombre) → anneau sombre, comme SOLID. État `disabled` (R7) : opacité
+ * sombre) → anneau sombre, comme SOLID ; ALARM démarre sur brick → anneau
+ * sombre aussi. État `disabled` (R7) : opacité
  * réduite, curseur bloqué, hover neutralisé (n'a de prise que sur le
  * `<button>` rendu sans `href` — un lien ne peut pas être `disabled` en
  * HTML).
@@ -45,9 +46,20 @@ const HOUSE: Record<"navy" | "brick", string> = {
   brick: `border-paper bg-brick text-paper hover:bg-paper hover:text-brick disabled:hover:bg-paper disabled:hover:text-brick ${FOCUS_RING_DARK}`,
 };
 
+/**
+ * Variante « alarme » (brick sur fond CLAIR — le CTA du compteur de
+ * /souscription, retour Youri soir du 26/07) : même recette que HOUSE brick,
+ * bordure INK et non paper — posée sur paper, une bordure paper
+ * disparaîtrait ; le contour reste celui des objets du fond clair. Repos sur
+ * brick (accent sombre) → anneau sombre, comme SOLID/HOUSE. Elle rime avec le
+ * bandeau brick de la feuille de bas d'écran : les deux entrées vers le
+ * paiement portent le même rouge.
+ */
+const ALARM = `border-ink bg-brick text-paper hover:bg-paper hover:text-brick disabled:hover:bg-brick disabled:hover:text-paper ${FOCUS_RING_DARK}`;
+
 type ButtonOwnProps = {
   href?: string;
-  variant?: "solid" | "outline" | "house" | "invert";
+  variant?: "solid" | "outline" | "house" | "invert" | "alarm";
   /** Couleur de la maison ciblée — requis quand `variant="house"`. */
   tone?: "navy" | "brick";
   className?: string;
@@ -79,7 +91,9 @@ export function Button({
         ? OUTLINE
         : variant === "invert"
           ? INVERT
-          : SOLID;
+          : variant === "alarm"
+            ? ALARM
+            : SOLID;
   const classes = [BASE, variantClass, className].filter(Boolean).join(" ");
 
   if (href) {

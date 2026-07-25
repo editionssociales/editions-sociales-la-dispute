@@ -6,14 +6,15 @@ import { useInView } from "@/hooks/use-in-view";
 import { useImpactFrame } from "@/components/impact-frame";
 
 /**
- * Un palier, réduit à ce que la jauge en fait encore : une ABSCISSE. Depuis la
- * suppression de la bande de libellés (retour Youri 26/07), ni l'intitulé ni
- * l'état atteint ne sont peints ici — les paliers se disent par les COUPURES
- * de la barre, et se détaillent dans l'escalier des objectifs et le rail des
- * contreparties, plus bas dans la page. Type structurel : un `GaugeMarker[]`
- * (`lib/campaign`, inchangé) s'y range toujours.
+ * Un palier tel que la jauge le peint : une ABSCISSE (coupure du masque) ET
+ * une INSCRIPTION (valeur + intitulé, ✓ si atteint) dans la bande sous la
+ * barre. La parenthèse « barre nue » du 26/07 est refermée (retour Youri,
+ * soir du 26/07 : les paliers se relisent sur la barre elle-même) — seuls
+ * les DESCRIPTIFS longs restent l'affaire de l'escalier des objectifs et du
+ * rail des contreparties, plus bas dans la page. Type structurel : un
+ * `GaugeMarker[]` (`lib/campaign`, inchangé) s'y range toujours.
  */
-type Marker = { value: number };
+type Marker = { value: number; label: string; reached: boolean };
 
 /**
  * La barre s'étend 20 % au-delà de l'objectif (demi-droite). Exporté avec
@@ -47,13 +48,13 @@ const SEAM_OVERLAP_PCT = 0.3;
 const SOLID_END_PCT = SOLID_PCT + SEAM_OVERLAP_PCT;
 
 /**
- * Demi-largeur d'une coupure de palier (px) : fente de 8px, MOITIÉ des ~16px
- * que mesurent les découpes de la queue à pleine largeur (retour Youri 26/07,
- * « comme à la fin mais 2 fois moins larges »). En pixels fixes et non en
- * pourcentage : une démarcation doit être aussi franche à 320px de barre qu'à
- * 1200px.
+ * Demi-largeur d'une coupure de palier (px) : fente de 5,6px — les 8px
+ * d'origine (« comme à la fin mais 2 fois moins larges » que les ~16px des
+ * découpes de la queue) raccourcis de 30 % (retour Youri). En pixels fixes et
+ * non en pourcentage : une démarcation doit être aussi franche à 320px de
+ * barre qu'à 1200px.
  */
-const CUT_HALF_PX = 4;
+const CUT_HALF_PX = 2.8;
 
 /**
  * Épaisseur du contour (px) — celle des objets ombrés du site (R8). Les
@@ -135,8 +136,11 @@ function buildCutMask(cuts: readonly string[]): CSSProperties {
  * 26/07, revert de l'inversion de charge du 25/07 : un cache ink fusionnait
  * avec l'ombre dure du calque jumeau, la barre n'avait plus de contour).
  *
- * Barre NUE (retour Youri 26/07) : plus une seule abscisse écrite sous ou sur
- * la barre — les coupures du masque sont les seules démarcations de paliers.
+ * Bande des paliers AUTOUR de la barre (retour Youri — referme la parenthèse
+ * « barre nue ») : chaque palier réinscrit valeur et intitulé, centrés sur SA
+ * coupure ; rangs pairs SOUS la barre, rangs impairs (80 k€) hissés
+ * AU-DESSUS ; les coupures du masque restent les démarcations, la bande les
+ * nomme.
  *
  * Deux marques suivent le front, et une seule course les porte (`--tx`) :
  * le TRAIT DE COUPE soudé au bord gauche du cache — il vit DANS la barre,
@@ -211,13 +215,15 @@ export function Gauge({
   const sweepClass = filled && pct > 0 ? "gauge-sweep" : "";
 
   return (
-    <div ref={ref} className={className}>
-      {/* Boîte de la barre : hauteur DOUBLÉE (32px, retour Youri 26/07) —
-          l'ombre dure s'y superpose au lieu de vivre en absolu dans le
-          conteneur. Aucune réserve haute : la bande de libellés qui l'exigeait
-          (`pt-16 sm:pt-20`) a disparu. Le curseur, lui, déborde de 6px par le
-          haut (il est à moitié hors barre) — c'est à l'appelant de lui laisser
-          cette avance (`mt-4` sur /souscription). */}
+    // Réserve haute (`pt-14 sm:pt-20`) : les inscriptions de rang IMPAIR
+    // (80 k€) montent au-dessus de la barre — absolues, ancrées à la bande
+    // basse, elles n'occupent aucune place ; ce padding la leur garde (≈ 45px
+    // d'inscription + 8px d'air en mobile, un cran de plus à `sm` où le corps
+    // grandit). Le curseur, à moitié hors barre (6px), y loge d'office — le
+    // `mt-4` de l'appelant n'est plus que de l'air entre compteur et bande.
+    <div ref={ref} className={`pt-14 sm:pt-20 ${className}`}>
+      {/* Boîte de la barre : hauteur DOUBLÉE (32px) — l'ombre dure s'y
+          superpose au lieu de vivre en absolu dans le conteneur. */}
       <div className="relative h-8">
         {/* Ombre dure (R8, recette des couvertures de carrousel) peinte par un
             calque jumeau masqué à l'identique : elle épouse donc les pointillés
@@ -231,8 +237,9 @@ export function Gauge({
         />
         {/* Alternative programmatique (a11y) : la pile de <div> anonymes
             n'expose sinon ni la nature de jauge ni le taux de remplissage —
-            elle porte seule, depuis la suppression des libellés, le montant et
-            l'objectif en toutes lettres. */}
+            elle porte le montant collecté et l'objectif en toutes lettres ;
+            les paliers, eux, se lisent dans la bande de VRAI texte autour de
+            la barre. */}
         <div
           role="img"
           aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
@@ -272,9 +279,10 @@ export function Gauge({
           <div className="absolute inset-x-0 top-0 h-[2px] bg-ink" />
           <div className="absolute inset-x-0 bottom-0 h-[2px] bg-ink" />
           <div className="absolute inset-y-0 left-0 w-[2px] bg-ink" />
-          {/* Deux montants par coupure, collés aux LÈVRES de la fente de 8px
-              (donc à `X − 6px` et `X + 4px`, largeur 2px) : chaque morceau est
-              cerné de ses quatre côtés, sauf à l'extrême droite de la barre. */}
+          {/* Deux montants par coupure, collés aux LÈVRES de la fente de 5,6px
+              (donc à `X − 4,8px` et `X + 2,8px`, largeur 2px) : chaque morceau
+              est cerné de ses quatre côtés, sauf à l'extrême droite de la
+              barre. */}
           {cuts.flatMap((x) => [
             <div
               key={`${x}-g`}
@@ -325,6 +333,53 @@ export function Gauge({
             <span className="absolute left-[-4px] top-[-4px] h-0 w-0 border-l-[5px] border-r-[5px] border-t-8 border-l-transparent border-r-transparent border-t-ink" />
           )}
         </div>
+      </div>
+      {/* Bande des paliers : valeur + intitulé, centrés sur LEUR coupure —
+          même chaîne `cuts[i]` que la fente du masque et ses montants de
+          contour, aucune dérive d'arrondi possible. UN PALIER SUR DEUX
+          MONTE AU-DESSUS de la barre (retour Youri — 80 k€ respire en haut,
+          50 k€ et 100 k€ restent dessous) : l'écart entre coupures VOISINES
+          (80 → 100 k€, 16,7 % de la barre) ne tient pas deux inscriptions
+          sur mobile, quand l'écart entre paliers de MÊME bande (41,7 %) les
+          tient toujours. Tout est ancré ICI, dans l'ordre des paliers (un
+          seul jeu de nœuds, ordre de lecture intact) : les hautes montent
+          par `bottom-full mb-14` — 16px de gouttière basse + 32px de barre
+          + 8px d'air au-dessus du bord — miroir des 8px que `mt-4` laisse
+          entre l'ombre (8px) et le rang bas. Corps : montants gonflés à
+          21/27px (+50 %, retour Youri), intitulés repassés à 10/12px (le
+          +50 % essayé sur eux aussi a été repris — retour Youri : le montant
+          domine, l'intitulé chuchote) ; largeurs `w-32 sm:w-56` calées sur
+          « 100 000 € » insécable sous l'écart de même bande.
+          Vrai texte, pas d'aria-hidden : les lecteurs d'écran y lisent les
+          paliers, le `role="img"` gardant collecte et objectif ; le ✓ des
+          paliers atteints reste décoratif (aria-hidden), doublé d'un
+          « (atteint) » sr-only. */}
+      <div className={`relative mt-4 h-16 text-center font-sans leading-tight ${dark ? "text-paper" : "text-ink"}`}>
+        {markers.map((m, i) => {
+          const up = i % 2 === 1;
+          return (
+            <div
+              key={m.value}
+              className={`absolute w-32 -translate-x-1/2 sm:w-56 ${
+                up ? "bottom-full mb-14" : "top-0"
+              }`}
+              style={{ left: cuts[i] }}
+            >
+              <div className="text-[21px] font-black sm:text-[27px]">
+                {m.reached && <span aria-hidden="true">✓&nbsp;</span>}
+                {formatInt(m.value)}&nbsp;€
+                {m.reached && <span className="sr-only"> (atteint)</span>}
+              </div>
+              <div
+                className={`text-[10px] font-bold uppercase tracking-[.06em] sm:text-xs ${
+                  dark ? "text-paper/70" : "text-ink-soft"
+                }`}
+              >
+                {m.label}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
