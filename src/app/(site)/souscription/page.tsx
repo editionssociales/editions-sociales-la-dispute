@@ -283,16 +283,20 @@ export default async function SouscriptionPage() {
                     rouge qui tienne sur paper) et en corps d'affiche. Il
                     DOUBLE l'entrée vers le paiement que portent déjà le rail
                     et la feuille mobile ; sous `lg`, la feuille intercepte
-                    l'ancre `#paliers` et se redéploie. Sa cellule ABSORBE le
-                    flanc droit (`grow`) et le centre dans les DEUX axes face
-                    au compteur (retour Youri — collé bas-droite, il n'était
-                    « pas du tout centré ») ; `flex-wrap` la fait passer sous
-                    le compteur quand la largeur manque, bouton centré là
-                    aussi. Rendu dans les quatre états du bloc (panne
+                    l'ancre `#paliers` et se redéploie. Grille 2 colonnes dès
+                    `sm` plutôt qu'un `flex-wrap` (retour Youri 26/07 : son
+                    repli passait le bouton entre le montant et la barre,
+                    jamais permis) : le bouton occupe la 2ᵉ colonne de la 1ʳᵉ
+                    rangée et s'y centre dans les DEUX axes face au compteur
+                    (retour Youri — collé bas-droite, il n'était « pas du tout
+                    centré ») ; sous `sm`, il retombe en DERNIER élément de la
+                    grille — donc SOUS la jauge (2ᵉ rangée, toujours en ordre
+                    de source juste après le montant), jamais entre elle et le
+                    montant. Rendu dans les quatre états du bloc (panne
                     comprise : le paiement, lui, fonctionne — seul le total
                     est muet). L'ex-module « Objectif » reste supprimé. */}
-                <div className="flex flex-wrap gap-x-8 gap-y-6">
-                  <div className="min-w-0">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0 sm:col-start-1 sm:row-start-1">
                     {outage ? (
                       <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
                         La collecte est en cours — le total s’affichera de nouveau
@@ -339,7 +343,27 @@ export default async function SouscriptionPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex grow items-center justify-center">
+                  {/* La barre SOULIGNE le bloc du compteur au lieu de flotter
+                      sous lui : elle appartient au chiffre, d'où sa place ici
+                      en ordre de source, juste après le montant (2ᵉ rangée,
+                      pleine largeur dès `sm`). Repliée sous `sm`, elle tombe
+                      donc TOUJOURS entre le montant et le bouton, jamais
+                      l'inverse — c'est le bouton qui se replie en dernier,
+                      SOUS elle (cf. commentaire plus haut). La jauge a repris
+                      sa réserve HAUTE (l'inscription 80 k€ vit au-dessus de la
+                      barre) : curseur et inscriptions logent dans le
+                      composant, le `gap-y-6` de la grille suffit comme cran
+                      d'air. */}
+                  {!outage && (
+                    <Gauge
+                      className="sm:col-span-2 sm:row-start-2"
+                      tone="light"
+                      value={liveCampaign.gauge.value}
+                      max={liveCampaign.gauge.max}
+                      markers={liveCampaign.gauge.markers}
+                    />
+                  )}
+                  <div className="flex items-center justify-center sm:col-start-2 sm:row-start-1">
                     <div className="text-center">
                       <Button
                         href="#paliers"
@@ -360,21 +384,6 @@ export default async function SouscriptionPage() {
                     </div>
                   </div>
                 </div>
-                {/* La barre SOULIGNE le bloc du compteur au lieu de flotter
-                    sous lui : elle appartient au chiffre. La jauge a repris
-                    sa réserve HAUTE (l'inscription 80 k€ vit au-dessus de la
-                    barre) : curseur et inscriptions logent dans le composant,
-                    ce `mt-4` n'est qu'un cran d'air entre le compteur et la
-                    bande. */}
-                {!outage && (
-                  <Gauge
-                    className="mt-4"
-                    tone="light"
-                    value={liveCampaign.gauge.value}
-                    max={liveCampaign.gauge.max}
-                    markers={liveCampaign.gauge.markers}
-                  />
-                )}
               </ImpactFrame>
             </Reveal>
           </Container>
