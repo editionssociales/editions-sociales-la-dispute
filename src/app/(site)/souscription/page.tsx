@@ -36,8 +36,8 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * (R8) clos par la chute du docx et le CTA final (sur paper, sans bandeau —
  * retour Youri 25/07). Interdits d'arbitrage : aucun texte ajouté (pas de
  * numéros de section, pas de légende), pas de lettres au trait
- * (-webkit-text-stroke), pas de compression scaleX, aucune palette pop sur
- * cette page. Les displays géants sont en clamp() (variantes `lg:` : la
+ * (-webkit-text-stroke), pas de compression scaleX, palette pop réservée au
+ * seul liseré qui clôt le bloc de collecte. Les displays géants sont en clamp() (variantes `lg:` : la
  * colonne perd 380px au profit du rail, la pente vw doit se resserrer).
  *
  * Sections de l'ancienne maquette (campagne Ulule 2024) supprimées à
@@ -76,6 +76,14 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * dérivés de `DONATION_TIERS` (la table qui pilote Stripe) : la présentation
  * est éditable, jamais le paiement.
  */
+
+/**
+ * Liseré multicolore qui clôt le bloc de collecte (R2/R3) : `POP_BG` ne sert
+ * que cette décoration ponctuelle — récupérée de l'ex-CTA final (25/07), elle
+ * marque désormais le pied de la jauge. Les paliers du rail cyclent, eux, les
+ * 4 accents de marque, jamais la palette pop (réservée nav/statut).
+ */
+const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
 
 /**
  * Vidéo de présentation — ouvre le corps de texte (retour client
@@ -313,6 +321,13 @@ export default async function SouscriptionPage() {
               )}
             </Reveal>
           </Container>
+          {/* Liseré pop en pied de bloc : la seule décoration pop de la page,
+              posée sur la couture ink → paper. Décoratif pur (aria-hidden). */}
+          <div className="grid grid-cols-4" aria-hidden="true">
+            {POP_BG.map((c) => (
+              <div key={c} className={`h-1.5 ${c}`} />
+            ))}
+          </div>
         </section>
 
         {/* 2 ▪ Vidéo de présentation — OUVRE le corps de texte ; tant
@@ -689,8 +704,10 @@ export default async function SouscriptionPage() {
             (R8), montant qui grossit d'une marche à l'autre, sommet inversé
             ink. Pas de titre de section au-dessus, la jauge d'ouverture
             porte déjà « Objectif » : les barres parlent d'elles-mêmes. La
-            section se clôt sur la chute du récit et le CTA final. */}
-        <section className="mt-16 sm:mt-24">
+            section se clôt sur la chute du récit et le CTA final — d'où le
+            `pb-` : dernière section de la colonne, le CTA butait sinon
+            directement sur le pied de page (zéro pixel sous le bouton). */}
+        <section className="mt-16 pb-16 sm:mt-24 sm:pb-24">
           <Container>
             <Reveal>
               <div className="flex flex-col gap-[2px] border-2 border-ink bg-ink shadow-[8px_8px_0_0_#17140f]">
