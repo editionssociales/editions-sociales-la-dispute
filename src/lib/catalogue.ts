@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { buildCatalogueView, type CatalogueView } from "./browse";
 import { getBoutiqueOnlyBook, listBoutiqueOnlyBooks, pgCatalogueSource } from "./catalogue-pg";
+import type { RawBook } from "./catalogue-source";
 import {
   buildNativeBookDetail,
   buildNativeCatalogue,
@@ -28,36 +29,58 @@ export type { CatalogueView } from "./browse";
  * catalogue faute d'être en vente : il est simplement marqué « à paraître »
  * ou « indisponible en ligne ».
  *
- * Cache data (`unstable_cache`, tag `catalogue`, 3600 s) : les pages catalogue
- * lisent `searchParams` donc restent dynamiques (`no-store`), mais le
- * chargement Postgres n'est plus rejoué à chaque MISS — invalidé via
- * `revalidateTag('catalogue', { expire: 0 })` dans les hooks Payload
- * (expiration bloquante — read-your-writes du back-office).
+ * Cache data (`unstable_cache`, tag `catalogue`, 86400 s — filet de sécurité
+ * quotidien) : `getAllBooks` ET `getBook` partagent désormais la MÊME source
+ * brute cachée (`getRawCatalogue`, ci-dessous) — `getBook` ne fait plus sa
+ * propre requête Payload, il cherche la fiche dans le jeu complet (édition +
+ * slug). La fraîcheur temps réel vient de `revalidateTag('catalogue',
+ * { expire: 0 })`, posé par `src/payload/hooks/revalidate-catalogue.ts` sur
+ * les collections qui alimentent une fiche livre (livres, auteurs, libellés,
+ * médias) — expiration bloquante, read-your-writes du back-office ; le filet
+ * quotidien ne couvre que les écritures qui contournent les hooks (scripts,
+ * migrations).
  */
 
 const source = pgCatalogueSource();
 
-async function loadAllBooks(): Promise<Book[]> {
+/** Jeu brut complet du catalogue : les deux fonds (non résolus) + les boutique-seuls. */
+interface RawCatalogue {
+  rawByEdition: Partial<Record<EditionSlug, RawBook[]>>;
+  boutiqueOnly: RawBook[];
+}
+
+async function loadRawCatalogue(): Promise<RawCatalogue> {
   const [es, ld, boutiqueOnly] = await Promise.all([
     source.listBooks("editions-sociales"),
     source.listBooks("la-dispute"),
     listBoutiqueOnlyBooks(),
   ]);
-  return buildNativeCatalogue({ "editions-sociales": es, "la-dispute": ld }, boutiqueOnly);
+  return { rawByEdition: { "editions-sociales": es, "la-dispute": ld }, boutiqueOnly };
 }
 
 // `unstable_cache` exige un store Next (absent sous Vitest) — en test on
-// appelle `loadAllBooks` directement ; en runtime Next, data-cache 3600 s.
-const getAllBooksData =
+// appelle `loadRawCatalogue` directement ; en runtime Next, data-cache tagué
+// `catalogue`, 86400 s.
+const getRawCatalogueData =
   process.env.VITEST === "true"
-    ? loadAllBooks
-    : unstable_cache(loadAllBooks, ["catalogue-all-books"], {
-        revalidate: 3600,
+    ? loadRawCatalogue
+    : unstable_cache(loadRawCatalogue, ["catalogue-all-books"], {
+        revalidate: 86400,
         tags: ["catalogue"],
       });
 
+/**
+ * Source brute, dédoublonnée par requête (`cache`) : UNIQUE point d'entrée du
+ * data-cache pour `getAllBooks` ET `getBook` — sans cette couche, les deux
+ * appelleraient chacun `getRawCatalogueData` séparément dans un même rendu.
+ */
+const getRawCatalogue = cache(async (): Promise<RawCatalogue> => getRawCatalogueData());
+
 /** Catalogue unifié complet (deux fonds + boutique-seuls), mémoïsé par requête + data cache. */
-export const getAllBooks = cache(async (): Promise<Book[]> => getAllBooksData());
+export const getAllBooks = cache(async (): Promise<Book[]> => {
+  const { rawByEdition, boutiqueOnly } = await getRawCatalogue();
+  return buildNativeCatalogue(rawByEdition, boutiqueOnly);
+});
 
 /** Applique filtres + tri (pagination gérée par l'appelant). */
 export async function getBooks(filters: BookFilters = {}): Promise<Book[]> {
@@ -80,10 +103,18 @@ export async function catalogueView(filters: BookFilters = {}): Promise<Catalogu
   return buildCatalogueView(all, facets, filters);
 }
 
-/** Fiche complète d'un livre (par édition + slug). Absent pour un article boutique-only. */
+/**
+ * Fiche complète d'un livre (par édition + slug) — dérivée du jeu complet
+ * caché (`getRawCatalogue`), plus de requête Payload dédiée : `listBooks` et
+ * l'ancien appel individuel de `catalogue-pg.ts` font tous deux `depth: 2`
+ * avec le même mapper (`payloadBookToRawBook`), la fiche brute d'un livre de
+ * la liste est donc identique à celle d'une requête ciblée. Absent pour un
+ * article boutique-only.
+ */
 export const getBook = cache(
   async (edition: EditionSlug, slug: string): Promise<BookDetail | null> => {
-    const raw = await source.getBook(edition, slug);
+    const { rawByEdition } = await getRawCatalogue();
+    const raw = (rawByEdition[edition] ?? []).find((b) => b.slug === slug);
     if (!raw) return null;
     return buildNativeBookDetail(edition, raw, `/catalogue/${edition}/${slug}`);
   },

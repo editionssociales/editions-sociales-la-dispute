@@ -5,6 +5,10 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import {
+  revalidateCatalogueTagAfterChange,
+  revalidateCatalogueTagAfterDelete,
+} from '../hooks/revalidate-catalogue.ts'
 import { deriveSlugFromLabel } from '../lib/slug-field.ts'
 
 export const Authors: CollectionConfig = {
@@ -26,8 +30,8 @@ export const Authors: CollectionConfig = {
   hooks: {
     // Le nom/slug d'un·e auteur·rice apparaît sur toute fiche livre associée
     // (facette catalogue comprise) — même levier de revalidation qu'E6.
-    afterChange: [revalidateCatalogueAfterChange],
-    afterDelete: [revalidateCatalogueAfterDelete],
+    afterChange: [revalidateCatalogueTagAfterChange, revalidateCatalogueAfterChange],
+    afterDelete: [revalidateCatalogueTagAfterDelete, revalidateCatalogueAfterDelete],
   },
   fields: [
     {

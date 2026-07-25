@@ -1,4 +1,4 @@
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 
 import type {
   CollectionAfterChangeHook,
@@ -7,18 +7,21 @@ import type {
 } from 'payload'
 
 /**
- * Invalidation du cache Next à la sauvegarde back-office (E6 du plan).
+ * Invalidation ISR (purge par chemin) à la sauvegarde back-office (E6 du
+ * plan).
  *
  * Choix de mécanisme (à confirmer dans node_modules/next/dist/docs/01-app/
  * 02-guides au moment de coder, cf. AGENTS.md — fait) : les pages `(site)`
  * ne lisent jamais Payload en direct, elles passent par la façade
  * `src/lib/catalogue.ts`, elle-même consommée par des pages en ISR
- * classique — `export const revalidate = 3600` (voir chaque page.tsx), pas
- * Les pages ISR classiques s'appuient sur `revalidatePath` (soft tags de
- * route). En plus, `getAllBooks` pose un data-cache tagué `catalogue`
- * (`unstable_cache`) — indispensable pour les vues catalogue dynamiques
- * (`searchParams` → `no-store`) qui sinon rechargeraient Postgres à chaque
- * MISS. Les deux leviers sont donc nécessaires.
+ * classique — `export const revalidate = 3600` (voir chaque page.tsx). Les
+ * pages ISR classiques s'appuient sur `revalidatePath` (soft tags de
+ * route) — ce fichier ne gère QUE ce levier ; l'autre (`getAllBooks`/
+ * `getBook` posent un data-cache tagué `catalogue`, `unstable_cache`,
+ * indispensable pour les vues catalogue dynamiques — `searchParams` →
+ * `no-store` — qui sinon rechargeraient Postgres à chaque MISS) vit dans
+ * `revalidate-catalogue.ts`. Les deux leviers sont nécessaires en parallèle,
+ * aucun ne recouvre l'autre.
  *
  * `revalidatePath(pattern, 'page')` cible **tous** les rendus d'un même
  * fichier de page, quel que soit le paramètre dynamique (édition, slug) —
@@ -46,15 +49,13 @@ const CATALOGUE_PAGE_PATTERNS = [
   '/(site)/boutique/[slug]',
 ]
 
-/** Revalide toutes les pages qui peuvent afficher un livre/auteur/collection/média. */
+/**
+ * Revalide toutes les pages qui peuvent afficher un livre/auteur/collection/
+ * média (purge ISR par chemin uniquement — le data-cache tagué `catalogue`
+ * est invalidé séparément par `revalidate-catalogue.ts`, attaché aux mêmes
+ * collections).
+ */
 function revalidateCatalogueRoutes(): void {
-  // `{ expire: 0 }` (et pas `'max'`) : le profil `'max'` est du
-  // stale-while-revalidate — combiné à la purge de route ci-dessous, la page
-  // se re-rendait UNE fois avec les données périmées puis restait en cache
-  // 1 h (constat live). L'édition back-office exige du read-your-writes :
-  // expiration bloquante du data-cache AVANT la purge des routes, pour que
-  // le premier re-rendu parte de Postgres.
-  revalidateTag('catalogue', { expire: 0 })
   for (const path of CATALOGUE_LITERAL_PATHS) revalidatePath(path)
   for (const pattern of CATALOGUE_PAGE_PATTERNS) revalidatePath(pattern, 'page')
 }

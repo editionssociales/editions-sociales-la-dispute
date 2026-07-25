@@ -7,7 +7,10 @@ import type { EditionSlug } from "./types";
  * vitest.config.ts) : `./catalogue-pg` est substitué (adaptateur couvert par
  * `catalogue-pg.test.ts`, assemblage par `catalogue-core.test.ts`) — on ne
  * vérifie ici que la COMPOSITION : les deux fonds + les boutique-seuls
- * assemblés en un catalogue, la fiche détail construite depuis l'adaptateur.
+ * assemblés en un catalogue, la fiche détail dérivée du même jeu caché —
+ * l'adaptateur mocké n'expose volontairement PAS de `getBook` propre : seul
+ * `listBooks` fournit la donnée, preuve que `getBook` ne fait plus sa propre
+ * requête.
  */
 
 const rawBook = (id: number, over: Partial<RawBook> = {}): RawBook => ({
@@ -30,18 +33,20 @@ const rawBook = (id: number, over: Partial<RawBook> = {}): RawBook => ({
 });
 
 vi.mock("./catalogue-pg", () => ({
+  // `getBook` de `pgCatalogueSource()` n'est plus appelé par la façade
+  // (dérivation depuis `listBooks`, cf. `catalogue.ts`) — mock non fourni,
+  // `presentationHtml` posé directement sur la fiche de la liste.
   pgCatalogueSource: () => ({
     listBooks: async (edition: EditionSlug) =>
       edition === "editions-sociales"
-        ? [rawBook(1, { commerce: { sellable: true, stock: 3 } }), rawBook(2)]
+        ? [
+            rawBook(1, {
+              commerce: { sellable: true, stock: 3 },
+              presentationHtml: "<p>Présentation</p>",
+            }),
+            rawBook(2),
+          ]
         : [rawBook(3)],
-    getBook: async (edition: EditionSlug, slug: string) =>
-      edition === "editions-sociales" && slug === "livre-1"
-        ? rawBook(1, {
-            commerce: { sellable: true, stock: 3 },
-            presentationHtml: "<p>Présentation</p>",
-          })
-        : null,
   }),
   listBoutiqueOnlyBooks: async () => [
     rawBook(100, { slug: "tote-bag", title: "Tote bag", commerce: { sellable: true, stock: null } }),
@@ -72,6 +77,9 @@ describe("getBook / getBoutiqueBook — fiches détail depuis l'adaptateur pg", 
     expect(detail!.status).toBe("available");
     expect(detail!.purchaseMode).toBe("cart");
     expect(detail!.permalink).toBe("/catalogue/editions-sociales/livre-1");
+    // Le mock n'expose pas de `getBook` propre : ce champ ne peut venir que
+    // de la fiche dérivée du jeu complet retourné par `listBooks`.
+    expect(detail!.presentation).toContain("Présentation");
   });
 
   it("renvoie null pour un slug inconnu", async () => {

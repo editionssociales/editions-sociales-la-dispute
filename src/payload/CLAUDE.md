@@ -12,7 +12,8 @@ Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : 
 ## Local Contracts
 
 - Dépendance à sens unique : ce dossier importe parfois `src/lib` (`donation-tiers`, `promo-core`, `order-export`, `cart-quote` en type-only) ; `src/lib` n'importe jamais `src/payload` — seule la Local API (`getPayload`) relie les deux côtés.
-- Toute écriture automatisée (import stock routeur, migration) pose `context.migration` et/ou `context.disableRevalidate` ; une écriture humaine ne pose jamais ces flags — c'est ce qui distingue les deux au niveau des hooks (`setContentTouched`, `revalidateCatalogueAfterChange`).
+- Toute écriture automatisée (import stock routeur, migration) pose `context.migration` et/ou `context.disableRevalidate` ; une écriture humaine ne pose jamais ces flags — c'est ce qui distingue les deux au niveau des hooks (`setContentTouched`, hooks de revalidation).
+- Revalidation à l'écriture (4 collections catalogue : livres, auteur·rice·s, libellés, médias) : paire `revalidate-catalogue.ts` (expire le data-cache tagué `catalogue`) puis `revalidate.ts` (purge ISR en chemins littéraux) — le hook tag TOUJOURS avant le hook chemins dans les tableaux `afterChange`/`afterDelete` (read-your-writes, constat live 2026-07-19).
 - Endpoints custom gardés par `access.ts` (`isAdmin`/`isAdminOrEditor`) en tête de handler, avant tout I/O : `import-stock`, `export/preparation`, `export/compta`, `import-runs/:id/rapport`. Tout le reste (ex. désactivation d'un code promo depuis le dashboard) passe par le REST généré de la collection, sous sa propre `access`.
 - Dashboard (`derive.ts`) : jamais de vert par défaut — un signal non calculable est `na` (gris), jamais `ok`.
 - `Orders` : `create` fermé partout (seul le webhook Stripe écrit, Local API `overrideAccess`) ; tous les champs sont verrouillés en écriture après création sauf `status` (`lockedAfterCreate`).

@@ -39,7 +39,7 @@ export interface RawBook {
     parislibrairies: string | null;
     lalibrairie: string | null;
   };
-  /** HTML de présentation — servi par `getBook` (les listes l'omettent), sanitisé en aval. */
+  /** HTML de présentation, sanitisé en aval — toujours peuplé (`listBooks`/`getBook` font tous deux `depth: 2`, aucun champ omis). */
   presentationHtml: string | null;
   /** « Pour aller plus loin » (HTML), sanitisé en aval. */
   furtherReadingHtml: string | null;

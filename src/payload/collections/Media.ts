@@ -8,6 +8,10 @@ import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
+import {
+  revalidateCatalogueTagAfterChange,
+  revalidateCatalogueTagAfterDelete,
+} from '../hooks/revalidate-catalogue.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -45,8 +49,8 @@ export const Media: CollectionConfig = {
   hooks: {
     // Remplacer une couverture (ré-upload) doit rafraîchir les fiches qui
     // l'affichent — même levier qu'E6.
-    afterChange: [revalidateCatalogueAfterChange],
-    afterDelete: [revalidateCatalogueAfterDelete],
+    afterChange: [revalidateCatalogueTagAfterChange, revalidateCatalogueAfterChange],
+    afterDelete: [revalidateCatalogueTagAfterDelete, revalidateCatalogueAfterDelete],
   },
   fields: [
     {

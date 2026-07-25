@@ -13,6 +13,10 @@ import {
   revalidateCatalogueAfterDelete,
 } from '../hooks/revalidate.ts'
 import {
+  revalidateCatalogueTagAfterChange,
+  revalidateCatalogueTagAfterDelete,
+} from '../hooks/revalidate-catalogue.ts'
+import {
   authorIdsFromDoc,
   buildBookMediaAlt,
   mediaIdFromDoc,
@@ -177,8 +181,15 @@ export const Books: CollectionConfig = {
   hooks: {
     beforeValidate: [trimIsbnField],
     beforeChange: [setContentTouched],
-    afterChange: [syncBookMediaAlts, revalidateCatalogueAfterChange],
-    afterDelete: [revalidateCatalogueAfterDelete],
+    // Tag AVANT purge de routes : expiration bloquante du data-cache d'abord,
+    // pour que le premier re-rendu post-purge parte de Postgres (cf.
+    // revalidate-catalogue.ts, constat live 2026-07-19).
+    afterChange: [
+      syncBookMediaAlts,
+      revalidateCatalogueTagAfterChange,
+      revalidateCatalogueAfterChange,
+    ],
+    afterDelete: [revalidateCatalogueTagAfterDelete, revalidateCatalogueAfterDelete],
   },
   // `POST /api/books/import-stock` — import stock routeur mensuel (multipart,
   // admin/éditeur authentifié) ; cf. `src/payload/lib/stock-import.ts` pour
