@@ -47,8 +47,53 @@ const SORTS = BOOK_SORTS.map((s) => ({ value: s, label: SORT_LABELS[s] }));
  * par-dessus (recette « grille encadrée », voir AGENTS.md).
  */
 const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-ink";
-const FIELD_CLASS = `bg-paper px-3.5 py-2.5 outline-none ${CELL_TEXT} ${FOCUS_RING_LIGHT}`;
-const SELECT_CLASS = `${FIELD_CLASS} cursor-pointer`;
+
+/**
+ * Cellule de choix à LIBELLÉ FIXE (« Auteurs », « Tri ») : le `<select>`
+ * natif est étiré en absolu par-dessus la puce, transparent. Sans ce
+ * montage, la cellule prendrait la largeur intrinsèque de sa plus LONGUE
+ * option (un nom d'auteur entier) et son texte changerait à chaque
+ * sélection — les deux défauts que corrige le retour Youri 25/07. Hors flux,
+ * le select ne dicte plus rien : la cellule se règle sur son seul libellé.
+ *
+ * Le `<select>` reste l'élément interactif (menu natif, clavier, nom
+ * accessible par `aria-label`) ; la puce visible est décorative. L'anneau de
+ * focus est la recette claire de R5 portée par le parent via
+ * `has-[select:focus-visible]` — l'outline du select serait invisible sous
+ * `opacity-0`, et `has-[…:focus-visible]` garde la sémantique clavier que
+ * `focus-within` perdrait (il s'allumerait aussi au clic souris).
+ */
+function SelectCell({
+  label,
+  ariaLabel,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  ariaLabel: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`relative flex cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px]`}
+    >
+      <span aria-hidden="true" className="whitespace-nowrap px-3.5 py-2.5">
+        {label}
+      </span>
+      <select
+        aria-label={ariaLabel}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      >
+        {children}
+      </select>
+    </div>
+  );
+}
 
 /** Étiquette cliquable (libellé) — cellule inversante à l'état actif. */
 function Tag({
@@ -218,15 +263,18 @@ export function CatalogueFilters({
         </FramedGrid>
       )}
 
-      {/* Recherche + tri : toujours visibles, jamais dans le rail de puces
-          ci-dessus (elles ne défilent jamais). */}
+      {/* Recherche + auteurs + tri : toujours visibles, jamais dans le rail
+          de puces ci-dessus (elles ne défilent jamais). Grille explicite
+          `1fr auto auto` plutôt qu'un flex : les trois champs tiennent SUR
+          UNE SEULE LIGNE par construction (jamais de retour à la ligne à
+          négocier), les deux cellules de choix se règlent sur leur libellé
+          fixe et la recherche absorbe tout l'espace restant. */}
       <FramedGrid
-        flow="flex"
         role="group"
         aria-label="Recherche et tri du catalogue"
-        className={`items-stretch ${hasTags ? "mt-[2px]" : ""}`}
+        className={`grid-cols-[1fr_auto_auto] items-stretch ${hasTags ? "mt-[2px]" : ""}`}
       >
-        <label className="flex items-center bg-paper px-3.5">
+        <label className="flex min-w-0 items-center bg-paper px-3.5">
           <span className="sr-only">Rechercher</span>
           <input
             type="search"
@@ -237,15 +285,15 @@ export function CatalogueFilters({
               setQuery(e.target.value);
               setFilter("q", e.target.value);
             }}
-            className={`w-full min-w-[190px] bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-ink/40 ${CELL_TEXT} ${FOCUS_RING_LIGHT}`}
+            className={`w-full min-w-0 bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-ink/40 ${CELL_TEXT} ${FOCUS_RING_LIGHT}`}
           />
         </label>
 
-        <select
-          aria-label="Auteur"
+        <SelectCell
+          label="Auteurs"
+          ariaLabel="Auteur"
           value={filters.author ?? ""}
-          onChange={(e) => setFilter("author", e.target.value)}
-          className={SELECT_CLASS}
+          onChange={(v) => setFilter("author", v)}
         >
           <option value="">Tous les auteurs</option>
           {authors.map((a) => (
@@ -253,20 +301,20 @@ export function CatalogueFilters({
               {a.name} ({a.count})
             </option>
           ))}
-        </select>
+        </SelectCell>
 
-        <select
-          aria-label="Trier"
+        <SelectCell
+          label="Tri"
+          ariaLabel="Trier"
           value={filters.sort ?? "recent"}
-          onChange={(e) => setFilter("sort", e.target.value)}
-          className={SELECT_CLASS}
+          onChange={(v) => setFilter("sort", v)}
         >
           {SORTS.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>
           ))}
-        </select>
+        </SelectCell>
       </FramedGrid>
 
       <FilterChips chips={chips} onRemove={removeFilter} onClearAll={clearAll} />

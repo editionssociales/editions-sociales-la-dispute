@@ -67,10 +67,10 @@ async function CatalogueBody({
           rôle visuellement. */}
       <h1 className="sr-only">Le catalogue par libellés</h1>
 
-      {/* Même vue de libellés que /catalogue/[edition] (rectangles simples /
-          cases variables derrière le switch temporaire, retour client
-          2026-07-23) ; les étiquettes de libellés des filtres ci-dessous
-          sont masquées, cette vue couvre déjà ce rôle. */}
+      {/* Même vue de libellés que /catalogue/[edition] (« cases variables »,
+          vue unique depuis l'arbitrage client 25/07) ; les étiquettes de
+          libellés des filtres ci-dessous sont masquées, cette vue couvre
+          déjà ce rôle. */}
       <LibelleMosaic
         items={[
           { name: "Tous les livres", slug: null, count: facets.total },
