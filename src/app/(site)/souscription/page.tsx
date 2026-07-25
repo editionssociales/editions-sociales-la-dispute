@@ -238,6 +238,29 @@ export default async function SouscriptionPage() {
   // (l'objectif, lui, reste vrai). L'ISR (1 h) peut prolonger cet état
   // quelques minutes après le retour de Stripe.
   const outage = enabled && campaign2026 === null;
+  // CTA « Contribuer » du bloc collecte : une seule définition, rendue à DEUX
+  // endroits (repli `lg`, cf. plus bas) — jamais les deux en même temps
+  // (`hidden`/`lg:hidden` s'excluent), donc aucun doublon dans l'arbre a11y.
+  const contribuerCta = (
+    <div className="text-center">
+      <Button
+        href="#paliers"
+        variant="alarm"
+        aria-label="Contribuer — voir les contreparties"
+        className="px-10 py-5 text-lg tracking-[.04em] sm:px-14 sm:py-7 sm:text-3xl"
+      >
+        Contribuer
+      </Button>
+      {/* Avant l'ouverture, le rail garde ses CTA morts : la date sous le
+          bouton évite la promesse en l'air (même microcopie que `ClosedCta`,
+          source unique). */}
+      {!enabled && (
+        <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-ink-soft">
+          {OPENING_MICROCOPY}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
@@ -283,20 +306,29 @@ export default async function SouscriptionPage() {
                     rouge qui tienne sur paper) et en corps d'affiche. Il
                     DOUBLE l'entrée vers le paiement que portent déjà le rail
                     et la feuille mobile ; sous `lg`, la feuille intercepte
-                    l'ancre `#paliers` et se redéploie. Grille 2 colonnes dès
-                    `sm` plutôt qu'un `flex-wrap` (retour Youri 26/07 : son
-                    repli passait le bouton entre le montant et la barre,
-                    jamais permis) : le bouton occupe la 2ᵉ colonne de la 1ʳᵉ
-                    rangée et s'y centre dans les DEUX axes face au compteur
-                    (retour Youri — collé bas-droite, il n'était « pas du tout
-                    centré ») ; sous `sm`, il retombe en DERNIER élément de la
-                    grille — donc SOUS la jauge (2ᵉ rangée, toujours en ordre
-                    de source juste après le montant), jamais entre elle et le
-                    montant. Rendu dans les quatre états du bloc (panne
-                    comprise : le paiement, lui, fonctionne — seul le total
-                    est muet). L'ex-module « Objectif » reste supprimé. */}
-                <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                  <div className="min-w-0 sm:col-start-1 sm:row-start-1">
+                    l'ancre `#paliers` et se redéploie. Sa cellule ABSORBE le
+                    flanc droit (`grow`) et le centre dans les DEUX axes face
+                    au compteur (retour Youri — collé bas-droite, il n'était
+                    « pas du tout centré »). Repli en DEUX rendus du MÊME
+                    `contribuerCta` plutôt qu'un `flex-wrap` sans borne
+                    (retour Youri 26/07 : un simple flex-wrap laissait le
+                    bouton chevaucher le chiffre au lieu de se replier
+                    proprement, et de toute façon son repli passait entre le
+                    montant et la barre, ce qui n'est jamais permis) : le seuil
+                    est `xl`, PAS `lg` — mesuré en direct (constat client
+                    26/07), le rail de 380px rétrécit déjà la colonne à `lg`,
+                    où montant + bouton ne rentrent PAS encore (chevauchement
+                    vérifié jusqu'à ~1150px, marge saine à partir de `xl`,
+                    1280px). Dès `xl` le bouton rejoint le montant dans UNE
+                    rangée flex (`flex-wrap` gardé en garde-fou si le montant
+                    grossit un jour au-delà de cette marge) ; sous `xl` cette
+                    cellule est masquée et un second rendu du même CTA prend
+                    place APRÈS la jauge, jamais entre elle et le montant.
+                    Rendu dans les quatre états du bloc (panne comprise : le
+                    paiement, lui, fonctionne — seul le total est muet).
+                    L'ex-module « Objectif » reste supprimé. */}
+                <div className="flex flex-col gap-6 xl:flex-row xl:flex-wrap xl:gap-x-8 xl:gap-y-6">
+                  <div className="min-w-0">
                     {outage ? (
                       <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
                         La collecte est en cours — le total s’affichera de nouveau
@@ -343,47 +375,35 @@ export default async function SouscriptionPage() {
                       </p>
                     )}
                   </div>
-                  {/* La barre SOULIGNE le bloc du compteur au lieu de flotter
-                      sous lui : elle appartient au chiffre, d'où sa place ici
-                      en ordre de source, juste après le montant (2ᵉ rangée,
-                      pleine largeur dès `sm`). Repliée sous `sm`, elle tombe
-                      donc TOUJOURS entre le montant et le bouton, jamais
-                      l'inverse — c'est le bouton qui se replie en dernier,
-                      SOUS elle (cf. commentaire plus haut). La jauge a repris
-                      sa réserve HAUTE (l'inscription 80 k€ vit au-dessus de la
-                      barre) : curseur et inscriptions logent dans le
-                      composant, le `gap-y-6` de la grille suffit comme cran
-                      d'air. */}
-                  {!outage && (
-                    <Gauge
-                      className="sm:col-span-2 sm:row-start-2"
-                      tone="light"
-                      value={liveCampaign.gauge.value}
-                      max={liveCampaign.gauge.max}
-                      markers={liveCampaign.gauge.markers}
-                    />
-                  )}
-                  <div className="flex items-center justify-center sm:col-start-2 sm:row-start-1">
-                    <div className="text-center">
-                      <Button
-                        href="#paliers"
-                        variant="alarm"
-                        aria-label="Contribuer — voir les contreparties"
-                        className="px-10 py-5 text-lg tracking-[.04em] sm:px-14 sm:py-7 sm:text-3xl"
-                      >
-                        Contribuer
-                      </Button>
-                      {/* Avant l'ouverture, le rail garde ses CTA morts : la
-                          date sous le bouton évite la promesse en l'air (même
-                          microcopie que `ClosedCta`, source unique). */}
-                      {!enabled && (
-                        <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-ink-soft">
-                          {OPENING_MICROCOPY}
-                        </p>
-                      )}
-                    </div>
+                  {/* CTA en position « à côté du montant » : UNIQUEMENT dès
+                      `xl` (marge saine mesurée, cf. commentaire plus haut),
+                      masqué en dessous — le second rendu, après la jauge,
+                      prend le relais (cf. plus bas). */}
+                  <div className="hidden xl:flex xl:grow xl:items-center xl:justify-center">
+                    {contribuerCta}
                   </div>
                 </div>
+                {/* La barre SOULIGNE le bloc du compteur au lieu de flotter
+                    sous lui : elle appartient au chiffre — sibling de la
+                    rangée montant/bouton, TOUJOURS pleine largeur (jamais
+                    contrainte par la colonne du montant ni par celle du
+                    bouton). La jauge a repris sa réserve HAUTE (l'inscription
+                    80 k€ vit au-dessus de la barre) : curseur et inscriptions
+                    logent dans le composant, ce `mt-4` n'est qu'un cran d'air
+                    entre le compteur et la bande. */}
+                {!outage && (
+                  <Gauge
+                    className="mt-4"
+                    tone="light"
+                    value={liveCampaign.gauge.value}
+                    max={liveCampaign.gauge.max}
+                    markers={liveCampaign.gauge.markers}
+                  />
+                )}
+                {/* CTA en position de repli : sous `xl` SEULEMENT (exclusif
+                    avec le rendu ci-dessus), toujours APRÈS la jauge — jamais
+                    entre elle et le montant. */}
+                <div className="mt-6 flex justify-center xl:hidden">{contribuerCta}</div>
               </ImpactFrame>
             </Reveal>
           </Container>
