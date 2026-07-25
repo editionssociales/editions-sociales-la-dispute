@@ -248,11 +248,7 @@ export default async function SouscriptionPage() {
           `site-header.tsx`). Jamais monté en panne Stripe — pas de total
           honnête à afficher. */}
       {!outage && (
-        <CollecteTicker
-          value={liveCampaign.gauge.value}
-          max={liveCampaign.gauge.max}
-          markers={liveCampaign.gauge.markers}
-        />
+        <CollecteTicker value={liveCampaign.gauge.value} max={liveCampaign.gauge.max} />
       )}
       {/* Colonne principale (jauge, corps de texte, CTA final) — le rail des
           contreparties vit en frère de DOM, sur la droite de la page entière,
@@ -349,13 +345,17 @@ export default async function SouscriptionPage() {
                     )}
                   </div>
                 </div>
-                {/* La barre SOULIGNE le bloc du compteur (`mt-2`, 26/07) au
-                    lieu de flotter sous lui : elle appartient au chiffre. La
-                    seule gouttière qui subsiste entre les deux est la réserve
-                    des libellés hauts (`pt-16/20`), INTERNE à la jauge. */}
+                {/* La barre SOULIGNE le bloc du compteur (26/07) au lieu de
+                    flotter sous lui : elle appartient au chiffre. La jauge
+                    n'ayant plus ni libellés ni réserve haute (26/07), cette
+                    gouttière est désormais la SEULE — et le curseur y monte de
+                    6px (il est à moitié hors barre). D'où `mt-4` et non `mt-2` :
+                    8px laisseraient 2px entre la pointe et les descendantes du
+                    compteur, 16px en laissent 10 sans desserrer la barre du
+                    chiffre. */}
                 {!outage && (
                   <Gauge
-                    className="mt-2"
+                    className="mt-4"
                     tone="light"
                     value={liveCampaign.gauge.value}
                     max={liveCampaign.gauge.max}
