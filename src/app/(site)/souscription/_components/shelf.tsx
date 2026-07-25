@@ -11,8 +11,8 @@ import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
  * Étagère 3D de l'ask `/souscription` et son repli mobile — module colocalisé
  * privé (`_components`, hors routing App Router), composants serveur
  * uniquement. Les deux étagères plafonnent elles-mêmes leur contenu (11 dos
- * dessinés / 8 couvertures) : l'appelant passe simplement ses parutions
- * filtrées.
+ * dessinés / 7 couvertures + une case « ··· » vers le catalogue) :
+ * l'appelant passe simplement ses parutions filtrées.
  */
 
 // Étagère de l'ask : dimensions en pixels des dos de livres dessinés.
@@ -32,6 +32,14 @@ const SPINES: { h: number; w: number }[] = [
 const SHELF_GAP = 6; // = gap-1.5 entre les dos
 
 /**
+ * Hauteur du plus grand dos. Les dos sont alignés par le BAS (`items-end`) :
+ * un `bottom` constant place donc le cartouche à la même ordonnée quel que
+ * soit le dos survolé — un `bottom: calc(100% + …)` suivrait la hauteur propre
+ * de chaque dos et ferait sauter le bloc de texte d'un livre à l'autre.
+ */
+const SHELF_MAX_H = Math.max(...SPINES.map((s) => s.h));
+
+/**
  * Hauteur uniforme (px) du livre déplié au survol. Les dos gardent leur
  * hauteur variée au repos (l'étagère), mais tous les livres atteignent cette
  * hauteur une fois sortis — grand format, pour bien présenter la couverture.
@@ -39,10 +47,11 @@ const SHELF_GAP = 6; // = gap-1.5 entre les dos
  */
 const BOOK_HOVER_H = 320;
 
-/** Nombre de couvertures dans le repli mobile (grille 2×4, R7 — l'étagère 3D
- *  ne peut pas disparaître sous `lg` sur une page dont le trafic de campagne
- *  sera majoritairement mobile). */
-const MOBILE_SHELF_COUNT = 8;
+/** Couvertures du repli mobile : 7, la 8ᵉ case de la grille 2×4 étant prise
+ *  par la case « ··· » vers le catalogue (retour Youri 25/07). R7 — l'étagère
+ *  3D ne peut pas disparaître sous `lg` sur une page dont le trafic de
+ *  campagne sera majoritairement mobile. */
+const MOBILE_SHELF_COUNT = 7;
 
 /**
  * Étagère de l'ask : chaque dos dessiné porte une parution récente réelle. Au
@@ -50,7 +59,8 @@ const MOBILE_SHELF_COUNT = 8;
  * l'arête de sa reliure (bord droit du dos) pour présenter sa couverture,
  * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
  * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
- * apparaissent en typo nue sous la barre de l'étagère. CSS pur, aucun JS
+ * apparaissent en typo nue AU-DESSUS des dos, dans la bande réservée en tête
+ * (retour Youri 25/07 — l'encart vivait sous la barre). CSS pur, aucun JS
  * client. L'étagère vit sous le titre de l'ask, sur fond paper (maquette
  * 25/07) : la couverture dépliée peut recouvrir temporairement le titre
  * au-dessus — même comportement que dans l'ex-héros, où elle glissait vers
@@ -69,6 +79,9 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
   );
   return (
     <ShelfLock className="hidden lg:block">
+      {/* Zone réservée AU-DESSUS des dos : l'encart titre/auteur/collection du
+          dos ouvert s'y affiche (positionné en absolu depuis chaque lien). */}
+      <div aria-hidden="true" className="h-20" />
       <div className="flex items-end gap-1.5">
         {SPINES.map((s, i) => {
           const book = books[i];
@@ -99,12 +112,13 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
                 {book.title}
                 {book.authors[0] ? `, ${book.authors[0].name}` : ""}
               </span>
-              {/* Titre, auteur, collection — fondu sous la barre de l'étagère.
+              {/* Titre, auteur, collection — fondu AU-DESSUS de l'étagère
+                  (retour Youri 25/07, l'encart vivait sous la barre).
                   Affiché quand le dos est ouvert (classe is-open pilotée par
                   ShelfLock) ou au focus clavier ; cf. .book3d-cap (globals.css). */}
               <span
                 className="book3d-cap pointer-events-none absolute z-10 block w-[340px] opacity-0 transition-opacity duration-300 motion-reduce:transition-none"
-                style={{ left: -leftOffsets[i], top: "calc(100% + 16px)" }}
+                style={{ left: -leftOffsets[i], bottom: SHELF_MAX_H + 16 }}
                 aria-hidden="true"
               >
                 <span className="block font-serif text-sm font-semibold text-ink">
@@ -143,9 +157,6 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
         {trailing && <div className="min-w-0 flex-1">{trailing}</div>}
       </div>
       <div className="h-[3px] bg-ink/25" />
-      {/* Zone réservée sous la barre : l'encart titre/auteur/collection du dos
-          ouvert s'y affiche (positionné en absolu depuis chaque lien). */}
-      <div aria-hidden="true" className="h-20" />
     </ShelfLock>
   );
 }
@@ -156,7 +167,9 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
  * l'atout le plus travaillé de la page ne peut pas disparaître pour la
  * majorité du trafic de la campagne. Toujours via `BookCover` : jamais
  * recadrée (`src/components/CLAUDE.md`), donc pas de grille à hauteur de
- * cellule forcée.
+ * cellule forcée. La 8ᵉ case n'est pas un livre mais la suite du fonds :
+ * « ··· » vers le catalogue — l'équivalent mobile des points médians posés
+ * sur le rayon de `HeroShelf`.
  */
 export function MobileShelf({ books }: { books: Book[] }) {
   // Même invariant que HeroShelf : couverture + fiche interne requises.
@@ -194,6 +207,15 @@ export function MobileShelf({ books }: { books: Book[] }) {
           />
         </Link>
       ))}
+      {/* 8ᵉ case : la suite du fonds. Format de couverture (`aspect-[2/3]`)
+          pour tenir le rythme de la grille, points médians centrés. */}
+      <Link
+        href="/catalogue"
+        className={`flex aspect-[2/3] items-center justify-center bg-paper-2 font-sans text-2xl font-black leading-none text-ink/45 transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${FOCUS_RING_LIGHT_OUTER}`}
+      >
+        <span className="sr-only">Voir tout le catalogue</span>
+        <span aria-hidden="true">···</span>
+      </Link>
     </div>
   );
 }

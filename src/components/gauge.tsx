@@ -54,13 +54,10 @@ export function Gauge({
       <div
         role="img"
         aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
-        className="relative h-4 overflow-hidden"
-        style={{
-          // Les quatre blocs se répartissent le segment 0 → objectif
-          // (≈83,3 % de la demi-droite) ; brick continue sur le dépassement.
-          background:
-            "linear-gradient(90deg, var(--color-navy) 0 20.83%, var(--color-bottle) 20.83% 41.67%, var(--color-ocher) 41.67% 62.5%, var(--color-brick) 62.5% 100%)",
-        }}
+        // Barre ORANGE d'un bout à l'autre (retour Youri 25/07, remplace les
+        // quatre blocs navy/bottle/ocher/brick) : ocher est l'orange de la
+        // charte (R3, accent d'attente) — lisible sur ink comme sur paper.
+        className="relative h-4 overflow-hidden bg-ocher"
       >
         {/* Cache : recouvre la part non collectée, glisse vers la droite.
             Animé en transform (composité GPU) plutôt qu'en `left`
@@ -86,10 +83,15 @@ export function Gauge({
           chevaucher le 80 k€. Sous `sm`, les mêmes entrées passent en liste
           empilée, lisible à 320px ; l'overlay ne s'affiche qu'à partir de
           `sm`. */}
-      <div className={`mt-2 text-xs ${tone === "dark" ? "text-paper/70" : "text-ink-soft"}`}>
+      {/* Corps de la légende : text-sm sous `sm` (la liste empilée est la
+          seule vue mobile des paliers — text-xs y était trop petit, retour
+          Youri 25/07), text-xs dès que l'overlay reprend la main. */}
+      <div
+        className={`mt-2 text-sm sm:text-xs ${tone === "dark" ? "text-paper/80 sm:text-paper/70" : "text-ink-soft"}`}
+      >
         {/* role="list" : le preflight Tailwind pose list-style:none, ce qui
             fait retirer la sémantique de liste par Safari/VoiceOver. */}
-        <ul role="list" className="flex flex-col gap-1 sm:hidden">
+        <ul role="list" className="flex flex-col gap-2 sm:hidden">
           {markers.map((m) => (
             <li key={m.value}>
               <span className={`text-lg font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>

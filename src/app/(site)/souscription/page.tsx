@@ -5,7 +5,6 @@ import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
 import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
-import { FOCUS_RING_DARK } from "@/lib/ui";
 import { donationsEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { youTubeEmbedUrl } from "@/lib/video";
@@ -397,11 +396,16 @@ export default async function SouscriptionPage() {
               <HeroShelf
                 books={shelfBooks}
                 trailing={
-                  <span
-                    aria-hidden="true"
-                    className="block max-w-[15ch] pb-2 pl-12 font-sans text-[clamp(30px,3.4vw,46px)] font-black italic leading-[0.95] text-ink"
-                  >
-                    aidez-nous à poursuivre l’histoire.
+                  // Trois points médians AVANT la demande (retour Youri
+                  // 25/07) : les livres à venir, posés sur le rayon — ils
+                  // décalent d'autant le texte vers la droite.
+                  <span aria-hidden="true" className="flex items-end gap-6 pb-2 pl-6">
+                    <span className="block font-sans text-[clamp(30px,3.4vw,46px)] font-black leading-[0.7] tracking-[.12em] text-ink/40">
+                      ···
+                    </span>
+                    <span className="block max-w-[15ch] font-sans text-[clamp(30px,3.4vw,46px)] font-black italic leading-[0.95] text-ink">
+                      aidez-nous à poursuivre l’histoire.
+                    </span>
                   </span>
                 }
               />
@@ -412,30 +416,32 @@ export default async function SouscriptionPage() {
           <div className="mx-auto mt-8 w-full max-w-6xl px-5 sm:px-8 lg:hidden">
             <MobileShelf books={shelfBooks} />
           </div>
-          <p
-            aria-hidden="true"
-            className="mt-8 block bg-ink pb-10 pt-10 font-sans font-black italic text-paper sm:mt-10 sm:pb-12 sm:pt-12 lg:hidden"
-          >
-            <span className={SPAN_CONTAINER}>
-              <span className="block max-w-[16ch] text-[clamp(28px,7vw,54px)] leading-[0.95]">
-                aidez-nous à poursuivre l’histoire.
-              </span>
-            </span>
-          </p>
-          {/* Chemin mobile uniquement (en lg+, le rail sticky est déjà
-              visible) : petite bande ink qui prolonge le bandeau du slogan.
-              Padding seulement, JAMAIS de marge sur le premier enfant — une
-              marge fusionnerait à travers le div (margin collapse) et
-              ouvrirait une bande de paper entre les deux blocs ink (bug
-              constaté en prod le 25/07 avec l'ancien `mt-14` de l'étagère). */}
-          <div className="bg-ink text-paper lg:hidden">
-            <div className="mx-auto w-full max-w-6xl px-5 pb-8 sm:px-8">
-              <a
-                href="#paliers"
-                className={`inline-flex min-h-11 items-center font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper ${FOCUS_RING_DARK}`}
+          {/* Bandeau ink de la demande + son CTA sur UNE SEULE ligne : le
+              bouton « Contribuer » est centré verticalement à DROITE du texte
+              (retour Youri 25/07 — il remplace le lien « Voir les
+              contreparties ↓ » qui vivait dans une bande ink séparée, sous le
+              slogan). La demande reste `aria-hidden` (le h1 la porte en
+              sr-only) mais le bouton, lui, doit rester dans l'arbre a11y :
+              d'où l'attribut sur le seul <p>, jamais sur la bande. Paddings
+              SEULEMENT, jamais de marge sur un enfant — une marge
+              fusionnerait à travers le div (margin collapse) et ouvrirait une
+              bande de paper (bug constaté en prod le 25/07). */}
+          <div className="mt-8 bg-ink text-paper sm:mt-10 lg:hidden">
+            <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-5 py-10 sm:gap-6 sm:px-8 sm:py-12">
+              <p
+                aria-hidden="true"
+                className="min-w-0 flex-1 font-sans text-[clamp(22px,6vw,54px)] font-black italic leading-[0.95]"
               >
-                Voir les contreparties ↓
-              </a>
+                aidez-nous à poursuivre l’histoire.
+              </p>
+              <Button
+                href="#paliers"
+                variant="invert"
+                aria-label="Contribuer — voir les contreparties"
+                className="shrink-0 px-4 py-3 text-[13px] font-extrabold tracking-[.03em] sm:px-6 sm:py-3.5 sm:text-sm"
+              >
+                Contribuer
+              </Button>
             </div>
           </div>
         </section>
@@ -642,20 +648,30 @@ export default async function SouscriptionPage() {
         </section>
 
         {/* Section 4 — l'appel : tout le h2 sur bandeau bottle, en crescendo
-            (« Nous avons besoin » modéré, « de vous » géant) ; le paragraphe
-            unique agrandi (c'est l'ask du récit, pas un descriptif). */}
+            (« Nous avons besoin » modéré, « de vous » géant), clos par un
+            POINT D'EXCLAMATION à la hauteur des deux lignes (retour Youri
+            25/07) — seul ajout de texte au verbatim du docx, assumé comme
+            ponctuation de l'ask. Les deux lignes passent en colonne flex pour
+            que le « ! » se pose à leur droite : le corps du « ! » est calé
+            sur la SOMME des deux hauteurs de ligne (≈16,4vw ÷ 0,72 de hauteur
+            de glyphe), et son `leading` serré l'empêche de dicter la hauteur
+            de la rangée. Le paragraphe unique reste agrandi (c'est l'ask du
+            récit, pas un descriptif). */}
         <section className="mt-16 sm:mt-24">
           <Reveal>
             <h2 className="bg-bottle font-sans font-black italic text-paper">
-              <span
-                className={`${SPAN_CONTAINER} pt-8 text-[clamp(22px,5vw,44px)] uppercase leading-[0.9] sm:pt-10`}
-              >
-                Nous avons besoin
-              </span>{" "}
-              <span
-                className={`${SPAN_CONTAINER} pb-8 text-[clamp(54px,14vw,140px)] uppercase leading-[0.85] tracking-[-0.02em] sm:pb-10 lg:text-[clamp(54px,10vw,140px)]`}
-              >
-                de vous
+              <span className="mx-auto flex w-full max-w-6xl items-center gap-2 px-5 pb-8 pt-8 sm:gap-5 sm:px-8 sm:pb-10 sm:pt-10">
+                <span className="block min-w-0 flex-1">
+                  <span className="block text-[clamp(22px,5vw,44px)] uppercase leading-[0.9]">
+                    Nous avons besoin
+                  </span>{" "}
+                  <span className="block text-[clamp(54px,14vw,140px)] uppercase leading-[0.85] tracking-[-0.02em] lg:text-[clamp(54px,10vw,140px)]">
+                    de vous
+                  </span>
+                </span>
+                <span className="block shrink-0 text-[clamp(92px,22vw,210px)] leading-[0.72] lg:text-[clamp(92px,17.5vw,210px)]">
+                  !
+                </span>
               </span>
             </h2>
             <Container className="pt-8 sm:pt-10">
@@ -688,7 +704,11 @@ export default async function SouscriptionPage() {
                     className={`grid grid-cols-[10px_1fr] sm:grid-cols-[14px_1fr] ${o.sommet ? "bg-ink text-paper" : "bg-paper text-ink"}`}
                   >
                     <span aria-hidden="true" className={`block ${o.accent}`} />
-                    <div className="flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-6 sm:px-7 sm:py-8">
+                    {/* Corps agrandi sous `sm` (retour Youri 25/07) : sur
+                        mobile, l'intitulé et le descriptif du palier passaient
+                        en 15/14px sur une colonne pleine largeur — ils y sont
+                        la seule explication de l'objectif, pas une légende. */}
+                    <div className="flex flex-wrap items-center gap-x-8 gap-y-4 px-5 py-7 sm:gap-y-3 sm:px-7 sm:py-8">
                       {/* `{" "}` porteur (hérité de l'ancienne grille) : les
                           nœuds espace entre blocs ne sont pas rendus, mais
                           AT/copier-coller séparent bien « 50 000 € » de son
@@ -697,11 +717,11 @@ export default async function SouscriptionPage() {
                         {formatInt(o.value)}&nbsp;€
                       </p>{" "}
                       <div className="min-w-0 flex-1 basis-[26ch]">
-                        <p className="font-sans text-[15px] font-extrabold uppercase tracking-[.06em]">
+                        <p className="font-sans text-base font-extrabold uppercase tracking-[.06em] sm:text-[15px]">
                           {o.titre}
                         </p>
                         <p
-                          className={`mt-1.5 text-sm leading-relaxed ${o.sommet ? "text-paper/70" : "text-ink/70"}`}
+                          className={`mt-2 text-[15px] leading-relaxed sm:mt-1.5 sm:text-sm ${o.sommet ? "text-paper/80 sm:text-paper/70" : "text-ink/80 sm:text-ink/70"}`}
                         >
                           {o.desc}
                         </p>
