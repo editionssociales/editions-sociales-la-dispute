@@ -13,7 +13,7 @@ import {
 } from "@/lib/nav";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { NAV_ACCENT_BG } from "./nav-accent";
-import { CartNavCell } from "./cart/cart-badge";
+import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
 
 /**
  * Navbar brutaliste — quadrillage noir 2px (conteneur `grid gap-[2px]
@@ -41,15 +41,19 @@ import { CartNavCell } from "./cart/cart-badge";
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » |
  * nav 2×2. Dans le bloc maisons, « Les Éditions sociales » (plus long) fixe
  * la largeur ; la rangée du dessus aligne « La Dispute » puis deux carrés
- * icône (Accueil, Panier) dans l'espace restant. Mobile : 2 rangées —
- * [LD | Accueil icône | ES | « Nous soutenir » | panier icône] puis
- * [Catalogue | Agenda]. La Geme et À paraître n'ont pas de cellule téléphone
- * (elles restent accessibles par la mosaïque de libellés de /catalogue et la
- * mosaïque pop du pied de page) — le quadrillage tient au premier paint sans
- * pousser le contenu hors écran.
+ * icône (Accueil, Panier) dans l'espace restant.
  *
- * Les carrés Accueil / Panier (desktop dans le bloc maisons ; mobile en
- * rangée haute) sont permanents. `useSearchParams` (états Geme / À paraître)
+ * Mobile : UNE seule rangée visible par défaut —
+ * [LD | Accueil icône | ES | « Nous soutenir » | bascule chevron]. La deuxième
+ * rangée n'existe plus en permanence : les 4 sections du desktop vivent
+ * derrière la bascule, en menu déroulant 2×2. Déroulé, la case de droite de la
+ * rangée haute redevient le carré panier et la bascule se réinstalle en barre
+ * pleine largeur SOUS les sections, chevron retourné, pour refermer. Le
+ * compteur d'articles suit toujours cette case de droite : il s'affiche donc
+ * sur le chevron quand le menu est fermé (`CartCountBadge`, exigence client).
+ *
+ * Le carré Accueil (desktop dans le bloc maisons ; mobile en rangée haute) est
+ * permanent. `useSearchParams` (états Geme / À paraître)
  * est confiné derrière `<Suspense>` — sans ça, le layout racine dynamiserait
  * tout le site.
  *
@@ -61,6 +65,9 @@ import { CartNavCell } from "./cart/cart-badge";
  * changement visuel), sauf le groupe maisons desktop qui reste un vrai
  * item de grille (sous-grille Dispute + carrés / ES).
  */
+
+/** Cible de `aria-controls` de la bascule mobile (panneau des 4 sections). */
+const MOBILE_MENU_ID = "menu-sections-mobile";
 
 const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
   catalogue: "bg-paper hover:bg-pop-pink",
@@ -86,9 +93,6 @@ const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string }> = {
     cellClass: "bg-navy text-paper hover:bg-paper hover:text-navy",
   },
 };
-
-/** Sections gardées dans le quadrillage téléphone (cf. docstring du fichier). */
-const MOBILE_SECTION_IDS: NavSectionId[] = ["catalogue", "agenda"];
 
 /** Placement en grille desktop (littéral : le JIT ne compile pas `col-start-${n}`). */
 const SECTION_PLACEMENT: Record<NavSectionId, string> = {
@@ -195,6 +199,62 @@ function HomeNavCell({ placement, active }: { placement: string; active: boolean
     >
       <HomeGlyph />
     </Link>
+  );
+}
+
+/** Chevron du menu déroulant mobile (angles droits, R8) — pointe vers le bas
+ *  au repos, retourné (`rotate-180`) quand le menu est déroulé. */
+function ChevronGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="M4 8 L12 17 L20 8" />
+    </svg>
+  );
+}
+
+/**
+ * Bascule du menu déroulant mobile — MÊME recette visuelle que la cellule
+ * panier (`CartNavCell` en mode `icon`) : les deux occupent tour à tour la case
+ * de droite de la rangée haute (fermé = cette bascule, déroulé = le panier).
+ *
+ *  • `open=false` : carré de droite de la rangée haute, chevron vers le bas ;
+ *    il porte le compteur du panier (le panier n'a alors pas de case à lui —
+ *    le compteur doit rester visible, exigence client).
+ *  • `open=true` : barre pleine largeur SOUS les sections, chevron retourné,
+ *    referme le menu. Pas de compteur : le panier a repris sa case.
+ */
+function MobileMenuToggle({
+  open,
+  onToggle,
+  panelId,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  panelId: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={open ? panelId : undefined}
+      aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+      className={`relative flex min-h-11 items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${
+        open ? "w-full" : "w-14"
+      }`}
+    >
+      <span className={open ? "rotate-180" : undefined}>
+        <ChevronGlyph />
+      </span>
+      {!open && <CartCountBadge />}
+    </button>
   );
 }
 
@@ -340,6 +400,20 @@ function SiteHeaderChrome({
   homeActive: boolean;
   railInset: boolean;
 }) {
+  // Menu déroulant mobile : fermé par défaut à chaque page (la rangée des
+  // sections n'existe plus en permanence sous `lg`), refermé après navigation.
+  // Refermeture après navigation par AJUSTEMENT EN RENDU (pattern React
+  // « adjusting state when a prop changes ») et non par effet : un
+  // `setState` dans un `useEffect` provoquerait un rendu en cascade (et
+  // l'ouverture resterait peinte une frame après le clic).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname() ?? "/";
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (lastPathname !== pathname) {
+    setLastPathname(pathname);
+    setMenuOpen(false);
+  }
+
   return (
     <header className={railInset ? "sticky top-0 z-50 lg:mr-[380px]" : "sticky top-0 z-50"}>
       <nav aria-label="Navigation principale" className="bg-ink">
@@ -364,25 +438,43 @@ function SiteHeaderChrome({
             <li className="contents">
               <SoutenirCell compact={compact} placement="min-w-0 flex-1 py-3" />
             </li>
+            {/* Case de droite : panier quand le menu est déroulé, bascule du
+                menu (chevron + compteur panier) quand il est fermé. */}
             <li className="contents">
-              <CartNavCell compact={compact} icon placement="w-14" />
+              {menuOpen ? (
+                <CartNavCell compact={compact} icon placement="w-14" />
+              ) : (
+                <MobileMenuToggle
+                  open={false}
+                  onToggle={() => setMenuOpen(true)}
+                  panelId={MOBILE_MENU_ID}
+                />
+              )}
             </li>
           </ul>
-          <ul className="grid grid-cols-2 gap-[2px]">
-            {NAV_SECTIONS.filter((section) => MOBILE_SECTION_IDS.includes(section.id)).map(
-              (section) => (
-                <li key={section.id} className="contents">
-                  <Link
-                    href={section.href}
-                    aria-current={active[section.id] ? "page" : undefined}
-                    className={navCellClass(section.id, active[section.id], compact)}
-                  >
-                    {section.label}
-                  </Link>
-                </li>
-              ),
-            )}
-          </ul>
+          {menuOpen && (
+            <>
+              <ul id={MOBILE_MENU_ID} className="grid grid-cols-2 gap-[2px]">
+                {NAV_SECTIONS.map((section) => (
+                  <li key={section.id} className="contents">
+                    <Link
+                      href={section.href}
+                      aria-current={active[section.id] ? "page" : undefined}
+                      className={navCellClass(section.id, active[section.id], compact)}
+                    >
+                      {section.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {/* Bascule repliée en bas du menu, chevron retourné. */}
+              <MobileMenuToggle
+                open
+                onToggle={() => setMenuOpen(false)}
+                panelId={MOBILE_MENU_ID}
+              />
+            </>
+          )}
         </div>
 
         {/* Desktop (lg+) : maisons (Dispute + carrés Accueil/Panier / ES) |

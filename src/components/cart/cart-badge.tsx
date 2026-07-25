@@ -38,6 +38,26 @@ function CartGlyph() {
   );
 }
 
+/**
+ * Pastille « n articles » superposée au coin haut-droit d'une cellule carrée du
+ * header. Exportée parce que la MÊME case du quadrillage mobile porte tantôt le
+ * pictogramme panier (menu déroulé), tantôt la flèche du menu déroulant (menu
+ * fermé) : le compteur doit s'afficher dans les deux états (cf. `site-header`).
+ * Rend `null` quand le panier est vide.
+ */
+export function CartCountBadge() {
+  const { count } = useCart();
+  if (count === 0) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute right-1 top-1 font-sans text-[10px] font-extrabold leading-none"
+    >
+      {count}
+    </span>
+  );
+}
+
 export function CartNavCell({
   compact,
   placement,
@@ -60,14 +80,7 @@ export function CartNavCell({
         className={`relative flex min-h-11 items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${placement}`}
       >
         <CartGlyph />
-        {count > 0 && (
-          <span
-            aria-hidden="true"
-            className="absolute right-1 top-1 font-sans text-[10px] font-extrabold leading-none"
-          >
-            {count}
-          </span>
-        )}
+        <CartCountBadge />
       </Link>
     );
   }
