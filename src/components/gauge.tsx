@@ -91,10 +91,22 @@ export function Gauge({
       >
         {/* role="list" : le preflight Tailwind pose list-style:none, ce qui
             fait retirer la sémantique de liste par Safari/VoiceOver. */}
-        <ul role="list" className="flex flex-col gap-2 sm:hidden">
+        {/* Tableau invisible 2 × 3 (retour Youri 26/07) : montants en colonne 1,
+            intitulés en colonne 2 — les uns et les autres s'alignent d'une
+            ligne à l'autre, ce qu'un texte au fil de l'eau ne faisait pas.
+            `grid-cols-subgrid` plutôt que `display: contents` sur le `<li>` :
+            l'item garde sa boîte (et son rôle `listitem`, que `contents`
+            retire de l'arbre a11y sur WebKit) tout en se calant sur les
+            colonnes de la liste. */}
+        <ul role="list" className="grid grid-cols-[auto_1fr] gap-y-4 sm:hidden">
           {markers.map((m) => (
-            <li key={m.value}>
-              <span className={`text-lg font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
+            <li
+              key={m.value}
+              className="col-span-2 grid grid-cols-subgrid items-baseline gap-x-3"
+            >
+              <span
+                className={`whitespace-nowrap text-lg font-semibold tabular-nums ${tone === "dark" ? "text-paper" : "text-ink"}`}
+              >
                 {formatInt(m.value)}&nbsp;€
                 {m.reached && (
                   <>
@@ -102,8 +114,8 @@ export function Gauge({
                     <span className="sr-only"> (palier atteint)</span>
                   </>
                 )}
-              </span>{" "}
-              {m.label}
+              </span>
+              <span>{m.label}</span>
             </li>
           ))}
         </ul>

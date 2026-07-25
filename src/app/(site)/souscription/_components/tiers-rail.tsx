@@ -2,7 +2,6 @@ import Image, { type StaticImageData } from "next/image";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { SubmitButton } from "@/components/submit-button";
-import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
 import { ACCENTS, ACCENT_BG as BG } from "@/lib/accents";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
@@ -223,19 +222,28 @@ export function TiersRail({
               </h3>
             );
             return (
-              <Reveal key={p.tier.id} className="h-full">
+              <div key={p.tier.id} className="h-full">
                 <div className="relative flex h-full flex-col bg-paper">
                   <div aria-hidden="true" className={`h-2 ${accentBg}`} />
                   {/* Montage produit sur fond blanc pur — `mix-blend-multiply`
                       fond le blanc dans le `bg-paper` (blanc cassé) du site,
                       les ombres portées restent correctes. Décoratif : la
-                      liste textuelle des items porte l'information (alt vide). */}
+                      liste textuelle des items porte l'information (alt vide).
+
+                      `loading="eager"` (retour Youri 26/07) : sous `lg` ces
+                      cartes vivent dans la feuille de bas d'écran, qui se
+                      déroule 1 s après le chargement — en `lazy`, les visuels
+                      ne partaient qu'à leur entrée dans le viewport et
+                      apparaissaient APRÈS l'ouverture. Ils sont donc chargés
+                      d'emblée ; pas de `priority` en revanche, qui les
+                      ferait précharger contre le héros de la page. */}
                   {img && !compact && (
                     <Image
                       src={img}
                       alt=""
                       sizes="(min-width: 1024px) 380px, 100vw"
                       placeholder="blur"
+                      loading="eager"
                       className="block h-auto w-full mix-blend-multiply"
                     />
                   )}
@@ -252,6 +260,7 @@ export function TiersRail({
                             alt=""
                             sizes="(min-width: 1024px) 140px, 35vw"
                             placeholder="blur"
+                            loading="eager"
                             className="-mr-2 block h-auto w-[35%] shrink-0 mix-blend-multiply"
                           />
                         )}
@@ -307,14 +316,14 @@ export function TiersRail({
                     )}
                   </div>
                 </div>
-              </Reveal>
+              </div>
             );
           })}
           {/* Carte de clôture — montant libre (retour client 2026-07-24) : le
               formulaire à montant personnalisé vit tout en bas de la liste,
               après les 9 paliers, et poursuit le cycle des 4 accents de
               marque. */}
-          <Reveal className="h-full">
+          <div className="h-full">
             <div id="montant-libre" className="flex h-full flex-col bg-paper">
               <div
                 aria-hidden="true"
@@ -332,7 +341,7 @@ export function TiersRail({
                 <FreeAmountForm enabled={enabled} />
               </div>
             </div>
-          </Reveal>
+          </div>
         </FramedGrid>
       </div>
     </aside>

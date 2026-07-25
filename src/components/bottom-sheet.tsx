@@ -247,7 +247,11 @@ export function BottomSheet({
       // au-dessus de la feuille.
       // À l'impression, la feuille redevient un bloc en flux, entier et jamais
       // tronqué (même soin que le rail en lg+, `tiers-rail.tsx`).
-      className={`fixed inset-x-0 bottom-0 z-40 flex h-[66.6667svh] flex-col border-t-2 border-ink bg-paper print:static print:h-auto print:translate-y-0 ${
+      // Ombre portée LÉGÈRE vers le haut (retour Youri 26/07) : la feuille
+      // flotte au-dessus de la page, le filet ink seul ne la détachait pas.
+      // Exception assumée à R8 (aplats durs `shadow-[8px_8px_0_0]`) — une
+      // ombre nette ferait une seconde barre au-dessus du bandeau.
+      className={`fixed inset-x-0 bottom-0 z-40 flex h-[66.6667svh] flex-col border-t-2 border-ink bg-paper shadow-[0_-10px_24px_-12px_rgba(23,20,15,0.35)] print:static print:h-auto print:translate-y-0 print:shadow-none ${
         dragging
           ? ""
           : // Pas de `motion-reduce:transition-none` : la course de la feuille
@@ -256,7 +260,11 @@ export function BottomSheet({
             // dès que « Réduire les animations » est actif. Exception assumée
             // (arbitrage client 2026-07-26), le reste du site respecte le
             // réglage.
-            "transition-transform duration-300 ease-out"
+            // Courbe de feuille : départ franc, arrivée très amortie
+            // (cubic-bezier(.32,.72,0,1)) — un `ease-out` court donnait
+            // une course sèche en fin de trajet. Le chevron suit la MÊME
+            // durée et la même courbe.
+            "transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]"
       } ${
         !dragging && !open
           ? "translate-y-[calc(100%-3.5rem)]"
@@ -287,7 +295,7 @@ export function BottomSheet({
               replié — la rotation s'anime sur la même durée que la course de
               la feuille, jamais un basculement sec. */}
           <span
-            className={`inline-block transition-transform duration-300 ease-out ${
+            className={`inline-block transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
               open ? "rotate-0" : "rotate-180"
             }`}
           >
