@@ -259,15 +259,14 @@ export default async function SouscriptionPage() {
                   ) : liveCampaign.collected > 0 ? (
                     /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
                        supprime les blancs contenant un retour à la ligne — sans
-                       eux, AT/copier-coller lisent « Déjà11 014 €réunis ». Les
+                       eux, AT/copier-coller lisent « 11 014 €réunis ». Les
                        nœuds espace entre spans `block` ne sont pas rendus : zéro
                        impact visuel. La phrase reste UN SEUL <p> (ordre de
-                       lecture intact), seuls les spans posent les échelles. */
+                       lecture intact), seuls les spans posent les échelles.
+                       Le surtitre « Déjà » est supprimé (25/07, retour Youri) :
+                       le compteur ouvre directement le bloc. */
                     <p className="text-lg leading-snug text-paper/80">
-                      <span className="block font-sans text-xs font-extrabold uppercase tracking-[.3em] text-paper/70">
-                        Déjà
-                      </span>{" "}
-                      <span className="mt-3 block">
+                      <span className="block">
                         <CountUp
                           value={liveCampaign.collected}
                           suffix=" €"
@@ -365,8 +364,8 @@ export default async function SouscriptionPage() {
             puis l'étagère des dernières parutions SOUS le titre (maquette
             25/07). En lg+, la demande (« aidez-nous… ») est posée SUR le
             rayon, dans l'espace vide à droite du dernier dos — la place des
-            prochains livres ; sous lg elle reste un bandeau ink sous la
-            grille de couvertures. Le h1 reste UN SEUL <h1> portant tout le
+            prochains livres ; sous lg elle suit la grille de couvertures dans
+            le même conteneur, sur paper. Le h1 reste UN SEUL <h1> portant tout le
             slogan verbatim dans l'ordre : la demande y vit en sr-only, ses
             deux rendus visibles (rayon lg / bandeau mobile) sont
             aria-hidden — une seule lecture SR, zéro duplication dans
@@ -412,32 +411,27 @@ export default async function SouscriptionPage() {
               />
             </div>
           </div>
-          {/* Sous lg : le repli 2×4 de l'étagère (R7), puis la demande en
-              bandeau ink — même composition qu'avant la maquette 25/07. */}
+          {/* Sous lg : le repli 2×4 de l'étagère (R7), puis la demande + son
+              CTA sur UNE SEULE ligne, dans le MÊME conteneur que la grille de
+              couvertures (retour Youri 25/07) : la demande est le pendant
+              mobile du texte posé sur le rayon en lg+, elle se lit donc dans
+              la foulée des couvertures — plus de bandeau ink pleine largeur,
+              qui creusait un gap et un changement de fond pour deux lignes.
+              Le bouton « Contribuer » est centré verticalement à DROITE du
+              texte. La demande reste `aria-hidden` (le h1 la porte en
+              sr-only) mais le bouton, lui, doit rester dans l'arbre a11y :
+              d'où l'attribut sur le seul <p>, jamais sur la rangée. */}
           <div className="mx-auto mt-8 w-full max-w-6xl px-5 sm:px-8 lg:hidden">
             <MobileShelf books={shelfBooks} />
-          </div>
-          {/* Bandeau ink de la demande + son CTA sur UNE SEULE ligne : le
-              bouton « Contribuer » est centré verticalement à DROITE du texte
-              (retour Youri 25/07 — il remplace le lien « Voir les
-              contreparties ↓ » qui vivait dans une bande ink séparée, sous le
-              slogan). La demande reste `aria-hidden` (le h1 la porte en
-              sr-only) mais le bouton, lui, doit rester dans l'arbre a11y :
-              d'où l'attribut sur le seul <p>, jamais sur la bande. Paddings
-              SEULEMENT, jamais de marge sur un enfant — une marge
-              fusionnerait à travers le div (margin collapse) et ouvrirait une
-              bande de paper (bug constaté en prod le 25/07). */}
-          <div className="mt-8 bg-ink text-paper sm:mt-10 lg:hidden">
-            <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-5 py-10 sm:gap-6 sm:px-8 sm:py-12">
+            <div className="mt-6 flex items-center gap-4 sm:mt-8 sm:gap-6">
               <p
                 aria-hidden="true"
-                className="min-w-0 flex-1 font-sans text-[clamp(22px,6vw,54px)] font-black italic leading-[0.95]"
+                className="min-w-0 flex-1 font-sans text-[clamp(22px,6vw,54px)] font-black italic leading-[0.95] text-ink"
               >
                 aidez-nous à poursuivre l’histoire.
               </p>
               <Button
                 href="#paliers"
-                variant="invert"
                 aria-label="Contribuer — voir les contreparties"
                 className="shrink-0 px-4 py-3 text-[13px] font-extrabold tracking-[.03em] sm:px-6 sm:py-3.5 sm:text-sm"
               >
@@ -455,13 +449,17 @@ export default async function SouscriptionPage() {
             bandeau, AA large tenu : brick ≈5,4:1, navy ≈12:1) — crise = brick
             (le langage d'alerte du site, cf. panier), bataille politique =
             navy, héritage centenaire = ocher (texte ink, AA ≈5,5:1), appel =
-            bottle en crescendo. Le descriptif reste en corps 15-17px/ink-70,
-            `max-w-[70ch]`. Jamais de palette pop ici (R2). */}
+            bottle en crescendo. Les descriptifs partagent tous la MÊME
+            recette de corps de texte (retour Youri 25/07, alignée sur le
+            paragraphe de l'appel) : `max-w-[52ch] font-sans text-lg
+            font-medium text-ink sm:text-2xl sm:leading-[1.45]` — plus de
+            corps 15-17px/ink-70. Jamais de palette pop ici (R2). */}
 
         {/* Section 1 — la crise : « danger maximal » crié sur bandeau brick
             coiffé de la bande hazard, le montant perdu en exergue inline
             (max 1.8em — jamais un display dans la ligne), la chute (« coup
-            fatal ») en bandeau ink liseré brick. Marge réduite au minimum
+            fatal ») en display liseré brick au pied du descriptif, dans la
+            colonne de texte. Marge réduite au minimum
             (25/07, retour Youri) : seule cette occurrence — juste après
             l'ask/étagère — perd le rythme mt-16/mt-24 commun aux autres
             transitions de section. */}
@@ -482,7 +480,7 @@ export default async function SouscriptionPage() {
               </span>
             </h2>
             <Container className="pt-8 sm:pt-10">
-              <div className="max-w-[70ch] space-y-5 text-[15px] leading-relaxed text-ink/70 sm:space-y-6 sm:text-[17px] sm:leading-[1.65]">
+              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-2xl sm:leading-[1.45]">
                 <p>
                   En cette fin d’été 2026, l’édition de critique sociale fait
                   face à une des pires crises de son histoire. Des centaines de
@@ -500,14 +498,14 @@ export default async function SouscriptionPage() {
                   d’auteur.
                 </p>
               </div>
-            </Container>
-            <p className="mt-10 border-l-[14px] border-brick bg-ink py-7 text-paper sm:mt-12 sm:py-9">
-              <span
-                className={`${SPAN_CONTAINER} font-sans text-[clamp(24px,5vw,36px)] font-black italic leading-[1.1]`}
-              >
+              {/* La chute clôt le descriptif DANS la colonne de texte (retour
+                  Youri 25/07) : plus de bandeau ink pleine largeur, qui
+                  ouvrait un gap et un second changement de fond dans la même
+                  section. Le liseré brick reste le seul marqueur d'accent. */}
+              <p className="mt-8 max-w-[70ch] border-l-[14px] border-brick pl-5 font-sans text-[clamp(24px,5vw,36px)] font-black italic leading-[1.1] text-ink sm:mt-10 sm:pl-7">
                 Pour nos maisons, c’est le genre de coup qui peut être fatal.
-              </span>
-            </p>
+              </p>
+            </Container>
           </Reveal>
         </section>
 
@@ -532,7 +530,7 @@ export default async function SouscriptionPage() {
               </span>
             </h2>
             <Container className="pt-8 sm:pt-10">
-              <div className="max-w-[70ch] space-y-5 text-[15px] leading-relaxed text-ink/70 sm:space-y-6 sm:text-[17px] sm:leading-[1.65]">
+              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-2xl sm:leading-[1.45]">
                 <p>
                   La faillite de Makassar est le résultat d’un marché de
                   l’édition où les grands groupes — Hachette, Editis,
@@ -618,7 +616,7 @@ export default async function SouscriptionPage() {
 
           <Reveal>
             <Container>
-              <div className="mt-10 max-w-[70ch] space-y-5 text-[15px] leading-relaxed text-ink/70 sm:mt-12 sm:space-y-6 sm:text-[17px] sm:leading-[1.65]">
+              <div className="mt-10 max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:mt-12 sm:space-y-8 sm:text-2xl sm:leading-[1.45]">
                 <p>
                   Récemment, nous avons ouvert de nouveaux chantiers prometteurs
                   pour nos maisons en arrivant chez un nouveau
