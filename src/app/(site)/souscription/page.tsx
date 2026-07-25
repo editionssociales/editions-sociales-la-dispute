@@ -452,8 +452,12 @@ export default async function SouscriptionPage() {
         {/* Section 1 — la crise : « danger maximal » crié sur bandeau brick
             coiffé de la bande hazard, le montant perdu en exergue inline
             (max 1.8em — jamais un display dans la ligne), la chute (« coup
-            fatal ») en bandeau ink liseré brick. */}
-        <section className="mt-16 sm:mt-24">
+            fatal ») en bandeau ink liseré brick. Marge réduite au minimum
+            (25/07, retour Youri) : seule cette occurrence — juste après
+            l'ask/étagère — perd le rythme mt-16/mt-24 commun aux autres
+            transitions de section ; le h-20 de HeroShelf (réserve du
+            cartouche titre/auteur au survol) reste intouché, fonctionnel. */}
+        <section className="mt-4 sm:mt-6">
           <Reveal>
             <h2 className="font-sans font-black italic text-ink">
               <span
