@@ -41,41 +41,55 @@ function tierRows<T>(items: T[]): T[][] {
 }
 
 /**
- * Métriques d'un étage — corps EXACTEMENT proportionnel à l'inverse de son
- * NOMBRE DE CASES (36/n, arrondi au dixième ; retour Youri 25/07, remplace le
- * calage sur le rang). Les cases d'un étage se partageant sa largeur à parts
- * égales, le corps suit donc la largeur d'une case : plus il y a de cases,
- * plus elles sont étroites, plus le texte est petit.
+ * Métriques d'un étage — corps ET épaisseur EXACTEMENT proportionnels à
+ * l'inverse du RANG de l'étage (retour Youri 25/07) :
  *
- * Conséquence assumée : un DERNIER étage incomplet (reliquat) revient à la
- * taille de l'étage de même nombre de cases — avec 19 libellés, les étages
- * font 1-2-3-4-5-4 cases, donc 36-18-12-9-7,2-9px. C'est le prix de la règle
- * demandée ; le calage sur le rang, qui gardait une pente strictement
- * décroissante, est dans l'historique git.
+ * - corps : `FONT_BASE / rang`, arrondi au dixième → 60-30-20-15-12-10 px.
+ * - épaisseur : `THICK_BASE / rang`, SAUF l'étage 1 (« Tous les livres »),
+ *   laissé en hauteur automatique — c'est la bannière du catalogue, elle se
+ *   règle sur son propre corps.
+ *
+ * `THICK_BASE` vaut 1,3 × `FONT_BASE` : le rapport hauteur/corps reste donc
+ * constant d'un étage à l'autre, ce qui laisse toujours la même marge à un
+ * libellé d'une ligne. Imposer la hauteur retire la latitude du padding
+ * vertical — les cases des étages 2+ passent en `py-0` + `overflow-hidden`,
+ * sinon `py-2` (16px) déborderait à lui seul les étages profonds (13px de
+ * haut au rang 6). Un libellé qui passerait à deux lignes y est donc rogné :
+ * c'est le prix de l'épaisseur exacte.
+ *
+ * Le calage sur le NOMBRE DE CASES (essayé le même jour) est écarté : un
+ * dernier étage incomplet — 19 libellés donnent 1-2-3-4-5-4 cases — revenait
+ * à la taille de l'étage de même largeur et cassait la décroissance.
  *
  * Ni terme constant ni plancher (auparavant `6 + 30/rang`, planchers 10px
- * desktop et 9px mobile) : ils écrasaient la pente en bas (36-21-16-14-12-11,
- * et le plancher mobile bloquait net à 9px dès l'étage 4). Corps
- * FRACTIONNAIRES et non entiers : sous ~8px, l'arrondi à l'unité remettait
- * des étages à égalité — soit la pente écrasée qu'on vient de corriger.
+ * desktop et 9px mobile) : ils écrasaient la pente en bas, et le plancher
+ * mobile bloquait net à 9px dès l'étage 4. Corps FRACTIONNAIRES et non
+ * entiers : sous ~8px, l'arrondi à l'unité remettait des étages à égalité —
+ * soit la pente écrasée qu'on vient de corriger.
  *
- * Plus AUCUNE épaisseur imposée : la hauteur d'une case = son corps + le
- * padding uniforme (py-2), donc « Tous les livres » reste une case FINE
- * malgré son grand corps. Le compte en coin suit le corps de l'étage
- * (`--fsc`) plafonné à 9px, sinon il devient plus gros que le libellé qu'il
- * annote sur les étages profonds. Les cases restent des cibles < 44px sur
- * ces étages : entorse à R7 assumée par le client (densité voulue de la vue).
+ * Le compte en coin suit le corps de l'étage (`--fsc`) plafonné à 9px, sinon
+ * il devient plus gros que le libellé qu'il annote sur les étages profonds.
+ * Les cases restent des cibles < 44px sur ces étages : entorse à R7 assumée
+ * par le client (densité voulue de la vue).
  */
+const FONT_BASE = 60;
+const THICK_BASE = FONT_BASE * 1.3;
+/** Facteur mobile, appliqué au corps comme à l'épaisseur. */
+const SM_RATIO = 0.62;
+
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-function tierMetrics(cases: number) {
-  const fontLg = round1(36 / cases);
-  const fontSm = round1(fontLg * 0.62);
+function tierMetrics(rank: number) {
+  const fontLg = round1(FONT_BASE / rank);
+  const fontSm = round1(fontLg * SM_RATIO);
   return {
     fontLg,
     fontSm,
     countLg: Math.min(9, fontLg),
     countSm: Math.min(8, fontSm),
+    // Étage 1 (« Tous les livres ») : hauteur automatique, jamais imposée.
+    thickLg: rank === 1 ? null : round1(THICK_BASE / rank),
+    thickSm: rank === 1 ? null : round1((THICK_BASE * SM_RATIO) / rank),
   };
 }
 
@@ -83,23 +97,29 @@ function tierMetrics(cases: number) {
  * Case d'un étage — corps hérité de l'étage via variables CSS. Le compte de
  * titres vit en COIN bas-droit, en absolu et à corps fixe : dans le flux du
  * libellé, il décalait le centrage d'une case à l'autre.
+ *
+ * `fixedHeight` : l'étage impose sa hauteur (tous sauf « Tous les livres »).
+ * La case perd alors son padding vertical — `py-2` (16px) déborderait à lui
+ * seul les étages profonds — et clippe ce qui dépasse.
  */
 function TierCell({
   href,
   active,
   label,
   count,
+  fixedHeight,
 }: {
   href: string;
   active: boolean;
   label: string;
   count: number;
+  fixedHeight: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`relative flex min-w-0 flex-1 items-center justify-center px-3 py-2 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
+      className={`relative flex min-w-0 flex-1 items-center justify-center overflow-hidden px-3 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${fixedHeight ? "" : "py-2"} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
     >
       <span className="font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.05] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs)]">
         {label}
@@ -147,17 +167,21 @@ export function LibelleMosaic({
       className={`grid-cols-1 ${className}`}
     >
       {rows.map((row, i) => {
-        const m = tierMetrics(row.length);
+        const m = tierMetrics(i + 1);
         return (
           <div
             key={i}
-            className="flex gap-[2px]"
+            className={`flex gap-[2px] ${m.thickLg == null ? "" : "h-[var(--th-sm)] lg:h-[var(--th)]"}`}
             style={
               {
                 "--fs": `${m.fontLg}px`,
                 "--fs-sm": `${m.fontSm}px`,
                 "--fsc": `${m.countLg}px`,
                 "--fsc-sm": `${m.countSm}px`,
+                ...(m.thickLg != null && {
+                  "--th": `${m.thickLg}px`,
+                  "--th-sm": `${m.thickSm}px`,
+                }),
               } as CSSProperties
             }
           >
@@ -168,6 +192,7 @@ export function LibelleMosaic({
                 active={isActive(item)}
                 label={item.name}
                 count={item.count}
+                fixedHeight={m.thickLg != null}
               />
             ))}
           </div>
