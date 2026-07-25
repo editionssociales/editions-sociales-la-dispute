@@ -260,11 +260,13 @@ export function BottomSheet({
             // dès que « Réduire les animations » est actif. Exception assumée
             // (arbitrage client 2026-07-26), le reste du site respecte le
             // réglage.
-            // Courbe de feuille : départ franc, arrivée très amortie
-            // (cubic-bezier(.32,.72,0,1)) — un `ease-out` court donnait
-            // une course sèche en fin de trajet. Le chevron suit la MÊME
+            // Courbe SYMÉTRIQUE ease-in-out (cubic-bezier(.65,0,.35,1),
+            // easeInOutCubic) : la feuille démarre en douceur ET arrive
+            // en douceur — une courbe out-heavy (.32,.72,0,1) partait
+            // sec dès le premier tiers. Durée ample : la course fait les
+            // 2/3 de l'écran, elle doit se lire. Le chevron suit la MÊME
             // durée et la même courbe.
-            "transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]"
+            "transition-transform duration-[540ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
       } ${
         !dragging && !open
           ? "translate-y-[calc(100%-3.5rem)]"
@@ -295,7 +297,7 @@ export function BottomSheet({
               replié — la rotation s'anime sur la même durée que la course de
               la feuille, jamais un basculement sec. */}
           <span
-            className={`inline-block transition-transform duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            className={`inline-block transition-transform duration-[540ms] ease-[cubic-bezier(0.65,0,0.35,1)] ${
               open ? "rotate-0" : "rotate-180"
             }`}
           >
