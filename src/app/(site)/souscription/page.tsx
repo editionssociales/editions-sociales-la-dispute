@@ -58,7 +58,10 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * final — ; contreparties éditables en rail sticky à droite de la PAGE
  * ENTIÈRE (`#paliers`, hors du corps de texte), clôturé par la carte
  * « montant libre » (le formulaire ne vit plus ni dans l'ask ni dans le CTA
- * final).
+ * final). Sous `lg`, ce même rail devient une FEUILLE DE BAS D'ÉCRAN
+ * (`BottomSheet`) : repliée en bandeau « Contribuer », elle se déroule seule
+ * 1 s après le chargement et se replie au glissé du doigt ; les CTA d'ancre
+ * `#paliers`/`#montant-libre` la redéploient (`anchors`).
  *
  * Découpage (routes fines, `src/app/CLAUDE.md`) : cette page garde la jauge,
  * le récit verbatim, les objectifs et la composition ; l'étagère 3D + son
