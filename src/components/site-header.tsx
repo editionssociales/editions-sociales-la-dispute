@@ -128,8 +128,15 @@ const MORPH_TRANSITION =
 // `inert`, JAMAIS par `visibility` — une visibilité en transition n'est pas
 // encore rendue focalisable au moment où l'effet suit le focus, et le focus se
 // perdait (constat live).
-const LAYER_MORPH =
-  "transition-opacity duration-200 ease-out motion-reduce:transition-none";
+//
+// EXCEPTION `prefers-reduced-motion` (arbitrage client 2026-07-26, cf. aussi le
+// panneau déroulant ci-dessous et `bottom-sheet.tsx`) : pas de
+// `motion-reduce:transition-none` ici. Ces mouvements ne sont pas décoratifs —
+// ils DISENT où va le menu et d'où revient le panier ; coupés, la substitution
+// redevient le saut sec qu'on venait de corriger. iOS active « Réduire les
+// animations » sur tous ses navigateurs à la fois : l'exception se voyait sur
+// chaque iPhone concerné. Le reste du site respecte le réglage.
+const LAYER_MORPH = "transition-opacity duration-200 ease-out";
 
 /**
  * Taille FIXE sous `lg` (compact par défaut, indépendante du scroll) ; à `lg`
@@ -509,11 +516,15 @@ function SiteHeaderChrome({
               ET se replier visuellement : la grille interpole `0fr → 1fr`
               (seule façon d'animer une hauteur `auto` sans la mesurer en JS),
               l'enfant clippe le débordement pendant la course. `inert` replié :
-              ni focusable, ni lu par un lecteur d'écran. */}
+              ni focusable, ni lu par un lecteur d'écran. Pas de
+              `motion-reduce:transition-none` — exception assumée, cf.
+              `LAYER_MORPH`. L'opacité accompagne la hauteur : si un moteur
+              n'interpole pas `grid-template-rows` (WebKit ancien), le panneau
+              se fond au lieu d'apparaître d'un bloc. */}
           <div
             id={panelId}
             inert={!menuOpen}
-            className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
+            className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out ${
               menuOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
             }`}
           >

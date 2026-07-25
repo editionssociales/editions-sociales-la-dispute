@@ -38,12 +38,17 @@ import { FOCUS_RING_DARK } from "@/lib/ui";
 
 /**
  * Hauteur du bandeau, seule partie visible replié (`3.5rem`, cible R7 ≥ 44px)
- * — PLUS l'encoche basse de l'appareil (`safe-area-inset-bottom`) : sur iPhone,
- * la barre d'accueil recouvre les ~34 derniers pixels d'un élément `bottom-0`,
- * et le libellé « Contribuer » du bandeau replié passait dessous. Le bouton
- * grandit d'autant (son contenu reste centré dans les 3.5rem du haut, la zone
- * d'encoche n'est qu'un aplat), et la course de repli suit la même formule —
- * les deux DOIVENT rester en phase, d'où la mesure du bandeau en px au geste.
+ * — PLUS l'encoche basse de l'appareil (`safe-area-inset-bottom`).
+ *
+ * NB : sans `viewport-fit=cover` (cas actuel — aucune `export const viewport`
+ * dans `(site)/layout.tsx`), iOS insère déjà le viewport au-dessus de la barre
+ * d'accueil et `env()` vaut 0 : le terme ne change RIEN aujourd'hui. Il est là
+ * pour que le bandeau reste au-dessus de la barre d'accueil le jour où la page
+ * passera en `viewport-fit=cover` — pas pour corriger un bug observé.
+ *
+ * La classe de repli, la réserve posée sur `body` et la course de glissé
+ * suivent la même formule et DOIVENT rester en phase : d'où la mesure du
+ * bandeau en pixels réels au moment du geste.
  */
 const HANDLE_H = "calc(3.5rem + env(safe-area-inset-bottom))";
 
@@ -236,7 +241,13 @@ export function BottomSheet({
       className={`fixed inset-x-0 bottom-0 z-40 flex h-[85dvh] flex-col border-t-2 border-ink bg-paper print:static print:h-auto print:translate-y-0 ${
         dragging
           ? ""
-          : "transition-transform duration-300 ease-out motion-reduce:transition-none"
+          : // Pas de `motion-reduce:transition-none` : la course de la feuille
+            // est l'information (d'où elle sort, où elle repart). Coupée, elle
+            // se téléporte — et iOS coupe pour TOUS ses navigateurs à la fois
+            // dès que « Réduire les animations » est actif. Exception assumée
+            // (arbitrage client 2026-07-26), le reste du site respecte le
+            // réglage.
+            "transition-transform duration-300 ease-out"
       } ${
         !dragging && !open
           ? "translate-y-[calc(100%-3.5rem-env(safe-area-inset-bottom))]"
@@ -273,7 +284,7 @@ export function BottomSheet({
               replié — la rotation s'anime sur la même durée que la course de
               la feuille, jamais un basculement sec. */}
           <span
-            className={`inline-block transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            className={`inline-block transition-transform duration-300 ease-out ${
               open ? "rotate-0" : "rotate-180"
             }`}
           >
