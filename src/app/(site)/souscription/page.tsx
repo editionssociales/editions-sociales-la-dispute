@@ -359,20 +359,15 @@ export default async function SouscriptionPage() {
 
         {/* 3 ▪ L'ask 2026 — le slogan en trois échelles (affiche) : « 100
             ans » en aplat plein très grand, la qualification en capitales,
-            la demande sur bandeau ink qui accueille l'étagère. Le h1 reste
-            UN SEUL <h1> portant tout le slogan verbatim dans l'ordre — seuls
-            des spans posent les échelles (jamais de duplication). Le
-            formulaire montant libre n'est plus ici (il clôt la liste des
-            contreparties), seule l'ancre y mène.
+            la demande sur bandeau ink. Le h1 reste UN SEUL <h1> portant tout
+            le slogan verbatim dans l'ordre — seuls des spans posent les
+            échelles (jamais de duplication). L'étagère ne vit plus ici :
+            elle sépare deux paragraphes de la section héritage (dernières
+            parutions = preuve des « chantiers prometteurs », cf. plus bas).
+            Le formulaire montant libre n'est plus ici non plus (il clôt la
+            liste des contreparties), seule l'ancre y mène.
             TODO(contenu) : le docx s'intitule « Slogans » (pluriel) mais
             n'en livre qu'un — d'autres variantes pourraient arriver. */}
-        {/* Ni ce bloc ni l'étagère qu'il contient ne doivent jamais être
-            enveloppés dans <Reveal> : son `transform` (l'animation
-            d'apparition) crée un containing block qui casse le pop-out
-            3D des dos (position/transform absolus calés sur ce bloc).
-            Pour la même raison, aucun `overflow-hidden` ne doit jamais
-            être posé ici, sur les conteneurs internes ou sur la `section` :
-            ça clipperait le livre déplié, qui déborde largement du bloc. */}
         <section className="bg-paper pt-16 sm:pt-20">
           <h1 className="font-sans font-black italic text-ink">
             <span
@@ -385,7 +380,7 @@ export default async function SouscriptionPage() {
             >
               d’édition marxiste :
             </span>{" "}
-            <span className="mt-8 block bg-ink pt-10 text-paper sm:mt-10 sm:pt-12">
+            <span className="mt-8 block bg-ink pb-10 pt-10 text-paper sm:mt-10 sm:pb-12 sm:pt-12">
               <span className={SPAN_CONTAINER}>
                 <span className="block max-w-[16ch] text-[clamp(28px,7vw,54px)] leading-[0.95]">
                   aidez-nous à poursuivre l’histoire.
@@ -393,25 +388,20 @@ export default async function SouscriptionPage() {
               </span>
             </span>
           </h1>
-          {/* Continuation du bandeau ink de l'ask : ancre mobile + étagère. */}
-          <div className="bg-ink pb-12 text-paper sm:pb-14">
-            <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-              {/* Chemin mobile uniquement : en lg+, le rail sticky des
-                  contreparties est déjà visible, l'ancre est redondante. */}
+          {/* Chemin mobile uniquement (en lg+, le rail sticky est déjà
+              visible) : petite bande ink qui prolonge le bandeau du slogan.
+              Padding seulement, JAMAIS de marge sur le premier enfant — une
+              marge fusionnerait à travers le div (margin collapse) et
+              ouvrirait une bande de paper entre les deux blocs ink (bug
+              constaté en prod le 25/07 avec l'ancien `mt-14` de l'étagère). */}
+          <div className="bg-ink text-paper lg:hidden">
+            <div className="mx-auto w-full max-w-6xl px-5 pb-8 sm:px-8">
               <a
                 href="#paliers"
-                className={`mt-8 inline-flex min-h-11 items-center font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper lg:hidden ${FOCUS_RING_DARK}`}
+                className={`inline-flex min-h-11 items-center font-sans text-xs font-bold uppercase tracking-[.04em] text-paper/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-paper ${FOCUS_RING_DARK}`}
               >
                 Voir les contreparties ↓
               </a>
-
-              {/* `hidden lg:block` : sous lg la HeroShelf qu'il contient est déjà
-                  masquée — sans lui, un groupe nommé VIDE doublonnerait le
-                  `aria-label` de MobileShelf dans l'arbre d'accessibilité. */}
-              <div className="mt-14 hidden lg:block" role="group" aria-label="Dernières parutions">
-                <HeroShelf books={shelfBooks} />
-              </div>
-              <MobileShelf books={shelfBooks} />
             </div>
           </div>
         </section>
@@ -530,10 +520,10 @@ export default async function SouscriptionPage() {
               <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-2xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_#262a5c] sm:mt-12 sm:p-8 sm:text-3xl">
                 Et, parce que la bataille des idées est aussi une guerre
                 matérielle, soutenir les éditeurs indépendants est{" "}
-                {/* `whitespace-nowrap` : un marqueur coupé en fin de ligne
-                    serait illisible — le marqueur passe à la ligne entier
-                    (token court). */}
-                <span className="whitespace-nowrap bg-navy px-2 text-paper">
+                {/* Soulignement (retour Youri 25/07, remplace le marqueur à
+                    fond navy) — même recette que « préserver notre
+                    indépendance » plus bas. */}
+                <span className="underline decoration-navy decoration-4 underline-offset-4">
                   un devoir politique
                 </span>
                 .
@@ -545,8 +535,13 @@ export default async function SouscriptionPage() {
         {/* Section 3 — les maisons, cent ans : le titre entier en display
             sur bandeau ocher (texte ink — AA ≈5,5:1), le « 100 ans » en
             tampon penché conservé, l'anaphore « Cent ans de… » en barres
-            empilées séparées de hairlines ink ; le reste (chantiers, équipe)
-            demeure descriptif. */}
+            empilées séparées de hairlines ink ; l'étagère des dernières
+            parutions SÉPARE l'anaphore des paragraphes de chantiers
+            (« Récemment… ») — la preuve matérielle du propos, entre le
+            centenaire et les collections nouvelles. Reveal SCINDÉ en deux
+            autour d'elle : l'étagère ne doit jamais vivre sous un Reveal
+            (son transform crée un containing block qui casse le pop-out 3D)
+            ni sous un overflow-hidden (clipperait le livre déplié). */}
         <section className="mt-16 sm:mt-24">
           <Reveal>
             <h2 className="bg-ocher font-sans font-black italic text-ink">
@@ -577,7 +572,30 @@ export default async function SouscriptionPage() {
                   et faire vivre le débat à gauche.
                 </p>
               </div>
-              <div className="mt-8 max-w-[70ch] space-y-5 text-[15px] leading-relaxed text-ink/70 sm:mt-10 sm:space-y-6 sm:text-[17px] sm:leading-[1.65]">
+            </Container>
+          </Reveal>
+
+          {/* Étagère-séparateur (hors Reveal, cf. commentaire de section) :
+              bande ink compacte entre l'anaphore et les chantiers récents.
+              Paddings seulement — pas de marge sur le premier enfant
+              (margin collapse = bande de paper, bug du 25/07). Le pb lg est
+              court : HeroShelf réserve déjà h-20 sous la barre pour le
+              cartouche titre/auteur du livre déplié. */}
+          <div className="mt-10 bg-ink text-paper sm:mt-12">
+            <div className="mx-auto w-full max-w-6xl px-5 pb-8 pt-8 sm:px-8 sm:pt-10 lg:pb-3">
+              {/* `hidden lg:block` : sous lg la HeroShelf qu'il contient est
+                  déjà masquée — sans lui, un groupe nommé VIDE doublonnerait
+                  le `aria-label` de MobileShelf dans l'arbre d'accessibilité. */}
+              <div className="hidden lg:block" role="group" aria-label="Dernières parutions">
+                <HeroShelf books={shelfBooks} />
+              </div>
+              <MobileShelf books={shelfBooks} />
+            </div>
+          </div>
+
+          <Reveal>
+            <Container>
+              <div className="mt-10 max-w-[70ch] space-y-5 text-[15px] leading-relaxed text-ink/70 sm:mt-12 sm:space-y-6 sm:text-[17px] sm:leading-[1.65]">
                 <p>
                   Récemment, nous avons ouvert de nouveaux chantiers prometteurs
                   pour nos maisons en arrivant chez un nouveau
