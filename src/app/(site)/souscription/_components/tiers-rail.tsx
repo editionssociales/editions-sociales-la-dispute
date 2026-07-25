@@ -172,10 +172,14 @@ function FreeAmountForm({ enabled }: { enabled: boolean }) {
 /**
  * Rail contreparties — module autonome sur la droite de la PAGE ENTIÈRE
  * (retour client 2026-07-24), plus une colonne du corps de texte : ancré au
- * défilement, borné à la hauteur du viewport sous le header, avec sa propre
- * barre de scroll — fine et TOUJOURS visible (les overlay scrollbars macOS
- * masquaient toute affordance sur ~10 cartes de profondeur), sans
- * `overscroll-contain` pour laisser le scroll chaîner vers la page en butée.
+ * défilement, avec sa propre barre de scroll — fine et TOUJOURS visible (les
+ * overlay scrollbars macOS masquaient toute affordance sur ~10 cartes de
+ * profondeur), sans `overscroll-contain` pour laisser le scroll chaîner vers
+ * la page en butée. En lg+, le rail monte JUSQU'EN HAUT DE PAGE (maquette
+ * 25/07 — priorité maximale aux contreparties) : la navbar se resserre à
+ * gauche et lui cède la colonne (cf. `site-header.tsx`, `railInset`), l'aside
+ * remonte de la hauteur du header compact (`lg:-mt-24`, même constante 6rem
+ * que `scroll-mt-24`) et colle au viewport en `top-0`, pleine hauteur.
  * Les 9 cartes sont uniformes ; la carte « montant libre » clôt la liste.
  * Sur mobile, le rail suit toute la colonne principale (l'ancre `#paliers` y
  * mène — `scroll-mt-24` à tous les breakpoints, le header mobile fait ~96px).
@@ -192,20 +196,13 @@ export function TiersRail({
     <aside
       id="paliers"
       aria-label="Contreparties"
-      className="border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 lg:print:static lg:print:max-h-none lg:print:overflow-visible"
+      className="border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky lg:top-0 lg:-mt-24 lg:max-h-screen lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 lg:print:static lg:print:mt-0 lg:print:max-h-none lg:print:overflow-visible"
     >
       <div className="px-5 py-4 sm:px-8 sm:py-6">
-        {/* Signalement du montant libre : la carte vit en CLÔTURE du rail
-            (position actée client) — sans cette ancre, l'option la plus
-            demandée d'une souscription resterait indécouvrable avant d'avoir
-            déroulé les 9 paliers. */}
-        <a
-          href="#montant-libre"
-          className={`inline-flex min-h-11 items-center font-sans text-xs font-bold uppercase tracking-[.04em] text-ink/60 underline decoration-1 underline-offset-2 transition-colors motion-reduce:transition-none hover:text-ink ${FOCUS_RING_LIGHT}`}
-        >
-          Ou donnez un montant libre ↓
-        </a>
-        <FramedGrid className="mt-2 grid-cols-1">
+        {/* Plus d'ancre « Ou donnez un montant libre ↓ » en tête (retirée
+            25/07) : la carte montant libre reste en CLÔTURE du rail, seuls le
+            CTA final et l'ancre externe `#montant-libre` y mènent. */}
+        <FramedGrid className="grid-cols-1">
           {content.contreparties.map((p, i) => {
             // Paliers de don : les 4 accents de marque, jamais le cycle pop (R2/R3).
             const accentBg = BG[ACCENTS[i % 4]];

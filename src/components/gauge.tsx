@@ -5,10 +5,18 @@ import { useInView } from "@/hooks/use-in-view";
 
 type Marker = { value: number; label: string; reached: boolean };
 
+/** La barre s'étend 20 % au-delà de l'objectif (demi-droite). */
+const OVERSHOOT = 1.2;
+
 /**
  * Jauge de collecte : le fond porte les quatre couleurs de la palette en
  * blocs plats ; un cache couleur `line` se retire vers la droite à l'entrée
  * dans le viewport pour révéler la part collectée.
+ *
+ * Demi-droite (maquette 25/07) : la barre dépasse l'objectif de 20 %
+ * (`OVERSHOOT`) — l'axe continue après le sommet, ce qui laisse centrer
+ * l'abscisse du 100 000 € sur son trait (plus de chevauchement avec le
+ * palier précédent) et donne où peindre un éventuel dépassement de collecte.
  *
  * Coquille de rendu : toute l'arithmétique de campagne (valeur, max, paliers
  * atteints) est dérivée en amont par `lib/campaign` ; la jauge ne fait que
@@ -33,7 +41,11 @@ export function Gauge({
   tone?: "light" | "dark";
 }) {
   const [ref, filled] = useInView<HTMLDivElement>({ threshold: 0.4 });
-  const pct = Math.min((value / max) * 100, 100);
+  // Positions en % de la barre ENTIÈRE (objectif + dépassement) : l'objectif
+  // tombe à 100/1.2 ≈ 83,3 % ; une collecte au-delà de l'objectif continue
+  // de se peindre sur le dépassement (cap au bout de la demi-droite).
+  const span = max * OVERSHOOT;
+  const pct = Math.min((value / span) * 100, 100);
 
   return (
     <div ref={ref} className={className}>
@@ -44,8 +56,10 @@ export function Gauge({
         aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
         className="relative h-4 overflow-hidden"
         style={{
+          // Les quatre blocs se répartissent le segment 0 → objectif
+          // (≈83,3 % de la demi-droite) ; brick continue sur le dépassement.
           background:
-            "linear-gradient(90deg, var(--color-navy) 0 25%, var(--color-bottle) 25% 50%, var(--color-ocher) 50% 75%, var(--color-brick) 75% 100%)",
+            "linear-gradient(90deg, var(--color-navy) 0 20.83%, var(--color-bottle) 20.83% 41.67%, var(--color-ocher) 41.67% 62.5%, var(--color-brick) 62.5% 100%)",
         }}
       >
         {/* Cache : recouvre la part non collectée, glisse vers la droite.
@@ -61,23 +75,24 @@ export function Gauge({
           <div
             key={m.value}
             className="absolute inset-y-0 w-0.5 bg-paper"
-            // Borné : le palier sommet (value === max) tomberait sinon à
-            // left:100 %, entièrement clippé par overflow-hidden (0.125rem = w-0.5).
-            style={{ left: `min(${(m.value / max) * 100}%, calc(100% - 0.125rem))` }}
+            // Le sommet (value === max) tombe à ≈83,3 % : plus aucun trait
+            // n'approche le bord clippé de la barre.
+            style={{ left: `${(m.value / span) * 100}%` }}
           />
         ))}
       </div>
-      {/* Libellés des paliers : l'overlay positionné en pourcentages fait se
-          chevaucher les derniers paliers (80/100 k€) sur un viewport étroit —
-          sous `sm`, les mêmes entrées passent en liste empilée, lisible à
-          320px ; l'overlay ne s'affiche qu'à partir de `sm`. */}
+      {/* Libellés des paliers : tous CENTRÉS sur leur trait — le dépassement
+          de la demi-droite laisse au 100 k€ la place de se centrer sans
+          chevaucher le 80 k€. Sous `sm`, les mêmes entrées passent en liste
+          empilée, lisible à 320px ; l'overlay ne s'affiche qu'à partir de
+          `sm`. */}
       <div className={`mt-2 text-xs ${tone === "dark" ? "text-paper/70" : "text-ink-soft"}`}>
         {/* role="list" : le preflight Tailwind pose list-style:none, ce qui
             fait retirer la sémantique de liste par Safari/VoiceOver. */}
         <ul role="list" className="flex flex-col gap-1 sm:hidden">
           {markers.map((m) => (
             <li key={m.value}>
-              <span className={`font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
+              <span className={`text-lg font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
                 {formatInt(m.value)}&nbsp;€
                 {m.reached && (
                   <>
@@ -90,16 +105,16 @@ export function Gauge({
             </li>
           ))}
         </ul>
-        <div className="relative hidden h-10 sm:block">
+        <div className="relative hidden h-12 sm:block">
           {markers.map((m) => {
-            const left = (m.value / max) * 100;
+            const left = (m.value / span) * 100;
             return (
               <div
                 key={m.value}
-                className={`absolute top-0 ${left > 90 ? "-translate-x-full text-right" : "-translate-x-1/2 text-center"}`}
+                className="absolute top-0 -translate-x-1/2 text-center"
                 style={{ left: `${left}%` }}
               >
-                <span className={`font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
+                <span className={`text-lg font-semibold ${tone === "dark" ? "text-paper" : "text-ink"}`}>
                   {formatInt(m.value)}&nbsp;€
                   {m.reached && (
                     <>

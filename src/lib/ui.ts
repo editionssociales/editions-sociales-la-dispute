@@ -25,13 +25,12 @@ export const FOCUS_RING_LIGHT =
 export const FOCUS_RING_LIGHT_OUTER =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
-/** Anneau intérieur (offset négatif) — fond ink/noir : outline pop-yellow. */
+/** Anneau intérieur (offset négatif) — fond ink/noir : outline pop-yellow.
+ *  (La variante extérieure sombre a disparu avec son dernier usage — l'étagère
+ *  mobile de /souscription, passée sur fond paper le 2026-07-25 ; la recréer
+ *  ici si le besoin revient.) */
 export const FOCUS_RING_DARK =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
-
-/** Variante extérieure (décollée de 2px) du même anneau sombre. */
-export const FOCUS_RING_DARK_OUTER =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pop-yellow";
 
 /**
  * Cellule inversante : fond clair au repos, inversion en ink à l'état actif —

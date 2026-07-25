@@ -218,85 +218,79 @@ export default async function SouscriptionPage() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       {/* Colonne principale (jauge, corps de texte, CTA final) — le rail des
-          contreparties vit en frère de DOM, sur la droite de la page entière. */}
+          contreparties vit en frère de DOM, sur la droite de la page entière,
+          et monte jusqu'en haut de page en lg+ (`lg:-mt-24` dans TiersRail,
+          navbar resserrée à gauche via `railInset` — largeur de colonne 380px
+          à garder en phase avec `site-header.tsx`). */}
       <div className="min-w-0">
         {/* 1 ▪ La collecte en direct OUVRE la page — compteur de lutte
-            monumental sur bloc ink pleine largeur, jauge 2026 vivante,
-            objectif + CTA d'ancre. N'affiche que ce qu'une campagne en cours
-            peut honnêtement montrer (collecté net + contributeurs). Fenêtre
-            de fraîcheur ~1–3 min, voir `src/app/CLAUDE.md`. */}
+            monumental sur bloc ink pleine largeur, CTA d'ancre à sa droite,
+            jauge 2026 vivante en demi-droite (l'objectif vit dans ses
+            abscisses — plus de module « Objectif » séparé). N'affiche que ce
+            qu'une campagne en cours peut honnêtement montrer (collecté net +
+            contributeurs). Fenêtre de fraîcheur ~1–3 min, voir
+            `src/app/CLAUDE.md`. */}
         <section className="bg-ink text-paper">
           <Container className="py-12 sm:py-16">
             <Reveal>
-              {outage ? (
-                <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
-                  La collecte est en cours — le total s’affichera de nouveau
-                  dans quelques minutes.
-                </p>
-              ) : !enabled ? (
-                /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
-                   annoncer la date plutôt qu'un « soyez les premier·ères »
-                   contradictoire avec des boutons morts. */
-                <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
-                  La souscription ouvre le 15 août — découvrez déjà les
-                  contreparties.
-                </p>
-              ) : liveCampaign.collected > 0 ? (
-                /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
-                   supprime les blancs contenant un retour à la ligne — sans
-                   eux, AT/copier-coller lisent « Déjà11 014 €réunis ». Les
-                   nœuds espace entre spans `block` ne sont pas rendus : zéro
-                   impact visuel. La phrase reste UN SEUL <p> (ordre de
-                   lecture intact), seuls les spans posent les échelles. */
-                <p className="text-lg leading-snug text-paper/80">
-                  <span className="block font-sans text-xs font-extrabold uppercase tracking-[.3em] text-paper/70">
-                    Déjà
-                  </span>{" "}
-                  <span className="mt-3 block">
-                    <CountUp
-                      value={liveCampaign.collected}
-                      suffix=" €"
-                      className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-paper lg:text-[clamp(56px,9vw,128px)]"
-                    />
-                  </span>{" "}
-                  <span className="mt-4 block">
-                    réunis auprès de{" "}
-                    <CountUp
-                      value={liveCampaign.contributors}
-                      className="font-sans text-2xl font-black italic text-paper"
-                    />{" "}
-                    contributeur·rices.
-                  </span>
-                </p>
-              ) : (
-                <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
-                  Campagne tout juste lancée — soyez les premier·ères à
-                  contribuer.
-                </p>
-              )}
-              {!outage && (
-                <Gauge
-                  className="mt-10 sm:mt-12"
-                  tone="dark"
-                  value={liveCampaign.gauge.value}
-                  max={liveCampaign.gauge.max}
-                  markers={liveCampaign.gauge.markers}
-                />
-              )}
-              <div className="mt-10 flex flex-wrap items-end justify-between gap-x-8 gap-y-6 border-t-2 border-paper/30 pt-8">
-                <div>
-                  <p className="font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/70">
-                    Objectif
-                  </p>
-                  <p className="mt-2 font-sans text-[clamp(36px,7vw,48px)] font-black italic leading-none">
-                    {formatInt(liveCampaign.goal)}&nbsp;€
-                  </p>
+              {/* Rangée compteur + CTA (maquette 25/07) : le CTA d'ancre
+                  occupe l'espace vide au-dessus à droite de la barre, calé
+                  sur la base du compteur. Il renvoie vers la liste des
+                  contreparties, le paiement se joue là-bas ; la flèche
+                  « ↓ » le distingue des boutons de PAIEMENT du rail
+                  (libellé « Contribuer » nu, retour client 2026-07-24).
+                  L'ex-module « Objectif » a disparu (25/07) : redondant
+                  avec l'abscisse 100 000 € de la jauge. */}
+              <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
+                <div className="min-w-0">
+                  {outage ? (
+                    <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
+                      La collecte est en cours — le total s’affichera de nouveau
+                      dans quelques minutes.
+                    </p>
+                  ) : !enabled ? (
+                    /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
+                       annoncer la date plutôt qu'un « soyez les premier·ères »
+                       contradictoire avec des boutons morts. */
+                    <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
+                      La souscription ouvre le 15 août — découvrez déjà les
+                      contreparties.
+                    </p>
+                  ) : liveCampaign.collected > 0 ? (
+                    /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
+                       supprime les blancs contenant un retour à la ligne — sans
+                       eux, AT/copier-coller lisent « Déjà11 014 €réunis ». Les
+                       nœuds espace entre spans `block` ne sont pas rendus : zéro
+                       impact visuel. La phrase reste UN SEUL <p> (ordre de
+                       lecture intact), seuls les spans posent les échelles. */
+                    <p className="text-lg leading-snug text-paper/80">
+                      <span className="block font-sans text-xs font-extrabold uppercase tracking-[.3em] text-paper/70">
+                        Déjà
+                      </span>{" "}
+                      <span className="mt-3 block">
+                        <CountUp
+                          value={liveCampaign.collected}
+                          suffix=" €"
+                          className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-paper lg:text-[clamp(56px,9vw,128px)]"
+                        />
+                      </span>{" "}
+                      <span className="mt-4 block">
+                        réunis auprès de{" "}
+                        <CountUp
+                          value={liveCampaign.contributors}
+                          className="font-sans text-2xl font-black italic text-paper"
+                        />{" "}
+                        contributeur·rices.
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="max-w-md text-[15px] leading-relaxed text-paper/70">
+                      Campagne tout juste lancée — soyez les premier·ères à
+                      contribuer.
+                    </p>
+                  )}
                 </div>
                 <div>
-                  {/* CTA de la jauge (retour client 2026-07-24) : renvoie vers
-                      la liste des contreparties, le paiement se joue là-bas. La
-                      flèche « ↓ » distingue cette ancre de défilement des
-                      boutons de PAIEMENT du rail (libellé « Contribuer » nu). */}
                   <Button
                     href="#paliers"
                     variant="invert"
@@ -312,6 +306,15 @@ export default async function SouscriptionPage() {
                   )}
                 </div>
               </div>
+              {!outage && (
+                <Gauge
+                  className="mt-10 sm:mt-12"
+                  tone="dark"
+                  value={liveCampaign.gauge.value}
+                  max={liveCampaign.gauge.max}
+                  markers={liveCampaign.gauge.markers}
+                />
+              )}
             </Reveal>
           </Container>
         </section>
@@ -359,11 +362,17 @@ export default async function SouscriptionPage() {
 
         {/* 3 ▪ L'ask 2026 — le slogan en trois échelles (affiche) : « 100
             ans » en aplat plein très grand, la qualification en capitales,
-            la demande sur bandeau ink. Le h1 reste UN SEUL <h1> portant tout
-            le slogan verbatim dans l'ordre — seuls des spans posent les
-            échelles (jamais de duplication). L'étagère ne vit plus ici :
-            elle sépare deux paragraphes de la section héritage (dernières
-            parutions = preuve des « chantiers prometteurs », cf. plus bas).
+            puis l'étagère des dernières parutions SOUS le titre (maquette
+            25/07). En lg+, la demande (« aidez-nous… ») est posée SUR le
+            rayon, dans l'espace vide à droite du dernier dos — la place des
+            prochains livres ; sous lg elle reste un bandeau ink sous la
+            grille de couvertures. Le h1 reste UN SEUL <h1> portant tout le
+            slogan verbatim dans l'ordre : la demande y vit en sr-only, ses
+            deux rendus visibles (rayon lg / bandeau mobile) sont
+            aria-hidden — une seule lecture SR, zéro duplication dans
+            l'arbre a11y. L'étagère ne vit JAMAIS sous un Reveal (son
+            transform crée un containing block qui casse le pop-out 3D) ni
+            sous un overflow-hidden (clipperait le livre déplié).
             Le formulaire montant libre n'est plus ici non plus (il clôt la
             liste des contreparties), seule l'ancre y mène.
             TODO(contenu) : le docx s'intitule « Slogans » (pluriel) mais
@@ -380,14 +389,39 @@ export default async function SouscriptionPage() {
             >
               d’édition marxiste :
             </span>{" "}
-            <span className="mt-8 block bg-ink pb-10 pt-10 text-paper sm:mt-10 sm:pb-12 sm:pt-12">
-              <span className={SPAN_CONTAINER}>
-                <span className="block max-w-[16ch] text-[clamp(28px,7vw,54px)] leading-[0.95]">
-                  aidez-nous à poursuivre l’histoire.
-                </span>
+            <span className="sr-only">aidez-nous à poursuivre l’histoire.</span>
+          </h1>
+          {/* lg+ : l'étagère sous le titre, la demande posée sur le rayon. */}
+          <div className="mx-auto mt-10 hidden w-full max-w-6xl px-5 sm:px-8 lg:block">
+            <div role="group" aria-label="Dernières parutions">
+              <HeroShelf
+                books={shelfBooks}
+                trailing={
+                  <span
+                    aria-hidden="true"
+                    className="block max-w-[15ch] pb-2 pl-12 font-sans text-[clamp(30px,3.4vw,46px)] font-black italic leading-[0.95] text-ink"
+                  >
+                    aidez-nous à poursuivre l’histoire.
+                  </span>
+                }
+              />
+            </div>
+          </div>
+          {/* Sous lg : le repli 2×4 de l'étagère (R7), puis la demande en
+              bandeau ink — même composition qu'avant la maquette 25/07. */}
+          <div className="mx-auto mt-8 w-full max-w-6xl px-5 sm:px-8 lg:hidden">
+            <MobileShelf books={shelfBooks} />
+          </div>
+          <p
+            aria-hidden="true"
+            className="mt-8 block bg-ink pb-10 pt-10 font-sans font-black italic text-paper sm:mt-10 sm:pb-12 sm:pt-12 lg:hidden"
+          >
+            <span className={SPAN_CONTAINER}>
+              <span className="block max-w-[16ch] text-[clamp(28px,7vw,54px)] leading-[0.95]">
+                aidez-nous à poursuivre l’histoire.
               </span>
             </span>
-          </h1>
+          </p>
           {/* Chemin mobile uniquement (en lg+, le rail sticky est déjà
               visible) : petite bande ink qui prolonge le bandeau du slogan.
               Padding seulement, JAMAIS de marge sur le premier enfant — une
@@ -535,13 +569,10 @@ export default async function SouscriptionPage() {
         {/* Section 3 — les maisons, cent ans : le titre entier en display
             sur bandeau ocher (texte ink — AA ≈5,5:1), le « 100 ans » en
             tampon penché conservé, l'anaphore « Cent ans de… » en barres
-            empilées séparées de hairlines ink ; l'étagère des dernières
-            parutions SÉPARE l'anaphore des paragraphes de chantiers
-            (« Récemment… ») — la preuve matérielle du propos, entre le
-            centenaire et les collections nouvelles. Reveal SCINDÉ en deux
-            autour d'elle : l'étagère ne doit jamais vivre sous un Reveal
-            (son transform crée un containing block qui casse le pop-out 3D)
-            ni sous un overflow-hidden (clipperait le livre déplié). */}
+            empilées séparées de hairlines ink. Reveal en deux blocs frères —
+            héritage de l'ex-étagère-séparatrice (remontée sous le titre de
+            l'ask le 25/07) ; sans coût, chaque bloc se révèle
+            indépendamment. */}
         <section className="mt-16 sm:mt-24">
           <Reveal>
             <h2 className="bg-ocher font-sans font-black italic text-ink">
@@ -574,23 +605,6 @@ export default async function SouscriptionPage() {
               </div>
             </Container>
           </Reveal>
-
-          {/* Étagère-séparateur (hors Reveal, cf. commentaire de section) :
-              bande compacte sur fond paper (fond ink retiré le 25/07) entre
-              l'anaphore et les chantiers récents. Le pb lg est court :
-              HeroShelf réserve déjà h-20 sous la barre pour le cartouche
-              titre/auteur du livre déplié. */}
-          <div className="mt-10 sm:mt-12">
-            <div className="mx-auto w-full max-w-6xl px-5 pb-8 pt-8 sm:px-8 sm:pt-10 lg:pb-3">
-              {/* `hidden lg:block` : sous lg la HeroShelf qu'il contient est
-                  déjà masquée — sans lui, un groupe nommé VIDE doublonnerait
-                  le `aria-label` de MobileShelf dans l'arbre d'accessibilité. */}
-              <div className="hidden lg:block" role="group" aria-label="Dernières parutions">
-                <HeroShelf books={shelfBooks} />
-              </div>
-              <MobileShelf books={shelfBooks} />
-            </div>
-          </div>
 
           <Reveal>
             <Container>

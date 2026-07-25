@@ -30,6 +30,14 @@ import { CartNavCell } from "./cart/cart-badge";
  * par `useCompactOnScroll`, ~200ms) — comportement scroll inchangé, mais
  * cantonné au desktop.
  *
+ * Exception /souscription (`railInset`, maquette 25/07) : le rail des
+ * contreparties monte jusqu'en haut de page — la navbar se RESSERRE À
+ * GAUCHE (marge droite = largeur du rail, à garder en phase avec
+ * `lg:grid-cols-[minmax(0,1fr)_380px]` de la page) et reste en format
+ * compact quel que soit le scroll. La marge vit sur le <header> (pas sur le
+ * <nav>) : sinon sa boîte sticky z-50 continuerait de couvrir le haut du
+ * rail et intercepterait les clics.
+ *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » |
  * nav 2×2. Dans le bloc maisons, « Les Éditions sociales » (plus long) fixe
  * la largeur ; la rangée du dessus aligne « La Dispute » puis deux carrés
@@ -325,13 +333,15 @@ function SiteHeaderChrome({
   active,
   compact,
   homeActive,
+  railInset,
 }: {
   active: Record<NavSectionId, boolean>;
   compact: boolean;
   homeActive: boolean;
+  railInset: boolean;
 }) {
   return (
-    <header className="sticky top-0 z-50">
+    <header className={railInset ? "sticky top-0 z-50 lg:mr-[380px]" : "sticky top-0 z-50"}>
       <nav aria-label="Navigation principale" className="bg-ink">
         {/* Mobile (< lg) : 2 rangées — chaque cellule est un <li>
             (`display: contents`, parité lecteur d'écran) ; les tailles restent
@@ -420,12 +430,14 @@ function SiteHeaderChrome({
 function SiteHeaderInner() {
   const pathname = usePathname() ?? "/";
   const active = useActiveSections();
-  const compact = useCompactOnScroll();
+  const railInset = pathname === "/souscription";
+  const compact = useCompactOnScroll() || railInset;
   return (
     <SiteHeaderChrome
       active={active}
       compact={compact}
       homeActive={pathname === NAV_HOME.href}
+      railInset={railInset}
     />
   );
 }
@@ -451,12 +463,14 @@ function SiteHeaderFallback() {
   const pathname = usePathname() ?? "/";
   const search = useInitialSearch();
   const active = activeSections(pathname, search);
-  const compact = useCompactOnScroll();
+  const railInset = pathname === "/souscription";
+  const compact = useCompactOnScroll() || railInset;
   return (
     <SiteHeaderChrome
       active={active}
       compact={compact}
       homeActive={pathname === NAV_HOME.href}
+      railInset={railInset}
     />
   );
 }

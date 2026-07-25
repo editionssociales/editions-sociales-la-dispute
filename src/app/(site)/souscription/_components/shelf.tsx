@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Book } from "@/lib/types";
 import Link from "next/link";
 import { ShelfLock } from "@/components/shelf-lock";
@@ -50,12 +51,17 @@ const MOBILE_SHELF_COUNT = 8;
  * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
  * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
  * apparaissent en typo nue sous la barre de l'étagère. CSS pur, aucun JS
- * client. L'étagère vit dans une bande-séparatrice SUR FOND PAPER (fond ink
- * retiré 2026-07-25) : la couverture dépliée peut recouvrir temporairement le
- * texte au-dessus — même comportement que dans l'ex-héros, où elle glissait
- * vers la colonne de texte.
+ * client. L'étagère vit sous le titre de l'ask, sur fond paper (maquette
+ * 25/07) : la couverture dépliée peut recouvrir temporairement le titre
+ * au-dessus — même comportement que dans l'ex-héros, où elle glissait vers
+ * la colonne de texte.
+ *
+ * `trailing` : contenu posé SUR le rayon, dans l'espace libre à droite du
+ * dernier dos (la place des prochains livres) — l'ask y met la demande du
+ * slogan. Rendu plein-flex aligné sur la base des dos ; padding/typo à la
+ * charge de l'appelant (convention primitives).
  */
-export function HeroShelf({ books }: { books: Book[] }) {
+export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: ReactNode }) {
   // Décalage de chaque dos par rapport au bord gauche de l'étagère, pour
   // ancrer le bloc de texte au même endroit quel que soit le dos survolé.
   const leftOffsets = SPINES.map((_, i) =>
@@ -80,9 +86,9 @@ export function HeroShelf({ books }: { books: Book[] }) {
           }
           return (
             // Anneau focus fait main (exception R5) : les dos font 20-36px de
-            // large, un anneau EXTÉRIEUR pop-yellow (FOCUS_RING_DARK_OUTER) y
-            // déborderait de 20-36px ; ocher INTÉRIEUR contraste sur la
-            // couverture sans jamais dépasser du dos (choix de cadrage d'origine).
+            // large, un anneau EXTÉRIEUR (FOCUS_RING_*_OUTER) y déborderait
+            // de 20-36px ; ocher INTÉRIEUR contraste sur la couverture sans
+            // jamais dépasser du dos (choix de cadrage d'origine).
             <Link
               key={book.id}
               href={`/catalogue/${book.edition}/${book.slug}`}
@@ -134,6 +140,7 @@ export function HeroShelf({ books }: { books: Book[] }) {
             </Link>
           );
         })}
+        {trailing && <div className="min-w-0 flex-1">{trailing}</div>}
       </div>
       <div className="h-[3px] bg-ink/25" />
       {/* Zone réservée sous la barre : l'encart titre/auteur/collection du dos
