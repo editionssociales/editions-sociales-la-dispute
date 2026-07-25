@@ -37,20 +37,16 @@ import { FOCUS_RING_DARK } from "@/lib/ui";
  */
 
 /**
- * Hauteur du bandeau, seule partie visible replié (`3.5rem`, cible R7 ≥ 44px)
- * — PLUS l'encoche basse de l'appareil (`safe-area-inset-bottom`).
+ * Hauteur du bandeau, seule partie visible replié — FIXE, 3.5rem (`h-14`,
+ * cible R7 ≥ 44px). La classe de repli, la réserve posée sur `body` et la
+ * course de glissé partagent cette valeur et DOIVENT rester en phase.
  *
- * NB : sans `viewport-fit=cover` (cas actuel — aucune `export const viewport`
- * dans `(site)/layout.tsx`), iOS insère déjà le viewport au-dessus de la barre
- * d'accueil et `env()` vaut 0 : le terme ne change RIEN aujourd'hui. Il est là
- * pour que le bandeau reste au-dessus de la barre d'accueil le jour où la page
- * passera en `viewport-fit=cover` — pas pour corriger un bug observé.
- *
- * La classe de repli, la réserve posée sur `body` et la course de glissé
- * suivent la même formule et DOIVENT rester en phase : d'où la mesure du
- * bandeau en pixels réels au moment du geste.
+ * Ne JAMAIS y remettre `env(safe-area-inset-bottom)` (essayé le 26/07, retiré
+ * le jour même sur constat client) : iOS Safari renvoie 0 barre d'outils
+ * déployée et ~34px une fois qu'elle s'escamote au défilement — le bandeau
+ * changeait donc de taille selon l'état « plein écran » du navigateur.
  */
-const HANDLE_H = "calc(3.5rem + env(safe-area-inset-bottom))";
+const HANDLE_PX = 56;
 
 /** Sous le point de rupture `lg` de Tailwind (1024px) exclusivement. */
 const MOBILE_QUERY = "(max-width: 1023.98px)";
@@ -95,7 +91,6 @@ export function BottomSheet({
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const handleRef = useRef<HTMLButtonElement>(null);
   // Le geste vit dans un ref (`last` = dernier décalage appliqué) : la
   // décision d'aimantation le lit à la levée du doigt sans passer par l'état,
   // dont les mises à jour sont asynchrones.
@@ -130,11 +125,28 @@ export function BottomSheet({
   useEffect(() => {
     if (!mobile) return;
     const previous = document.body.style.paddingBottom;
-    document.body.style.paddingBottom = HANDLE_H;
+    document.body.style.paddingBottom = `${HANDLE_PX}px`;
     return () => {
       document.body.style.paddingBottom = previous;
     };
   }, [mobile]);
+
+  // Fermeture au clic ou au glissé EXTÉRIEUR — sur `pointerdown` (le doigt
+  // qui part ailleurs ferme aussitôt, sans attendre la levée) et en phase de
+  // CAPTURE, pour fermer même si un composant de la page arrête la
+  // propagation. Pas de voile : la page derrière reste lisible et cliquable,
+  // c'est le premier appui qui referme.
+  useEffect(() => {
+    if (!mobile || !open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const sheet = sheetRef.current;
+      if (!sheet || sheet.contains(event.target as Node)) return;
+      userActed.current = true;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [mobile, open]);
 
   // Chaîne stable (et non le tableau, recréé à chaque rendu de l'appelant) :
   // l'écouteur ne se réabonne pas à chaque frame de glissé.
@@ -180,11 +192,8 @@ export function BottomSheet({
       if (!sheet) return;
       userActed.current = true;
       // Course utile = tout sauf le bandeau, qui reste toujours visible.
-      // Bandeau MESURÉ (l'encoche basse ne se connaît qu'au rendu) : la
-      // course de glissé doit s'arrêter exactement là où la classe de repli
-      // s'arrête, sinon le geste et l'aimantation divergent.
-      const handlePx = handleRef.current?.offsetHeight ?? 56;
-      const max = Math.max(0, sheet.offsetHeight - handlePx);
+      // Course utile = tout sauf le bandeau, qui reste toujours visible.
+      const max = Math.max(0, sheet.offsetHeight - HANDLE_PX);
       const base = open ? 0 : max;
       gesture.current = { startY: event.clientY, base, max, moved: false, last: base };
       // Capture : le doigt peut sortir du bandeau sans perdre le geste.
@@ -238,7 +247,7 @@ export function BottomSheet({
       // au-dessus de la feuille.
       // À l'impression, la feuille redevient un bloc en flux, entier et jamais
       // tronqué (même soin que le rail en lg+, `tiers-rail.tsx`).
-      className={`fixed inset-x-0 bottom-0 z-40 flex h-[85dvh] flex-col border-t-2 border-ink bg-paper print:static print:h-auto print:translate-y-0 ${
+      className={`fixed inset-x-0 bottom-0 z-40 flex h-[66.6667svh] flex-col border-t-2 border-ink bg-paper print:static print:h-auto print:translate-y-0 ${
         dragging
           ? ""
           : // Pas de `motion-reduce:transition-none` : la course de la feuille
@@ -250,7 +259,7 @@ export function BottomSheet({
             "transition-transform duration-300 ease-out"
       } ${
         !dragging && !open
-          ? "translate-y-[calc(100%-3.5rem-env(safe-area-inset-bottom))]"
+          ? "translate-y-[calc(100%-3.5rem)]"
           : ""
       }`}
       // Position PENDANT le geste : le doigt mène, aucune transition ne s'interpose.
@@ -265,15 +274,9 @@ export function BottomSheet({
         onPointerMove={onPointerMove}
         onPointerUp={endGesture}
         onPointerCancel={endGesture}
-        ref={handleRef}
-        // Hauteur en style inline : la MÊME expression sert ici et dans la
-        // classe de repli (`HANDLE_H`, source unique). Le padding bas laisse
-        // l'encoche de l'appareil en aplat sous le libellé, qui reste centré
-        // dans les 3.5rem du haut.
-        style={{ height: HANDLE_H, paddingBottom: "env(safe-area-inset-bottom)" }}
         // touch-none : le navigateur ne doit pas voler le geste vertical pour
         // défiler la page pendant qu'on tire la feuille.
-        className={`flex w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-ink text-paper hover:bg-pop-yellow hover:text-ink ${FOCUS_RING_DARK} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
+        className={`flex h-14 w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-brick text-paper hover:bg-paper hover:text-brick ${FOCUS_RING_DARK} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
       >
         {/* Poignée (grip) — barre pleine aux angles droits (R8), à la couleur
             du texte pour survivre à l'inversion au survol. */}
