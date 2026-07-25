@@ -45,17 +45,22 @@ function tierRows<T>(items: T[]): T[][] {
  * l'inverse du RANG de l'étage (retour Youri 25/07) :
  *
  * - corps : `FONT_BASE / rang`, arrondi au dixième → 60-30-20-15-12-10 px.
- * - épaisseur : `THICK_BASE / rang`, SAUF l'étage 1 (« Tous les livres »),
- *   laissé en hauteur automatique — c'est la bannière du catalogue, elle se
- *   règle sur son propre corps.
+ *   SEULE exception, l'étage 1 (« Tous les livres ») porte 30 % de moins
+ *   (`TIER1_FONT_RATIO`) : sa case est une bannière pleine largeur, le corps
+ *   de formule y était démesuré. La réduction est locale au rang 1 — la
+ *   formule des autres étages n'en est jamais affectée.
+ * - épaisseur : `THICK_BASE / rang`, SAUF ce même étage 1, laissé en hauteur
+ *   automatique : c'est la bannière du catalogue, elle se règle sur son
+ *   propre corps.
  *
- * `THICK_BASE` vaut 1,3 × `FONT_BASE` : le rapport hauteur/corps reste donc
- * constant d'un étage à l'autre, ce qui laisse toujours la même marge à un
- * libellé d'une ligne. Imposer la hauteur retire la latitude du padding
- * vertical — les cases des étages 2+ passent en `py-0` + `overflow-hidden`,
- * sinon `py-2` (16px) déborderait à lui seul les étages profonds (13px de
- * haut au rang 6). Un libellé qui passerait à deux lignes y est donc rogné :
- * c'est le prix de l'épaisseur exacte.
+ * `THICK_BASE` vaut 2,6 × `FONT_BASE` : le rapport hauteur/corps reste donc
+ * constant d'un étage à l'autre, ce qui laisse partout la même marge. Le
+ * facteur a été DOUBLÉ (1,3 → 2,6, retour Youri 25/07) : les étages étaient
+ * trop plats au départ. Effet de bord bienvenu, les libellés à deux lignes
+ * cessent d'être rognés (26px de haut pour 10px de corps au rang 6).
+ * Imposer la hauteur retire la latitude du padding vertical — les cases des
+ * étages 2+ passent en `py-0` + `overflow-hidden`, sinon `py-2` (16px)
+ * mangerait à lui seul l'essentiel des étages profonds.
  *
  * Le calage sur le NOMBRE DE CASES (essayé le même jour) est écarté : un
  * dernier étage incomplet — 19 libellés donnent 1-2-3-4-5-4 cases — revenait
@@ -73,14 +78,16 @@ function tierRows<T>(items: T[]): T[][] {
  * par le client (densité voulue de la vue).
  */
 const FONT_BASE = 60;
-const THICK_BASE = FONT_BASE * 1.3;
+const THICK_BASE = FONT_BASE * 2.6;
+/** Abattement du seul rang 1 (« Tous les livres »), −30 %. */
+const TIER1_FONT_RATIO = 0.7;
 /** Facteur mobile, appliqué au corps comme à l'épaisseur. */
 const SM_RATIO = 0.62;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 function tierMetrics(rank: number) {
-  const fontLg = round1(FONT_BASE / rank);
+  const fontLg = round1((FONT_BASE / rank) * (rank === 1 ? TIER1_FONT_RATIO : 1));
   const fontSm = round1(fontLg * SM_RATIO);
   return {
     fontLg,
