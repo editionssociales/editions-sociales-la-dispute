@@ -38,6 +38,15 @@ import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
  * <nav>) : sinon sa boîte sticky z-50 continuerait de couvrir le haut du
  * rail et intercepterait les clics.
  *
+ * Cette même route porte le LISERÉ DE COLLECTE fixé en haut du viewport
+ * (10px, z-60 — `souscription/_components/collecte-ticker.tsx`) : le header
+ * lui réserve sa hauteur en `pt-[10px]`, réserve INTERNE à la boîte sticky,
+ * donc valable en haut de page comme une fois collée (un `mt` + `top-[10px]`
+ * laisserait au contraire la page défiler à nu dans ces 10px). Réserve
+ * OPAQUE (`bg-paper`) : le bandeau n'est pas rendu en panne Stripe, la bande
+ * doit rester pleine sans lui. Valeur à garder en phase avec la hauteur du
+ * liseré et l'ancrage du rail (`lg:top-[10px]`, `tiers-rail.tsx`).
+ *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » |
  * nav 2×2. Dans le bloc maisons, « Les Éditions sociales » (plus long) fixe
  * la largeur ; la rangée du dessus aligne « La Dispute » puis deux carrés
@@ -453,7 +462,13 @@ function SiteHeaderChrome({
   }, [menuOpen]);
 
   return (
-    <header className={railInset ? "sticky top-0 z-50 lg:mr-[380px]" : "sticky top-0 z-50"}>
+    <header
+      className={
+        railInset
+          ? "sticky top-0 z-50 bg-paper pt-[10px] lg:mr-[380px]"
+          : "sticky top-0 z-50"
+      }
+    >
       <nav aria-label="Navigation principale" className="bg-ink">
         {/* Mobile (< lg) : 2 rangées — chaque cellule est un <li>
             (`display: contents`, parité lecteur d'écran) ; les tailles restent
