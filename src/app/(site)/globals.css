@@ -137,27 +137,15 @@ h1, h2, h3, h4 {
    honnête sans JS) ; à l'hydratation, le pilotage par le scroll reprend la
    barre. Une seule course douce couvre l'écart entre les deux — même
    easeOutCubic que `gauge-sweep` —, puis la classe est retirée : le suivi du
-   scroll, lui, doit rester immédiat. */
+   scroll, lui, doit rester immédiat. Portée par le remplissage ET par le
+   curseur voyageur, qui la perdent au même instant. */
 .rail-handoff {
   transition: transform 700ms cubic-bezier(0.33, 1, 0.68, 1);
 }
-/* Impression du palier au passage du front : le trait (2px) s'épaissit d'un
-   coup, tient, puis reprend sa largeur — `steps(1, end)`, deux états francs,
-   aucun fondu (R8). En `transform` et non en `width` : un aplat de 2px
-   relancerait un layout à chaque frame. */
-@keyframes rail-tick-hit {
-  0% { transform: scaleX(1); }
-  35% { transform: scaleX(4); }
-  100% { transform: scaleX(1); }
-}
-.rail-tick-hit {
-  animation: rail-tick-hit 280ms steps(1, end) 1;
-}
 @media (prefers-reduced-motion: reduce) {
   /* Sous ce réglage le liseré n'est de toute façon pas piloté : garde de
-     principe, aucune de ces deux courses ne doit pouvoir démarrer. */
+     principe, la passation ne doit pas pouvoir démarrer. */
   .rail-handoff { transition: none; }
-  .rail-tick-hit { animation: none; }
 }
 
 /* Animations de la page de souscription (étagère du héro). */

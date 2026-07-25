@@ -2,24 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import { MASK_STYLE, OVERSHOOT } from "@/components/gauge";
-import type { GaugeMarker } from "@/lib/campaign";
 
 /**
  * Durée de la PASSATION (cf. `.rail-handoff`, globals.css) : le HTML serveur
  * peint le niveau réel, l'hydratation rend la barre au scroll — la transition
  * couvre le seul écart entre les deux, puis disparaît (le suivi du scroll doit
- * rester immédiat).
+ * rester immédiat). Remplissage ET curseur la portent, et la perdent au même
+ * timeout : deux courses désynchronisées décrocheraient la pointe du front.
  */
 const HANDOFF_MS = 700;
-
-/**
- * Tolérance d'allumage d'un palier : le front calculé n'atteint jamais son
- * abscisse à la virgule près (course de scroll en pixels entiers).
- */
-const EPSILON = 0.0004;
-
-/** Opacité d'un trait de palier pas encore franchi (allumé : 1). */
-const TICK_DIM = "0.2";
 
 /**
  * Liseré de collecte fixé en haut du viewport, sur /souscription seulement —
@@ -30,10 +21,19 @@ const TICK_DIM = "0.2";
  * c'est mener la collecte à son état vrai.
  *
  * Géométrie reprise TELLE QUELLE de `<Gauge>` (`OVERSHOOT`, `MASK_STYLE`
- * importés) : même empan de demi-droite (objectif × 1,2), mêmes abscisses de
- * paliers, même queue en pointillés dégressifs au-delà de ≈105 % de
- * l'objectif. Le liseré n'est pas une seconde jauge, c'est la même, à
- * l'échelle du viewport.
+ * importés) : même empan de demi-droite (objectif × 1,2), même queue en
+ * pointillés dégressifs au-delà de ≈105 % de l'objectif. Le liseré n'est pas
+ * une seconde jauge, c'est la même, à l'échelle du viewport.
+ *
+ * AUCUNE marque de palier (retour Youri 26/07 : « enlève les marques de
+ * paliers du liseré ») : sur 10px de haut, trois traits allumés/éteints
+ * faisaient une graduation illisible que rien n'explique — les paliers se
+ * lisent dans la page, pas dans son liseré. Ne restent que le front… et le
+ * CURSEUR qui le désigne (même retour : le client voyait « le triangle curseur
+ * bloqué à 0 », c'est-à-dire une pointe qui ne suivait pas ; elle suit
+ * désormais le remplissage au pixel, dans le même `paint()`). C'est pourquoi
+ * `MASK_STYLE` reste la version SANS coupures de la jauge : les démarcations de
+ * paliers sont l'affaire de la barre du héros seule.
  *
  * FOND IMPOSÉ (correction client du 26/07) : le prototype masquait le bandeau
  * ENTIER, si bien que la page défilante se voyait dans les coupures de la
@@ -64,11 +64,9 @@ const TICK_DIM = "0.2";
 export function CollecteTicker({
   value,
   max,
-  markers,
 }: {
   value: number;
   max: number;
-  markers: GaugeMarker[];
 }) {
   // Empan de la demi-droite (120 k€ pour un objectif à 100 k€) : l'objectif
   // tombe à 83,3 %, une collecte au-delà se peint sur le dépassement.
@@ -76,46 +74,29 @@ export function CollecteTicker({
   const real = Math.min(value / span, 1);
 
   const fillRef = useRef<HTMLDivElement>(null);
-  const tickRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  // État allumé/éteint des paliers, initialisé sur le rendu serveur : les
-  // écritures suivantes sont différentielles (aucun style réécrit par frame).
-  const litRef = useRef<boolean[]>(markers.map((m) => m.reached));
+  const cursorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fill = fillRef.current;
-    if (!fill) return;
+    const cursor = cursorRef.current;
+    if (!fill || !cursor) return;
     // Mouvement réduit : aucun pilotage, le niveau réel rendu par le serveur
-    // reste en place (même sortie que le prototype, qui force scrollP à 1).
+    // reste en place — remplissage ET curseur (même sortie que le prototype,
+    // qui force scrollP à 1).
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let raf = 0;
     let queued = false;
-    // Première peinture = la passation : elle éteint les paliers rendus par le
-    // serveur, sans les faire clignoter (seul un ALLUMAGE frappe, et jamais
-    // celui-là).
-    let handover = true;
 
     const paint = (front: number) => {
       // `scaleX` sur un aplat sans contenu : composité, aucun layout — et le
       // masque, porté par le groupe parent, reste en repère viewport (posé sur
       // la barre elle-même, il se comprimerait avec elle).
       fill.style.transform = `scaleX(${front})`;
-      markers.forEach((m, i) => {
-        const el = tickRefs.current[i];
-        if (!el) return;
-        const lit = front >= m.value / span - EPSILON;
-        if (lit === litRef.current[i]) return;
-        litRef.current[i] = lit;
-        el.style.opacity = lit ? "1" : TICK_DIM;
-        // Impression du palier au passage du front (réversible : en remontant,
-        // il s'éteint sans frapper).
-        if (lit && !handover) {
-          el.classList.remove("rail-tick-hit");
-          void el.offsetWidth; // reflow : rejoue l'animation
-          el.classList.add("rail-tick-hit");
-        }
-      });
-      handover = false;
+      // Le curseur est peint dans le MÊME appel, jamais dans un second
+      // listener : la pointe et le front ne peuvent pas décrocher d'une frame.
+      // `translateX` en % (et non `scaleX`) — un triangle ne se comprime pas.
+      cursor.style.transform = `translateX(${front * 100}%)`;
     };
 
     const read = () => {
@@ -136,6 +117,7 @@ export function CollecteTicker({
     read();
     const handoff = window.setTimeout(() => {
       fill.classList.remove("rail-handoff");
+      cursor.classList.remove("rail-handoff");
     }, HANDOFF_MS);
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -148,7 +130,7 @@ export function CollecteTicker({
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [markers, real, span]);
+  }, [real]);
 
   return (
     <div
@@ -173,18 +155,29 @@ export function CollecteTicker({
           className="rail-handoff absolute inset-0 origin-left bg-ocher"
           style={{ transform: `scaleX(${real})` }}
         />
-        {markers.map((m, i) => (
-          <span
-            key={m.value}
-            ref={(el) => {
-              tickRefs.current[i] = el;
-            }}
-            // 2px centrés sur l'abscisse du palier (`-ml-px`) ; `origin-center`
-            // pour que l'impression du passage s'épaississe des deux côtés.
-            className="absolute inset-y-0 -ml-px w-0.5 origin-center bg-paper"
-            style={{ left: `${(m.value / span) * 100}%`, opacity: m.reached ? 1 : TICK_DIM }}
-          />
-        ))}
+      </div>
+      {/* Curseur voyageur, FRÈRE du groupe masqué et posé après lui : il ne
+          doit être ni rogné par la queue en pointillés (une pointe à demi
+          effacée au-delà de 105 k€ ne dirait plus rien) ni comprimé par le
+          `scaleX` du remplissage — d'où un calque à part, `inset-x-0`, que la
+          course translate de `front × 100 %`, l'enfant se recentrant lui-même
+          sur ce point (`-translate-x-1/2`).
+
+          Triangle PAPER pointe en bas, 10×8 en bordures CSS (aplat R8, zéro
+          radius), CONTENU dans les 10px du bandeau : au front il chevauche
+          l'ocher à sa gauche et l'ink à sa droite — paper est la seule teinte
+          lisible sur les deux d'un coup.
+
+          Comme le remplissage : niveau RÉEL au rendu serveur (fail-open), même
+          `.rail-handoff` pour rattraper le scroll à l'hydratation, statique au
+          réel sous `prefers-reduced-motion`. À 0 € il est simplement posé à
+          l'origine — et bouge au premier scroll. */}
+      <div
+        ref={cursorRef}
+        className="rail-handoff absolute inset-x-0 top-0"
+        style={{ transform: `translateX(${real * 100}%)` }}
+      >
+        <span className="absolute left-0 top-0 h-0 w-0 -translate-x-1/2 border-l-[5px] border-r-[5px] border-t-8 border-l-transparent border-r-transparent border-t-paper" />
       </div>
     </div>
   );
