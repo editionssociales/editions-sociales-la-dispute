@@ -3,6 +3,7 @@ import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { CountUp } from "@/components/count-up";
 import { Gauge } from "@/components/gauge";
+import { ImpactFrame } from "@/components/impact-frame";
 import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
 import { donationsEnabled } from "@/lib/stripe";
@@ -83,8 +84,23 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * que cette décoration ponctuelle — récupérée de l'ex-CTA final (25/07), elle
  * marque désormais le pied de la jauge. Les paliers du rail cyclent, eux, les
  * 4 accents de marque, jamais la palette pop (réservée nav/statut).
+ *
+ * Ses coupes ne sont plus quatre parts égales mais les ABSCISSES DE LA JAUGE,
+ * sur l'empan total de la demi-droite (120 k€ = objectif × 1,2) : 0-50 k
+ * (41,666 %), 50-80 k (25 %), 80-100 k (16,667 %), puis le dépassement
+ * 100-120 k (16,667 %) — d'où `POP_COLS`, mêmes nombres en `fr`. Rime
+ * STRUCTURELLE : le liseré répète la géométrie de la barre, jamais sa donnée
+ * vivante (il reste décoratif — R2, aria-hidden — et ne bouge pas d'un pixel
+ * avec la collecte). En `fr` plutôt qu'en pourcentages : la grille répartit
+ * l'arrondi elle-même, quatre largeurs en % laisseraient un jour sous-pixel
+ * au bout du liseré.
+ *
+ * La queue en pointillés de la jauge n'a PAS d'écho ici : elle ne commence
+ * qu'à 105 k€ (87,5 % de l'empan), pas au palier — un dernier segment tireté
+ * copierait une coupe qui n'existe pas.
  */
 const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
+const POP_COLS = "grid-cols-[41.666fr_25fr_16.667fr_16.667fr]";
 
 /**
  * Vidéo de présentation — ouvre le corps de texte (retour client
@@ -240,92 +256,105 @@ export default async function SouscriptionPage() {
         <section className="bg-paper text-ink">
           <Container className="py-12 sm:py-16">
             <Reveal>
-              {/* Rangée compteur + CTA (maquette 25/07) : le CTA d'ancre
-                  occupe l'espace vide au-dessus à droite de la barre, calé
-                  sur la base du compteur. Il renvoie vers la liste des
-                  contreparties, le paiement se joue là-bas ; la flèche
-                  « ↓ » le distingue des boutons de PAIEMENT du rail
-                  (libellé « Contribuer » nu, retour client 2026-07-24).
-                  L'ex-module « Objectif » a disparu (25/07) : redondant
-                  avec l'abscisse 100 000 € de la jauge. */}
-              <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
-                <div className="min-w-0">
-                  {outage ? (
-                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                      La collecte est en cours — le total s’affichera de nouveau
-                      dans quelques minutes.
-                    </p>
-                  ) : !enabled ? (
-                    /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
-                       annoncer la date plutôt qu'un « soyez les premier·ères »
-                       contradictoire avec des boutons morts. */
-                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                      La souscription ouvre le 15 août — découvrez déjà les
-                      contreparties.
-                    </p>
-                  ) : liveCampaign.collected > 0 ? (
-                    /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
-                       supprime les blancs contenant un retour à la ligne — sans
-                       eux, AT/copier-coller lisent « 11 014 €réunis ». Les
-                       nœuds espace entre spans `block` ne sont pas rendus : zéro
-                       impact visuel. La phrase reste UN SEUL <p> (ordre de
-                       lecture intact), seuls les spans posent les échelles.
-                       Le surtitre « Déjà » est supprimé (25/07, retour Youri) :
-                       le compteur ouvre directement le bloc. */
-                    <p className="text-lg leading-snug text-ink-soft">
-                      <span className="block">
-                        <CountUp
-                          value={liveCampaign.collected}
-                          suffix=" €"
-                          className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-ink lg:text-[clamp(56px,9vw,128px)]"
-                        />
-                      </span>{" "}
-                      <span className="mt-4 block">
-                        réunis auprès de{" "}
-                        <CountUp
-                          value={liveCampaign.contributors}
-                          className="font-sans text-2xl font-black italic text-ink"
-                        />{" "}
-                        contributeur·rices.
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                      Campagne tout juste lancée — soyez les premier·ères à
-                      contribuer.
-                    </p>
-                  )}
+              {/* Frame d'impact : compteur et jauge courent 1600 ms sur le
+                  même easeOutCubic — encore faut-il qu'ils PARTENT ensemble.
+                  `ImpactFrame` hisse le déclencheur au bloc entier ; le total
+                  et la barre se posent alors sur la même frame. Le fondu du
+                  `Reveal` garde, lui, son propre seuil. */}
+              <ImpactFrame>
+                {/* Rangée compteur + CTA (maquette 25/07) : le CTA d'ancre
+                    occupe l'espace vide au-dessus à droite de la barre, calé
+                    sur la base du compteur. Il renvoie vers la liste des
+                    contreparties, le paiement se joue là-bas ; la flèche
+                    « ↓ » le distingue des boutons de PAIEMENT du rail
+                    (libellé « Contribuer » nu, retour client 2026-07-24).
+                    L'ex-module « Objectif » a disparu (25/07) : redondant
+                    avec l'abscisse 100 000 € de la jauge. */}
+                <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
+                  <div className="min-w-0">
+                    {outage ? (
+                      <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
+                        La collecte est en cours — le total s’affichera de nouveau
+                        dans quelques minutes.
+                      </p>
+                    ) : !enabled ? (
+                      /* Avant l'ouverture (E1), les CTA du rail sont désactivés :
+                         annoncer la date plutôt qu'un « soyez les premier·ères »
+                         contradictoire avec des boutons morts. */
+                      <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
+                        La souscription ouvre le 15 août — découvrez déjà les
+                        contreparties.
+                      </p>
+                    ) : liveCampaign.collected > 0 ? (
+                      /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
+                         supprime les blancs contenant un retour à la ligne — sans
+                         eux, AT/copier-coller lisent « 11 014 €réunis ». Les
+                         nœuds espace entre spans `block` ne sont pas rendus : zéro
+                         impact visuel. La phrase reste UN SEUL <p> (ordre de
+                         lecture intact), seuls les spans posent les échelles.
+                         Le surtitre « Déjà » est supprimé (25/07, retour Youri) :
+                         le compteur ouvre directement le bloc. */
+                      <p className="text-lg leading-snug text-ink-soft">
+                        <span className="block">
+                          <CountUp
+                            value={liveCampaign.collected}
+                            suffix=" €"
+                            className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-ink lg:text-[clamp(56px,9vw,128px)]"
+                          />
+                        </span>{" "}
+                        <span className="mt-4 block">
+                          réunis auprès de{" "}
+                          <CountUp
+                            value={liveCampaign.contributors}
+                            className="font-sans text-2xl font-black italic text-ink"
+                          />{" "}
+                          contributeur·rices.
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
+                        Campagne tout juste lancée — soyez les premier·ères à
+                        contribuer.
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Button
+                      href="#paliers"
+                      variant="solid"
+                      aria-label="Contribuer — voir les contreparties"
+                      className="px-6 py-3 text-sm font-extrabold tracking-[.03em]"
+                    >
+                      Contribuer&nbsp;↓
+                    </Button>
+                    {!enabled && (
+                      <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-ink-soft">
+                        {OPENING_MICROCOPY}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Button
-                    href="#paliers"
-                    variant="solid"
-                    aria-label="Contribuer — voir les contreparties"
-                    className="px-6 py-3 text-sm font-extrabold tracking-[.03em]"
-                  >
-                    Contribuer&nbsp;↓
-                  </Button>
-                  {!enabled && (
-                    <p className="mt-1.5 font-sans text-[11px] font-semibold uppercase tracking-[.04em] text-ink-soft">
-                      {OPENING_MICROCOPY}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {!outage && (
-                <Gauge
-                  className="mt-10 sm:mt-12"
-                  tone="light"
-                  value={liveCampaign.gauge.value}
-                  max={liveCampaign.gauge.max}
-                  markers={liveCampaign.gauge.markers}
-                />
-              )}
+                {/* La barre SOULIGNE le bloc du compteur (`mt-2`, 26/07) au
+                    lieu de flotter sous lui : elle appartient au chiffre. La
+                    seule gouttière qui subsiste entre les deux est la réserve
+                    des libellés hauts (`pt-16/20`), INTERNE à la jauge. */}
+                {!outage && (
+                  <Gauge
+                    className="mt-2"
+                    tone="light"
+                    value={liveCampaign.gauge.value}
+                    max={liveCampaign.gauge.max}
+                    markers={liveCampaign.gauge.markers}
+                  />
+                )}
+              </ImpactFrame>
             </Reveal>
           </Container>
           {/* Liseré pop en pied de bloc : la seule décoration pop de la page,
-              posée sur la couture paper → ink. Décoratif pur (aria-hidden). */}
-          <div className="grid grid-cols-4" aria-hidden="true">
+              posée sur la couture paper → ink. Décoratif pur (aria-hidden).
+              Coupé aux abscisses des paliers (cf. POP_COLS) : le pied du bloc
+              rime avec la barre qui le surmonte. */}
+          <div className={`grid ${POP_COLS}`} aria-hidden="true">
             {POP_BG.map((c) => (
               <div key={c} className={`h-1.5 ${c}`} />
             ))}
