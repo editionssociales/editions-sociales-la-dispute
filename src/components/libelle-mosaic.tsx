@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { FramedGrid } from "./framed-grid";
+import { MosaicDisclosure } from "./mosaic-disclosure";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
 
 /**
@@ -258,44 +259,76 @@ export function LibelleMosaic({
   );
   const rows = tierRows(byCount);
 
+  /** Variables CSS d'un étage — corps, compte, et l'épaisseur si imposée. */
+  const tierStyle = (m: ReturnType<typeof tierMetrics>) =>
+    ({
+      "--fs": `${m.fontLg}px`,
+      "--fs-sm": `${m.fontSm}px`,
+      "--fsc": `${m.countLg}px`,
+      "--fsc-sm": `${m.countSm}px`,
+      ...(m.thickLg != null && {
+        "--th": `${m.thickLg}px`,
+        "--th-sm": `${m.thickSm}px`,
+      }),
+    }) as CSSProperties;
+
+  const tierRow = (row: LibelleMosaicItem[], i: number) => {
+    const m = tierMetrics(i + 1);
+    return (
+      <div
+        key={i}
+        className={`flex gap-[2px] ${m.thickLg == null ? "" : "h-[var(--th-sm)] lg:h-[var(--th)]"}`}
+        style={tierStyle(m)}
+      >
+        {row.map((item) => (
+          <TierCell
+            key={item.slug ?? "all"}
+            href={hrefFor(item.slug)}
+            active={isActive(item)}
+            label={item.name}
+            count={item.count}
+            fixedHeight={m.thickLg != null}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  // Bannière = l'étage 1 quand il porte bien la case « Tous les livres »
+  // (`slug: null`, épinglée par les deux appelants et toujours la plus grosse
+  // au tri). Sinon — jeu de libellés sans elle —, la vue retombe sur tous les
+  // étages à plat : jamais de bascule qui replierait un libellé ordinaire.
+  const banner =
+    rows[0]?.length === 1 && rows[0][0].slug === null ? rows[0][0] : null;
+
   return (
     <FramedGrid
       as="nav"
       aria-label={ariaLabel}
       className={`grid-cols-1 ${className}`}
     >
-      {rows.map((row, i) => {
-        const m = tierMetrics(i + 1);
-        return (
-          <div
-            key={i}
-            className={`flex gap-[2px] ${m.thickLg == null ? "" : "h-[var(--th-sm)] lg:h-[var(--th)]"}`}
-            style={
-              {
-                "--fs": `${m.fontLg}px`,
-                "--fs-sm": `${m.fontSm}px`,
-                "--fsc": `${m.countLg}px`,
-                "--fsc-sm": `${m.countSm}px`,
-                ...(m.thickLg != null && {
-                  "--th": `${m.thickLg}px`,
-                  "--th-sm": `${m.thickSm}px`,
-                }),
-              } as CSSProperties
-            }
-          >
-            {row.map((item) => (
-              <TierCell
-                key={item.slug ?? "all"}
-                href={hrefFor(item.slug)}
-                active={isActive(item)}
-                label={item.name}
-                count={item.count}
-                fixedHeight={m.thickLg != null}
-              />
-            ))}
-          </div>
-        );
-      })}
+      {banner ? (
+        // Les étages sont derrière la bascule de la bannière (îlot client,
+        // `mosaic-disclosure`) : cette vue reste serveur, elle ne passe au
+        // client que des noeuds déjà rendus et un objet de style.
+        <MosaicDisclosure
+          bannerStyle={tierStyle(tierMetrics(1))}
+          bannerActive={isActive(banner)}
+          banner={
+            <TierCell
+              href={hrefFor(banner.slug)}
+              active={isActive(banner)}
+              label={banner.name}
+              count={banner.count}
+              fixedHeight={false}
+            />
+          }
+        >
+          {rows.slice(1).map((row, i) => tierRow(row, i + 1))}
+        </MosaicDisclosure>
+      ) : (
+        rows.map(tierRow)
+      )}
     </FramedGrid>
   );
 }
