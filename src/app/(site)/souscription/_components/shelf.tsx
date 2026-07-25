@@ -4,7 +4,7 @@ import { ShelfLock } from "@/components/shelf-lock";
 import { ShelfCover } from "@/components/shelf-cover";
 import { BookCover, coverAspectRatio } from "@/lib/cover";
 import { ACCENTS, ACCENT_BG as BG } from "@/lib/accents";
-import { FOCUS_RING_DARK_OUTER } from "@/lib/ui";
+import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 /**
  * Étagère 3D de l'ask `/souscription` et son repli mobile — module colocalisé
@@ -50,10 +50,10 @@ const MOBILE_SHELF_COUNT = 8;
  * qui glisse vers le haut-gauche hors de l'étagère (translateX/Y/Z + rotateY
  * -78deg, cf. .book3d* dans globals.css). Titre, auteur et collection
  * apparaissent en typo nue sous la barre de l'étagère. CSS pur, aucun JS
- * client. Depuis l'itération maquette 2026-07, l'étagère vit DANS le bloc ink
- * de l'ask (colonne récit) : la couverture dépliée peut recouvrir
- * temporairement le texte au-dessus — même comportement que dans l'ex-héros,
- * où elle glissait vers la colonne de texte.
+ * client. L'étagère vit dans une bande-séparatrice SUR FOND PAPER (fond ink
+ * retiré 2026-07-25) : la couverture dépliée peut recouvrir temporairement le
+ * texte au-dessus — même comportement que dans l'ex-héros, où elle glissait
+ * vers la colonne de texte.
  */
 export function HeroShelf({ books }: { books: Book[] }) {
   // Décalage de chaque dos par rapport au bord gauche de l'étagère, pour
@@ -101,16 +101,16 @@ export function HeroShelf({ books }: { books: Book[] }) {
                 style={{ left: -leftOffsets[i], top: "calc(100% + 16px)" }}
                 aria-hidden="true"
               >
-                <span className="block font-serif text-sm font-semibold text-paper">
+                <span className="block font-serif text-sm font-semibold text-ink">
                   {book.title}
                 </span>
                 {book.authors.length > 0 && (
-                  <span className="block text-sm text-paper/70">
+                  <span className="block text-sm text-ink/70">
                     {book.authors.map((a) => a.name).join(", ")}
                   </span>
                 )}
                 {book.libelles.length > 0 && (
-                  <span className="mt-0.5 block text-xs tracking-wide text-paper/50">
+                  <span className="mt-0.5 block text-xs tracking-wide text-ink/50">
                     {book.libelles.map((l) => l.name).join(" · ")}
                   </span>
                 )}
@@ -135,7 +135,7 @@ export function HeroShelf({ books }: { books: Book[] }) {
           );
         })}
       </div>
-      <div className="h-1.5 bg-paper/25" />
+      <div className="h-[3px] bg-ink/25" />
       {/* Zone réservée sous la barre : l'encart titre/auteur/collection du dos
           ouvert s'y affiche (positionné en absolu depuis chaque lien). */}
       <div aria-hidden="true" className="h-20" />
@@ -160,7 +160,7 @@ export function MobileShelf({ books }: { books: Book[] }) {
       // Pas de marge propre : la disposition est l'affaire de l'appelant
       // (convention primitives, src/components/CLAUDE.md) — c'est le bandeau
       // séparateur de page.tsx qui porte les espacements.
-      className="grid grid-cols-4 items-start gap-[2px] bg-paper/15 p-[2px] lg:hidden"
+      className="grid grid-cols-4 items-start gap-[2px] bg-ink/15 p-[2px] lg:hidden"
       role="group"
       aria-label="Dernières parutions"
     >
@@ -168,10 +168,10 @@ export function MobileShelf({ books }: { books: Book[] }) {
         <Link
           key={book.id}
           href={`/catalogue/${book.edition}/${book.slug}`}
-          // Anneau EXTÉRIEUR (R5) : posé sur le fond ink du bloc d'ask, pas
-          // sur la couverture elle-même — pop-yellow y contraste, et l'anneau
+          // Anneau EXTÉRIEUR (R5) : posé sur le fond paper de la bande, pas
+          // sur la couverture elle-même — outline ink y contraste, et l'anneau
           // ne recouvre jamais l'image.
-          className={`group relative block bg-paper-2 ${FOCUS_RING_DARK_OUTER}`}
+          className={`group relative block bg-paper-2 ${FOCUS_RING_LIGHT_OUTER}`}
         >
           <span className="sr-only">
             {book.title}

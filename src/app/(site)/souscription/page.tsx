@@ -576,12 +576,11 @@ export default async function SouscriptionPage() {
           </Reveal>
 
           {/* Étagère-séparateur (hors Reveal, cf. commentaire de section) :
-              bande ink compacte entre l'anaphore et les chantiers récents.
-              Paddings seulement — pas de marge sur le premier enfant
-              (margin collapse = bande de paper, bug du 25/07). Le pb lg est
-              court : HeroShelf réserve déjà h-20 sous la barre pour le
-              cartouche titre/auteur du livre déplié. */}
-          <div className="mt-10 bg-ink text-paper sm:mt-12">
+              bande compacte sur fond paper (fond ink retiré le 25/07) entre
+              l'anaphore et les chantiers récents. Le pb lg est court :
+              HeroShelf réserve déjà h-20 sous la barre pour le cartouche
+              titre/auteur du livre déplié. */}
+          <div className="mt-10 sm:mt-12">
             <div className="mx-auto w-full max-w-6xl px-5 pb-8 pt-8 sm:px-8 sm:pt-10 lg:pb-3">
               {/* `hidden lg:block` : sous lg la HeroShelf qu'il contient est
                   déjà masquée — sans lui, un groupe nommé VIDE doublonnerait
