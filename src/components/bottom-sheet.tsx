@@ -226,8 +226,14 @@ export function BottomSheet({
         <span aria-hidden="true" className="h-1 w-12 bg-current" />
         <span className="flex items-center gap-2 font-sans text-[13px] font-extrabold uppercase leading-none tracking-[.06em]">
           {label}
-          {/* Chevron : vers le bas déroulée (tirer pour replier), retourné replié. */}
-          <span className={open ? undefined : "rotate-180"}>
+          {/* Chevron : vers le bas déroulée (tirer pour replier), retourné
+              replié — la rotation s'anime sur la même durée que la course de
+              la feuille, jamais un basculement sec. */}
+          <span
+            className={`inline-block transition-transform duration-300 ease-out motion-reduce:transition-none ${
+              open ? "rotate-0" : "rotate-180"
+            }`}
+          >
             <ChevronGlyph />
           </span>
         </span>

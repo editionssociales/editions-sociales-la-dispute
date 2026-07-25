@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useId, useRef, useState, type RefObject } from "react";
 import {
   NAV_HOME,
   NAV_HOUSES,
@@ -66,9 +66,6 @@ import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
  * item de grille (sous-grille Dispute + carrés / ES).
  */
 
-/** Cible de `aria-controls` de la bascule mobile (panneau des 4 sections). */
-const MOBILE_MENU_ID = "menu-sections-mobile";
-
 const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
   catalogue: "bg-paper hover:bg-pop-pink",
   geme: "bg-paper hover:bg-pop-teal",
@@ -125,6 +122,14 @@ const CELL_TRANSITION =
 // d'un même libellé — dont le reflow 2 lignes ↔ 1 ligne « sauterait ».
 const MORPH_TRANSITION =
   "transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none";
+
+// Croisement des deux calques de la case de droite mobile (panier ↔ bascule du
+// menu) : opacité seule. Le calque sortant est retiré du parcours clavier par
+// `inert`, JAMAIS par `visibility` — une visibilité en transition n'est pas
+// encore rendue focalisable au moment où l'effet suit le focus, et le focus se
+// perdait (constat live).
+const LAYER_MORPH =
+  "transition-opacity duration-200 ease-out motion-reduce:transition-none";
 
 /**
  * Taille FIXE sous `lg` (compact par défaut, indépendante du scroll) ; à `lg`
@@ -234,21 +239,25 @@ function MobileMenuToggle({
   open,
   onToggle,
   panelId,
+  ref,
 }: {
   open: boolean;
   onToggle: () => void;
   panelId: string;
+  /** Suivi du focus quand la bascule change de place (cf. `SiteHeaderChrome`). */
+  ref?: RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      aria-controls={open ? panelId : undefined}
+      aria-controls={panelId}
       aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-      className={`relative flex min-h-11 items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${
-        open ? "w-full" : "w-14"
-      }`}
+      // La largeur vient de l'emplacement : carré `w-14` de la rangée haute
+      // (porté par la pile de calques) ou barre pleine largeur du menu.
+      className={`relative flex h-full min-h-11 w-full items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT}`}
     >
       <span className={open ? "rotate-180" : undefined}>
         <ChevronGlyph />
@@ -414,13 +423,38 @@ function SiteHeaderChrome({
     setMenuOpen(false);
   }
 
+  // La bascule CHANGE de place d'un état à l'autre (case de droite ↔ barre du
+  // bas) : au clavier, le bouton qu'on vient d'actionner devient invisible et
+  // le focus tomberait sur le <body>. On le suit jusqu'à sa nouvelle position
+  // — après le commit (l'élément visé est encore masqué pendant le rendu).
+  // Id du panneau via `useId` et non une constante : le rendu en flux laisse
+  // dans le document une COPIE cachée du header (le div `hidden` de la
+  // frontière Suspense) — un id littéral y serait dupliqué, et `aria-controls`
+  // résoudrait vers la copie morte.
+  const panelId = useId();
+  const topToggle = useRef<HTMLButtonElement>(null);
+  const bottomToggle = useRef<HTMLButtonElement>(null);
+  const followFocus = useRef(false);
+  const toggleMenu = () => {
+    followFocus.current = true;
+    setMenuOpen((previous) => !previous);
+  };
+  useEffect(() => {
+    if (!followFocus.current) return;
+    followFocus.current = false;
+    (menuOpen ? bottomToggle : topToggle).current?.focus();
+  }, [menuOpen]);
+
   return (
     <header className={railInset ? "sticky top-0 z-50 lg:mr-[380px]" : "sticky top-0 z-50"}>
       <nav aria-label="Navigation principale" className="bg-ink">
         {/* Mobile (< lg) : 2 rangées — chaque cellule est un <li>
             (`display: contents`, parité lecteur d'écran) ; les tailles restent
             fixes sous lg (compact par défaut, chantier 3 §3), cibles ≥ 44px (R7). */}
-        <div className="flex flex-col gap-[2px] p-[2px] lg:hidden">
+        {/* Pas de `gap` ici : l'écart de 2px vit DANS le panneau déroulant
+            (`pt-[2px]`), sinon il resterait peint sous la rangée haute une fois
+            le menu replié. */}
+        <div className="flex flex-col p-[2px] lg:hidden">
           <ul className="flex items-stretch gap-[2px]">
             {/* LD | Accueil | ES | Soutenir | Panier */}
             <li className="contents">
@@ -439,42 +473,79 @@ function SiteHeaderChrome({
               <SoutenirCell compact={compact} placement="min-w-0 flex-1 py-3" />
             </li>
             {/* Case de droite : panier quand le menu est déroulé, bascule du
-                menu (chevron + compteur panier) quand il est fermé. */}
-            <li className="contents">
-              {menuOpen ? (
-                <CartNavCell compact={compact} icon placement="w-14" />
-              ) : (
+                menu (chevron + compteur panier) quand il est fermé. Les DEUX
+                calques sont montés en permanence dans la même case
+                ([grid-area:1/1], même pile que `SoutenirCell`) et se croisent
+                en opacité — un montage/démontage rendrait la substitution
+                brutale. `inert` sur le calque sortant : il quitte le parcours
+                clavier et les clics sans quitter le rendu (il doit finir son
+                fondu). Vrai item de grille (pas `contents`) : c'est la pile qui
+                porte la case. */}
+            <li className="relative grid w-14 shrink-0 self-stretch">
+              <span
+                inert={!menuOpen}
+                className={`[grid-area:1/1] ${LAYER_MORPH} ${
+                  menuOpen ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <CartNavCell compact={compact} icon placement="h-full w-full" />
+              </span>
+              <span
+                inert={menuOpen}
+                className={`[grid-area:1/1] ${LAYER_MORPH} ${
+                  menuOpen ? "opacity-0" : "opacity-100"
+                }`}
+              >
                 <MobileMenuToggle
+                  ref={topToggle}
                   open={false}
-                  onToggle={() => setMenuOpen(true)}
-                  panelId={MOBILE_MENU_ID}
+                  onToggle={toggleMenu}
+                  panelId={panelId}
                 />
-              )}
+              </span>
             </li>
           </ul>
-          {menuOpen && (
-            <>
-              <ul id={MOBILE_MENU_ID} className="grid grid-cols-2 gap-[2px]">
-                {NAV_SECTIONS.map((section) => (
-                  <li key={section.id} className="contents">
-                    <Link
-                      href={section.href}
-                      aria-current={active[section.id] ? "page" : undefined}
-                      className={navCellClass(section.id, active[section.id], compact)}
-                    >
-                      {section.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              {/* Bascule repliée en bas du menu, chevron retourné. */}
-              <MobileMenuToggle
-                open
-                onToggle={() => setMenuOpen(false)}
-                panelId={MOBILE_MENU_ID}
-              />
-            </>
-          )}
+          {/* Panneau des sections — TOUJOURS monté, pour pouvoir se dérouler
+              ET se replier visuellement : la grille interpole `0fr → 1fr`
+              (seule façon d'animer une hauteur `auto` sans la mesurer en JS),
+              l'enfant clippe le débordement pendant la course. `inert` replié :
+              ni focusable, ni lu par un lecteur d'écran. */}
+          <div
+            id={panelId}
+            inert={!menuOpen}
+            className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
+              menuOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            {/* L'item de grille ne porte QUE le clipping (`min-h-0` : sans
+                lui, sa taille minimale automatique empêcherait la rangée de
+                descendre à 0). L'écart de 2px vit un cran plus bas, sinon ce
+                padding survivrait au repli — la rangée tombe à 0, pas la boîte. */}
+            <div className="min-h-0 overflow-hidden">
+              <div className="flex flex-col gap-[2px] pt-[2px]">
+                <ul className="grid grid-cols-2 gap-[2px]">
+                  {NAV_SECTIONS.map((section) => (
+                    <li key={section.id} className="contents">
+                      <Link
+                        href={section.href}
+                        aria-current={active[section.id] ? "page" : undefined}
+                        className={navCellClass(section.id, active[section.id], compact)}
+                      >
+                        {section.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {/* Bascule repliée en bas du menu, chevron retourné. */}
+                <MobileMenuToggle
+                  ref={bottomToggle}
+                  open
+                  onToggle={toggleMenu}
+                  panelId={panelId}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Desktop (lg+) : maisons (Dispute + carrés Accueil/Panier / ES) |
