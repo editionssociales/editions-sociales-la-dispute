@@ -15,15 +15,25 @@ export const metadata: Metadata = {
  * Ligne d'identité (libellé + valeur), certaines encore en placeholder
  * client — distinguées visuellement (`italic text-ocher-text`, R6/5.2) pour
  * que l'inachevé se voie comme un état, pas comme une donnée réelle.
+ * `placeholder` est un booléen EXPLICITE posé par l'appelant (issue #91) —
+ * jamais dérivé d'une comparaison de chaîne (`.startsWith("[À COMPLÉTER")`
+ * cassait silencieusement au moindre reformulage du texte français).
  */
-function IdentityRow({ label, value }: { label: string; value: string }) {
-  const isPlaceholder = value.startsWith("[À COMPLÉTER");
+function IdentityRow({
+  label,
+  value,
+  placeholder = false,
+}: {
+  label: string;
+  value: string;
+  placeholder?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-1 border-t-2 border-ink bg-paper px-4 py-3 first:border-t-0 sm:flex-row sm:items-baseline sm:gap-3">
       <dt className="w-56 shrink-0 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
         {label}
       </dt>
-      <dd className={isPlaceholder ? "text-sm italic text-ocher-text" : "text-sm text-ink"}>
+      <dd className={placeholder ? "text-sm italic text-ocher-text" : "text-sm text-ink"}>
         {value}
       </dd>
     </div>
@@ -55,30 +65,43 @@ export default async function MentionsLegalesPage() {
           {/* Éditeur du site */}
           <LegalSection title="Éditeur du site">
             <dl className="mt-6 border-2 border-ink">
-              <IdentityRow label="Raison sociale" value="[À COMPLÉTER : raison sociale]" />
+              <IdentityRow label="Raison sociale" value="[À COMPLÉTER : raison sociale]" placeholder />
               <IdentityRow
                 label="Forme juridique"
                 value="[À COMPLÉTER : forme juridique — SARL / association]"
+                placeholder
               />
-              <IdentityRow label="Siège social" value="[À COMPLÉTER : adresse du siège social]" />
-              <IdentityRow label="SIRET" value="[À COMPLÉTER : SIRET]" />
+              <IdentityRow
+                label="Siège social"
+                value="[À COMPLÉTER : adresse du siège social]"
+                placeholder
+              />
+              <IdentityRow label="SIRET" value="[À COMPLÉTER : SIRET]" placeholder />
               <IdentityRow
                 label="RCS"
                 value="[À COMPLÉTER : n° RCS et ville d'immatriculation, le cas échéant]"
+                placeholder
               />
               <IdentityRow
                 label="Capital social"
                 value="[À COMPLÉTER : capital social, le cas échéant]"
+                placeholder
               />
               <IdentityRow
                 label="N° TVA intracommunautaire"
                 value="[À COMPLÉTER : n° TVA intracommunautaire]"
+                placeholder
               />
               <IdentityRow
                 label="Directeur de la publication"
                 value="[À COMPLÉTER : nom du directeur de la publication]"
+                placeholder
               />
-              <IdentityRow label="Contact" value="[À COMPLÉTER : email de contact et téléphone]" />
+              <IdentityRow
+                label="Contact"
+                value="[À COMPLÉTER : email de contact et téléphone]"
+                placeholder
+              />
             </dl>
           </LegalSection>
 
