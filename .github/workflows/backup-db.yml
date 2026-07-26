@@ -137,11 +137,24 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17 age
+          # L'image du runner embarque déjà un client Postgres 16 dans
+          # /usr/bin, qui gagne dans le PATH et fait échouer le dump
+          # (« aborting because of server version mismatch », constat live
+          # 2026-07-26) : le binaire 17 vit dans /usr/lib/postgresql/17/bin,
+          # on le met DEVANT et on vérifie la version majeure obtenue plutôt
+          # que de la supposer.
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          major="$(/usr/lib/postgresql/17/bin/pg_dump --version | grep -oE '[0-9]+' | head -1)"
+          if [ "$major" != "17" ]; then
+            echo "::error::pg_dump majeur $major au lieu de 17 — aligner sur la version du serveur Neon avant de dumper."
+            exit 1
+          fi
 
       - name: pg_dump (URL Neon directe/non-poolée)
         run: |
           STAMP="$(date -u +%Y%m%d)"
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          echo "pg_dump utilisé : $(command -v pg_dump) — $(pg_dump --version)"
           pg_dump --format=custom --no-owner --dbname="$NEON_DATABASE_URL" \
             --file="catalogue-${STAMP}.dump"
 
