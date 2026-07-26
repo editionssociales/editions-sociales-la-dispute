@@ -29,8 +29,10 @@ export function AddToCartButton({
   // un `<button>` (aucun `href` transmis), mais son type d'`onClick` accepte
   // les deux pour rester générique.
   function handleClick(e: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) {
-    // `book-card.tsx` enveloppe la couverture (et ce bouton) dans un `<Link>`
-    // vers la fiche — ne jamais laisser le clic naviguer en plus d'ajouter.
+    // Défensif : ce bouton n'est plus jamais nesté dans un `<Link>` (chip
+    // sortie du lien en `book-card.tsx`, `nested-interactive`) — garde tout
+    // de même `preventDefault`/`stopPropagation` au cas où un appelant futur
+    // le placerait à nouveau dans un ancêtre cliquable.
     e.preventDefault();
     e.stopPropagation();
     addToCart(id, 1);
@@ -46,7 +48,7 @@ export function AddToCartButton({
         type="button"
         onClick={handleClick}
         aria-label="Ajouter au panier"
-        className={`flex h-8 w-8 flex-none items-center justify-center border-2 border-ink bg-pop-yellow font-sans text-lg font-black leading-none text-black transition-colors motion-reduce:transition-none hover:bg-ink hover:text-pop-yellow ${FOCUS_RING_LIGHT} ${className ?? ""}`}
+        className={`flex h-11 w-11 flex-none items-center justify-center border-2 border-ink bg-pop-yellow font-sans text-lg font-black leading-none text-black transition-colors motion-reduce:transition-none hover:bg-ink hover:text-pop-yellow ${FOCUS_RING_LIGHT} ${className ?? ""}`}
       >
         +
       </button>
