@@ -128,8 +128,22 @@ const CAMPAIGN_VIDEO_URL: string | null = null;
  * classes clamp littérales — contrat JIT) ; la barre du sommet
  * (« On construit », l'objectif plein) est la seule inversée en ink.
  */
+/**
+ * Union littérale des montants de palier 2026 — dérivée À LA MAIN de
+ * `CAMPAIGN_2026_PALIERS` (`src/lib/donation-tiers.ts`, table « docx client,
+ * définitifs »), et non automatiquement : cette table y est annotée
+ * `Palier[]` (pas `as const`), donc son `value` est déjà `number` au moment
+ * où ce module l'importe — aucun littéral ne survit à cette annotation
+ * (`src/lib/donation-tiers.ts` n'appartient pas à ce périmètre). Cette union
+ * fait au moins refuser au compilateur toute clé INCONNUE ou MANQUANTE dans
+ * `OBJECTIF_EXTRAS` ci-dessous ; l'invariant juste après couvre l'autre sens
+ * (un montant qui change côté source) en le faisant échouer bruyamment au
+ * lieu de fusionner silencieusement des extras `undefined`.
+ */
+type PalierAmount = 50_000 | 80_000 | 100_000;
+
 const OBJECTIF_EXTRAS: Record<
-  number,
+  PalierAmount,
   { desc: string; accent: string; display: string; sommet?: boolean }
 > = {
   50_000: {
@@ -152,10 +166,23 @@ const OBJECTIF_EXTRAS: Record<
   },
 };
 
+// Invariant de synchronisation : si `CAMPAIGN_2026_PALIERS` gagne, perd ou
+// modifie un montant sans que `PalierAmount`/`OBJECTIF_EXTRAS` suivent (le
+// cas EN SILENCE visé plus haut), ce module lève au premier rendu/à la
+// génération statique plutôt que de laisser l'escalier des objectifs se
+// composer avec des extras manquants.
+for (const p of CAMPAIGN_2026_PALIERS) {
+  if (!(p.value in OBJECTIF_EXTRAS)) {
+    throw new Error(
+      `souscription/page.tsx : OBJECTIF_EXTRAS ne couvre pas le palier ${p.value} de CAMPAIGN_2026_PALIERS — mettre à jour PalierAmount et OBJECTIF_EXTRAS.`,
+    );
+  }
+}
+
 const OBJECTIFS = CAMPAIGN_2026_PALIERS.map((p) => ({
   value: p.value,
   titre: p.label,
-  ...OBJECTIF_EXTRAS[p.value],
+  ...OBJECTIF_EXTRAS[p.value as PalierAmount],
 }));
 
 export const metadata: Metadata = {
