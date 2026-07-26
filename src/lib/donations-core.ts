@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 
 /**
  * Cœur pur de la jauge de dons 2026 — sans I/O (convention `src/lib/CLAUDE.md`,
- * même découpage que `catalogue-core.ts`/`catalogue-http.ts`) : l'agrégation
+ * même découpage que `catalogue-core.ts`/`catalogue-pg.ts`) : l'agrégation
  * (`sumDonations`) et le parsing d'une page de réponse Stripe
  * (`parseChargeSearchPage`, schéma zod) se testent sans réseau ;
  * `donations.ts` (`server-only`) ne fait que le fetch + la pagination et
@@ -12,7 +12,8 @@ import type Stripe from "stripe";
  * Extrait à part parce que `donations.ts` importe `./stripe`, qui importe le
  * marqueur `server-only` — celui-ci jette systématiquement hors d'un build
  * Next (dont sous Vitest) : tester `sumDonations`/le parsing exige donc de ne
- * pas remonter jusqu'à cet import, comme pour `catalogue-core.ts`.
+ * pas remonter jusqu'à cet import, comme pour `catalogue-core.ts` face à
+ * `catalogue-pg.ts` (également `server-only`).
  */
 
 /**

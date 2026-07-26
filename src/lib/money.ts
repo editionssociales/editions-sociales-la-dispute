@@ -5,7 +5,8 @@
  * `checkout-core.ts` et `promo-core.ts` (prix/montants saisis en euros côté
  * Payload, re-convertis en centimes entiers pour tout calcul) ; `centsToEuros`
  * par `order-webhook-core.ts` (sens inverse, montants Stripe déjà en
- * centimes vers les champs `*TTC` en euros de `Orders.ts`).
+ * centimes vers les champs `*TTC` en euros de `Orders.ts`) et par
+ * `cart-view` (rendu des montants en centimes du panier).
  *
  * `order-export.ts:roundCents` reste séparé : ce n'est pas une conversion
  * euros↔centimes mais un arrondi d'un montant DÉJÀ en euros (ventilation TVA).

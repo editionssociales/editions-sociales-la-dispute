@@ -3,10 +3,10 @@ import { parseChargeSearchPage, sumDonations, type DonationCharge } from "./dona
 
 /**
  * `donations.ts` (I/O, `server-only`) n'est volontairement pas importé ici :
- * comme `catalogue-http.ts`/`boutique.ts`, un module `server-only` jette dès
- * son import hors d'un build Next (dont sous Vitest) — la surface testable
- * est le cœur pur `donations-core.ts` (même convention que
- * `catalogue-core.test.ts` face à `catalogue-http.ts`).
+ * comme `catalogue-pg.ts`, un module `server-only` jette dès son import hors
+ * d'un build Next (dont sous Vitest) — la surface testable est le cœur pur
+ * `donations-core.ts` (même convention que `catalogue-core.test.ts` face à
+ * `catalogue-pg.ts`).
  */
 
 describe("sumDonations", () => {
