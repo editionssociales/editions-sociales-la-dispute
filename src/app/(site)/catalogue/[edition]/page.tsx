@@ -32,7 +32,13 @@ export async function generateMetadata({
   };
 }
 
-export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
+// Pas de `revalidate` ici (issue #74) : cette route lit `searchParams` et
+// rend donc DYNAMIQUEMENT à chaque requête (`catalogue/error.tsx` le
+// documente déjà) — un `revalidate = 3600` n'y décrivait rien de réel. La
+// fraîcheur vient du data-cache tagué `catalogue` (`src/lib/catalogue.ts`,
+// 24 h de filet, purgé par les hooks back-office), pas d'une fenêtre ISR de
+// cette route. Les fiches livre/boutique, elles, gardent un vrai
+// `revalidate = 3600` (pas de `searchParams`, ISR réelle).
 
 async function EditionCatalogueBody({
   params,
