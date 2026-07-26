@@ -14,6 +14,7 @@ import {
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { NAV_ACCENT_BG } from "./nav-accent";
 import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
+import { useCart } from "./cart/cart-context";
 
 /**
  * Navbar brutaliste — quadrillage noir 2px (conteneur `grid gap-[2px]
@@ -156,16 +157,18 @@ const LAYER_MORPH = "transition-opacity duration-200 ease-out";
  * à 23px, dans le composant le plus vu du site).
  */
 function maisonCellClass(compact: boolean) {
-  const lg = compact ? "lg:py-3 lg:text-[14px]" : "lg:py-7 lg:text-[clamp(22px,2vw,30px)]";
-  return `flex min-h-11 items-center bg-paper px-6 py-4 font-sans text-[16px] font-black italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg}`;
+  // Échelle rem (#88, R7 zoom-texte) : 14/16/22/30px → 0.875/1/1.375/1.875rem.
+  const lg = compact ? "lg:py-3 lg:text-[0.875rem]" : "lg:py-7 lg:text-[clamp(1.375rem,2vw,1.875rem)]";
+  return `flex min-h-11 items-center bg-paper px-6 py-4 font-sans text-[1rem] font-black italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg}`;
 }
 
 function navCellClass(section: NavSectionId, active: boolean, compact: boolean) {
   // Fond au repos toujours clair (bg-paper) ou pop (R2) : anneau clair dans
   // les deux cas (R5). Taille fixe sous `lg` (compact par défaut) ; à `lg`
   // la hauteur suit la rangée (py-0), seule la taille de texte varie au scroll.
-  const lg = compact ? "lg:min-h-0 lg:py-0 lg:text-[12px]" : "lg:min-h-0 lg:py-0 lg:text-[14px]";
-  return `flex min-h-11 items-center justify-center px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-black ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg} ${
+  // Échelle rem (#88, R7 zoom-texte) : 12/14/13px → 0.75/0.875/0.8125rem.
+  const lg = compact ? "lg:min-h-0 lg:py-0 lg:text-[0.75rem]" : "lg:min-h-0 lg:py-0 lg:text-[0.875rem]";
+  return `flex min-h-11 items-center justify-center px-4 py-4 text-center font-sans text-[0.8125rem] font-extrabold uppercase tracking-[.08em] text-black ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg} ${
     active ? NAV_ACCENT_BG[section] : NAV_HOVER_CLASS[section]
   }`;
 }
@@ -263,6 +266,18 @@ function MobileMenuToggle({
   /** Suivi du focus quand la bascule change de place (cf. `SiteHeaderChrome`). */
   ref?: RefObject<HTMLButtonElement | null>;
 }) {
+  // Le compte d'articles (`CartCountBadge`) n'est rendu que fermé (le panier a
+  // sa propre case une fois le menu déroulé) — mais un `aria-label` remplace
+  // TOUT le contenu descendant dans le calcul du nom accessible : sans le
+  // porter ici aussi, le compte n'existe pour aucune technologie d'assistance
+  // (#82). Même formulation que `CartNavCell` (`cart/cart-badge.tsx`).
+  const { count } = useCart();
+  const label =
+    open || count === 0
+      ? open
+        ? "Fermer le menu"
+        : "Ouvrir le menu"
+      : `Ouvrir le menu — Panier, ${count} article${count > 1 ? "s" : ""}`;
   return (
     <button
       ref={ref}
@@ -270,7 +285,7 @@ function MobileMenuToggle({
       onClick={onToggle}
       aria-expanded={open}
       aria-controls={panelId}
-      aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+      aria-label={label}
       // La largeur vient de l'emplacement : carré `w-14` de la rangée haute
       // (porté par la pile de calques) ou barre pleine largeur du menu.
       className={`relative flex h-full min-h-11 w-full items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT}`}
