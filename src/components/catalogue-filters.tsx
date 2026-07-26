@@ -14,7 +14,7 @@ import {
   withoutFilter,
   type FilterField,
 } from "@/lib/browse";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { ACCENT_BG } from "@/lib/accents";
 import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
@@ -24,12 +24,14 @@ interface Props {
   authors: Facet[];
   /** Si défini, l'édition est verrouillée (pages /catalogue/[edition]). */
   lockedEdition?: string;
-  /** Nombre total de titres, pour l'étiquette « Tous les livres ». */
-  totalCount?: number;
   /**
-   * Masque les étiquettes de libellé — la mosaïque de `/catalogue/[edition]`
-   * couvre déjà ce rôle, une double navigation sur la même page serait un
-   * doublon.
+   * Historique : masquait les étiquettes de libellé face à la mosaïque de
+   * thèmes. Depuis l'arbitrage client du 25/07 (`LibelleMosaic`, l'UNIQUE
+   * rendu des libellés), les DEUX appelants la posent en permanence — le
+   * rail de puces de libellés qu'elle désactivait est donc supprimé (#91),
+   * et cette prop n'a plus d'effet. Conservée dans le type pour la
+   * compatibilité des deux appelants qui la passent encore ; à retirer avec
+   * eux le jour où ils cessent de la poser.
    */
   hideLibelles?: boolean;
 }
@@ -102,7 +104,7 @@ function SelectCell({
 }) {
   return (
     <div
-      className={`relative flex cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px]`}
+      className={`relative flex min-h-11 cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px]`}
     >
       <span
         aria-hidden="true"
@@ -123,33 +125,11 @@ function SelectCell({
   );
 }
 
-/** Étiquette cliquable (libellé) — cellule inversante à l'état actif. */
-function Tag({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
-    >
-      {children}
-    </button>
-  );
-}
-
 /**
- * Étiquette de maison — même patron que `Tag`, mais accentée (navy/brick,
- * R3) plutôt qu'ink : le filtre de maison est d'une autre nature que les
- * libellés (identité de collection, pas un thème), il mérite son propre
- * petit groupe distinct plutôt que d'être noyé en fin du rail de libellés.
+ * Étiquette de maison — cellule inversante accentée (navy/brick, R3) plutôt
+ * qu'ink : le filtre de maison est d'une autre nature que les libellés
+ * (identité de collection, pas un thème), il mérite son propre petit groupe
+ * distinct.
  */
 function HouseTag({
   active,
@@ -167,7 +147,7 @@ function HouseTag({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${active ? `${accentBg} text-paper` : "bg-paper text-ink hover:bg-ink hover:text-paper"}`}
+      className={`min-h-11 whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${active ? `${accentBg} text-paper` : "bg-paper text-ink hover:bg-ink hover:text-paper"}`}
     >
       {children}
     </button>
@@ -178,8 +158,6 @@ export function CatalogueFilters({
   libelles,
   authors,
   lockedEdition,
-  totalCount,
-  hideLibelles,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -189,18 +167,34 @@ export function CatalogueFilters({
   const filters = readFilters(params);
 
   // Valeur locale du champ de recherche, pour pouvoir le vider depuis les
-  // chips. Si l'URL change sans passer par le champ (chips, navigation,
-  // retour arrière), on resynchronise — mais jamais pendant qu'une de nos
-  // transitions est en vol (l'URL serait en retard sur la frappe) ni quand
-  // l'URL ne fait que rattraper la dernière valeur poussée par le champ.
+  // chips et pour anti-rebondir la frappe (#86) avant de pousser l'URL.
+  // Resynchronisée sur l'URL quand elle change sans passer par le champ
+  // (chips, navigation, retour arrière) — par AJUSTEMENT EN RENDU (même
+  // idiome que `site-header.tsx` : comparaison à un état pendant le rendu,
+  // `setState` conditionnel dans le corps) plutôt que par un effet, qui
+  // provoquerait un rendu en cascade. Jamais pendant qu'une de nos
+  // transitions est en vol OU qu'un anti-rebond est en attente (l'URL serait
+  // en retard sur la frappe), ni quand l'URL ne fait que rattraper la
+  // dernière valeur poussée par le champ.
   const urlQuery = params.get("q") ?? "";
-  const lastPushed = useRef(urlQuery);
   const [query, setQuery] = useState(urlQuery);
-  useEffect(() => {
-    if (isPending || lastPushed.current === urlQuery) return;
-    lastPushed.current = urlQuery;
+  const [lastPushed, setLastPushed] = useState(urlQuery);
+  const [debouncing, setDebouncing] = useState(false);
+  if (!isPending && !debouncing && lastPushed !== urlQuery) {
+    setLastPushed(urlQuery);
     setQuery(urlQuery);
-  }, [urlQuery, isPending]);
+  }
+
+  // Anti-rebond de la recherche : un `router.replace` par frappe déclenchait
+  // une navigation non annulée à chaque caractère (#86). Un seul minuteur en
+  // vol à la fois — la frappe suivante l'annule et le redémarre.
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    },
+    [],
+  );
 
   // Un seul encodeur, dans les deux sens : on lit l'URL en `BookFilters`
   // (`readFilters`), on applique l'algèbre, on ré-encode via `serializeBookFilters`.
@@ -216,25 +210,30 @@ export function CatalogueFilters({
 
   const setFilter = (field: FilterField, value: string) => pushFilters(withFilter(filters, field, value));
 
+  /** Annule un anti-rebond de recherche en attente et resynchronise le champ. */
+  const resetSearchField = (value: string) => {
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+      searchTimeout.current = null;
+    }
+    setDebouncing(false);
+    setQuery(value);
+    setLastPushed(value);
+  };
+
   const removeFilter = (param: string) => {
-    if (param === "q") setQuery("");
+    if (param === "q") resetSearchField("");
     pushFilters(withoutFilter(filters, param));
   };
 
   const clearAll = () => {
-    setQuery("");
+    resetSearchField("");
     pushFilters(clearFilters(filters));
   };
 
-  const activeLibelle = filters.libelle ?? "";
   const activeEdition = filters.edition ?? "";
   const chips = activeChips(filters, { libelles, authors, lockedEdition });
-  // Deux groupes distincts, chacun masquable indépendamment (typiquement
-  // /catalogue/[edition], où hideLibelles ET lockedEdition sont posés — la
-  // mosaïque de thèmes au-dessus couvre déjà le rôle des deux).
   const showHouseGroup = !lockedEdition;
-  const showLibelleGroup = !hideLibelles;
-  const hasTags = showHouseGroup || showLibelleGroup;
 
   return (
     <div
@@ -266,31 +265,6 @@ export function CatalogueFilters({
         </FramedGrid>
       )}
 
-      {showLibelleGroup && (
-        // Rail horizontal sur mobile (pas de mur de puces qui repousse
-        // recherche/tri hors écran) ; redevient une grille qui s'enroule à
-        // partir de `sm`.
-        <FramedGrid
-          flow="flex"
-          role="group"
-          aria-label="Libellés du catalogue"
-          className={`items-stretch overflow-x-auto [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden ${showHouseGroup ? "mt-[2px]" : ""}`}
-        >
-          <Tag active={activeLibelle === ""} onClick={() => setFilter("libelle", "")}>
-            Tous les livres{totalCount != null ? ` (${totalCount})` : ""}
-          </Tag>
-          {libelles.map((l) => (
-            <Tag
-              key={l.slug}
-              active={activeLibelle === l.slug}
-              onClick={() => setFilter("libelle", l.slug)}
-            >
-              {l.name} ({l.count})
-            </Tag>
-          ))}
-        </FramedGrid>
-      )}
-
       {/* Recherche + auteurs + tri : toujours visibles, jamais dans le rail
           de puces ci-dessus (elles ne défilent jamais). Grille explicite
           `1fr auto auto` plutôt qu'un flex : les trois champs tiennent SUR
@@ -300,18 +274,25 @@ export function CatalogueFilters({
       <FramedGrid
         role="group"
         aria-label="Recherche et tri du catalogue"
-        className={`grid-cols-[1fr_auto_auto] items-stretch ${hasTags ? "mt-[2px]" : ""}`}
+        className={`grid-cols-[1fr_auto_auto] items-stretch ${showHouseGroup ? "mt-[2px]" : ""}`}
       >
-        <label className="flex min-w-0 items-center bg-paper px-3.5">
+        <label className="flex min-h-11 min-w-0 items-center bg-paper px-3.5">
           <span className="sr-only">Rechercher</span>
           <input
             type="search"
             value={query}
             placeholder="Titre, auteur…"
             onChange={(e) => {
-              lastPushed.current = e.target.value;
-              setQuery(e.target.value);
-              setFilter("q", e.target.value);
+              const next = e.target.value;
+              setQuery(next);
+              setLastPushed(next);
+              setDebouncing(true);
+              if (searchTimeout.current) clearTimeout(searchTimeout.current);
+              searchTimeout.current = setTimeout(() => {
+                searchTimeout.current = null;
+                setDebouncing(false);
+                setFilter("q", next);
+              }, 300);
             }}
             className={`w-full min-w-0 bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-ink/40 ${CELL_TEXT} ${FOCUS_RING_LIGHT}`}
           />
