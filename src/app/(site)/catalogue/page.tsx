@@ -120,7 +120,15 @@ async function CatalogueBody({
         />
       </div>
 
-      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
+      {/* Live region (issue #86b) : le fallback de chargement (`CatalogueFallback`)
+          annonce déjà « Chargement du catalogue… » côté AT — mais jamais le
+          RÉSULTAT du filtrage une fois la vue rendue. `aria-live="polite"`
+          fait lire le total à chaque changement de filtre/page (navigation
+          interne, pas de rechargement complet). */}
+      <div
+        className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]"
+        aria-live="polite"
+      >
         <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
           {total} résultats
         </span>
