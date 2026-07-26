@@ -64,7 +64,13 @@ describe("MosaicDisclosure — replié par défaut", () => {
     // ... jamais par `visibility` (ni style inline, ni classe utilitaire
     // `invisible`/`hidden` qui la poserait).
     expect(panel!.style.visibility).toBe("");
-    expect(panel!.className).not.toMatch(/\b(invisible|hidden)\b/);
+    // Comparaison sur les CLASSES ENTIÈRES, pas par regex : `\bhidden\b`
+    // matcherait à l'intérieur d'`overflow-hidden`, que le contrat EXIGE
+    // pourtant sur l'item du déroulé (cf. « Grammaire des déroulés »).
+    const classes = panel!.className.split(/\s+/).filter(Boolean);
+    expect(classes).not.toContain("invisible");
+    expect(classes).not.toContain("hidden");
+    expect(classes).toContain("overflow-hidden");
   });
 
   it("l'id du panneau vient de `useId` : unique entre deux instances rendues dans le même arbre, pas littéral", () => {

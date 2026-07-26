@@ -67,10 +67,14 @@ describe('Orders.fields — verrouillage en écriture après création', () => {
   it('les champs des groupes adresse (livraison/facturation) sont eux aussi verrouillés (au niveau du groupe)', () => {
     const shipping = topLevelFields().find((field) => field.name === 'shippingAddress')
     const billing = topLevelFields().find((field) => field.name === 'billingAddress')
-    expect(shipping?.access?.update).toBeTypeOf('function')
-    expect(billing?.access?.update).toBeTypeOf('function')
-    expect((shipping!.access!.update as Access)(adminUser)).toBe(false)
-    expect((billing!.access!.update as Access)(adminUser)).toBe(false)
+    // `Field` est une union dont `UIField` ne porte pas `access` : on lit la
+    // clé derrière le même cast local que la boucle ci-dessus.
+    const updateOf = (field?: Field) =>
+      (field as { access?: { update?: Access } } | undefined)?.access?.update
+    expect(updateOf(shipping)).toBeTypeOf('function')
+    expect(updateOf(billing)).toBeTypeOf('function')
+    expect(updateOf(shipping)!(adminUser)).toBe(false)
+    expect(updateOf(billing)!(adminUser)).toBe(false)
   })
 })
 
@@ -83,8 +87,11 @@ describe('Orders.fields — marqueurs techniques `stockDecremented`/`confirmatio
     it(`"${name}" est lockedAfterCreate ET admin.readOnly (jamais éditable à la main, mais écrit par le webhook en overrideAccess)`, () => {
       const field = findField(name)
       expect(field).toBeDefined()
-      expect(field!.admin?.readOnly).toBe(true)
-      const update = field!.access?.update as Access | undefined
+      // Même cast local que plus haut : `admin.readOnly` et `access` ne sont
+      // pas portés par toutes les branches de l'union `Field` (dont `UIField`).
+      const shape = field as { admin?: { readOnly?: boolean }; access?: { update?: Access } }
+      expect(shape.admin?.readOnly).toBe(true)
+      const update = shape.access?.update
       expect(update).toBeTypeOf('function')
       expect(update!(adminUser)).toBe(false)
       expect(update!(editorUser)).toBe(false)
