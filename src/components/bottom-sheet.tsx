@@ -103,6 +103,10 @@ export function BottomSheet({
   } | null>(null);
   /** Un glissé vient de se terminer → le `click` qui suit ne doit pas rebasculer. */
   const dragged = useRef(false);
+  /** rAF en vol pour coalescer les `pointermove` bruts (#90) : le pointeur
+   *  peut délivrer plusieurs événements par frame (à 120 Hz notamment) —
+   *  un seul `setDragOffset` par frame peinte, jamais un par événement brut. */
+  const moveRaf = useRef(0);
   /** L'utilisateur a pris la main → le déroulé automatique est annulé. */
   const userActed = useRef(false);
   const panelId = useId();
@@ -210,12 +214,24 @@ export function BottomSheet({
     // Tolérance : sous 4px c'est un appui, pas un glissé (tremblement du doigt).
     if (Math.abs(dy) > 4) g.moved = true;
     g.last = Math.min(g.max, Math.max(0, g.base + dy));
-    setDragOffset(g.last);
+    // Coalescé en un seul écrit par frame (#90) : le geste peut délivrer
+    // plusieurs `pointermove` avant la prochaine peinture — `gesture.current`
+    // porte déjà la dernière valeur (lue à la levée du doigt sans passer par
+    // l'état), seul l'AFFICHAGE a besoin d'être throttlé.
+    if (moveRaf.current) return;
+    moveRaf.current = requestAnimationFrame(() => {
+      moveRaf.current = 0;
+      if (gesture.current) setDragOffset(gesture.current.last);
+    });
   }, []);
 
   const endGesture = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     const g = gesture.current;
     if (!g) return;
+    if (moveRaf.current) {
+      cancelAnimationFrame(moveRaf.current);
+      moveRaf.current = 0;
+    }
     gesture.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
