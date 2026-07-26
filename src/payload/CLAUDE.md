@@ -22,5 +22,6 @@ Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : 
 
 ## Verification
 
-- `pnpm generate:types` après tout changement de schéma (collections/globals/fields) — `access.ts` le signale : tant que `payload-types.ts` n'est pas généré, les comparaisons de rôle ne sont pas vérifiées par le compilateur.
+- `pnpm generate:types` après tout changement de schéma (collections/globals/fields) : `payload-types.ts` est commité, et c'est lui qui rend les comparaisons de rôle d'`access.ts` vérifiables par le compilateur — tant qu'il n'est pas régénéré, un champ ajouté n'existe pas pour `tsc` (piège constaté sur les marqueurs d'`Orders`).
+- Les contrats d'accès sont EXÉCUTABLES, plus seulement écrits ici : `access.test.ts` exerce `isAdmin`/`isAdminOrEditor` directement, et `collections/Orders.test.ts` verrouille par inspection de config (aucune I/O) le `create` fermé partout et le verrouillage en écriture après création de TOUS les champs sauf `status`. Casser l'un ou l'autre fait rougir la suite, plus seulement la prose.
 - Migrations versionnées, jamais de `push` en prod (cf. CLAUDE.md racine). `payload migrate:create` est inutilisable sur ce repo (snapshots drizzle obsolètes) : migrations écrites À LA MAIN sur le modèle des précédentes — convention arrays sous collection versionnée : table `_<coll>_v_version_<field>` avec `id serial` + `_uuid varchar` (l'array principal garde `id varchar`), colonnes nullable quand la collection a des drafts.
