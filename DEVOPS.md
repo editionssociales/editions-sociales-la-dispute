@@ -222,37 +222,53 @@ Règle : **aucune clé `live` en Preview.** Une PR ne doit pas pouvoir encaisser
 
 ```
   PR ouverte
-    ├── GitHub Actions « verify »  → typecheck · lint · test        (~1 min, hermétique)
-    └── Vercel Preview Deployment  → pnpm build + URL de preview    (~1 min, réseau)
-         ↓ les deux verts + revue
+    └── GitHub Actions « verify »  → typecheck · lint · test · knip · build   (Postgres via secrets)
+         ↓ vert + revue
        merge sur main
          ↓
-       Vercel Production Deployment
+       Vercel Production Deployment  → `vercel-build` = migrate:prod + next build
 ```
 
-Ce pipeline est **vérifié**, pas souhaité : la PR #5 a fait tourner les deux branches
-(Actions vert en 32 s, preview Vercel verte), et l'historique des déploiements GitHub
-montre `vercel[bot]` promouvant chaque `main` en Production depuis le 2026-07-02.
+Il n'y a plus de déploiement **Preview** Vercel par PR (constat 2026-07-24, cf.
+`CLAUDE.md` § Verification) : le job `verify` est donc la **seule** vérification du
+build avant merge. `vercel[bot]` ne promeut plus que `main` en Production.
 
-### Pourquoi le `build` n'est pas dans GitHub Actions
+### Le `build` est de retour dans GitHub Actions
 
-`generateStaticParams` pré-rend 295 fiches, et `catalogue-http.getBook()` fait **une
-requête REST par slug** : un build à froid envoie **~300 requêtes PHP** à
-l'hébergement OVH **mutualisé** — celui-là même qui sert le trafic public des trois
-WordPress. Lancer le build deux fois par PR (Actions + Vercel) ferait payer au client
-la charge de notre CI. Le build est donc vérifié **une seule fois**, par le
-déploiement preview Vercel.
+Ce qui gardait `pnpm build` hors d'Actions (posé le 2026-07-09, quand ce document a été
+relevé) : `generateStaticParams` pré-rendait 295 fiches via `catalogue-http.getBook()`,
+**une requête REST par slug** vers l'hébergement OVH mutualisé qui servait aussi le
+trafic public des trois WordPress — un build à froid par PR y aurait envoyé ~300
+requêtes PHP, en plus de celles du déploiement preview Vercel qui vérifiait déjà le
+build à l'époque.
 
-Cette contrainte disparaît à la **phase 3** (catalogue en PostgreSQL) : le build
-redevient hermétique et le job `build` peut rejoindre `ci.yml`.
+Les deux prémisses sont tombées : la **coupure OVH** (2026-07-18) a supprimé
+`catalogue-http.ts` — le catalogue lit désormais PostgreSQL (Payload), un `SELECT`, pas
+300 requêtes HTTP — et il n'y a **plus de preview Vercel par PR** (2026-07-24) pour
+vérifier le build à sa place. Le job `verify` lance donc `pnpm build` juste après
+`pnpm knip`, avec deux secrets **GitHub Actions** (`Settings → Secrets and variables →
+Actions`, distincts des secrets Vercel) :
 
-**Corollaire mesuré sur cette PR** : chaque commit poussé, *y compris un commit qui ne
-touche que des `.md`*, déclenche un build preview complet — donc ~300 requêtes vers
-l'OVH du client. Les deux commits de la PR #5 en ont déclenché deux. Correctif à un
-coup : un *Ignored Build Step* Vercel (ou `vercel.json` → `ignoreCommand`) qui saute le
-build quand le diff ne touche ni `src/`, ni `public/`, ni les fichiers de conf.
-**Non appliqué ici** : cela modifie le comportement de déploiement d'un projet en
-production — à valider avant, pas à glisser dans une PR d'outillage.
+| Secret | Rôle |
+|---|---|
+| `DATABASE_URL` | requise au boot (`env.ts`) — `next build` ET `generateStaticParams` (~295 fiches) l'interrogent réellement, en lecture seule. |
+| `PAYLOAD_SECRET` | requise au boot (`env.ts`) ; peut être une valeur dédiée à la CI, n'a pas besoin d'être partagée avec un secret de production. |
+
+⚠️ **Ces deux secrets ne sont pas encore posés.** Ce commit ajoute l'étape dans
+`ci.yml` ; elle échouera (« variable requise » — `env.ts`) tant que `DATABASE_URL`/
+`PAYLOAD_SECRET` ne sont pas configurés côté dépôt GitHub — geste humain/infra, hors du
+périmètre d'un commit d'outillage (même réserve qu'aux runbooks §6). Reste aussi à
+décider **quelle base** `DATABASE_URL` doit pointer :
+
+- la base réelle (dev/staging) → le build lit **en direct** à chaque PR, ~295 lectures
+  Postgres par commit poussé, en concurrence avec le trafic de l'environnement si c'est
+  la même base que la preview/prod ;
+- une base Neon **dédiée à la CI** (branche jetable ou fixe, lecture seule suffisante)
+  → plus sûr, mais c'est une décision d'infra/coût à valider avec le porteur du compte
+  Neon, pas à deviner dans une PR d'outillage.
+
+Le job `verify` ne tranche pas laquelle : c'est cette page qui documente le choix une
+fois fait, pas ce commit.
 
 ### 🟠 Risque mitigé (court terme) : le catalogue tronqué en silence
 

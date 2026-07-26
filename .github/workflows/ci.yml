@@ -14,9 +14,9 @@ permissions:
 
 jobs:
   verify:
-    name: typecheck · lint · test · knip
+    name: typecheck · lint · test · knip · build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -43,15 +43,7 @@ jobs:
       - run: pnpm test
       # Exports morts, fichiers orphelins, dépendances inutilisées (knip.json).
       - run: pnpm knip
-
-# `pnpm build` n'est volontairement PAS lancé ici.
-#
-# Le build pré-rend 295 fiches livre, et `catalogue-http.getBook()` fait UNE requête
-# REST par slug : un build à froid envoie ~300 requêtes PHP à l'hébergement OVH
-# mutualisé, qui sert aussi le trafic public des WordPress. Le doubler (Actions +
-# preview Vercel) à chaque PR ferait payer au client la charge de notre CI.
-#
-# Le build est donc vérifié par le **déploiement preview Vercel** de la PR — une
-# seule fois. Voir DEVOPS.md § « Pipeline CI/CD ». Cette division tombe le jour où le
-# catalogue lit PostgreSQL au lieu de WordPress (phase 3) : le build redevient
-# hermétique et pourra rejoindre ce workflow.
+      - run: pnpm build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
