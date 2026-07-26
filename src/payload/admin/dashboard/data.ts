@@ -245,8 +245,8 @@ interface SentryApiIssue {
  * `.env.example`). Une des trois variables absente, ou réponse non-ok →
  * `na` (gris « diagnostic technique : indisponible »), JAMAIS vert par
  * défaut. Ce fetch vit ici (back-office) et pas dans `src/lib` : le contrat
- * réseau de `src/lib` est fermé (catalogue-http/boutique/donations
- * uniquement, cf. `src/lib/CLAUDE.md`).
+ * réseau de `src/lib` est fermé (`donations`/`brevo` uniquement, cf.
+ * `src/lib/CLAUDE.md`).
  *
  * `cache()` : mémoïsation par requête (défensive — un seul appelant
  * aujourd'hui, `../health/HealthPage.tsx`, vue `/admin/sante`, issue #27 ;

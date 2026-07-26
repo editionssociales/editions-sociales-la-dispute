@@ -1,18 +1,17 @@
 import type { Access } from 'payload'
+import type { User } from '@/payload-types'
 
 /**
- * Rôles applicatifs du back-office.
+ * Rôles applicatifs du back-office — alias lisible du type généré et commité
+ * (`payload-types.ts:586`, `role: 'admin' | 'editor'`). Les comparaisons
+ * `user?.role` ci-dessous SONT vérifiées par le compilateur : `req.user` est
+ * typé `TypedUser` (= `PayloadTypes['user']`), résolu depuis ces mêmes types
+ * générés — plus le fallback `any` d'avant leur génération.
  *
- * NB : tant que `payload-types.ts` n'est pas généré (première exécution de
- * `payload migrate`/`payload generate:types`), `req.user` est typé `any` par
- * le fallback `UntypedUser` de Payload — les comparaisons `user?.role` ci-
- * dessous ne sont donc pas vérifiées par le compilateur contre ce type `Role`.
- * À resserrer une fois les types générés (`CollectionConfig<'users'>` etc.).
- *
- * @public — exporté comme point d'ancrage de ce resserrement, sans importeur
- * pour l'instant (marqueur lu par knip).
+ * @public — exporté comme alias nommé, sans importeur pour l'instant
+ * (marqueur lu par knip).
  */
-export type Role = 'admin' | 'editor'
+export type Role = User['role']
 
 /** Accès réservé aux administrateur·rice·s (config, utilisateurs, suppression de livres…). */
 export const isAdmin: Access = ({ req: { user } }) => user?.role === 'admin'
