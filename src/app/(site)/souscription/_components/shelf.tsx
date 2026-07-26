@@ -133,7 +133,6 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
 export function MobileShelf({ books }: { books: Book[] }) {
   // Même invariant que HeroShelf : couverture + fiche interne requises.
   const items = books.filter((b) => b.cover && b.edition).slice(0, MOBILE_SHELF_COUNT);
-  if (items.length === 0) return null;
   return (
     <div
       // Pas de marge propre : la disposition est l'affaire de l'appelant
@@ -143,29 +142,43 @@ export function MobileShelf({ books }: { books: Book[] }) {
       role="group"
       aria-label="Dernières parutions"
     >
-      {items.map((book) => (
-        <Link
-          key={book.id}
-          href={`/catalogue/${book.edition}/${book.slug}`}
-          // Anneau EXTÉRIEUR (R5) : posé sur le fond paper de la bande, pas
-          // sur la couverture elle-même — outline ink y contraste, et l'anneau
-          // ne recouvre jamais l'image.
-          className={`group relative block bg-paper-2 ${FOCUS_RING_LIGHT_OUTER}`}
-        >
-          <span className="sr-only">
-            {book.title}
-            {book.authors[0] ? `, ${book.authors[0].name}` : ""}
-          </span>
-          <BookCover
-            cover={book.cover}
-            title={book.title}
-            alt=""
-            fit="width"
-            sizes="25vw"
-            className="block h-auto w-full transition-opacity group-hover:opacity-90 group-focus-within:opacity-90 motion-reduce:transition-none"
-          />
-        </Link>
-      ))}
+      {items.length === 0
+        ? // Fail-open (R7 : « l'étagère 3D ne peut pas disparaître sous lg »,
+          // cf. `MOBILE_SHELF_COUNT` ci-dessus) : une panne catalogue vidait
+          // `items` et faisait disparaître TOUTE la réserve mobile en même
+          // temps que HeroShelf ne rendait, elle, que des dos placeholder
+          // (elle ne s'appuie jamais sur `items.length`). Mêmes dos colorés
+          // ici plutôt qu'une grille absente.
+          Array.from({ length: MOBILE_SHELF_COUNT }, (_, i) => (
+            <div
+              key={i}
+              aria-hidden="true"
+              className={`aspect-[2/3] ${BG[ACCENTS[i % 4]]}`}
+            />
+          ))
+        : items.map((book) => (
+            <Link
+              key={book.id}
+              href={`/catalogue/${book.edition}/${book.slug}`}
+              // Anneau EXTÉRIEUR (R5) : posé sur le fond paper de la bande, pas
+              // sur la couverture elle-même — outline ink y contraste, et l'anneau
+              // ne recouvre jamais l'image.
+              className={`group relative block bg-paper-2 ${FOCUS_RING_LIGHT_OUTER}`}
+            >
+              <span className="sr-only">
+                {book.title}
+                {book.authors[0] ? `, ${book.authors[0].name}` : ""}
+              </span>
+              <BookCover
+                cover={book.cover}
+                title={book.title}
+                alt=""
+                fit="width"
+                sizes="25vw"
+                className="block h-auto w-full transition-opacity group-hover:opacity-90 group-focus-within:opacity-90 motion-reduce:transition-none"
+              />
+            </Link>
+          ))}
       {/* 8ᵉ case : la suite du fonds. Format de couverture (`aspect-[2/3]`)
           pour tenir le rythme de la grille, points médians centrés. */}
       <Link

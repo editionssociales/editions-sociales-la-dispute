@@ -8,6 +8,7 @@ import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
+import { RAIL_GRID_CLASS } from "@/components/rail-inset";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
@@ -127,8 +128,22 @@ const CAMPAIGN_VIDEO_URL: string | null = null;
  * classes clamp littérales — contrat JIT) ; la barre du sommet
  * (« On construit », l'objectif plein) est la seule inversée en ink.
  */
+/**
+ * Union littérale des montants de palier 2026 — dérivée À LA MAIN de
+ * `CAMPAIGN_2026_PALIERS` (`src/lib/donation-tiers.ts`, table « docx client,
+ * définitifs »), et non automatiquement : cette table y est annotée
+ * `Palier[]` (pas `as const`), donc son `value` est déjà `number` au moment
+ * où ce module l'importe — aucun littéral ne survit à cette annotation
+ * (`src/lib/donation-tiers.ts` n'appartient pas à ce périmètre). Cette union
+ * fait au moins refuser au compilateur toute clé INCONNUE ou MANQUANTE dans
+ * `OBJECTIF_EXTRAS` ci-dessous ; l'invariant juste après couvre l'autre sens
+ * (un montant qui change côté source) en le faisant échouer bruyamment au
+ * lieu de fusionner silencieusement des extras `undefined`.
+ */
+type PalierAmount = 50_000 | 80_000 | 100_000;
+
 const OBJECTIF_EXTRAS: Record<
-  number,
+  PalierAmount,
   { desc: string; accent: string; display: string; sommet?: boolean }
 > = {
   50_000: {
@@ -151,10 +166,23 @@ const OBJECTIF_EXTRAS: Record<
   },
 };
 
+// Invariant de synchronisation : si `CAMPAIGN_2026_PALIERS` gagne, perd ou
+// modifie un montant sans que `PalierAmount`/`OBJECTIF_EXTRAS` suivent (le
+// cas EN SILENCE visé plus haut), ce module lève au premier rendu/à la
+// génération statique plutôt que de laisser l'escalier des objectifs se
+// composer avec des extras manquants.
+for (const p of CAMPAIGN_2026_PALIERS) {
+  if (!(p.value in OBJECTIF_EXTRAS)) {
+    throw new Error(
+      `souscription/page.tsx : OBJECTIF_EXTRAS ne couvre pas le palier ${p.value} de CAMPAIGN_2026_PALIERS — mettre à jour PalierAmount et OBJECTIF_EXTRAS.`,
+    );
+  }
+}
+
 const OBJECTIFS = CAMPAIGN_2026_PALIERS.map((p) => ({
   value: p.value,
   titre: p.label,
-  ...OBJECTIF_EXTRAS[p.value],
+  ...OBJECTIF_EXTRAS[p.value as PalierAmount],
 }));
 
 export const metadata: Metadata = {
@@ -267,7 +295,7 @@ export default async function SouscriptionPage() {
   );
 
   return (
-    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+    <div className={`lg:grid ${RAIL_GRID_CLASS} lg:items-start`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       {/* Liseré de collecte fixé en haut du viewport (10px, prototype validé
           client — variante V2 « lecture = lutte ») : le remplissage progresse
@@ -435,7 +463,7 @@ export default async function SouscriptionPage() {
           <Container className="py-14 sm:py-16">
             <Reveal>
               {videoEmbed ? (
-                <div className="border-2 border-paper bg-ink shadow-[8px_8px_0_0_#faf7f2]">
+                <div className="border-2 border-paper bg-ink shadow-[8px_8px_0_0_var(--color-paper)]">
                   <iframe
                     src={videoEmbed}
                     title="La vidéo de la souscription"
@@ -447,7 +475,7 @@ export default async function SouscriptionPage() {
                   />
                 </div>
               ) : (
-                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-navy)_14px_28px)] shadow-[8px_8px_0_0_#faf7f2] print:hidden">
+                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-navy)_14px_28px)] shadow-[8px_8px_0_0_var(--color-paper)] print:hidden">
                   {/* SVG plutôt que le caractère ▶ : Effra ne couvre pas les
                       glyphes géométriques, le rendu retombait sur la fonte
                       système (forme et centrage variables selon l'OS). */}
@@ -668,7 +696,7 @@ export default async function SouscriptionPage() {
               </div>
               {/* Punchline en carton « Spécimen » : boîte bordée sous ombre
                   dure navy (R8). */}
-              <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-2xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_#262a5c] sm:mt-12 sm:p-8 sm:text-3xl">
+              <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-2xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_var(--color-navy)] sm:mt-12 sm:p-8 sm:text-3xl">
                 Et, parce que la bataille des idées est aussi une guerre
                 matérielle, soutenir les éditeurs indépendants est{" "}
                 {/* Soulignement (retour Youri 25/07, remplace le marqueur à
@@ -807,7 +835,7 @@ export default async function SouscriptionPage() {
         <section className="mt-16 pb-16 sm:mt-24 sm:pb-24">
           <Container>
             <Reveal>
-              <div className="flex flex-col gap-[2px] border-2 border-ink bg-ink shadow-[8px_8px_0_0_#17140f]">
+              <div className="flex flex-col gap-[2px] border-2 border-ink bg-ink shadow-[8px_8px_0_0_var(--color-ink)]">
                 {OBJECTIFS.map((o) => (
                   <div
                     key={o.titre}

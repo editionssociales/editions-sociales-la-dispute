@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { MASK_STYLE, OVERSHOOT } from "@/components/gauge";
+import { TICKER_HEIGHT_CLASS } from "@/components/rail-inset";
 
 /**
  * Durée de la PASSATION (cf. `.rail-handoff`, globals.css) : le HTML serveur
@@ -137,10 +138,9 @@ export function CollecteTicker({
       aria-hidden="true"
       // Au-dessus du header sticky (z-50) : le liseré n'est jamais recouvert.
       // `pointer-events-none` — 10px de bandeau fixe ne doivent voler aucun
-      // clic au haut de page. Hauteur à garder en phase avec la réserve du
-      // header (`pt-[10px]`, `site-header.tsx`) et l'ancrage du rail
-      // (`lg:top-[10px]`, `tiers-rail.tsx`).
-      className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[10px] print:hidden"
+      // clic au haut de page. Hauteur dérivée de `rail-inset.ts`, source
+      // commune avec la réserve du header et l'ancrage du rail.
+      className={`pointer-events-none fixed inset-x-0 top-0 z-[60] ${TICKER_HEIGHT_CLASS} print:hidden`}
     >
       {/* Fond imposé, JAMAIS masqué : rien de la page ne se voit au travers. */}
       <div className="absolute inset-0 bg-paper" />

@@ -5,7 +5,12 @@ import Link from "next/link";
 import { Button } from "@/components/button";
 import { LEGAL_LINK } from "@/components/legal-section";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
-import { MESSAGE_MAX_LENGTH, NAME_MAX_LENGTH, SUBJECT_MAX_LENGTH } from "@/lib/contact-form";
+import {
+  MESSAGE_MAX_LENGTH,
+  MESSAGE_MIN_LENGTH,
+  NAME_MAX_LENGTH,
+  SUBJECT_MAX_LENGTH,
+} from "@/lib/contact-form";
 import { sendContactMessage } from "@/app/(site)/contact/actions";
 import { CONTACT_INITIAL_STATE } from "@/app/(site)/contact/state";
 
@@ -111,6 +116,7 @@ export function ContactForm() {
           name="message"
           required
           rows={7}
+          minLength={MESSAGE_MIN_LENGTH}
           maxLength={MESSAGE_MAX_LENGTH}
           aria-invalid={erroredField === "message" ? true : undefined}
           aria-describedby={erroredField === "message" ? "contact-status" : undefined}

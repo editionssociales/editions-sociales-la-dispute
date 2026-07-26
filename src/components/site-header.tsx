@@ -13,6 +13,7 @@ import {
 } from "@/lib/nav";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { NAV_ACCENT_BG } from "./nav-accent";
+import { HEADER_TICKER_RESERVE_CLASS, RAIL_WIDTH_CLASS } from "./rail-inset";
 import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
 import { useCart } from "./cart/cart-context";
 
@@ -33,20 +34,22 @@ import { useCart } from "./cart/cart-context";
  *
  * Exception /souscription (`railInset`, maquette 25/07) : le rail des
  * contreparties monte jusqu'en haut de page — la navbar se RESSERRE À
- * GAUCHE (marge droite = largeur du rail, à garder en phase avec
- * `lg:grid-cols-[minmax(0,1fr)_380px]` de la page) et reste en format
- * compact quel que soit le scroll. La marge vit sur le <header> (pas sur le
- * <nav>) : sinon sa boîte sticky z-50 continuerait de couvrir le haut du
- * rail et intercepterait les clics.
+ * GAUCHE (marge droite = largeur du rail, `RAIL_WIDTH_CLASS`, à garder en
+ * phase avec `RAIL_GRID_CLASS` de la page) et reste en format compact quel
+ * que soit le scroll. La marge vit sur le <header> (pas sur le <nav>) :
+ * sinon sa boîte sticky z-50 continuerait de couvrir le haut du rail et
+ * intercepterait les clics.
  *
  * Cette même route porte le LISERÉ DE COLLECTE fixé en haut du viewport
- * (10px, z-60 — `souscription/_components/collecte-ticker.tsx`) : le header
- * lui réserve sa hauteur en `pt-[10px]`, réserve INTERNE à la boîte sticky,
- * donc valable en haut de page comme une fois collée (un `mt` + `top-[10px]`
- * laisserait au contraire la page défiler à nu dans ces 10px). Réserve
- * OPAQUE (`bg-paper`) : le bandeau n'est pas rendu en panne Stripe, la bande
- * doit rester pleine sans lui. Valeur à garder en phase avec la hauteur du
- * liseré et l'ancrage du rail (`lg:top-[10px]`, `tiers-rail.tsx`).
+ * (z-60 — `souscription/_components/collecte-ticker.tsx`) : le header lui
+ * réserve sa hauteur en `HEADER_TICKER_RESERVE_CLASS`, réserve INTERNE à la
+ * boîte sticky, donc valable en haut de page comme une fois collée (un `mt`
+ * + `top` laisserait au contraire la page défiler à nu dans cette réserve).
+ * Réserve OPAQUE (`bg-paper`) : le bandeau n'est pas rendu en panne Stripe,
+ * la bande doit rester pleine sans lui. `HEADER_TICKER_RESERVE_CLASS`,
+ * `RAIL_WIDTH_CLASS` et `RAIL_GRID_CLASS` viennent tous de
+ * `@/components/rail-inset` (source unique 380px/10px, cf. ce fichier) —
+ * une seule ligne à changer le jour où l'une des deux valeurs bouge.
  *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » |
  * nav 2×2. Dans le bloc maisons, « Les Éditions sociales » (plus long) fixe
@@ -480,7 +483,7 @@ function SiteHeaderChrome({
     <header
       className={
         railInset
-          ? "sticky top-0 z-50 bg-paper pt-[10px] lg:mr-[380px]"
+          ? `sticky top-0 z-50 bg-paper ${HEADER_TICKER_RESERVE_CLASS} ${RAIL_WIDTH_CLASS}`
           : "sticky top-0 z-50"
       }
     >

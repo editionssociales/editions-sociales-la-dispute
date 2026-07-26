@@ -42,3 +42,14 @@ export function invertingCell(active: boolean): string {
     ? "bg-ink text-paper"
     : "bg-paper text-ink hover:bg-ink hover:text-paper";
 }
+
+/**
+ * Lien pastille « PDF » (table des matières, extrait choisi) — recette
+ * partagée par la fiche livre boutique et la fiche livre catalogue
+ * (`boutique/[slug]/page.tsx`, `catalogue/[edition]/[slug]/page.tsx`), sinon
+ * copiée-collée à l'identique 4 fois. `${FOCUS_RING_LIGHT}` reste à la charge
+ * de l'appelant (interpolation dans un template literal, pas dans cette
+ * constante littérale).
+ */
+export const PDF_LINK_CLASS =
+  "inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper";

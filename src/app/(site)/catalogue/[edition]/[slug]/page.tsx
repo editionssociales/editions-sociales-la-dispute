@@ -14,7 +14,7 @@ import { getReglagesSite } from "@/lib/site-content";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { ACCENT_BG } from "@/lib/accents";
-import { FOCUS_RING_LIGHT, FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
+import { FOCUS_RING_LIGHT, FOCUS_RING_LIGHT_OUTER, PDF_LINK_CLASS } from "@/lib/ui";
 
 export async function generateMetadata({
   params,
@@ -326,7 +326,7 @@ export default async function BookPage({
                   href={book.tocUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+                  className={`${PDF_LINK_CLASS} ${FOCUS_RING_LIGHT}`}
                 >
                   Table des matières (PDF)
                 </a>
@@ -336,7 +336,7 @@ export default async function BookPage({
                   href={book.excerptUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className={`inline-flex items-center bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+                  className={`${PDF_LINK_CLASS} ${FOCUS_RING_LIGHT}`}
                 >
                   Extrait choisi (PDF)
                 </a>
