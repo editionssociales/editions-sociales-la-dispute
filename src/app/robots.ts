@@ -24,7 +24,17 @@ export default function robots(): MetadataRoute.Robots {
   return {
     // /admin (back-office Payload) et /api (REST/GraphQL Payload) ne doivent
     // jamais être crawlables ni indexables, y compris une fois le site indexable.
-    rules: { userAgent: "*", allow: "/", disallow: ["/panier", "/admin", "/api"] },
+    //
+    // Issue #87f : `/panier` n'est PAS listé ici — un `disallow` empêche le
+    // crawl, mais pas l'indexation d'une URL découverte ailleurs (lien
+    // interne, historique) : Google peut indexer une page disallowed sans
+    // jamais lire son contenu (résultat « aucune information n'est
+    // disponible »). Le mécanisme correct pour une page d'état utilisateur
+    // comme le panier est un `noindex` de PAGE (`metadata.robots`), qui
+    // exige au contraire que la page reste CRAWLABLE pour que ce `noindex`
+    // soit lu. Ce `noindex` vit dans `(site)/panier/` (hors périmètre de ce
+    // fichier — cf. l'agent propriétaire du dossier `panier/`).
+    rules: { userAgent: "*", allow: "/", disallow: ["/admin", "/api"] },
     sitemap: `${base}/sitemap.xml`,
   };
 }
