@@ -40,7 +40,7 @@ Does NOT own : le schéma SQL `public` (réservé — p. ex. dons) ; la jauge de
 ## Verification
 
 - `pnpm typecheck` · `lint` · `test` · `knip` (exports/fichiers/dépendances morts) · `build` — rejoués sur chaque PR (`ci.yml`, job `verify`) ; `pnpm generate:types` après tout changement de schéma Payload. `typecheck` joue `tsc` SANS attendre le `build` qui le suit dans le même job : les déclarations de modules image vivent dans `src/image-types.d.ts` (`next-env.d.ts` est gitignoré, généré au build).
-- `pnpm build` : hermétique (Postgres uniquement) — rejoué dans `ci.yml` après `pnpm knip`, via les secrets GitHub Actions `DATABASE_URL`/`PAYLOAD_SECRET` (à provisionner, cf. `DEVOPS.md` § « Pipeline CI/CD »), en plus du build de déploiement (`vercel-build` = migrate:prod + next build ; un échec laisse l'ancien déploiement en ligne). Plus aucun preview Vercel sur PR (constat 2026-07-24) : ce job « verify » est donc la seule vérification du build avant merge.
+- `pnpm build` : hermétique (Postgres uniquement) — rejoué dans `ci.yml` après `pnpm knip`, via les secrets GitHub Actions `DATABASE_URL`/`PAYLOAD_SECRET` (À PROVISIONNER : sans eux le job échoue à la collecte des données de page, cf. `DEVOPS.md` § « Pipeline CI/CD »), en plus du build de déploiement (`vercel-build` = migrate:prod + next build ; un échec laisse l'ancien déploiement en ligne). Il n'y a plus de preview Vercel sur PR : ce job « verify » est la SEULE vérification du build avant merge.
 
 ## Child Index
 
