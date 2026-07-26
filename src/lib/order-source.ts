@@ -21,11 +21,11 @@ import { computeStockAfterDecrement, type OrderCreateData } from "./order-webhoo
  * n'a d'ailleurs aucune policy `read`/`create` publique (`Orders.ts`).
  *
  * Centralise les appels déjà présents dans `order-handler.ts`/`health/
- * route.ts`, options reprises À L'IDENTIQUE (mêmes `where`, `sort`, `limit`,
- * `context`) — le but est de nommer le seam, pas de changer son
- * comportement. La logique métier (idempotence par `stripeSessionId`, refus
- * de re-crédit au remboursement) reste dans `order-handler.ts` : ce module ne
- * fait que l'I/O. Exception : `decrementBookStock` porte elle-même la boucle
+ * route.ts` — le but est de nommer le seam, pas de changer le comportement
+ * observable. La logique métier (idempotence par `stripeSessionId`, reprise
+ * par effet non encore marqué — issue #64 —, refus de re-crédit au
+ * remboursement) reste dans `order-handler.ts` : ce module ne fait que l'I/O.
+ * Exception : `decrementBookStock` porte elle-même la boucle
  * comparer-puis-échanger (issue #65) — l'atomicité du décrément est un trait
  * de CETTE écriture, pas une décision de l'appelant, `computeStockAfterDecrement`
  * (`order-webhook-core.ts`) restant le cœur pur qui porte la règle (plancher 0,
@@ -67,8 +67,16 @@ export async function createOrder(data: OrderCreateData): Promise<Order> {
   });
 }
 
-/** Met à jour une commande existante (aujourd'hui : passage à `refunded` depuis `charge.refunded`) — même garde de revalidation que `createOrder`. */
-export async function updateOrder(id: number, data: { status: Order["status"] }): Promise<Order> {
+/**
+ * Met à jour une commande existante — passage à `refunded` (`charge.refunded`)
+ * OU pose d'un des marqueurs d'effet du webhook (issue #64 : `stockDecremented`,
+ * `confirmationSent`, cf. `order-handler.ts:createPaidOrder`, reprise idempotente
+ * par effet plutôt qu'à l'entrée). Même garde de revalidation que `createOrder`.
+ */
+export async function updateOrder(
+  id: number,
+  data: Partial<Pick<Order, "status" | "stockDecremented" | "confirmationSent">>,
+): Promise<Order> {
   const payload = await getPayload({ config });
   return payload.update({
     collection: "orders",

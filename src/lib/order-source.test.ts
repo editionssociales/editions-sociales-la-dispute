@@ -257,6 +257,14 @@ describe("updateOrder", () => {
       context: { disableRevalidate: true },
     });
   });
+
+  it("pose les marqueurs d'effet du webhook (issue #64) — stockDecremented/confirmationSent", async () => {
+    orders = [{ id: 9, stockDecremented: false, confirmationSent: false }];
+    await updateOrder(9, { stockDecremented: true });
+    expect(orders[0]).toMatchObject({ stockDecremented: true, confirmationSent: false });
+    await updateOrder(9, { confirmationSent: true });
+    expect(orders[0]).toMatchObject({ stockDecremented: true, confirmationSent: true });
+  });
 });
 
 describe("decrementBookStock (issue #65 — écriture atomique)", () => {

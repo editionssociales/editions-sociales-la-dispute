@@ -15,6 +15,7 @@ import * as migration_20260722_223000_rencontres from './20260722_223000_rencont
 import * as migration_20260724_120000_fiche_presse_video_tdm from './20260724_120000_fiche_presse_video_tdm';
 import * as migration_20260724_121000_rencontres_plein_cadre from './20260724_121000_rencontres_plein_cadre';
 import * as migration_20260724_141654_souscription_2026 from './20260724_141654_souscription_2026';
+import * as migration_20260726_150000_commande_marqueurs_effets from './20260726_150000_commande_marqueurs_effets';
 
 export const migrations = [
   {
@@ -101,5 +102,10 @@ export const migrations = [
     up: migration_20260724_141654_souscription_2026.up,
     down: migration_20260724_141654_souscription_2026.down,
     name: '20260724_141654_souscription_2026',
+  },
+  {
+    up: migration_20260726_150000_commande_marqueurs_effets.up,
+    down: migration_20260726_150000_commande_marqueurs_effets.down,
+    name: '20260726_150000_commande_marqueurs_effets',
   },
 ];

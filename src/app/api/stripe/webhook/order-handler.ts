@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import type { Order } from "@/payload-types";
 import { decodeCheckoutLines, type DecodedCheckoutLine } from "@/lib/checkout-core";
 import { getCommerceBookRecords } from "@/lib/commerce-source";
 import {
@@ -137,37 +138,59 @@ async function decrementStock(
  * (`payment_status === "paid"`) : pour un moyen de paiement différé,
  * `checkout.session.completed` peut se présenter en attente
  * (`payment_status !== "paid"`), auquel cas rien n'est créé ici — l'event
- * `async_payment_succeeded` (même fonction) confirmera plus tard. Décrémente
- * le stock de chaque ligne dans la FOULÉE de la création — jamais si la
- * commande existait déjà (idempotence par `stripeSessionId`).
+ * `async_payment_succeeded` (même fonction) confirmera plus tard.
+ *
+ * Idempotence PAR EFFET (issue #64), plus à l'entrée : un rejeu Stripe après
+ * un échec partiel (process mort après `createOrder`, avant le décrément ou
+ * l'e-mail) ne doit PAS ressortir immédiatement — chaque effet non encore
+ * marqué (`stockDecremented`, `confirmationSent`, `Orders.ts`) s'exécute, quel
+ * que soit le nombre de rejeux, jusqu'à ce que les trois étapes (création,
+ * décrément, e-mail) soient posées. `resolveOrderLines` (snapshot + lecture
+ * fraîche du stock) n'est appelée qu'une fois, mémoïsée le temps de l'appel :
+ * inutile de relire `commerce-source` si l'effet correspondant est déjà
+ * marqué fait (cas courant du rejeu totalement terminé).
  */
 async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
   if (session.payment_status !== "paid") return;
 
-  if (await findOrderBySessionId(session.id)) return; // rejoué — ne décrémente pas deux fois
+  let order: Order | null = await findOrderBySessionId(session.id);
 
-  const { decoded, books, lines } = await resolveOrderLines(session);
-  const orderData = buildOrderCreateData(sessionFacts(session, lines, createdAtEpoch), "paid");
-  if ("error" in orderData) {
-    throw new Error(orderData.error);
+  let resolved: Awaited<ReturnType<typeof resolveOrderLines>> | undefined;
+  async function resolveOnce() {
+    resolved ??= await resolveOrderLines(session);
+    return resolved;
   }
 
-  const order = await createOrder(orderData);
+  if (!order) {
+    const { lines } = await resolveOnce();
+    const orderData = buildOrderCreateData(sessionFacts(session, lines, createdAtEpoch), "paid");
+    if ("error" in orderData) {
+      throw new Error(orderData.error);
+    }
+    order = await createOrder(orderData);
+  }
 
-  await decrementStock(decoded, books);
+  if (!order.stockDecremented) {
+    const { decoded, books } = await resolveOnce();
+    await decrementStock(decoded, books);
+    order = await updateOrder(order.id, { stockDecremented: true });
+  }
 
-  await selectOrderMailer().sendOrderConfirmation({
-    orderNumber: order.number ?? orderData.stripeSessionId,
-    email: orderData.email,
-    lines: orderData.lines.map((l) => ({
-      titleSnapshot: l.titleSnapshot,
-      quantity: l.quantity,
-      unitPriceTTC: l.unitPriceTTC,
-    })),
-    shippingCostTTC: orderData.shippingCostTTC,
-    discountTTC: orderData.discountTTC,
-    totalTTC: orderData.totalTTC,
-  });
+  if (!order.confirmationSent) {
+    await selectOrderMailer().sendOrderConfirmation({
+      orderNumber: order.number ?? order.stripeSessionId,
+      email: order.email,
+      lines: (order.lines ?? []).map((l) => ({
+        titleSnapshot: l.titleSnapshot,
+        quantity: l.quantity,
+        unitPriceTTC: l.unitPriceTTC,
+      })),
+      shippingCostTTC: order.shippingCostTTC,
+      discountTTC: order.discountTTC ?? 0,
+      totalTTC: order.totalTTC,
+    });
+    await updateOrder(order.id, { confirmationSent: true });
+  }
 }
 
 /**
