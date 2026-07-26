@@ -463,7 +463,7 @@ export default async function SouscriptionPage() {
           <Container className="py-14 sm:py-16">
             <Reveal>
               {videoEmbed ? (
-                <div className="border-2 border-paper bg-ink shadow-[8px_8px_0_0_#faf7f2]">
+                <div className="border-2 border-paper bg-ink shadow-[8px_8px_0_0_var(--color-paper)]">
                   <iframe
                     src={videoEmbed}
                     title="La vidéo de la souscription"
@@ -475,7 +475,7 @@ export default async function SouscriptionPage() {
                   />
                 </div>
               ) : (
-                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-navy)_14px_28px)] shadow-[8px_8px_0_0_#faf7f2] print:hidden">
+                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-navy)_14px_28px)] shadow-[8px_8px_0_0_var(--color-paper)] print:hidden">
                   {/* SVG plutôt que le caractère ▶ : Effra ne couvre pas les
                       glyphes géométriques, le rendu retombait sur la fonte
                       système (forme et centrage variables selon l'OS). */}
@@ -696,7 +696,7 @@ export default async function SouscriptionPage() {
               </div>
               {/* Punchline en carton « Spécimen » : boîte bordée sous ombre
                   dure navy (R8). */}
-              <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-2xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_#262a5c] sm:mt-12 sm:p-8 sm:text-3xl">
+              <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-2xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_var(--color-navy)] sm:mt-12 sm:p-8 sm:text-3xl">
                 Et, parce que la bataille des idées est aussi une guerre
                 matérielle, soutenir les éditeurs indépendants est{" "}
                 {/* Soulignement (retour Youri 25/07, remplace le marqueur à
@@ -835,7 +835,7 @@ export default async function SouscriptionPage() {
         <section className="mt-16 pb-16 sm:mt-24 sm:pb-24">
           <Container>
             <Reveal>
-              <div className="flex flex-col gap-[2px] border-2 border-ink bg-ink shadow-[8px_8px_0_0_#17140f]">
+              <div className="flex flex-col gap-[2px] border-2 border-ink bg-ink shadow-[8px_8px_0_0_var(--color-ink)]">
                 {OBJECTIFS.map((o) => (
                   <div
                     key={o.titre}
