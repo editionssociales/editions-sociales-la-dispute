@@ -307,7 +307,7 @@ export function BottomSheet({
         {/* Poignée (grip) — barre pleine aux angles droits (R8), à la couleur
             du texte pour survivre à l'inversion au survol. */}
         <span aria-hidden="true" className="h-1 w-12 bg-current" />
-        <span className="flex items-center gap-2 font-sans text-[13px] font-extrabold uppercase leading-none tracking-[.06em]">
+        <span className="flex items-center gap-2 font-sans text-[0.8125rem] font-extrabold uppercase leading-none tracking-[.06em]">
           {label}
           {/* Chevron : vers le bas déroulée (tirer pour replier), retourné
               replié — la rotation s'anime sur la même durée que la course de
