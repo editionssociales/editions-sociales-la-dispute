@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
-import { donationsEnabled, getStripe } from "@/lib/stripe";
+import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { CAMPAIGN_KEY, DONATION_TIERS } from "@/lib/donation-tiers";
 import { ACCENT_BG } from "@/lib/accents";
 
@@ -28,7 +28,7 @@ type Donation = { amount: number; tierTitle: string; pending: boolean };
  * affiche alors un remerciement générique, jamais une erreur brute.
  */
 async function lookupDonation(sessionId: string | undefined): Promise<Donation | null> {
-  if (!sessionId || !donationsEnabled()) return null;
+  if (!sessionId || !stripeEnabled()) return null;
   try {
     const session = await getStripe().checkout.sessions.retrieve(sessionId);
     // Défense en profondeur : n'afficher un montant que pour une session de

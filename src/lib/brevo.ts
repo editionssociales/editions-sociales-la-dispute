@@ -3,7 +3,7 @@ import "server-only";
 /**
  * Client Brevo (plan §5) — `fetch` natif, AUCUNE dépendance ajoutée (contrat
  * `CLAUDE.md`). `BREVO_API_KEY` est l'interrupteur de la phase communication,
- * même traitement que `STRIPE_SECRET_KEY`/`donationsEnabled()` (`stripe.ts`) :
+ * même traitement que `STRIPE_SECRET_KEY`/`stripeEnabled()` (`stripe.ts`) :
  * une valeur absente ou non reconnue n'est PAS une erreur de forme (`env.ts`
  * ne la valide donc pas), c'est un état de provisioning légitime — chaque
  * fonction de ce module DÉGRADE PROPREMENT dans ce cas (log serveur +

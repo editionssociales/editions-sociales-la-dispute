@@ -32,9 +32,9 @@ vi.mock("@/lib/commerce-source", () => ({
   getPromoCodeRecord: async (code: string) => promoCodes[code] ?? null,
 }));
 
-// Mock paramétrable : `stripeEnabled` pilote `donationsEnabled()` pour
+// Mock paramétrable : `stripeEnabledFlag` pilote `stripeEnabled()` pour
 // exercer la garde 503 (clé absente), figée à `true` partout ailleurs.
-let stripeEnabled = true;
+let stripeEnabledFlag = true;
 
 vi.mock("@/lib/stripe", async () => {
   const Stripe = (await import("stripe")).default;
@@ -44,7 +44,7 @@ vi.mock("@/lib/stripe", async () => {
       globalThis.fetch(...args),
     ),
   });
-  return { donationsEnabled: () => stripeEnabled, getStripe: () => client };
+  return { stripeEnabled: () => stripeEnabledFlag, getStripe: () => client };
 });
 
 // `vi.stubEnv` (auto-restauré) plutôt qu'une mutation de process.env au
@@ -116,12 +116,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   books = { 12: book() };
   promoCodes = {};
-  stripeEnabled = true;
+  stripeEnabledFlag = true;
 });
 
 describe("POST /api/checkout — garde Stripe", () => {
   it("clé Stripe absente → 503 avant toute lecture du corps, jamais d'appel Stripe", async () => {
-    stripeEnabled = false;
+    stripeEnabledFlag = false;
     const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
     expect(res.status).toBe(503);
     expect(sessionCalls).toBe(0);

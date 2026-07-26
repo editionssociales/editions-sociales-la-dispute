@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
-import { donationsEnabled, getStripe } from "@/lib/stripe";
+import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
 import { encodeCheckoutLines, parseCheckoutRequest, validateCheckoutLines } from "@/lib/checkout-core";
 import { computeCartQuote } from "@/lib/cart-quote";
@@ -17,11 +17,11 @@ import { evaluatePromoCode } from "@/lib/promo-core";
  * Stripe, même découpage que `souscription/actions.ts` (E1/phase dons).
  *
  * Garde Stripe en PREMIER, avant même de lire le corps de la requête :
- * sans clé (`donationsEnabled()`), aucun encaissement possible — 503 propre
+ * sans clé (`stripeEnabled()`), aucun encaissement possible — 503 propre
  * plutôt qu'une erreur au fond de l'appel Stripe.
  */
 export async function POST(req: Request): Promise<Response> {
-  if (!donationsEnabled()) {
+  if (!stripeEnabled()) {
     return Response.json({ error: "Commerce natif indisponible." }, { status: 503 });
   }
 

@@ -32,7 +32,7 @@ vi.mock("@/lib/stripe", async () => {
       globalThis.fetch(...args),
     ),
   });
-  return { donationsEnabled: () => true, getStripe: () => client };
+  return { stripeEnabled: () => true, getStripe: () => client };
 });
 
 // `vi.stubEnv` (auto-restauré) plutôt qu'une mutation de process.env au

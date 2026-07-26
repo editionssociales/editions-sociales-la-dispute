@@ -5,7 +5,7 @@ import { PageHero } from "@/components/page-hero";
 import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirmation";
 import { formatPrice } from "@/lib/format";
 import { ACCENT_BG } from "@/lib/accents";
-import { donationsEnabled, getStripe } from "@/lib/stripe";
+import { stripeEnabled, getStripe } from "@/lib/stripe";
 
 /**
  * Page de retour après un achat Stripe Checkout (`success_url` posée par
@@ -36,7 +36,7 @@ interface OrderConfirmation {
  * affiche alors un remerciement générique, jamais une erreur brute.
  */
 async function lookupOrder(sessionId: string | undefined): Promise<OrderConfirmation | null> {
-  if (!sessionId || !donationsEnabled()) return null;
+  if (!sessionId || !stripeEnabled()) return null;
   try {
     const session = await getStripe().checkout.sessions.retrieve(sessionId);
     if (session.metadata?.kind !== "order") return null;

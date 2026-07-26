@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { donationsEnabled } from "./stripe";
+import { stripeEnabled } from "./stripe";
 import { CAMPAIGN_KEY, type Campaign2026, deriveCampaign2026 } from "./donation-tiers";
 import { type DonationCharge, parseChargeSearchPage, sumDonations } from "./donations-core";
 
@@ -44,7 +44,7 @@ const MAX_PAGES = 20;
  * indisponible » et absorber cette dernière en `null`.
  */
 export const getDonationTotals = cache(async (): Promise<DonationCharge[]> => {
-  if (!donationsEnabled()) {
+  if (!stripeEnabled()) {
     throw new Error(
       "getDonationTotals() appelé sans STRIPE_SECRET_KEY valide (sk_test_… ou sk_live_…).",
     );
@@ -80,7 +80,7 @@ export const getDonationTotals = cache(async (): Promise<DonationCharge[]> => {
  * Vue-modèle de la campagne 2026 en cours, consommée par `/souscription`.
  * `null` sur **toute** erreur (clé absente, Stripe indisponible, réponse
  * malformée) — jamais un plantage. La page distingue alors deux cas : avant
- * l'ouverture (`donationsEnabled()` faux), jauge honnêtement à 0 ; en
+ * l'ouverture (`stripeEnabled()` faux), jauge honnêtement à 0 ; en
  * campagne (clé posée), panne Stripe → compteur remplacé par une mention
  * neutre et barre non rendue, jamais un faux 0.
  */

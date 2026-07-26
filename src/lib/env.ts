@@ -8,7 +8,7 @@ import { z } from "zod";
  * Postgres N'EST PLUS optionnelle : catalogue, contenus, panier, checkout et
  * back-office passent tous par Payload — `DATABASE_URL` et `PAYLOAD_SECRET`
  * sont REQUISES, leur absence doit échouer au démarrage, pas au fond d'une
- * requête. Le reste du provisioning demeure progressif (`donationsEnabled()`,
+ * requête. Le reste du provisioning demeure progressif (`stripeEnabled()`,
  * gate `SITE_INDEXABLE`, Brevo…) : ces entrées restent **optionnelles**, mais
  * une variable *posée mais malformée* — un secret vide qui plante dans jose,
  * un `SITE_INDEXABLE=true` qui laisse le site désindexé en silence — doit
@@ -24,7 +24,7 @@ const postgresUrl = z
  * Chaque entrée optionnelle (absence = phase non provisionnée) doit, posée,
  * avoir la forme attendue. `STRIPE_SECRET_KEY` et `BREVO_API_KEY` ne sont pas
  * listées : une valeur non reconnue y est un état documenté (interrupteur de
- * phase — `stripe.ts:donationsEnabled`, `brevo.ts:brevoConfigured`) — seule
+ * phase — `stripe.ts:stripeEnabled`, `brevo.ts:brevoConfigured`) — seule
  * la règle live/environnement Stripe est vérifiée plus bas.
  */
 const envSchema = z.object({

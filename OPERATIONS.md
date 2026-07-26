@@ -76,6 +76,16 @@ Le garde-fou est codé (`src/lib/env.ts:checkEnv`) et jette au boot
 (`assertEnv`, appelé par `instrumentation.ts`) si une clé live traîne hors
 production.
 
+**`STRIPE_SECRET_KEY` est l'interrupteur Stripe du site — dons ET boutique,
+pas seulement les dons.** `stripeEnabled()` (`src/lib/stripe.ts`) gouverne les
+deux parcours de paiement à la fois : retirer la clé (ou la laisser absente)
+rend `/souscription` inerte (boutons désactivés, iso-rendu) **et** fait
+répondre `POST /api/checkout` en 503 « Commerce natif indisponible » — la
+boutique s'arrête net, pas seulement les dons. Un geste d'exploitation
+courant — « couper les dons » en retirant `STRIPE_SECRET_KEY` côté Vercel —
+coupe donc aussi les commandes boutique ; il n'existe pas d'interrupteur
+séparé pour l'un sans l'autre.
+
 ## 4. Vérifications du repo
 
 CI (`.github/workflows/ci.yml`), sur chaque PR et sur `main` :

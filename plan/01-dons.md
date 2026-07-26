@@ -53,7 +53,7 @@ Travail sur branche `feat/dons-stripe` → PR → merge `main` (= déploiement p
 
 - **Quoi** : `pnpm add stripe` (SDK officiel, version épinglée par le lockfile ; l'`apiVersion` reste celle épinglée par le SDK — ne pas la forcer à la main). Créer `src/lib/stripe.ts` (server-only) :
   - `getStripe()` : instanciation paresseuse de `new Stripe(process.env.STRIPE_SECRET_KEY)` ; jette une erreur claire si la clé est absente/placeholder.
-  - `donationsEnabled()` : `true` ssi `STRIPE_SECRET_KEY` commence par `sk_test_` ou `sk_live_`. **C'est l'interrupteur de la phase** : clé absente ⇒ la page rend les boutons inertes actuels (iso-rendu avec aujourd'hui) ⇒ déploiement sans risque avant provisioning, et rollback = retirer la clé + redeploy.
+  - `stripeEnabled()` (nom d'origine renommé depuis, issue #71) : `true` ssi `STRIPE_SECRET_KEY` commence par `sk_test_` ou `sk_live_`. **C'est l'interrupteur de la phase** : clé absente ⇒ la page rend les boutons inertes actuels (iso-rendu avec aujourd'hui) ⇒ déploiement sans risque avant provisioning, et rollback = retirer la clé + redeploy.
 - **Fichiers** : `package.json`, `pnpm-lock.yaml`, `src/lib/stripe.ts`, `.env.example` (ajouter `STRIPE_SECRET_KEY=`, `STRIPE_WEBHOOK_SECRET=`, commentées).
 - **Vérifier** : `pnpm typecheck` ; `pnpm build` passe (aucune route ne consomme encore Stripe).
 
@@ -114,11 +114,11 @@ Travail sur branche `feat/dons-stripe` → PR → merge `main` (= déploiement p
 
 ### E5 — Câblage de la page `/souscription`
 
-- **Quoi** : dans `src/app/souscription/page.tsx`, si `donationsEnabled()` :
+- **Quoi** : dans `src/app/souscription/page.tsx`, si `stripeEnabled()` :
   - Cartes contreparties (`:482-487`) : envelopper le `<Button>` dans `<form action={createDonationCheckout}>` + `<input type="hidden" name="tierId" value={tier.id}/>`, et `<Button type="submit">` — le primitive `Button` (vérifié `src/components/button.tsx:63-67`) rend `<button type="button" {...rest}>`, donc `type="submit"` passé via `...rest` écrase le défaut **sans toucher au composant ni aux chaînes de classes** (iso-rendu).
   - Cartes mécènes (`:514-519`) : même enveloppe `<form>` + hidden `tierId`, **ET passer explicitement le bouton en `type="submit"`** — ⚠️ ce bouton est un `<button type="button">` **nu avec `type` codé en dur** (vérifié) : enveloppé dans un form sans changer son `type`, il ne soumettrait jamais et les paliers 500/1000 € resteraient inertes en silence. Changer `type="button"` → `type="submit"` sur place (classes conservées à l'identique), ou le remplacer par le primitive `Button` avec `type="submit"` si le rendu reste iso. Scénario de recette dédié : **R12**.
   - **Bloc montant libre** dans la section CTA finale (`:667-673`) : petit `<form>` avec `<input name="amount" type="number" min={5} step={1} inputMode="numeric">` + Button « Contribuer » (classes Tailwind littérales, style maison).
-  - Si `!donationsEnabled()` : rendu **strictement identique à aujourd'hui** (boutons inertes).
+  - Si `!stripeEnabled()` : rendu **strictement identique à aujourd'hui** (boutons inertes).
   - Les données `CONTREPARTIES`/`MECENES` de la page prennent un champ `tierId` référencé vers `DONATION_TIERS` (ou sont dérivées de lui — au choix de l'implémenteur, sans casser le rendu).
 - **Fichiers** : `src/app/souscription/page.tsx`.
 - **Vérifier** : diff DOM nul hors ajout des `<form>`/bloc montant libre/`type="submit"` mécène ; parcours complet en local avec carte `4242 4242 4242 4242` → `merci`, **y compris depuis une carte mécène**.

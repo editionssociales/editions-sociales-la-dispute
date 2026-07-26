@@ -6,7 +6,7 @@ import { Gauge } from "@/components/gauge";
 import { ImpactFrame } from "@/components/impact-frame";
 import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
-import { donationsEnabled } from "@/lib/stripe";
+import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
@@ -213,8 +213,8 @@ const SPAN_CONTAINER = "mx-auto block w-full max-w-6xl px-5 sm:px-8";
 export default async function SouscriptionPage() {
   // Interrupteur de la phase dons (E1) : tant que `STRIPE_SECRET_KEY` est
   // absente, la page reste en iso-rendu (CTA honnêtement désactivés, R7).
-  const enabled = donationsEnabled();
-  // `getCampaign2026()` ne fait aucun appel réseau tant que `donationsEnabled()`
+  const enabled = stripeEnabled();
+  // `getCampaign2026()` ne fait aucun appel réseau tant que `stripeEnabled()`
   // est faux (elle jette avant tout fetch, absorbée en `null` — `lib/donations.ts`) :
   // gratuit à appeler inconditionnellement.
   const [campaign2026, content, releases] = await Promise.all([
