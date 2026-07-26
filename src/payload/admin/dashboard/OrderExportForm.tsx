@@ -16,7 +16,11 @@ import styles from './dashboard.module.css'
  * home dashboard.
  */
 export function OrderExportForm() {
-  const defaults = defaultExportDateRange(new Date())
+  // Initialiseur paresseux : `defaultExportDateRange(new Date())` ne
+  // s'exécute qu'au montage (une seule fois, un seul appel partagé par les
+  // deux bornes), jamais à chaque rendu — évite à la fois une divergence
+  // serveur/client et une valeur qui change entre deux rendus du même montage.
+  const [defaults] = useState(() => defaultExportDateRange(new Date()))
   const [from, setFrom] = useState(defaults.from)
   const [to, setTo] = useState(defaults.to)
 
