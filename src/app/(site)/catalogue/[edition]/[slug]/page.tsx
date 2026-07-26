@@ -42,8 +42,12 @@ export async function generateMetadata({
       locale: "fr_FR",
       ...(book.cover?.url ? { images: [{ url: book.cover.url }] } : {}),
     },
+    // Issue #87a : `summary_large_image` n'a de sens que si une image est
+    // RÉELLEMENT émise — `images` reprend ici la même couverture que
+    // `openGraph` (jamais une carte large sans visuel).
     twitter: {
       card: book.cover?.url ? "summary_large_image" : "summary",
+      ...(book.cover?.url ? { images: [book.cover.url] } : {}),
     },
   };
 }
@@ -77,9 +81,14 @@ function Info({
     <dd className="font-sans text-sm font-bold text-ink">{value}</dd>
   );
   if (href) {
+    // Issue #86a : `display:contents` sur le <Link> lui ôte toute boîte —
+    // un `outline` posé dessus (via `FOCUS_RING_LIGHT`) ne s'affiche donc
+    // JAMAIS (échec WCAG 2.4.7). L'anneau doit vivre sur l'enfant qui porte
+    // réellement le fond (`bg-paper`) ; `group-focus-visible:` le déclenche
+    // depuis l'état focus du lien parent.
     return (
-      <Link href={href} className={`group contents ${FOCUS_RING_LIGHT}`}>
-        <div className="flex flex-col gap-1 bg-paper px-3.5 py-3">
+      <Link href={href} className="group contents">
+        <div className="flex flex-col gap-1 bg-paper px-3.5 py-3 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-ink group-focus-visible:outline-offset-[-2px]">
           {dt}
           {dd}
         </div>

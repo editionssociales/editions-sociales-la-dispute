@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { getAllBookParams, getAllBoutiqueParams } from "@/lib/catalogue";
+import { getAllBooks, getBoutiqueBooks } from "@/lib/catalogue";
+import type { Book, EditionSlug } from "@/lib/types";
 
 /**
  * Convention de fichier racine (`app/sitemap.ts`, hors des route groups) —
@@ -7,9 +8,20 @@ import { getAllBookParams, getAllBoutiqueParams } from "@/lib/catalogue";
  * pour produire `/sitemap.xml`.
  *
  * Via la façade `@/lib/catalogue` : pages statiques du front + une entrée
- * par fiche livre (`getAllBookParams`, ~295 titres), plus `/boutique` et une
- * entrée par article boutique-seul (`getAllBoutiqueParams`). ~330 URLs → un
- * seul sitemap, pas besoin de `generateSitemaps`.
+ * par fiche livre (~295 titres), plus `/boutique` et une entrée par article
+ * boutique-seul. ~330 URLs → un seul sitemap, pas besoin de
+ * `generateSitemaps`.
+ *
+ * `lastModified` (issue #87e) : dérivé de `publishedAt` (`Book`, ISO
+ * `YYYY-MM-DD`) sur les entrées livre/boutique — SEUL champ date déjà exposé
+ * par `Book` sans élargir ce type (pas de `updatedAt` distinct sur ce
+ * modèle). On lit `getAllBooks`/`getBoutiqueBooks` (déjà exportés, données
+ * complètes) plutôt que `getAllBookParams`/`getAllBoutiqueParams`
+ * (`{edition,slug}`/`{slug}` seuls, sans date) — mêmes fonctions, même
+ * data-cache tagué `catalogue`, aucun appel réseau supplémentaire. Absent
+ * (`null`) → pas de `lastModified` sur cette entrée plutôt qu'une date
+ * inventée. Pages statiques (contenu éditorial Payload sans date exposée
+ * ici) : pas de `lastModified` non plus.
  */
 
 export const revalidate = 3600;
@@ -38,22 +50,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = (
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"
   ).replace(/\/+$/, "");
-  const books = await getAllBookParams();
-  const boutiqueOnly = await getAllBoutiqueParams();
+  const allBooks = await getAllBooks();
+  const books = allBooks.filter(
+    (b): b is Book & { edition: EditionSlug } => b.edition != null,
+  );
+  const boutiqueOnly = await getBoutiqueBooks();
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
     url: `${base}${path}`,
   }));
 
-  const bookEntries: MetadataRoute.Sitemap = books.map(({ edition, slug }) => ({
+  const bookEntries: MetadataRoute.Sitemap = books.map(({ edition, slug, publishedAt }) => ({
     url: `${base}/catalogue/${edition}/${slug}`,
+    ...(publishedAt ? { lastModified: publishedAt } : {}),
   }));
 
   // Pas de `/boutique` (liste) : redirection permanente vers `/panier`
   // (retour client 2026-07-23) — seules les fiches articles restent des
   // URLs de contenu.
-  const boutiqueEntries: MetadataRoute.Sitemap = boutiqueOnly.map(({ slug }) => ({
+  const boutiqueEntries: MetadataRoute.Sitemap = boutiqueOnly.map(({ slug, publishedAt }) => ({
     url: `${base}/boutique/${slug}`,
+    ...(publishedAt ? { lastModified: publishedAt } : {}),
   }));
 
   return [...staticEntries, ...bookEntries, ...boutiqueEntries];

@@ -163,11 +163,15 @@ export const metadata: Metadata = {
   description:
     "La faillite de notre distributeur menace 100 ans d’édition marxiste indépendante. Soutenez Les Éditions sociales et La Dispute — contreparties de 15 à 1 000 €.",
   alternates: { canonical: "/souscription" },
-  // Carte large : l'image vient du fichier `opengraph-image.jpg` colocalisé
-  // (convention Next — og:image/twitter:image générées sans toucher l'objet
-  // `openGraph` hérité du layout, cf. piège de fusion superficielle
-  // documenté dans src/app/CLAUDE.md).
-  twitter: { card: "summary_large_image" },
+  // Issue #87a : `opengraph-image.jpg` colocalisé est un fichier de
+  // convention Next DISTINCT de `twitter-image` (aucun des deux ne se
+  // déduit de l'autre — pas de repli automatique) ; sans `twitter-image`
+  // colocalisé, aucun `twitter:image` n'est jamais émis pour cette page.
+  // `summary_large_image` déclarait donc une carte large sans image réelle.
+  // `summary` reflète ce que le crawler Twitter/X reçoit effectivement ; si
+  // un `twitter-image.jpg` est un jour ajouté ici, ce champ redevient
+  // `summary_large_image` (aucun autre changement requis).
+  twitter: { card: "summary" },
 };
 
 export const revalidate = 3600; // fenêtre ISR (contreparties lues dans Payload/Postgres)

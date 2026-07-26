@@ -27,14 +27,14 @@ export default function NotFound() {
           {SPINES.map((s, i) => (
             <div
               key={i}
-              className={`${s.w} rounded-t-sm ${ACCENT_BG[s.accent]} animate-[spine-rise_0.7s_ease-out_both] ${
+              className={`${s.w} ${ACCENT_BG[s.accent]} animate-[spine-rise_0.7s_ease-out_both] ${
                 s.fallen ? "ml-3 origin-bottom-left -rotate-12" : ""
               }`}
               style={{ height: s.h, animationDelay: `${i * 90}ms` }}
             />
           ))}
         </div>
-        <div className="-mx-3 h-1.5 rounded bg-ink/25" />
+        <div className="-mx-3 h-1.5 bg-ink/25" />
       </div>
 
       {/* 404 géant, le zéro devenu losange */}
@@ -43,7 +43,7 @@ export default function NotFound() {
         aria-hidden="true"
       >
         <span>4</span>
-        <span className="h-7 w-7 rotate-45 rounded-sm bg-brick" />
+        <span className="h-7 w-7 rotate-45 bg-brick" />
         <span>4</span>
       </p>
 

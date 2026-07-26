@@ -7,6 +7,7 @@ import { BuyLinksList } from "@/components/buy-links";
 import { FramedGrid } from "@/components/framed-grid";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
+import { getReglagesSite } from "@/lib/site-content";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /**
@@ -30,8 +31,40 @@ export async function generateMetadata({
     title: book.title,
     description: cmsExcerpt(book.presentation, 160) || book.title,
     alternates: { canonical: `/boutique/${slug}` },
+    // Issue #87b : même composition que la fiche catalogue (même forme de
+    // données, `BookDetail`) — `openGraph` REMPLACE celui du layout (fusion
+    // superficielle par champ, `src/app/CLAUDE.md`), donc `siteName`/`locale`
+    // sont reposés ici.
+    openGraph: {
+      type: "website",
+      siteName: (await getReglagesSite()).seo.titre,
+      locale: "fr_FR",
+      ...(book.cover?.url ? { images: [{ url: book.cover.url }] } : {}),
+    },
+    twitter: {
+      card: book.cover?.url ? "summary_large_image" : "summary",
+      ...(book.cover?.url ? { images: [book.cover.url] } : {}),
+    },
   };
 }
+
+type OfferLd = {
+  "@type": "Offer";
+  price: string;
+  priceCurrency: string;
+  availability: string;
+  url?: string;
+};
+/** Structured data `Product` (schema.org) — même rôle que le `Book` JSON-LD de la fiche catalogue, canaux légitimes (JSON-LD), pas de texte visible dupliqué. */
+type ProductJsonLd = {
+  "@context": "https://schema.org";
+  "@type": "Product";
+  name: string;
+  image?: string;
+  description?: string;
+  brand: { "@type": "Organization"; name: string };
+  offers?: OfferLd;
+};
 
 export const revalidate = 3600;
 
@@ -48,8 +81,43 @@ export default async function BoutiqueBookPage({
   const book = await getBoutiqueBook(slug);
   if (!book) notFound();
 
+  const descriptionLd = cmsExcerpt(book.presentation, 300) || undefined;
+  const canOffer = book.price != null && (book.status === "available" || book.status === "external");
+  const productJsonLd: ProductJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: book.title,
+    brand: { "@type": "Organization", name: (await getReglagesSite()).seo.titre },
+    // URL absolue exigée par schema.org (même repli que la fiche livre).
+    ...(book.cover?.url
+      ? {
+          image: new URL(
+            book.cover.url,
+            process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr",
+          ).toString(),
+        }
+      : {}),
+    ...(descriptionLd ? { description: descriptionLd } : {}),
+    ...(canOffer
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: String(book.price),
+            priceCurrency: "EUR",
+            availability: "https://schema.org/InStock",
+            ...(book.permalink ? { url: book.permalink } : {}),
+          } satisfies OfferLd,
+        }
+      : {}),
+  };
+  const productJsonLdScript = JSON.stringify(productJsonLd).replace(/</g, "\\u003c");
+
   return (
     <Container className="bg-paper py-12 sm:py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: productJsonLdScript }}
+      />
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         {/* Même règle que la fiche catalogue : titre avant achat sur mobile
             (order), couverture jamais plus large que 300px CSS avant lg. */}

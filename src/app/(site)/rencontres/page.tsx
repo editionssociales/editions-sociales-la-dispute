@@ -94,7 +94,10 @@ export default async function RencontresPage() {
                 .filter((r) => r.pleinCadre)
                 .map((r, i) => (
                   <Reveal key={r.id} delay={i * 100}>
-                    <HeroCard rencontre={r} />
+                    {/* Issue #85 : seule la toute première carte héros (haut de
+                        page) est un candidat LCP réel — précharger les
+                        suivantes gaspillerait la bande passante prioritaire. */}
+                    <HeroCard rencontre={r} preload={i === 0} />
                   </Reveal>
                 ))}
               {aVenir.some((r) => !r.pleinCadre) && (
@@ -235,10 +238,18 @@ function DatePlaque({ date, heure, small = false }: { date: string; heure?: stri
  */
 function renderVisualZone(
   rencontre: Rencontre,
-  { zoneClassName, coverHeightClassName, imageSizes }: {
+  {
+    zoneClassName,
+    coverHeightClassName,
+    imageSizes,
+    preload,
+  }: {
     zoneClassName: string;
     coverHeightClassName: string;
     imageSizes: string;
+    /** Issue #85 : candidat LCP (photo de l'événement à la une) — `false` par
+     *  défaut, à poser UNIQUEMENT sur la première carte héros de la page. */
+    preload?: boolean;
   },
 ) {
   const { image, titre, livre } = rencontre;
@@ -249,11 +260,20 @@ function renderVisualZone(
   // simple, sans assertion non-null.
   let media: ReactNode = null;
   if (image && image.width > image.height) {
-    media = <Image src={image.url} alt={alt} fill sizes={imageSizes} className="object-cover" />;
+    media = (
+      <Image
+        src={image.url}
+        alt={alt}
+        fill
+        sizes={imageSizes}
+        preload={preload}
+        className="object-cover"
+      />
+    );
   } else if (image) {
     media = (
       <span className={`flex ${coverHeightClassName} items-center justify-center`}>
-        <Cover cover={image} alt={alt} fit="height" sizes="320px" className="max-w-full" />
+        <Cover cover={image} alt={alt} fit="height" sizes="320px" preload={preload} className="max-w-full" />
       </span>
     );
   } else if (livre) {
@@ -265,6 +285,7 @@ function renderVisualZone(
           alt={alt}
           fit="height"
           sizes="320px"
+          preload={preload}
           fallbackClassName="px-8 py-6"
         />
       </span>
@@ -326,7 +347,7 @@ function DecouvrirLeLivre({ livre }: { livre: NonNullable<Rencontre["livre"]> })
  * marge haute (`pt-24`) pour ne jamais chevaucher le texte (elle déborderait
  * sinon sur la méta-ligne, la zone visuelle absorbant normalement ce débord).
  */
-function HeroCard({ rencontre }: { rencontre: Rencontre }) {
+function HeroCard({ rencontre, preload }: { rencontre: Rencontre; preload?: boolean }) {
   const { titre, heure, date, lieu, ville, intervenants, description, livre } = rencontre;
   const visual = renderVisualZone(rencontre, {
     zoneClassName:
@@ -336,6 +357,7 @@ function HeroCard({ rencontre }: { rencontre: Rencontre }) {
     // débord de plaque oblige).
     coverHeightClassName: "h-60 md:h-[360px]",
     imageSizes: "(min-width: 768px) 50vw, 100vw",
+    preload,
   });
 
   return (
