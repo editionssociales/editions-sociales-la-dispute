@@ -320,5 +320,34 @@ export const Orders: CollectionConfig = {
       label: 'Payée le',
       access: lockedAfterCreate,
     },
+    {
+      name: 'stockDecremented',
+      type: 'checkbox',
+      required: true,
+      defaultValue: false,
+      label: 'Stock décrémenté',
+      access: lockedAfterCreate,
+      admin: {
+        readOnly: true,
+        description:
+          'Marqueur technique du webhook (issue #64 — reprise après échec partiel) : ' +
+          "le stock des lignes de cette commande a-t-il déjà été décrémenté ? Un rejeu " +
+          "Stripe ne redécrémente jamais tant que ce marqueur est vrai. Ne se modifie jamais à la main.",
+      },
+    },
+    {
+      name: 'confirmationSent',
+      type: 'checkbox',
+      required: true,
+      defaultValue: false,
+      label: 'E-mail de confirmation envoyé',
+      access: lockedAfterCreate,
+      admin: {
+        readOnly: true,
+        description:
+          "Marqueur technique du webhook (issue #64) : l'e-mail de confirmation de cette " +
+          "commande a-t-il déjà été envoyé ? Ne se modifie jamais à la main.",
+      },
+    },
   ],
 }

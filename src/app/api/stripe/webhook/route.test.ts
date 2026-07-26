@@ -31,12 +31,16 @@ interface FakeOrder {
   stripePaymentIntentId: string | null;
   status: string;
   email: string;
+  stockDecremented: boolean;
+  confirmationSent: boolean;
   [key: string]: unknown;
 }
 
 let orders: FakeOrder[] = [];
 let nextOrderId = 1;
 let stockUpdates: { id: number; stock: number }[] = [];
+/** Simule un crash APRÈS la création de la commande mais AVANT le décrément (issue #64) — consommé une fois. */
+let failNextDecrement = false;
 
 interface FakeBookRecord {
   title: string;
@@ -52,7 +56,12 @@ vi.mock("@/lib/order-source", () => ({
   findOrderByPaymentIntent: async (stripePaymentIntentId: string) =>
     orders.find((o) => o.stripePaymentIntentId === stripePaymentIntentId) ?? null,
   createOrder: async (data: Record<string, unknown>) => {
-    const doc: FakeOrder = { id: nextOrderId++, ...data } as FakeOrder;
+    const doc: FakeOrder = {
+      id: nextOrderId++,
+      stockDecremented: false,
+      confirmationSent: false,
+      ...data,
+    } as FakeOrder;
     orders.push(doc);
     return doc;
   },
@@ -61,8 +70,15 @@ vi.mock("@/lib/order-source", () => ({
     if (order) Object.assign(order, data);
     return order;
   },
-  updateBookStock: async (id: number, stock: number) => {
-    stockUpdates.push({ id, stock });
+  decrementBookStock: async (id: number, qty: number) => {
+    if (failNextDecrement) {
+      failNextDecrement = false;
+      throw new Error("crash simulé après création, avant décrément (issue #64)");
+    }
+    const record = bookRecords[id];
+    if (!record || record.stock == null) return; // stock non suivi — rien à décrémenter
+    record.stock = Math.max(0, record.stock - qty);
+    stockUpdates.push({ id, stock: record.stock });
   },
 }));
 
@@ -169,6 +185,7 @@ beforeEach(() => {
   orders = [];
   nextOrderId = 1;
   stockUpdates = [];
+  failNextDecrement = false;
   bookRecords = { 12: { title: "Le Capital", isbn: "978-1", stock: 5 } };
 });
 
@@ -273,6 +290,29 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
     expect(sendOrderConfirmation).toHaveBeenCalledTimes(1);
   });
 
+  it("issue #64 — rejeu après échec partiel (crash après création, avant décrément) reprend l'effet manquant sans recréer la commande", async () => {
+    failNextDecrement = true; // le process « meurt » juste après createOrder, avant decrementStock
+    const request = () =>
+      signedEventRequest({ id: "evt_order_partial", type: "checkout.session.completed", object: checkoutSession() });
+
+    const first = await POST(request());
+    expect(first.status).toBe(500); // le décrément a jeté — le webhook répond en erreur (Stripe rejouera)
+    expect(Sentry.captureException).toHaveBeenCalled();
+    expect(orders).toHaveLength(1); // la commande a bien été créée malgré l'échec du décrément
+    expect(orders[0].stockDecremented).toBe(false);
+    expect(orders[0].confirmationSent).toBe(false);
+    expect(stockUpdates).toEqual([]);
+    expect(sendOrderConfirmation).not.toHaveBeenCalled();
+
+    const second = await POST(request());
+    expect(second.status).toBe(200);
+    expect(orders).toHaveLength(1); // toujours une seule commande — jamais recréée à l'entrée
+    expect(orders[0].stockDecremented).toBe(true);
+    expect(orders[0].confirmationSent).toBe(true);
+    expect(stockUpdates).toEqual([{ id: 12, stock: 3 }]); // décrémenté une seule fois, au rejeu
+    expect(sendOrderConfirmation).toHaveBeenCalledTimes(1);
+  });
+
   it("payment_status non « paid » au complete (moyen différé en attente) → aucune commande créée", async () => {
     const res = await POST(
       signedEventRequest({
@@ -322,6 +362,8 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
       stripePaymentIntentId: "pi_test_order_1",
       status: "paid",
       email: "client@exemple.fr",
+      stockDecremented: true,
+      confirmationSent: true,
     });
 
     const res = await POST(
