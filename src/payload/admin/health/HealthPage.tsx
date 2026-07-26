@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation'
 import type { AdminViewServerProps } from 'payload'
 
 import { DefaultTemplate } from '@payloadcms/next/templates'
+import { Pill } from '@payloadcms/ui'
 
-import { badgeClass, dotClass } from '../dashboard/dashboard-classes.ts'
+import { dotClass, dotLabel, pillStyleForState } from '../dashboard/dashboard-classes.ts'
 import { readConfig, readLastOrder, readSentryIssues } from '../dashboard/data.ts'
 import { fmtDateTimeFr, sentrySignal } from '../dashboard/derive.ts'
 import styles from '../dashboard/dashboard.module.css'
@@ -74,11 +75,14 @@ export async function HealthPage(props: AdminViewServerProps) {
           {/* ── Observabilité (Sentry + santé webhook) ── */}
           <section className={styles.panel} aria-labelledby="t-obs">
             <h2 className={styles.panelTitle} id="t-obs">
-              <span className={dotClass(diagState)} /> Observabilité (Sentry + santé webhook)
+              <span className={dotClass(diagState)} role="img" aria-label={dotLabel(diagState)} />{' '}
+              Observabilité (Sentry + santé webhook)
             </h2>
             {sentry.state === 'na' ? (
               <>
-                <span className={badgeClass('na')}>diagnostic technique : indisponible</span>
+                <Pill pillStyle={pillStyleForState('na')} size="small">
+                  diagnostic technique : indisponible
+                </Pill>
                 <p className={styles.muted}>
                   Token Sentry <code>event:read</code> (SENTRY_DASHBOARD_TOKEN) absent, ou API
                   injoignable — jamais vert par défaut.
@@ -86,11 +90,11 @@ export async function HealthPage(props: AdminViewServerProps) {
               </>
             ) : (
               <>
-                <span className={badgeClass(diagState)}>
+                <Pill pillStyle={pillStyleForState(diagState)} size="small">
                   {sentry.errorEvents > 0
                     ? `${sentry.errorEvents} événement(s) d’erreur sur 24 h`
                     : 'aucun événement d’erreur sur 24 h'}
-                </span>
+                </Pill>
                 <p className={styles.muted}>
                   Issues non résolues (24 h) : <strong>{sentry.unresolvedCount}</strong>
                 </p>

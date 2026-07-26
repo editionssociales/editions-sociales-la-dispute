@@ -14,19 +14,6 @@
   margin: 16px 0;
 }
 
-.grid2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-/* Mobile : une colonne, ordre DOM conservé (stock bas reste 2ᵉ panneau de contenu). */
-@media (max-width: 1024px) {
-  .grid2 {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ── Zones (home v3 : A « File du jour » / B « Alertes » / C « Raccourcis ») ── */
 
 .zone {
@@ -102,84 +89,6 @@
   background: var(--theme-elevation-450, #8a867c);
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 20px;
-  padding: 3px 11px;
-}
-
-.badgeOk {
-  background: var(--theme-success-100, #e3f1e9);
-  color: var(--theme-success-600, #1e7d46);
-}
-
-.badgeWarn {
-  background: var(--theme-warning-100, #faf0dc);
-  color: var(--theme-warning-600, #b26b00);
-}
-
-.badgeAlert {
-  background: var(--theme-error-100, #f9e7e4);
-  color: var(--theme-error-600, #b3362b);
-}
-
-.badgeNa {
-  background: var(--theme-elevation-100, #edebe4);
-  color: var(--theme-elevation-600, #8a867c);
-}
-
-/* ── Bandeau d'état (3.1) ── */
-
-.banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 22px;
-  border-radius: 8px;
-  padding: 12px 18px;
-  border: 1px solid var(--theme-border-color, #e4e1d8);
-  background: var(--theme-elevation-50, #f1efe9);
-}
-
-.bannerWarn {
-  border-color: var(--theme-warning-500, #b26b00);
-  background: var(--theme-warning-50, #faf0dc);
-}
-
-.bannerAlert {
-  border-color: var(--theme-error-500, #b3362b);
-  background: var(--theme-error-50, #f9e7e4);
-}
-
-.bannerTitle {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.pastilles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 20px;
-}
-
-.pastille {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13.5px;
-}
-
-.pastille a {
-  color: inherit;
-  font-weight: 600;
-  text-decoration: underline;
-}
-
 /* ── Gros chiffre d'entête de panneau ── */
 
 .bigRow {
@@ -201,6 +110,16 @@
 }
 
 /* ── Tables de données (commandes, stock, remboursements, quoi de neuf) ── */
+
+/*
+ * Défilement horizontal (issue #91) : un panneau de dashboard est étroit
+ * (colonne d'une grille), une table de commandes/stock ne l'est pas — sans
+ * ce conteneur, les colonnes de droite étaient tronquées hors panneau au
+ * lieu de défiler.
+ */
+.tableWrap {
+  overflow-x: auto;
+}
 
 .dataTable {
   width: 100%;
@@ -256,12 +175,6 @@
   border: 1px dashed var(--theme-border-color, #e4e1d8);
   border-radius: 4px;
   padding: 2px 8px;
-}
-
-.chipsRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .kbdNote {
@@ -382,17 +295,6 @@
   margin-left: auto;
 }
 
-.transitionBox {
-  border: 1px dashed var(--theme-border-color, #e4e1d8);
-  border-radius: 8px;
-  padding: 12px 14px;
-  color: var(--theme-elevation-500, #6b675e);
-  font-size: 13px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 /* ── Formulaires des îlots client (import, export) ── */
 
 .formRow {
@@ -401,12 +303,6 @@
   align-items: center;
   flex-wrap: wrap;
   font-size: 13px;
-}
-
-.errorText {
-  color: var(--theme-error-500, #b3362b);
-  font-size: 13px;
-  margin: 0;
 }
 
 .reportList {

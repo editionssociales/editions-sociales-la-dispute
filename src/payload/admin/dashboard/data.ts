@@ -38,6 +38,18 @@ export async function readWorkOrders(payload: Payload): Promise<WorkOrdersData> 
     const { docs } = await payload.find({
       collection: 'orders',
       where: { status: { in: ['paid', 'prepared'] } },
+      // Select API (issue #68) : la ligne de travail n'affiche que ces
+      // champs — pas les coordonnées client, l'adresse, les identifiants
+      // Stripe, etc. portés par le reste de la fiche commande.
+      select: {
+        number: true,
+        status: true,
+        createdAt: true,
+        paidAt: true,
+        lines: true,
+        totalTTC: true,
+        shippingMethod: true,
+      },
       sort: 'createdAt',
       depth: 0,
       limit: 0,
@@ -102,6 +114,8 @@ export async function readLowStock(payload: Payload): Promise<LowStockData> {
           { aParaitre: { equals: false } },
         ],
       },
+      // Select API (issue #68) : ce panneau n'affiche que titre/édition/stock.
+      select: { title: true, edition: true, commerce: { stock: true } },
       sort: 'commerce.stock',
       depth: 0,
       limit: 0,
@@ -231,8 +245,8 @@ interface SentryApiIssue {
  * `.env.example`). Une des trois variables absente, ou réponse non-ok →
  * `na` (gris « diagnostic technique : indisponible »), JAMAIS vert par
  * défaut. Ce fetch vit ici (back-office) et pas dans `src/lib` : le contrat
- * réseau de `src/lib` est fermé (catalogue-http/boutique/donations
- * uniquement, cf. `src/lib/CLAUDE.md`).
+ * réseau de `src/lib` est fermé (`donations`/`brevo` uniquement, cf.
+ * `src/lib/CLAUDE.md`).
  *
  * `cache()` : mémoïsation par requête (défensive — un seul appelant
  * aujourd'hui, `../health/HealthPage.tsx`, vue `/admin/sante`, issue #27 ;

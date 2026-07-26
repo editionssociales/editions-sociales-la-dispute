@@ -207,8 +207,8 @@ export const Books: CollectionConfig = {
   // boutique-seuls sans maison) : ce composite `(edition, slug)` couvre le cas
   // général. Le complément — un index unique PARTIEL sur `slug` quand
   // `edition IS NULL` — n'est pas exprimable via l'API déclarative `indexes`
-  // de Payload (pas de clause `where`) ; il devra être ajouté à la main dans
-  // la migration SQL générée (hors périmètre de cette mission A2).
+  // de Payload (pas de clause `where`) : posé à la main dans la migration SQL
+  // `src/migrations/20260711_150700_slug_unique_sans_edition.ts`.
   indexes: [
     { fields: ['edition', 'slug'], unique: true },
     { fields: ['wpSource.site', 'wpSource.wpId'], unique: true },

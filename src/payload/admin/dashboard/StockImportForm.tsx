@@ -4,6 +4,8 @@ import { useState, type FormEvent } from 'react'
 
 import { useRouter } from 'next/navigation'
 
+import { Button, toast } from '@payloadcms/ui'
+
 import styles from './dashboard.module.css'
 
 /** Forme de la réponse `POST /api/books/import-stock` (cf. `StockImportResult`, `stock-import.ts`). */
@@ -24,12 +26,15 @@ interface StockImportReport {
  * (LA vraie alerte). Après succès, `router.refresh()` recharge le RSC : le
  * bloc « dernier import » du panneau reflète le run tout juste persisté
  * (`import-runs`).
+ *
+ * `Button`/`toast` de `@payloadcms/ui` (issue #89) : un `<button>` brut
+ * n'héritait d'aucun style admin, et l'échec ne remontait qu'en paragraphe
+ * muet — `toast.error` porte une région live (annoncée aux lecteurs d'écran).
  */
 export function StockImportForm() {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [report, setReport] = useState<StockImportReport | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -37,7 +42,6 @@ export function StockImportForm() {
     if (!file) return
 
     setPending(true)
-    setError(null)
     setReport(null)
 
     try {
@@ -50,13 +54,13 @@ export function StockImportForm() {
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(typeof json?.error === 'string' ? json.error : 'Échec de l’import.')
+        toast.error(typeof json?.error === 'string' ? json.error : 'Échec de l’import.')
         return
       }
       setReport(json as StockImportReport)
       router.refresh()
     } catch {
-      setError('Échec de l’import (réseau).')
+      toast.error('Échec de l’import (réseau).')
     } finally {
       setPending(false)
     }
@@ -70,12 +74,10 @@ export function StockImportForm() {
           accept=".xls"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
-        <button type="submit" disabled={!file || pending}>
+        <Button type="submit" buttonStyle="secondary" size="small" disabled={!file || pending}>
           {pending ? 'Import en cours…' : 'Importer'}
-        </button>
+        </Button>
       </form>
-
-      {error && <p className={styles.errorText}>{error}</p>}
 
       {report && (
         <div>
