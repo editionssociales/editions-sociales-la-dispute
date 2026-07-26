@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import pg from '../node_modules/.pnpm/pg@8.16.3/node_modules/pg/lib/index.js'
+import pg from 'pg'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const APPLY = process.argv.includes('--apply')
