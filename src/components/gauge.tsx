@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useLayoutEffect, useState, type CSSProperties } from "react";
 import { formatInt } from "@/lib/format";
 import { useInView } from "@/hooks/use-in-view";
 import { useImpactFrame } from "@/components/impact-frame";
@@ -187,7 +187,25 @@ export function Gauge({
   // Déclencheur partagé quand la jauge est montée dans un `<ImpactFrame>`
   // (`null` sinon) : `??` et pas `||`, un `false` partagé doit gagner.
   const shared = useImpactFrame();
-  const filled = shared ?? ownInView;
+  // Fail-open (#81, doctrine des Métriques `src/components/CLAUDE.md`) : le
+  // HTML serveur — et la première frame hydratée — doivent porter la barre à
+  // sa position FINALE, jamais à 0. On n'arme le retour à zéro (puis la
+  // course qui le comble) qu'après hydratation, dans un layout effect
+  // (avant la première peinture client, donc sans flash), et seulement si le
+  // bloc est encore hors viewport à cet instant — même geste que
+  // `reveal.tsx`. Un bloc déjà visible à l'hydratation n'est jamais armé : il
+  // reste simplement plein, sans animation.
+  const [armed, setArmed] = useState(false);
+  useLayoutEffect(() => {
+    function armIfOffscreen() {
+      const el = ref.current;
+      if (el && el.getBoundingClientRect().top > window.innerHeight) {
+        setArmed(true);
+      }
+    }
+    armIfOffscreen();
+  }, [ref]);
+  const filled = armed ? (shared ?? ownInView) : true;
   // Positions en % de la barre ENTIÈRE (objectif + dépassement) : l'objectif
   // tombe à 100/1.2 ≈ 83,3 % ; une collecte au-delà de l'objectif continue
   // de se peindre sur le dépassement (cap au bout de la demi-droite).
@@ -211,8 +229,11 @@ export function Gauge({
   } as CSSProperties;
   // À 0 € rien ne se retire : pas d'animation du tout, sans quoi la barre
   // « respirerait » du seul demi-cran de garniture. Le curseur reste posé à
-  // l'origine.
-  const sweepClass = filled && pct > 0 ? "gauge-sweep" : "";
+  // l'origine. Gardée sur `armed` en plus de `filled` (#81) : tant que le
+  // bloc n'a jamais été désarmorcé à zéro (défaut non armé, bloc déjà visible
+  // à l'hydratation), la classe d'animation ne doit jamais apparaître — sinon
+  // le premier rendu, déjà à sa position finale, se rejouerait depuis 0.
+  const sweepClass = armed && filled && pct > 0 ? "gauge-sweep" : "";
 
   return (
     // Réserve haute (`pt-14 sm:pt-20`) : les inscriptions de rang IMPAIR
@@ -365,13 +386,13 @@ export function Gauge({
               }`}
               style={{ left: cuts[i] }}
             >
-              <div className="text-[21px] font-black sm:text-[27px]">
+              <div className="text-[1.3125rem] font-black sm:text-[1.6875rem]">
                 {m.reached && <span aria-hidden="true">✓&nbsp;</span>}
                 {formatInt(m.value)}&nbsp;€
                 {m.reached && <span className="sr-only"> (atteint)</span>}
               </div>
               <div
-                className={`text-[10px] font-bold uppercase tracking-[.06em] sm:text-xs ${
+                className={`text-[0.625rem] font-bold uppercase tracking-[.06em] sm:text-xs ${
                   dark ? "text-paper/70" : "text-ink-soft"
                 }`}
               >
