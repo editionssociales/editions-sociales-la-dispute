@@ -67,7 +67,7 @@ jamais confondre :
 | Emplacement | Contenu | Qui y touche |
 |---|---|---|
 | **Vercel (Production / Preview / Development)** | Tout ce que l'application lit au runtime : `DATABASE_URL(_UNPOOLED)`, `PAYLOAD_SECRET`, `BLOB_READ_WRITE_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`/`SENTRY_PROJECT`, `SENTRY_DASHBOARD_TOKEN`, `CATALOGUE_SOURCE`, `COMMERCE_NATIVE`, `SITE_INDEXABLE`, `NEXT_PUBLIC_SITE_URL` | Youri (dashboard Vercel ou `vercel env`) — jamais affichées en clair, jamais dans un log |
-| **Secrets GitHub Actions** (repo → Settings → Secrets) | Ce qui sert à la CI et au futur workflow de sauvegarde (§5) : rien aujourd'hui côté CI (le job `verify` n'a besoin d'aucun secret) ; `NEON_DATABASE_URL`, `BLOB_BACKUP_RW_TOKEN`, `BETTERSTACK_HEARTBEAT_URL` pour le backup, une fois provisionnés | Youri |
+| **Secrets GitHub Actions** (repo → Settings → Secrets) | Ce qui sert à la CI et au workflow de sauvegarde (§5) : `DATABASE_URL` + `PAYLOAD_SECRET` (job `verify`, qui rejoue `pnpm build`) ; `NEON_DATABASE_URL` (URL Neon **directe**) et `BLOB_BACKUP_RW_TOKEN` (store privé `es-ld-backups`) pour le backup, posés le 2026-07-26 ; `BETTERSTACK_HEARTBEAT_URL` **optionnel**, pas encore posé (pas de compte Better Stack) | Youri |
 | **Poste du développeur** (`.env` / `.env.local`, hors Git — `.gitignore`) | Outillage uniquement : `GITHUB_PAT`, `VERCEL_TOKEN` — jamais lus par `src/`, jamais posés côté Vercel (un PAT GitHub exposé au runtime du site serait une escalade de privilèges gratuite) | Youri |
 
 Règle d'or, rappelée de `DEVOPS.md` : **jamais de clé Stripe `sk_live_` hors
@@ -112,13 +112,15 @@ Après tout changement de schéma Payload (collection, champ, global) :
 
 ## 5. Sauvegarde nocturne (jalon S2)
 
-> **Code livré, provisioning pas fait.** `.github/workflows/backup-db.yml`
-> fait partie de ce même changeset — le workflow existe bien dans ce dépôt,
-> ce qui suit décrit son fonctionnement **réel**, pas une spécification à
-> vérifier plus tard. Ce qui reste à faire est uniquement le **provisioning
-> humain/infra** (secrets GitHub Actions, paire de clés age, store Blob
-> privé) détaillé en fin de section — tant qu'il n'est pas fait, le workflow
-> livré ne peut pas tourner utilement (il échouera faute de secrets).
+> **Opérationnel depuis le 2026-07-26.** Le workflow échouait chaque nuit
+> depuis le 2026-07-19 (premier step, provisioning absent). Sont désormais
+> posés : store Vercel Blob **privé** `es-ld-backups` (`store_FLS5SZOrUJDYmn0e`,
+> `fra1`), secrets `NEON_DATABASE_URL` + `BLOB_BACKUP_RW_TOKEN`, paire de clés
+> age (clé publique dans le workflow). Restent **deux** gestes humains, aucun
+> des deux bloquant pour la sauvegarde elle-même : la **garde de l'identité
+> age** (voir ci-dessous) et le **heartbeat Better Stack** (secret
+> `BETTERSTACK_HEARTBEAT_URL`, désormais optionnel — sans lui la sauvegarde
+> tourne et l'absence d'alerte est signalée en `::warning::` à chaque run).
 
 **Principe** : `.github/workflows/backup-db.yml`, cron quotidien en heure
 creuse (`47 3 * * *` UTC) + déclenchement manuel (`workflow_dispatch` pour la
@@ -133,8 +135,9 @@ recette). Chaîne du job :
    (`es-ld-backups`, région `fra1`, lecture authentifiée uniquement —
    **jamais** le store médias public de la phase catalogue), sous
    `backups/daily/…` (et une copie `backups/monthly/` le 1er du mois).
-4. Copie additive des médias ajoutés/modifiés depuis le store public vers le
-   store privé (jamais de suppression côté sauvegarde).
+4. (Non implémenté à ce jour — hors scope du workflow livré, cf. son en-tête :
+   la copie additive des médias du store public vers le store privé s'activera
+   à la migration médias.)
 5. Purge (`scripts/backup-prune.mjs`) : conserve 30 sauvegardes quotidiennes
    + 12 mensuelles.
 6. Dernier step (succès uniquement) : ping d'un heartbeat Better Stack — si le
@@ -153,22 +156,29 @@ pg_restore --clean --no-owner -d "$URL_CIBLE" catalogue-AAAAMMJJ.dump
 # 4. comptages de contrôle (livres, auteurs, collections) contre la prod
 ```
 
-**Prérequis humains — pas encore faits, à provisionner avant que ce jalon
-soit opérationnel** (détail complet : `plan/06-operations.md`, préconditions
-P6–P8) :
+**Fait le 2026-07-26** : store Blob privé `es-ld-backups` créé (`fra1`, accès
+`private`, connecté au projet Vercel sous le préfixe `BACKUP_` pour ne PAS
+toucher au `BLOB_READ_WRITE_TOKEN` du store médias public) ; secrets
+`NEON_DATABASE_URL` (= `DATABASE_URL_UNPOOLED`, hôte direct) et
+`BLOB_BACKUP_RW_TOKEN` posés ; paire de clés age générée hors CI, clé publique
+`age1kmtyac…jww7xj` dans le workflow.
 
-- créer le store Vercel Blob **privé** dédié (`vercel blob create-store
-  es-ld-backups --access private`, région `fra1`) et poser les secrets GitHub
-  Actions `NEON_DATABASE_URL`, `BLOB_BACKUP_RW_TOKEN`,
-  `BETTERSTACK_HEARTBEAT_URL` ;
-- générer la paire de clés age **hors CI** (`age-keygen`) et remettre le
-  fichier d'identité (clé privée) à **Youri et au client**, jamais commité,
-  jamais en secret CI ; coller la clé publique dans le workflow ;
-- passer le plan Neon de Free à **Launch** et configurer la fenêtre de
-  restauration à 7 jours (dashboard Neon → Backups/Restore).
+**Restant — gestes humains, non bloquants** :
 
-Tant que ces trois points ne sont pas faits, le workflow — même livré — ne
-peut pas tourner utilement. C'est un prérequis **humain/infra**, pas du code.
+- **Garde de l'identité age** : le fichier d'identité généré vit à
+  `~/marina_es/backup-identity.txt` (hors dépôt, `chmod 600`). Le déposer dans
+  le gestionnaire de mots de passe de Youri **et** celui de la structure, puis
+  le supprimer du poste si besoin. **Sans ce fichier, aucun dump n'est
+  déchiffrable** — c'est le seul point de défaillance irréversible de la
+  chaîne.
+- **Heartbeat Better Stack** : ouvrir le compte de la structure, créer le
+  moniteur « sauvegarde manquante » (période 24 h, grâce 6 h) et poser
+  `BETTERSTACK_HEARTBEAT_URL`. Sans lui, un backup qui cesse de tourner ne
+  déclenche aucune alerte externe (seul l'email d'échec GitHub Actions).
+- **Plan Neon Free → Launch** + fenêtre de restauration 7 jours (dashboard
+  Neon → Backups/Restore) : étage 1 de la chaîne, indépendant de ce workflow.
+- **Test de restauration démontré** (étape 7 du jalon S2) : maintenant
+  possible, procédure ci-dessus, à jouer sur une branche Neon jetable.
 
 ## 6. À venir
 
@@ -191,11 +201,12 @@ encore activé** faute d'un geste humain (provisioning).
   `package.json`) et monté (`<Analytics />` dans `src/app/(site)/layout.tsx`).
   Reste à activer le produit côté dashboard Vercel (Analytics tab du projet) —
   sans quoi le composant reste un no-op silencieux, comme Sentry sans DSN.
-- **Sauvegarde nocturne** (§5) — workflow livré, secrets/clés/store à
-  provisionner.
-- **Test de restauration démontré** (étape 7 du jalon S2) — ne peut se faire
-  qu'une fois le workflow de backup **opérationnel avec ses secrets** (le
-  code, lui, est déjà là — voir §5).
+- **Sauvegarde nocturne** (§5) — **opérationnelle** depuis le 2026-07-26 ;
+  restent la garde de l'identité age (gestionnaires de mots de passe) et le
+  heartbeat Better Stack (surveillance, pas la sauvegarde).
+- **Test de restauration démontré** (étape 7 du jalon S2) — débloqué depuis que
+  le backup tourne : reste à jouer un `pg_restore` d'un dump déchiffré sur une
+  branche Neon jetable, avec comptages de contrôle (procédure en §5).
 
 **Ni code ni provisioning (transfert, hors périmètre technique)** :
 

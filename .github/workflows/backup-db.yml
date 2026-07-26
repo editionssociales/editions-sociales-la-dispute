@@ -24,7 +24,14 @@
 #                                   public de la phase catalogue.
 #     - BETTERSTACK_HEARTBEAT_URL  URL du heartbeat Better Stack (moniteur
 #                                   "sauvegarde manquante", période 24h,
-#                                   grace 6h).
+#                                   grace 6h). SEUL secret OPTIONNEL : absent,
+#                                   la sauvegarde tourne quand même et le
+#                                   dernier step se contente d'avertir — un
+#                                   backup réel non surveillé vaut mieux qu'un
+#                                   backup inexistant. À poser dès que le compte
+#                                   Better Stack de la structure existe (les 9
+#                                   moniteurs S3 ne sont pas configurés à ce
+#                                   jour, cf. OPERATIONS.md §6).
 #
 #   Valeur EN CLAIR à coller ci-dessous (PAS un secret — c'est la clé
 #   PUBLIQUE d'une paire age, elle ne permet que de chiffrer ; la clé privée
@@ -71,10 +78,11 @@ env:
   NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
   BLOB_BACKUP_RW_TOKEN: ${{ secrets.BLOB_BACKUP_RW_TOKEN }}
   BETTERSTACK_HEARTBEAT_URL: ${{ secrets.BETTERSTACK_HEARTBEAT_URL }}
-  # Clé PUBLIQUE age — voir le bloc PROVISIONING ci-dessus. Placeholder
-  # volontairement invalide comme clé age (échoue tout de suite, plutôt que
-  # de chiffrer avec une fausse clé que personne ne peut déchiffrer).
-  AGE_PUBLIC_KEY: "age1REPLACE_ME_WITH_REAL_PUBLIC_KEY_SEE_HEADER_OF_THIS_FILE"
+  # Clé PUBLIQUE age — voir le bloc PROVISIONING ci-dessus. Posée le
+  # 2026-07-26 ; le fichier d'identité correspondant (clé privée) est hors
+  # dépôt et hors CI, à conserver par Youri ET le client — sans lui aucun dump
+  # n'est déchiffrable.
+  AGE_PUBLIC_KEY: "age1kmtyac55dxv3l7wav7sapgfl8sddw8mktm76m0mkr7jfa7jncdusjww7xj"
 
 jobs:
   backup:
@@ -89,13 +97,17 @@ jobs:
           missing=()
           [ -z "$NEON_DATABASE_URL" ] && missing+=("secret NEON_DATABASE_URL")
           [ -z "$BLOB_BACKUP_RW_TOKEN" ] && missing+=("secret BLOB_BACKUP_RW_TOKEN")
-          [ -z "$BETTERSTACK_HEARTBEAT_URL" ] && missing+=("secret BETTERSTACK_HEARTBEAT_URL")
-          if [ "$AGE_PUBLIC_KEY" = "age1REPLACE_ME_WITH_REAL_PUBLIC_KEY_SEE_HEADER_OF_THIS_FILE" ]; then
-            missing+=("AGE_PUBLIC_KEY (placeholder non remplacé dans .github/workflows/backup-db.yml)")
-          fi
+          case "$AGE_PUBLIC_KEY" in
+            age1REPLACE_ME_*|"") missing+=("AGE_PUBLIC_KEY (placeholder non remplacé dans .github/workflows/backup-db.yml)") ;;
+          esac
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Sauvegarde annulée — provisioning manquant : ${missing[*]}. Voir l'en-tête de .github/workflows/backup-db.yml et plan/06-operations.md (P7/P8)."
+            echo "::error::Sauvegarde annulée — provisioning manquant : ${missing[*]}. Voir l'en-tête de .github/workflows/backup-db.yml et OPERATIONS.md §5."
             exit 1
+          fi
+          # Le heartbeat n'est pas un prérequis : sans lui la sauvegarde est
+          # réelle mais non surveillée (avertissement, jamais un échec).
+          if [ -z "$BETTERSTACK_HEARTBEAT_URL" ]; then
+            echo "::warning::BETTERSTACK_HEARTBEAT_URL absent — la sauvegarde va s'exécuter mais AUCUNE alerte « sauvegarde manquante » ne la surveille. À poser dès l'ouverture du compte Better Stack."
           fi
           echo "Provisioning complet, poursuite de la sauvegarde."
 
@@ -181,6 +193,9 @@ jobs:
       # Dernier step, SUCCÈS UNIQUEMENT (comportement par défaut de GitHub
       # Actions : un step précédent en échec saute celui-ci) — c'est ce qui
       # rend la promesse « une sauvegarde chaque nuit » vérifiable plutôt que
-      # déclarative (plan, Recette #6).
+      # déclarative (plan, Recette #6). Tant que le secret n'est pas posé, le
+      # step est neutralisé par son `if` (surveillance absente, sauvegarde
+      # quand même effectuée).
       - name: Heartbeat Better Stack
+        if: env.BETTERSTACK_HEARTBEAT_URL != ''
         run: curl -fsS "$BETTERSTACK_HEARTBEAT_URL"
