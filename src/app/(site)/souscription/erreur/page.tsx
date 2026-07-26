@@ -37,7 +37,7 @@ export default async function ErreurPage({
           qui en aboutit à un. */}
       <div aria-hidden="true" className="h-1.5 bg-brick" />
       <section className="bg-paper">
-        <Container className="max-w-2xl py-20 sm:py-28">
+        <Container width="prose" className="py-20 sm:py-28">
           <div className="mb-6 flex h-14 w-14 items-center justify-center border-2 border-ink bg-brick">
             <span aria-hidden="true" className="font-sans text-2xl font-black text-paper">
               !

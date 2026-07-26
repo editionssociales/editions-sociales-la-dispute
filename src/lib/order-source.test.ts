@@ -177,6 +177,8 @@ function orderCreateData(overrides: Partial<OrderCreateData> = {}): OrderCreateD
     stripeSessionId: "cs_test_1",
     stripePaymentIntentId: "pi_test_1",
     paidAt: "2026-07-12T10:00:00.000Z",
+    stockDecremented: false,
+    confirmationSent: false,
     ...overrides,
   };
 }

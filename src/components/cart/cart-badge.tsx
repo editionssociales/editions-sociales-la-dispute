@@ -60,14 +60,6 @@ export function CartNavCell({
   placement,
 }: {
   placement: string;
-  /**
-   * Vestiges du rendu « libellé texte », supprimé (#91 — les deux appelants
-   * de `site-header.tsx` passent toujours `icon`). Restent acceptés et
-   * ignorés ici : `site-header.tsx` n'est pas dans le périmètre de ce
-   * correctif — à retirer de ses deux appels quand ce fichier sera repris.
-   */
-  compact?: boolean;
-  icon?: boolean;
 }) {
   const { count } = useCart();
   const ariaLabel =

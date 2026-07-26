@@ -32,7 +32,7 @@ function req(
     routeParams,
   }: {
     user?: { role: string } | null
-    findByID: Payload['findByID']
+    findByID: unknown
     routeParams?: Record<string, unknown>
   },
 ): PayloadRequest {
@@ -133,8 +133,11 @@ describe('importRunRapportHandler — rapport stocké', () => {
     expect(res.headers.get('Content-Disposition')).toBe(
       'attachment; filename="import-routeur-rapport-2026-07-10.csv"',
     )
+    // BOM v\u00E9rifi\u00E9 sur les OCTETS : `Response.text()` fait un UTF-8 decode, qui
+    // retire la marque d'ordre en tete (spec Fetch) \u2014 cf. `order-export-handler.test.ts`.
+    const octets = new Uint8Array(await res.clone().arrayBuffer())
+    expect([octets[0], octets[1], octets[2]]).toEqual([0xef, 0xbb, 0xbf])
     const body = await res.text()
-    expect(body.startsWith('\uFEFF')).toBe(true)
     expect(body).toContain('Le Capital')
   })
 })

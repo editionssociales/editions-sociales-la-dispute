@@ -37,18 +37,12 @@ export function useInView<T extends Element = HTMLDivElement>({
       forceReveal();
       return;
     }
-    // `io` déclaré avant le minuteur (jamais initialisé au moment de la
-    // planification, mais toujours assigné avant que le callback puisse
-    // s'exécuter) : le repli à 2s doit aussi déconnecter l'observer (#90) —
-    // sans quoi il restait actif indéfiniment après avoir déjà forcé la
-    // révélation, une fuite pour chaque bloc dont l'observer ne délivre
-    // jamais (onglet gelé, rendu headless).
-    let io: IntersectionObserver;
-    const fallback = window.setTimeout(() => {
-      forceReveal();
-      io.disconnect();
-    }, 2000);
-    io = new IntersectionObserver(
+    // L'observer et le minuteur de repli se référencent mutuellement : chacun
+    // doit pouvoir annuler l'autre. L'observer est déclaré en PREMIER et lit
+    // `fallback` depuis sa fermeture — jamais à l'évaluation, seulement quand
+    // il se déclenche, donc après l'affectation (les callbacks
+    // d'IntersectionObserver ne sont jamais synchrones).
+    const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setInView(true);
@@ -58,6 +52,14 @@ export function useInView<T extends Element = HTMLDivElement>({
       },
       { threshold, rootMargin },
     );
+    // Le repli à 2s doit AUSSI déconnecter l'observer (#90) — sans quoi il
+    // restait actif indéfiniment après avoir déjà forcé la révélation, une
+    // fuite pour chaque bloc dont l'observer ne délivre jamais (onglet gelé,
+    // rendu headless).
+    const fallback = window.setTimeout(() => {
+      forceReveal();
+      io.disconnect();
+    }, 2000);
     io.observe(el);
     return () => {
       window.clearTimeout(fallback);

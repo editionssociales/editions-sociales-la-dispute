@@ -53,6 +53,10 @@ describe("buildOrderCreateData", () => {
       stripeSessionId: "cs_test_1",
       stripePaymentIntentId: "pi_test_1",
       paidAt: "2026-07-12T10:00:00.000Z",
+      // Marqueurs d'effet (#64) : toujours faux à l'assemblage — aucun effet
+      // n'a encore eu lieu, c'est `createPaidOrder` qui les lève un par un.
+      stockDecremented: false,
+      confirmationSent: false,
     });
   });
 

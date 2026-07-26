@@ -6,7 +6,13 @@ import { getBoutiqueBooks } from "@/lib/catalogue";
 import { canAddToCart } from "@/lib/cart-core";
 import { CartView } from "./cart-view";
 
-export const metadata: Metadata = { title: "Panier" };
+// `noindex` de PAGE plutôt qu'un `disallow` dans robots.txt (#87) : un
+// disallow interdit l'exploration, donc empêche aussi le moteur de LIRE la
+// directive — une URL de panier déjà connue peut rester indexée sans contenu.
+export const metadata: Metadata = {
+  title: "Panier",
+  robots: { index: false, follow: true },
+};
 
 export const revalidate = 3600; // fenêtre ISR des suggestions goodies (Payload/Postgres)
 

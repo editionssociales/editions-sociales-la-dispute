@@ -77,6 +77,14 @@ export interface OrderCreateData {
   stripeSessionId: string;
   stripePaymentIntentId: string | null;
   paidAt: string;
+  /**
+   * Marqueurs d'effet (#64) — TOUJOURS `false` à la création : la commande est
+   * enregistrée AVANT que le stock soit décrémenté et l'e-mail envoyé. C'est
+   * `createPaidOrder` qui les passe à `true`, un par un, après chaque effet
+   * réussi ; un rejeu Stripe reprend là où le précédent s'est arrêté.
+   */
+  stockDecremented: boolean;
+  confirmationSent: boolean;
 }
 
 /**
@@ -123,6 +131,10 @@ export function buildOrderCreateData(
     stripeSessionId: facts.stripeSessionId,
     stripePaymentIntentId: facts.stripePaymentIntentId,
     paidAt: facts.paidAtISO,
+    // Aucun effet n'a encore eu lieu au moment de la création — y compris pour
+    // une commande `failed`, qui n'en déclenchera jamais aucun.
+    stockDecremented: false,
+    confirmationSent: false,
   };
 }
 

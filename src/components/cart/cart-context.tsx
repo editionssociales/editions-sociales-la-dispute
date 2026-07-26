@@ -53,7 +53,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const hydrated = useRef(false);
   const [announcement, setAnnouncement] = useState("");
-  const announcementTimeout = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  // `number` et non `ReturnType<typeof window.setTimeout>` : @types/node est
+  // dans le programme, et ce `ReturnType` s'y résout en `Timeout` (Node) alors
+  // que `window.setTimeout` rend bien un `number` (DOM) à l'exécution.
+  const announcementTimeout = useRef<number | null>(null);
 
   useEffect(() => {
     // Enveloppé dans une fonction nommée (plutôt qu'un `setState` nu en tête

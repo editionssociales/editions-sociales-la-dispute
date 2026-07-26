@@ -448,6 +448,14 @@ export interface Order {
   stripeSessionId: string;
   stripePaymentIntentId?: string | null;
   paidAt?: string | null;
+  /**
+   * Marqueur technique du webhook (issue #64 — reprise après échec partiel) : le stock des lignes de cette commande a-t-il déjà été décrémenté ? Un rejeu Stripe ne redécrémente jamais tant que ce marqueur est vrai. Ne se modifie jamais à la main.
+   */
+  stockDecremented: boolean;
+  /**
+   * Marqueur technique du webhook (issue #64) : l'e-mail de confirmation de cette commande a-t-il déjà été envoyé ? Ne se modifie jamais à la main.
+   */
+  confirmationSent: boolean;
   updatedAt: string;
   createdAt: string;
 }
@@ -820,6 +828,8 @@ export interface OrdersSelect<T extends boolean = true> {
   stripeSessionId?: T;
   stripePaymentIntentId?: T;
   paidAt?: T;
+  stockDecremented?: T;
+  confirmationSent?: T;
   updatedAt?: T;
   createdAt?: T;
 }

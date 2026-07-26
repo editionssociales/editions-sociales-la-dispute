@@ -525,7 +525,7 @@ function SiteHeaderChrome({
                   menuOpen ? "opacity-100" : "opacity-0"
                 }`}
               >
-                <CartNavCell compact={compact} icon placement="h-full w-full" />
+                <CartNavCell placement="h-full w-full" />
               </span>
               <span
                 inert={menuOpen}
@@ -600,7 +600,7 @@ function SiteHeaderChrome({
               {NAV_HOUSES[0].label}
             </Link>
             <HomeNavCell active={homeActive} placement={ICON_SQUARE} />
-            <CartNavCell compact={compact} icon placement={ICON_SQUARE} />
+            <CartNavCell placement={ICON_SQUARE} />
             <Link
               href={NAV_HOUSES[1].href}
               className={`col-span-3 ${maisonCellClass(compact)}`}

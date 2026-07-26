@@ -231,8 +231,11 @@ describe('exportPreparationHandler / exportComptaHandler — réponse CSV', () =
     expect(res.headers.get('Content-Disposition')).toMatch(
       /^attachment; filename="commandes-preparation-\d{4}-\d{2}-\d{2}\.csv"$/,
     )
-    const body = await res.text()
-    expect(body.startsWith('\uFEFF')).toBe(true)
+    // Le BOM se v\u00E9rifie sur les OCTETS : `Response.text()` fait un UTF-8 decode,
+    // qui RETIRE une marque d'ordre en tete (spec Fetch). Assert\u00E9e sur la cha\u00EEne,
+    // elle ne pourrait jamais passer \u2014 m\u00EAme si le handler l'\u00E9met bien, ce qu'il fait.
+    const octets = new Uint8Array(await res.arrayBuffer())
+    expect([octets[0], octets[1], octets[2]]).toEqual([0xef, 0xbb, 0xbf])
   })
 
   it('code promo résolu par une seconde lecture ciblée (promo-codes) uniquement si référencé', async () => {

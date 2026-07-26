@@ -84,8 +84,15 @@ describe("tierMetrics", () => {
   it("mobile (Sm) suit la même loi que desktop (Lg), à la moitié de la base", () => {
     for (let rank = 1; rank <= 6; rank++) {
       const m = tierMetrics(rank);
-      expect(m.fontSm).toBe(Math.round((m.fontLg / 2) * 10) / 10);
-      expect(m.countSm).toBe(Math.round((m.countLg / 2) * 10) / 10);
+      // « Moitié de la base » vaut AVANT arrondi : chaque métrique est arrondie
+      // au dixième depuis sa propre base, donc Sm peut différer de Lg/2 d'un pas
+      // d'arrondi (rang 5 : countLg = round1(172,8/7) = 24,7 → 12,35, quand
+      // countSm = round1(86,4/7) = 12,3). C'est la loi qui est partagée, pas
+      // le résultat arrondi.
+      // Borne à 0,051 et non 0,05 : l'écart vaut exactement un demi-pas, que le
+      // flottant rend 0,05000000000000071.
+      expect(Math.abs(m.fontSm - m.fontLg / 2)).toBeLessThan(0.051);
+      expect(Math.abs(m.countSm - m.countLg / 2)).toBeLessThan(0.051);
     }
   });
 });

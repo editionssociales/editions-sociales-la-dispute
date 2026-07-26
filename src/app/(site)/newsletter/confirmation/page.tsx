@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function NewsletterConfirmationPage() {
   return (
     <section className="bg-paper">
-      <Container className="max-w-2xl py-20 sm:py-28">
+      <Container width="prose" className="py-20 sm:py-28">
         <PageHero
           tone="system"
           title="Inscription confirmée"

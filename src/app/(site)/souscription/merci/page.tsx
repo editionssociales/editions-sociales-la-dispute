@@ -63,7 +63,7 @@ export default async function MerciPage({
     <>
       <div aria-hidden="true" className={`h-1.5 ${ACCENT_BG[tone]}`} />
       <section className="bg-paper">
-        <Container className="max-w-2xl py-20 sm:py-28">
+        <Container width="prose" className="py-20 sm:py-28">
           <div
             className={`mb-6 flex h-14 w-14 items-center justify-center border-2 border-ink ${ACCENT_BG[tone]}`}
           >

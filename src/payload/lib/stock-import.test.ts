@@ -50,8 +50,8 @@ interface FakeBookDoc {
 
 function fakePayload(books: FakeBookDoc[]) {
   const find = vi.fn(async () => ({ docs: books }))
-  const update = vi.fn(async () => ({}))
-  const create = vi.fn(async () => ({}))
+  const update = vi.fn(async (_args: Record<string, unknown>) => ({}))
+  const create = vi.fn(async (_args: Record<string, unknown>) => ({}))
   // `importStockHandler` logue l'erreur via `req.payload.logger.error` sur le
   // chemin d'échec (fichier illisible) — sans ce stub, ce chemin planterait
   // avant même de produire la réponse 400.

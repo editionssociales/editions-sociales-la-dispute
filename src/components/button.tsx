@@ -104,9 +104,13 @@ export function Button({ variant = "solid", tone, className, children, ...domPro
   const classes = [BASE, variantClass, className].filter(Boolean).join(" ");
 
   // `domProps` (props communes retirées) reste un type-union discriminé sur
-  // `href` : `if (domProps.href)` narrowe vers `ButtonAsLinkProps` (jamais de
-  // `disabled` dans cette branche) plutôt que vers `ButtonAsButtonProps`.
-  if (domProps.href) {
+  // `href` : le test narrowe vers `ButtonAsLinkProps` (jamais de `disabled`
+  // dans cette branche) plutôt que vers `ButtonAsButtonProps`.
+  // `typeof … === "string"` et NON une simple vérité : `href: ""` laisserait
+  // l'union non résolue dans la branche `else`, et le `type?: string` que
+  // `AnchorHTMLAttributes` porte pour les `<a>` viendrait alors élargir le
+  // `type="button"` du `<button>` rendu plus bas.
+  if (typeof domProps.href === "string") {
     const { href, target, rel, ...rest } = domProps;
     if (href.startsWith("/")) {
       return (

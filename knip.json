@@ -8,7 +8,6 @@
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
     "tsx",
-    "tailwindcss",
-    "pg"
+    "tailwindcss"
   ]
 }
