@@ -2,8 +2,9 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/button";
 import { LEGAL_LINK } from "@/components/legal-section";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_LIGHT } from "@/lib/ui";
 import { MESSAGE_MAX_LENGTH, NAME_MAX_LENGTH, SUBJECT_MAX_LENGTH } from "@/lib/contact-form";
 import { sendContactMessage } from "@/app/(site)/contact/actions";
 import { CONTACT_INITIAL_STATE } from "@/app/(site)/contact/state";
@@ -128,14 +129,14 @@ export function ContactForm() {
       />
       <input type="hidden" name="renderedAt" value={renderedAt ?? ""} />
 
-      <button
+      <Button
         type="submit"
         disabled={isPending}
         aria-busy={isPending}
-        className={`inline-flex w-fit items-center justify-center border-2 border-ink bg-ink px-6 py-3 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`}
+        className="w-fit px-6 py-3 text-sm tracking-[.03em]"
       >
         {isPending ? "Envoi…" : "Envoyer"}
-      </button>
+      </Button>
 
       {state.status !== "idle" && (
         <div

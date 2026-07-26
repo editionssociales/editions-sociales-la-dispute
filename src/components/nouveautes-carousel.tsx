@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
 import type { NouveauteBook } from "@/lib/nouveaute-book";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
@@ -69,6 +69,15 @@ export function NouveautesCarousel({
   // Dernier z-index appliqué par carte : on n'écrit le z-index que lorsqu'il
   // change (le changer à chaque frame force un recalcul d'empilement inutile).
   const zRef = useRef<number[]>([]);
+  // Index actif ET butées, en ÉTAT (contrairement au reste, en refs) : ils
+  // pilotent du rendu React — l'annonce assistive (#86) et la désactivation
+  // des flèches en butée (#91, même geste que `pagination.tsx`). `setState`
+  // fonctionnel, comparé à la valeur précédente : `paint()` tourne à chaque
+  // frame de défilement, mais ne déclenche un rendu que quand la valeur
+  // affichée change réellement (#90).
+  const [activeIndex, setActiveIndex] = useState(n > 1 ? 1 : 0);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(n <= 1);
 
   /** Ajuste les marges de début/fin pour que la 1re et la dernière couverture
    *  (largeurs variables) puissent se centrer dans le viewport. */
@@ -129,6 +138,12 @@ export function NouveautesCarousel({
     });
 
     activeRef.current = nearest;
+    setActiveIndex((prev) => (prev === nearest ? prev : nearest));
+    setAtStart((prev) => (prev === (nearest <= 0) ? prev : nearest <= 0));
+    setAtEnd((prev) => {
+      const next = nearest >= cards.length - 1;
+      return prev === next ? prev : next;
+    });
   }, []);
 
   const schedulePaint = useCallback(() => {
@@ -283,13 +298,13 @@ export function NouveautesCarousel({
               onFocus={() => centerCard(i)}
               draggable={false}
               aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
-              className="block origin-center will-change-transform focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-4"
+              className={`block origin-center will-change-transform ${FOCUS_RING_LIGHT}`}
             >
               {/* Hauteur commune fixée ; la largeur suit le ratio réel de
                   l'image (aucune bande, jamais coupée). draggable=false : le
                   drag HTML5 natif entrerait en conflit avec le glissé du rail.
                   1re couverture : preload (LCP) — les suivantes restent lazy. */}
-              <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[8px_8px_0_0_#17140f] ring-1 ring-ink">
+              <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[8px_8px_0_0_var(--color-ink)] ring-1 ring-ink">
                 <Cover
                   cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
                   alt={book.title}
@@ -326,19 +341,33 @@ export function NouveautesCarousel({
                 <button
                   type="button"
                   aria-label="Couverture précédente"
+                  disabled={atStart}
                   onClick={() => step(-1)}
-                  className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
+                  className={`flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
+                    atStart ? "pointer-events-none text-ink/30" : "hover:bg-ink hover:text-paper"
+                  }`}
                 >
                   ←
                 </button>
                 <button
                   type="button"
                   aria-label="Couverture suivante"
+                  disabled={atEnd}
                   onClick={() => step(1)}
-                  className="flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-2 motion-reduce:transition-none"
+                  className={`flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
+                    atEnd ? "pointer-events-none text-ink/30" : "hover:bg-ink hover:text-paper"
+                  }`}
                 >
                   →
                 </button>
+                {/* Annonce assistive du déplacement (#86) : les flèches ne
+                    produisaient aucun retour pour les technologies
+                    d'assistance — région live, hors du flux visuel. */}
+                <p aria-live="polite" className="sr-only">
+                  {books[activeIndex]
+                    ? `${activeIndex + 1} sur ${n} : ${books[activeIndex].title}`
+                    : ""}
+                </p>
               </div>
             )}
             {/* Sortie discrète du carrousel, à proximité des flèches — même

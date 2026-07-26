@@ -28,7 +28,13 @@ export function ShelfCover({ url, ratio }: { url: string; ratio: string }) {
         src={url}
         alt=""
         fill
-        sizes="320px"
+        // Largeur RÉELLE affichée (#91), pas la hauteur : la face couverture
+        // a une hauteur de `BOOK_HOVER_H` (320px, `shelf.tsx`) mais une
+        // largeur déduite du ratio réel de la couverture (`aspect-ratio:
+        // var(--car)`, `.book3d-cover`) — au format DB courant (≈2/3), soit
+        // ≈320 × 2/3 ≈ 213px. `sizes="320px"` (la hauteur, recopiée par
+        // erreur) surdimensionnait la requête d'environ 50 %.
+        sizes="213px"
         className="object-cover"
         onLoad={(e) => {
           const img = e.currentTarget;

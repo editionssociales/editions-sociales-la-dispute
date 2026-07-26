@@ -154,7 +154,7 @@ export function BookCover({
   }
   return (
     <span
-      className={`flex aspect-[2/3] items-center justify-center text-center font-sans text-sm font-bold uppercase text-black ${fallbackClassName ?? "p-4"}`}
+      className={`flex aspect-[2/3] items-center justify-center text-center font-sans text-sm font-bold uppercase text-ink ${fallbackClassName ?? "p-4"}`}
     >
       {title}
     </span>

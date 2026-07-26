@@ -176,36 +176,34 @@ export function SiteFooter({ footer }: { footer: ReglagesSiteContent["footer"] }
 
   return (
     <footer className="bg-ink">
-      {/* Mobile (< lg) : cellules empilées pleine largeur ; la cellule
-          centrale vide n'a pas de contenu, elle est masquée — la cellule
-          « Suivez-nous » n'apparaît que si des réseaux sont saisis. */}
-      <FramedGrid className="grid-cols-1 lg:hidden">
-        <AdresseCell adresse={footer.adresse} />
-        <MentionsCell year={year} />
-        <NewsletterCell />
-        <DiffusionCell texte={footer.texteDiffusion} />
-        {reseaux.length > 0 && <ReseauxCell reseaux={reseaux} />}
-      </FramedGrid>
-
-      {/* Desktop (lg+) : gauche (Adresse / Mentions légales) | centre (vide,
-          ou « Suivez-nous » si des réseaux sont saisis) | droite (Newsletter /
-          Diffusion-Distribution). */}
-      <FramedGrid className="hidden grid-cols-[1fr_1fr_1fr] grid-rows-2 lg:grid">
-        <AdresseCell className="col-start-1 row-start-1" adresse={footer.adresse} />
-        <MentionsCell className="col-start-1 row-start-2" year={year} />
+      {/* UNE SEULE grille, responsive (#91) : deux `FramedGrid` séparés
+          (`lg:hidden` / `hidden lg:grid`) montaient chacun leur PROPRE
+          `NewsletterForm` en permanence — CSS `hidden` ne démonte rien, les
+          deux instances vivaient dans le DOM à la fois, et franchir `lg` en
+          cours de saisie perdait le champ (la copie visible changeait sous
+          le doigt). Mobile (< lg) : cellules empilées dans l'ordre de
+          lecture — la cellule « Suivez-nous » n'apparaît que si des réseaux
+          sont saisis. Desktop (lg+) : placement EXPLICITE par cellule
+          (gauche Adresse/Mentions, centre vide ou Suivez-nous, droite
+          Newsletter/Diffusion) — l'ordre du DOM (mobile) n'a pas besoin de
+          suivre l'ordre visuel desktop, chaque cellule porte son propre
+          `lg:col-start`/`lg:row-start`. */}
+      <FramedGrid className="grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] lg:grid-rows-2">
+        <AdresseCell className="lg:col-start-1 lg:row-start-1" adresse={footer.adresse} />
+        <MentionsCell className="lg:col-start-1 lg:row-start-2" year={year} />
+        <NewsletterCell className="lg:col-start-3 lg:row-start-1" />
+        <DiffusionCell className="lg:col-start-3 lg:row-start-2" texte={footer.texteDiffusion} />
         {reseaux.length > 0 ? (
           <ReseauxCell
-            className="col-start-2 row-span-2 row-start-1"
+            className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
             reseaux={reseaux}
           />
         ) : (
           <div
             aria-hidden="true"
-            className="col-start-2 row-span-2 row-start-1 bg-paper"
+            className="hidden bg-paper lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block"
           />
         )}
-        <NewsletterCell className="col-start-3 row-start-1" />
-        <DiffusionCell className="col-start-3 row-start-2" texte={footer.texteDiffusion} />
       </FramedGrid>
     </footer>
   );

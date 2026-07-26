@@ -32,4 +32,12 @@ données ni le routage.
 
 - Les primitives partagées ne fixent que la recette visuelle commune ; padding,
   taille et disposition restent l'affaire de l'appelant via `className`, pour ne
-  pas figer un contrat de props par usage.
+  pas figer un contrat de props par usage. **Exception : `Container.width`**
+  (`"page"` 6xl par défaut | `"prose"` 2xl, #80) — Tailwind v4 ordonne les
+  utilitaires d'une même famille par valeur d'échelle dans la feuille générée,
+  pas par ordre dans l'attribut : un `max-w-*` passé en `className` pour
+  remplacer le `max-w-6xl` par défaut du composant perd silencieusement
+  (confirmé au `getComputedStyle`). La largeur ne peut donc PAS rester une
+  affaire de `className` seul pour ce composant précis ; prop à valeurs
+  closes plutôt qu'une dépendance de merge (`twMerge`, hors périmètre —
+  `package.json` n'appartient pas à `src/components`).

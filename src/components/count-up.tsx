@@ -49,7 +49,15 @@ export function CountUp({
     const tick = (t: number) => {
       const p = reduce ? 1 : Math.min((t - t0) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
-      setDisplay(Math.round(value * eased));
+      const next = Math.round(value * eased);
+      // Écrit fonctionnel (#90) : `gauge.tsx` anime en CSS, ce compteur reste
+      // en rAF (l'affichage combine chiffres ET séparateurs de milliers,
+      // hors de portée d'un `@property`/keyframe CSS) — mais n'écrit l'état
+      // qu'aux PALIERS d'affichage réels. React compare par `Object.is` et
+      // saute le rendu quand la valeur ne change pas : sur les paliers finaux
+      // (easeOutCubic aplati), plusieurs frames consécutives arrondissent au
+      // même entier, ce qui évite déjà une partie des ~96 rendus du rAF brut.
+      setDisplay((prev) => (prev === next ? prev : next));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

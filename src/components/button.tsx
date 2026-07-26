@@ -10,14 +10,17 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * (R5) : SOLID démarre sur ink → anneau sombre (pop-yellow) ; OUTLINE démarre
  * sur paper → anneau clair (ink) ; HOUSE démarre sur navy/brick (accent
  * sombre) → anneau sombre, comme SOLID ; ALARM démarre sur brick → anneau
- * sombre aussi. État `disabled` (R7) : opacité
+ * sombre aussi. États `disabled`/`active` (R7) : `disabled` — opacité
  * réduite, curseur bloqué, hover neutralisé (n'a de prise que sur le
  * `<button>` rendu sans `href` — un lien ne peut pas être `disabled` en
- * HTML).
+ * HTML, cf. le type discriminé `ButtonProps` plus bas, qui rend le couple
+ * `href`+`disabled` impossible à la compilation) ; `active:` — pression
+ * (souris/tactile), même sens que le hover (inversion), un cran plus soutenu
+ * pour se distinguer de lui.
  */
 
 const BASE =
-  "inline-flex items-center justify-center font-sans font-bold uppercase transition-colors motion-reduce:transition-none border-2 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex items-center justify-center font-sans font-bold uppercase transition-colors motion-reduce:transition-none border-2 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:brightness-100";
 
 const SOLID = `border-ink bg-ink text-paper hover:bg-paper hover:text-ink disabled:hover:bg-ink disabled:hover:text-paper ${FOCUS_RING_DARK}`;
 const OUTLINE = `border-ink bg-paper text-ink hover:bg-ink hover:text-paper disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT}`;
@@ -57,33 +60,37 @@ const HOUSE: Record<"navy" | "brick", string> = {
  */
 const ALARM = `border-ink bg-brick text-paper hover:bg-paper hover:text-brick disabled:hover:bg-brick disabled:hover:text-paper ${FOCUS_RING_DARK}`;
 
-type ButtonOwnProps = {
-  href?: string;
+type ButtonCommonProps = {
   variant?: "solid" | "outline" | "house" | "invert" | "alarm";
   /** Couleur de la maison ciblée — requis quand `variant="house"`. */
   tone?: "navy" | "brick";
   className?: string;
-  target?: string;
-  rel?: string;
   children: ReactNode;
 };
 
-type ButtonProps = ButtonOwnProps &
-  Omit<
-    AnchorHTMLAttributes<HTMLAnchorElement> & ButtonHTMLAttributes<HTMLButtonElement>,
-    keyof ButtonOwnProps | "href"
+/**
+ * Rendu lien : jamais `disabled` — un `<a>` ne peut pas l'être en HTML (rien
+ * n'empêchait auparavant de le passer quand même : ça compilait, et ça ne
+ * faisait rien). `href` discrimine l'union : présent ⇒ ce variant, `disabled`
+ * hors de portée du type ; absent ⇒ `ButtonAsButtonProps`, où il redevient
+ * valide (#88).
+ */
+type ButtonAsLinkProps = ButtonCommonProps & {
+  href: string;
+  target?: string;
+  rel?: string;
+} & Omit<
+    AnchorHTMLAttributes<HTMLAnchorElement>,
+    keyof ButtonCommonProps | "href" | "target" | "rel"
   >;
 
-export function Button({
-  href,
-  variant = "solid",
-  tone,
-  className,
-  target,
-  rel,
-  children,
-  ...rest
-}: ButtonProps) {
+type ButtonAsButtonProps = ButtonCommonProps & {
+  href?: undefined;
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, keyof ButtonCommonProps>;
+
+export type ButtonProps = ButtonAsLinkProps | ButtonAsButtonProps;
+
+export function Button({ variant = "solid", tone, className, children, ...domProps }: ButtonProps) {
   const variantClass =
     variant === "house"
       ? HOUSE[tone ?? "navy"]
@@ -96,7 +103,11 @@ export function Button({
             : SOLID;
   const classes = [BASE, variantClass, className].filter(Boolean).join(" ");
 
-  if (href) {
+  // `domProps` (props communes retirées) reste un type-union discriminé sur
+  // `href` : `if (domProps.href)` narrowe vers `ButtonAsLinkProps` (jamais de
+  // `disabled` dans cette branche) plutôt que vers `ButtonAsButtonProps`.
+  if (domProps.href) {
+    const { href, target, rel, ...rest } = domProps;
     if (href.startsWith("/")) {
       return (
         <Link href={href} className={classes} target={target} rel={rel} {...rest}>
@@ -112,6 +123,7 @@ export function Button({
     );
   }
 
+  const { href: _href, ...rest } = domProps;
   return (
     <button type="button" className={classes} {...rest}>
       {children}
