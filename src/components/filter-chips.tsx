@@ -38,7 +38,16 @@ export function FilterChips({
           aria-label={`Retirer le filtre ${chip.type} : ${chip.label}`}
           className={`inline-flex min-h-11 items-center gap-2 bg-paper pl-3.5 pr-3 text-[12px] font-bold uppercase tracking-[.03em] text-ink transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${FOCUS_RING_LIGHT_OUTER}`}
         >
-          {chip.label}
+          {/* Puce « recherche » (#91) : seule à porter un texte à longueur
+              libre (la saisie de l'utilisateur) — bornée en largeur et
+              tronquée à l'affichage, jamais les autres puces (facettes,
+              libellés bornés en amont). Le nom accessible du bouton vient
+              entièrement de son `aria-label` (ci-dessus, jamais tronqué) :
+              la troncature visuelle n'affecte aucune technologie
+              d'assistance. */}
+          <span className={chip.param === "q" ? "max-w-[16ch] truncate" : undefined}>
+            {chip.label}
+          </span>
           <span aria-hidden="true" className="text-sm leading-none">
             ×
           </span>
