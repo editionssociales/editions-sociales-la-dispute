@@ -8,6 +8,7 @@ import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
+import { RAIL_GRID_CLASS } from "@/components/rail-inset";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
@@ -267,7 +268,7 @@ export default async function SouscriptionPage() {
   );
 
   return (
-    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+    <div className={`lg:grid ${RAIL_GRID_CLASS} lg:items-start`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       {/* Liseré de collecte fixé en haut du viewport (10px, prototype validé
           client — variante V2 « lecture = lutte ») : le remplissage progresse
