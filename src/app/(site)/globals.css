@@ -30,8 +30,6 @@
      #c97a2b ne tient pas le contraste AA (3,1:1 sur paper) en petit corps. */
   --color-ocher-text: #9a5a17;
 
-  --color-accent: var(--color-navy);
-
   /*
    * Palette « pop » — refonte grille brutaliste (maquette « essai site »).
    * Aplats vifs qui codent les sections de nav (catalogue, la Geme, à
