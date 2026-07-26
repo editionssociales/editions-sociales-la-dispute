@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Button } from "@/components/button";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
 import { useCart } from "./cart-context";
@@ -13,6 +13,18 @@ import { useCart } from "./cart-context";
  * rendent qu'à `book.purchaseMode === "cart"` — donc toujours sous
  * `<CartProvider>` (monté par `layout.tsx`).
  */
+/**
+ * Les deux états de la puce de grille, en classes LITTÉRALES (contrat JIT) et
+ * à géométrie IDENTIQUE : elle vit dans la rangée basse à hauteur fixe de
+ * `book-card`, un changement de boîte y ferait sauter la grille. Le retour est
+ * donc porté par la seule couleur — l'inversion `ink↔paper` de R4/R7, en aplat
+ * dur (R8), la même que celle du survol.
+ */
+const CHIP_BASE =
+  "flex h-11 w-11 flex-none items-center justify-center border-2 border-ink font-sans text-lg font-black leading-none transition-colors motion-reduce:transition-none";
+const CHIP_IDLE = `${CHIP_BASE} bg-pop-yellow text-black hover:bg-ink hover:text-pop-yellow`;
+const CHIP_ADDED = `${CHIP_BASE} bg-ink text-pop-yellow`;
+
 export function AddToCartButton({
   id,
   variant = "button",
@@ -24,6 +36,17 @@ export function AddToCartButton({
 }) {
   const { addToCart } = useCart();
   const [justAdded, setJustAdded] = useState(false);
+  const resetTimeout = useRef<number | null>(null);
+
+  // Le retour dure 1,5 s : sans nettoyage, quitter la page entre-temps
+  // (navigation depuis une vignette de grille — le cas courant) laisserait un
+  // `setState` tomber sur un composant démonté.
+  useEffect(
+    () => () => {
+      if (resetTimeout.current != null) window.clearTimeout(resetTimeout.current);
+    },
+    [],
+  );
 
   // `Button` peut rendre un `<a>` ou un `<button>` selon `href` — ici toujours
   // un `<button>` (aucun `href` transmis), mais son type d'`onClick` accepte
@@ -36,10 +59,12 @@ export function AddToCartButton({
     e.preventDefault();
     e.stopPropagation();
     addToCart(id, 1);
-    if (variant === "button") {
-      setJustAdded(true);
-      window.setTimeout(() => setJustAdded(false), 1500);
-    }
+    // Retour visible pour les DEUX variantes (#82c) : la région live du
+    // provider ne sert que les technologies d'assistance (`sr-only`), elle ne
+    // dit rien à l'œil. La puce de grille restait donc sans aucun retour.
+    setJustAdded(true);
+    if (resetTimeout.current != null) window.clearTimeout(resetTimeout.current);
+    resetTimeout.current = window.setTimeout(() => setJustAdded(false), 1500);
   }
 
   if (variant === "chip") {
@@ -47,10 +72,15 @@ export function AddToCartButton({
       <button
         type="button"
         onClick={handleClick}
+        // `aria-label` STABLE malgré la bascule visuelle : il remplace déjà le
+        // contenu du bouton pour les technologies d'assistance (le glyphe
+        // n'est donc jamais lu), et le faire changer sous un bouton qui a le
+        // focus provoquerait une seconde annonce en plus de celle de la
+        // région live du provider.
         aria-label="Ajouter au panier"
-        className={`flex h-11 w-11 flex-none items-center justify-center border-2 border-ink bg-pop-yellow font-sans text-lg font-black leading-none text-black transition-colors motion-reduce:transition-none hover:bg-ink hover:text-pop-yellow ${FOCUS_RING_LIGHT} ${className ?? ""}`}
+        className={`${justAdded ? CHIP_ADDED : CHIP_IDLE} ${FOCUS_RING_LIGHT} ${className ?? ""}`}
       >
-        +
+        {justAdded ? "✓" : "+"}
       </button>
     );
   }
