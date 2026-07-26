@@ -42,8 +42,12 @@ export async function generateMetadata({
       locale: "fr_FR",
       ...(book.cover?.url ? { images: [{ url: book.cover.url }] } : {}),
     },
+    // Issue #87a : `summary_large_image` n'a de sens que si une image est
+    // RÉELLEMENT émise — `images` reprend ici la même couverture que
+    // `openGraph` (jamais une carte large sans visuel).
     twitter: {
       card: book.cover?.url ? "summary_large_image" : "summary",
+      ...(book.cover?.url ? { images: [book.cover.url] } : {}),
     },
   };
 }
