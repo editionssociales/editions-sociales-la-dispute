@@ -48,6 +48,10 @@ export async function importRouterStock(
   const { docs } = await payload.find({
     collection: 'books',
     where: { origin: { equals: 'catalogue' } },
+    // Select API (issue #68) : l'appariement (`matchStock`) ne lit que ces
+    // 4 champs — la fiche complète (richText, HTML hérité, presse[], table
+    // des matières) n'a rien à faire ici.
+    select: { slug: true, title: true, isbn: true, commerce: { stockSuivi: true } },
     depth: 0,
     limit: 0,
     overrideAccess: true,

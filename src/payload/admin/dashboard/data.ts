@@ -38,6 +38,18 @@ export async function readWorkOrders(payload: Payload): Promise<WorkOrdersData> 
     const { docs } = await payload.find({
       collection: 'orders',
       where: { status: { in: ['paid', 'prepared'] } },
+      // Select API (issue #68) : la ligne de travail n'affiche que ces
+      // champs — pas les coordonnées client, l'adresse, les identifiants
+      // Stripe, etc. portés par le reste de la fiche commande.
+      select: {
+        number: true,
+        status: true,
+        createdAt: true,
+        paidAt: true,
+        lines: true,
+        totalTTC: true,
+        shippingMethod: true,
+      },
       sort: 'createdAt',
       depth: 0,
       limit: 0,
@@ -102,6 +114,8 @@ export async function readLowStock(payload: Payload): Promise<LowStockData> {
           { aParaitre: { equals: false } },
         ],
       },
+      // Select API (issue #68) : ce panneau n'affiche que titre/édition/stock.
+      select: { title: true, edition: true, commerce: { stock: true } },
       sort: 'commerce.stock',
       depth: 0,
       limit: 0,

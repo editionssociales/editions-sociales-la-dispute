@@ -24,7 +24,12 @@ import { BooksFilterChips } from './BooksFilterChips.tsx'
 export async function BooksFilterChipsPanel({ payload }: BeforeListTableServerProps) {
   let seuil = STOCK_SEUIL_FALLBACK
   try {
-    const settings = await payload.findGlobal({ slug: 'reglages-boutique', depth: 0 })
+    const settings = await payload.findGlobal({
+      slug: 'reglages-boutique',
+      // Select API (issue #68) : seul le seuil d'alerte est lu ici.
+      select: { seuilAlerteStockBas: true },
+      depth: 0,
+    })
     seuil = settings?.seuilAlerteStockBas ?? STOCK_SEUIL_FALLBACK
   } catch {
     // Repli silencieux — seuil par défaut déjà posé ci-dessus.
