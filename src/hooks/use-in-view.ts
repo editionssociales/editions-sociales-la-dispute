@@ -37,8 +37,18 @@ export function useInView<T extends Element = HTMLDivElement>({
       forceReveal();
       return;
     }
-    const fallback = window.setTimeout(forceReveal, 2000);
-    const io = new IntersectionObserver(
+    // `io` déclaré avant le minuteur (jamais initialisé au moment de la
+    // planification, mais toujours assigné avant que le callback puisse
+    // s'exécuter) : le repli à 2s doit aussi déconnecter l'observer (#90) —
+    // sans quoi il restait actif indéfiniment après avoir déjà forcé la
+    // révélation, une fuite pour chaque bloc dont l'observer ne délivre
+    // jamais (onglet gelé, rendu headless).
+    let io: IntersectionObserver;
+    const fallback = window.setTimeout(() => {
+      forceReveal();
+      io.disconnect();
+    }, 2000);
+    io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setInView(true);
