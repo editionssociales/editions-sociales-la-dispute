@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation'
 import type { AdminViewServerProps } from 'payload'
 
 import { DefaultTemplate } from '@payloadcms/next/templates'
+import { Pill } from '@payloadcms/ui'
 
-import { badgeClass, dotClass } from '../dashboard/dashboard-classes.ts'
+import { dotClass, dotLabel, pillStyleForState } from '../dashboard/dashboard-classes.ts'
 import { readLastImportRun, readLowStock } from '../dashboard/data.ts'
 import {
   fmtDateTimeFr,
@@ -63,10 +64,13 @@ export async function StockPage(props: AdminViewServerProps) {
         <div className={styles.board}>
           <section className={styles.panel} id="panneau-stock" aria-labelledby="t-stock">
             <h2 className={styles.panelTitle} id="t-stock">
-              <span className={dotClass(stockState)} /> Stock bas
+              <span className={dotClass(stockState)} role="img" aria-label={dotLabel(stockState)} />{' '}
+              Stock bas
             </h2>
             {lowStock.state === 'na' ? (
-              <span className={badgeClass('na')}>liste stock indisponible</span>
+              <Pill pillStyle={pillStyleForState('na')} size="small">
+                liste stock indisponible
+              </Pill>
             ) : (
               <>
                 <div className={styles.bigRow}>
@@ -84,31 +88,33 @@ export async function StockPage(props: AdminViewServerProps) {
                 {lowStock.rows.length === 0 ? (
                   <p className={styles.empty}>Aucun titre sous le seuil.</p>
                 ) : (
-                  <table className={styles.dataTable}>
-                    <thead>
-                      <tr>
-                        <th>Titre</th>
-                        <th className={styles.right}>Stock</th>
-                        <th className={styles.right}>État</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lowStock.rows.map((row) => (
-                        <tr key={row.id}>
-                          <td>
-                            <a href={`/admin/collections/books/${row.id}`}>{row.title}</a>{' '}
-                            <span className={styles.tag}>{editionTag(row.edition)}</span>
-                          </td>
-                          <td className={styles.right}>{row.stock}</td>
-                          <td className={styles.right}>
-                            <span className={badgeClass(stockRowState(row.stock))}>
-                              {row.stock <= 0 ? 'indisponible en ligne' : 'stock bas'}
-                            </span>
-                          </td>
+                  <div className={styles.tableWrap}>
+                    <table className={styles.dataTable}>
+                      <thead>
+                        <tr>
+                          <th>Titre</th>
+                          <th className={styles.right}>Stock</th>
+                          <th className={styles.right}>État</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {lowStock.rows.map((row) => (
+                          <tr key={row.id}>
+                            <td>
+                              <a href={`/admin/collections/books/${row.id}`}>{row.title}</a>{' '}
+                              <span className={styles.tag}>{editionTag(row.edition)}</span>
+                            </td>
+                            <td className={styles.right}>{row.stock}</td>
+                            <td className={styles.right}>
+                              <Pill pillStyle={pillStyleForState(stockRowState(row.stock))} size="small">
+                                {row.stock <= 0 ? 'indisponible en ligne' : 'stock bas'}
+                              </Pill>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </>
             )}
@@ -120,12 +126,17 @@ export async function StockPage(props: AdminViewServerProps) {
 
           <section className={styles.panel} id="panneau-import" aria-labelledby="t-import">
             <h2 className={styles.panelTitle} id="t-import">
-              <span className={dotClass(importState)} /> Import routeur
+              <span className={dotClass(importState)} role="img" aria-label={dotLabel(importState)} />{' '}
+              Import routeur
             </h2>
             {importRun.state === 'na' ? (
-              <span className={badgeClass('na')}>historique des imports indisponible</span>
+              <Pill pillStyle={pillStyleForState('na')} size="small">
+                historique des imports indisponible
+              </Pill>
             ) : importRun.run === null ? (
-              <span className={badgeClass('na')}>Aucun import enregistré</span>
+              <Pill pillStyle={pillStyleForState('na')} size="small">
+                Aucun import enregistré
+              </Pill>
             ) : (
               <>
                 <div className={styles.bigRow}>
@@ -136,9 +147,9 @@ export async function StockPage(props: AdminViewServerProps) {
                   </span>
                 </div>
                 {importState === 'alert' && (
-                  <span className={badgeClass('alert')}>
+                  <Pill pillStyle={pillStyleForState('alert')} size="small">
                     dernier import il y a plus de {IMPORT_ALERT_DAYS} jours
-                  </span>
+                  </Pill>
                 )}
                 <div className={styles.actions}>
                   <a href={`/api/import-runs/${importRun.run.id}/rapport`}>

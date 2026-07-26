@@ -4,6 +4,8 @@ import { useState } from 'react'
 
 import { useRouter } from 'next/navigation'
 
+import { Button, toast } from '@payloadcms/ui'
+
 import styles from './dashboard.module.css'
 
 /**
@@ -12,15 +14,17 @@ import styles from './dashboard.module.css'
  * (`active: false`, cookie Payload, access `update: isAdminOrEditor`) puis
  * `router.refresh()` — la ligne disparaît du RSC rechargé. Aucun nouveau
  * champ : le calcul « expiré » vit côté panneau (`derive.ts`).
+ *
+ * `Button`/`toast` de `@payloadcms/ui` (issue #89) : un `<button>` brut
+ * n'héritait d'aucun style admin, et l'échec ne remontait qu'en paragraphe
+ * muet — `toast.error` porte une région live (annoncée aux lecteurs d'écran).
  */
 export function PromoDeactivateButton({ id }: { id: number }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   async function deactivate() {
     setPending(true)
-    setError(null)
     try {
       const res = await fetch(`/api/promo-codes/${id}`, {
         method: 'PATCH',
@@ -29,12 +33,12 @@ export function PromoDeactivateButton({ id }: { id: number }) {
         body: JSON.stringify({ active: false }),
       })
       if (!res.ok) {
-        setError('Échec de la désactivation.')
+        toast.error('Échec de la désactivation.')
         return
       }
       router.refresh()
     } catch {
-      setError('Échec de la désactivation (réseau).')
+      toast.error('Échec de la désactivation (réseau).')
     } finally {
       setPending(false)
     }
@@ -42,10 +46,9 @@ export function PromoDeactivateButton({ id }: { id: number }) {
 
   return (
     <span className={styles.pushRight}>
-      <button type="button" onClick={deactivate} disabled={pending}>
+      <Button type="button" buttonStyle="secondary" size="small" onClick={deactivate} disabled={pending}>
         {pending ? 'Désactivation…' : 'Désactiver'}
-      </button>
-      {error && <span className={styles.errorText}> {error}</span>}
+      </Button>
     </span>
   )
 }

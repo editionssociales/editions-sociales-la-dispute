@@ -1,5 +1,7 @@
 import type { ServerProps } from 'payload'
 
+import { Pill } from '@payloadcms/ui'
+
 import {
   commandesState as deriveCommandesState,
   fmtDateFr,
@@ -11,7 +13,7 @@ import {
   parisMonthBounds,
   type PanelState,
 } from './derive.ts'
-import { badgeClass, dotClass } from './dashboard-classes.ts'
+import { dotClass, dotLabel, pillStyleForState } from './dashboard-classes.ts'
 import { readExpiredPromos, readWorkOrders } from './data.ts'
 import styles from './dashboard.module.css'
 import { DashboardLegend } from './Legend.tsx'
@@ -62,44 +64,53 @@ export async function Dashboard({ payload }: ServerProps) {
         <h2 className={styles.zoneTitle}>File du jour</h2>
         <section className={styles.panel} id="panneau-commandes" aria-labelledby="t-commandes">
           <h3 className={styles.panelTitle} id="t-commandes">
-            <span className={dotClass(commandesState)} /> Commandes à traiter
+            <span className={dotClass(commandesState)} role="img" aria-label={dotLabel(commandesState)} />{' '}
+            Commandes à traiter
           </h3>
           {workOrders.state === 'na' ? (
-            <span className={badgeClass('na')}>liste des commandes indisponible</span>
+            <Pill pillStyle={pillStyleForState('na')} size="small">
+              liste des commandes indisponible
+            </Pill>
           ) : workOrders.orders.length === 0 ? (
             <p className={styles.empty}>Aucune commande en attente.</p>
           ) : (
-            <table className={styles.dataTable}>
-              <thead>
-                <tr>
-                  <th>Réf.</th>
-                  <th>Statut</th>
-                  <th>Le</th>
-                  <th className={styles.right}>Lignes</th>
-                  <th className={styles.right}>Total</th>
-                  <th>Port</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workOrders.orders.map((order) => (
-                  <tr key={order.id}>
-                    <td>
-                      <span className={dotClass(orderLateness(order, now))} />{' '}
-                      <a href={`/admin/collections/orders/${order.id}`}>{order.number}</a>
-                    </td>
-                    <td>
-                      <span className={styles.tag}>
-                        {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                      </span>
-                    </td>
-                    <td>{fmtDateTimeFr(order.paidAt ?? order.createdAt)}</td>
-                    <td className={styles.right}>{order.linesCount}</td>
-                    <td className={styles.right}>{fmtEuros(order.totalTTC)}</td>
-                    <td>{SHIPPING_LABELS[order.shippingMethod] ?? order.shippingMethod}</td>
+            <div className={styles.tableWrap}>
+              <table className={styles.dataTable}>
+                <thead>
+                  <tr>
+                    <th>Réf.</th>
+                    <th>Statut</th>
+                    <th>Le</th>
+                    <th className={styles.right}>Lignes</th>
+                    <th className={styles.right}>Total</th>
+                    <th>Port</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {workOrders.orders.map((order) => (
+                    <tr key={order.id}>
+                      <td>
+                        <span
+                          className={dotClass(orderLateness(order, now))}
+                          role="img"
+                          aria-label={dotLabel(orderLateness(order, now))}
+                        />{' '}
+                        <a href={`/admin/collections/orders/${order.id}`}>{order.number}</a>
+                      </td>
+                      <td>
+                        <span className={styles.tag}>
+                          {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                        </span>
+                      </td>
+                      <td>{fmtDateTimeFr(order.paidAt ?? order.createdAt)}</td>
+                      <td className={styles.right}>{order.linesCount}</td>
+                      <td className={styles.right}>{fmtEuros(order.totalTTC)}</td>
+                      <td>{SHIPPING_LABELS[order.shippingMethod] ?? order.shippingMethod}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <span className={styles.noteChip}>
             retard {ORDER_WARN_HOURS} h (attention) / {ORDER_ALERT_HOURS} h (alerte) — seuils

@@ -1,6 +1,7 @@
 'use client'
 
 import { OrderExportForm } from './dashboard/OrderExportForm.tsx'
+import styles from './dashboard/dashboard.module.css'
 
 /**
  * Panneau « Export CSV » au-dessus de la liste des commandes (slot
@@ -11,20 +12,18 @@ import { OrderExportForm } from './dashboard/OrderExportForm.tsx'
  * Colonnes des deux profils validées par le client le 13/07
  * (`plan/04-commerce.md`, décision n°5 close) — cf.
  * `order-export-handler.ts` pour le détail des profils.
+ *
+ * `.panel`/`.panelTitle`/`.muted` partagés de `dashboard.module.css` (issue
+ * #91) — remplacent le style inline qui divergeait de ceux du dashboard
+ * (bordure, rayon, gris de texte définis deux fois avec des valeurs
+ * différentes).
  */
 export function OrderExportPanel() {
   return (
-    <div
-      style={{
-        margin: '1rem 0',
-        padding: '1rem',
-        border: '1px solid var(--theme-border-color, #ccc)',
-        borderRadius: 4,
-      }}
-    >
-      <h3 style={{ marginTop: 0 }}>Export CSV des commandes</h3>
+    <div className={styles.panel}>
+      <h3 className={styles.panelTitle}>Export CSV des commandes</h3>
       <OrderExportForm />
-      <p style={{ marginBottom: 0, color: 'var(--theme-elevation-500, #666)' }}>
+      <p className={styles.muted}>
         Plage par défaut : aujourd&apos;hui et un mois en arrière (modifiable / vidable pour
         toutes les commandes). « Préparation » : statuts « payée »/« préparée ». « Compta » :
         toutes commandes, TVA 5,5 % ventilée.
