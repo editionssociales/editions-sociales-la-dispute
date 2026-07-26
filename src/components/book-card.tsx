@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
-export function BookCard({ book }: { book: Book }) {
+export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
   // Catalogue : toujours la fiche interne, quel que soit le statut d'achat.
   // Boutique-seul (`edition` absent) : sa propre fiche interne
   // `/boutique/<slug>` existe pour CHAQUE article — achetable ou non, elle
@@ -31,6 +31,7 @@ export function BookCard({ book }: { book: Book }) {
       sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 220px"
       className="block h-auto w-full transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
       fallbackClassName="p-4"
+      preload={preload}
     />
   );
 
@@ -74,24 +75,31 @@ export function BookCard({ book }: { book: Book }) {
   return (
     // Carte pleine hauteur : le grid parent (`FramedGrid`, `book-grid.tsx`)
     // étire déjà chaque cellule à la hauteur de sa rangée (stretch, défaut
-    // CSS Grid) — `h-full` + `flex-1` sur le lien propagent cette hauteur
-    // jusqu'à la rangée basse, pour qu'elle reste calée sur le bas du cadre
-    // (`mt-auto`) même quand les cartes voisines ont une couverture plus haute.
+    // CSS Grid) — `h-full` + `flex-1` sur le lien propagent cette hauteur ;
+    // la rangée basse (prix/badge/puce) est un FRÈRE du lien, jamais un
+    // descendant : la puce panier est un vrai `<button>`
+    // (`cart/add-to-cart-button.tsx`), et un `<a>` exclut tout descendant
+    // interactif (HTML Living Standard, règle `nested-interactive` d'axe-core
+    // — même grammaire que la case « Tous les livres »/bascule de
+    // `mosaic-disclosure.tsx`, jamais un élément à la fois lien et bouton).
+    // Le lien continue de couvrir la couverture (titre porté par son `alt`) ;
+    // le frère qui suit, poussé en bas par la croissance du lien, garde le
+    // rendu visuel inchangé.
     <article className="group flex h-full flex-col bg-paper p-4">
       <Link href={href} className={`flex h-full flex-1 flex-col ${FOCUS_RING_LIGHT_OUTER}`}>
         <span className="relative block w-full overflow-hidden border-2 border-ink bg-paper-2 transition-transform duration-300 group-hover:-translate-y-1 motion-reduce:transition-none">
           {cover}
         </span>
-        {hasFooter && (
-          <div className="mt-auto flex items-end justify-between gap-2 pt-3">
-            <div className="min-w-0">{priceBlock}</div>
-            <div className="flex flex-none items-center gap-2">
-              {statusBadge}
-              {cartChip}
-            </div>
-          </div>
-        )}
       </Link>
+      {hasFooter && (
+        <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+          <div className="min-w-0">{priceBlock}</div>
+          <div className="flex flex-none items-center gap-2">
+            {statusBadge}
+            {cartChip}
+          </div>
+        </div>
+      )}
     </article>
   );
 }

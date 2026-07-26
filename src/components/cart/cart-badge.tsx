@@ -12,12 +12,10 @@ import { useCart } from "./cart-context";
  * site-header`) ; le focus vient de `FOCUS_RING_LIGHT` (`lib/ui.ts`, fond
  * paper au repos, R5). Toujours rendue sous `<CartProvider>`.
  *
- * Deux rendus :
- *  - texte « Panier (n) » — conservé pour d'éventuels usages hors carré ;
- *  - `icon` : pictogramme panier (carré Accueil/Panier du header desktop, et
- *    rangée mobile) — SVG inline aux angles droits (R8) ; le compteur est un
- *    pastille superposée pour ne pas élargir le carré ; nom accessible via
- *    l'`aria-label`.
+ * Rendu unique : pictogramme panier (carré Accueil/Panier du header desktop,
+ * et rangée mobile) — SVG inline aux angles droits (R8) ; le compteur est
+ * une pastille superposée pour ne pas élargir le carré ; nom accessible via
+ * l'`aria-label`.
  */
 const CELL_TRANSITION = "transition-all duration-200 ease-out motion-reduce:transition-none";
 
@@ -59,41 +57,30 @@ export function CartCountBadge() {
 }
 
 export function CartNavCell({
-  compact,
   placement,
-  icon = false,
 }: {
-  compact: boolean;
   placement: string;
-  /** Rendu pictogramme (carré header) au lieu du libellé texte. */
+  /**
+   * Vestiges du rendu « libellé texte », supprimé (#91 — les deux appelants
+   * de `site-header.tsx` passent toujours `icon`). Restent acceptés et
+   * ignorés ici : `site-header.tsx` n'est pas dans le périmètre de ce
+   * correctif — à retirer de ses deux appels quand ce fichier sera repris.
+   */
+  compact?: boolean;
   icon?: boolean;
 }) {
   const { count } = useCart();
   const ariaLabel =
     count > 0 ? `Panier, ${count} article${count > 1 ? "s" : ""}` : "Panier, vide";
 
-  if (icon) {
-    return (
-      <Link
-        href="/panier"
-        aria-label={ariaLabel}
-        className={`relative flex min-h-11 items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${placement}`}
-      >
-        <CartGlyph />
-        <CartCountBadge />
-      </Link>
-    );
-  }
-
-  const lg = compact ? "lg:min-h-0 lg:py-0 lg:text-[12px]" : "lg:min-h-0 lg:py-0 lg:text-[14px]";
-  const label = count > 0 ? `Panier (${count})` : "Panier";
   return (
     <Link
       href="/panier"
       aria-label={ariaLabel}
-      className={`flex min-h-11 items-center justify-center bg-paper px-4 py-4 text-center font-sans text-[13px] font-extrabold uppercase tracking-[.08em] text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg} ${placement}`}
+      className={`relative flex min-h-11 items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${placement}`}
     >
-      {label}
+      <CartGlyph />
+      <CartCountBadge />
     </Link>
   );
 }

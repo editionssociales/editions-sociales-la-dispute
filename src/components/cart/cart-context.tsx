@@ -23,6 +23,15 @@ import {
 
 const STORAGE_KEY = "es-ld-panier";
 
+/**
+ * Délai avant réinitialisation du message d'annonce — purement pour ne pas
+ * laisser une région live encombrée d'un texte périmé ; la remise à `""`
+ * PUIS au message (au lieu d'un simple `setState` du message) est ce qui
+ * garantit qu'un ajout identique consécutif soit reannoncé : un lecteur
+ * d'écran ne relit un `role="status"` que sur un changement de contenu.
+ */
+const ANNOUNCEMENT_RESET_MS = 4000;
+
 interface CartContextValue {
   state: CartState;
   /** Faux jusqu'à la relecture initiale de `localStorage` (effet post-montage) — évite d'afficher un panier vide une frappe avant sa vraie valeur. */
@@ -43,6 +52,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CartState>(EMPTY_CART);
   const [ready, setReady] = useState(false);
   const hydrated = useRef(false);
+  const [announcement, setAnnouncement] = useState("");
+  const announcementTimeout = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   useEffect(() => {
     // Enveloppé dans une fonction nommée (plutôt qu'un `setState` nu en tête
@@ -55,6 +66,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setReady(true);
     }
     hydrate();
+  }, []);
+
+  useEffect(() => {
+    // Synchronisation inter-onglets : `storage` ne se déclenche que dans les
+    // AUTRES onglets que celui qui a écrit (jamais dans celui qui vient de
+    // muter, cf. `mutate` ci-dessous) — sans cet écouteur, deux onglets
+    // ouverts sur le site divergent silencieusement dès qu'un panier change
+    // dans l'un des deux. `parseCartState` retombe déjà sur `EMPTY_CART`
+    // quand `e.newValue` est `null` (onglet qui vide son panier).
+    function handleStorage(e: StorageEvent) {
+      if (e.key !== STORAGE_KEY) return;
+      setState(parseCartState(e.newValue));
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (announcementTimeout.current != null) window.clearTimeout(announcementTimeout.current);
+    };
+  }, []);
+
+  /**
+   * Alimente la région live unique du provider (`role="status"` rendue
+   * ci-dessous) — partagée par les DEUX variantes de `AddToCartButton`
+   * (`chip` et `button`), qui ne rendent chacune aucun retour accessible par
+   * elles-mêmes (chip : rien à l'écran ; button : bascule de texte 1,5 s hors
+   * de tout live region). Remise à `""` PUIS au message, sur deux ticks —
+   * jamais un simple `setState(message)` : un lecteur d'écran ne relit un
+   * `role="status"` que sur un changement de contenu, et deux ajouts
+   * consécutifs poseraient sinon deux fois le même texte sans être annoncés
+   * la seconde fois.
+   */
+  const announce = useCallback((message: string) => {
+    if (announcementTimeout.current != null) window.clearTimeout(announcementTimeout.current);
+    setAnnouncement("");
+    announcementTimeout.current = window.setTimeout(() => {
+      setAnnouncement(message);
+      announcementTimeout.current = window.setTimeout(() => setAnnouncement(""), ANNOUNCEMENT_RESET_MS);
+    }, 50);
   }, []);
 
   /**
@@ -77,8 +129,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addToCart = useCallback(
-    (id: number, qty = 1) => mutate((s) => addToCartCore(s, id, qty)),
-    [mutate],
+    (id: number, qty = 1) => {
+      mutate((s) => addToCartCore(s, id, qty));
+      announce(qty > 1 ? `${qty} exemplaires ajoutés au panier.` : "Article ajouté au panier.");
+    },
+    [mutate, announce],
   );
   const setLineQty = useCallback(
     (id: number, qty: number) => mutate((s) => setLineQtyCore(s, id, qty)),
@@ -97,7 +152,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     clearCart,
   };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={value}>
+      {children}
+      {/* Région live unique du panier (#82c) — un seul `role="status"` pour
+          les deux variantes de `AddToCartButton`, jamais une par bouton. */}
+      <div role="status" className="sr-only">
+        {announcement}
+      </div>
+    </CartContext.Provider>
+  );
 }
 
 /** À utiliser uniquement sous `<CartProvider>` (monté par le layout du site). */

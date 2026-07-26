@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCart } from "@/components/cart/cart-context";
 import { ShelfSpines } from "@/components/cart/shelf-spines";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { BookCover } from "@/lib/cover";
 import { formatPrice } from "@/lib/format";
+import { centsToEuros } from "@/lib/money";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { MAX_LINE_QTY, resolveCartSummary, type CartLineView } from "@/lib/cart-core";
 import { FREE_SHIPPING_MIN_CART_CENTS, type ShippingZone } from "@/lib/shipping-core";
@@ -40,7 +41,7 @@ const FIELD_CLASS =
   FOCUS_RING_LIGHT;
 
 function euros(cents: number): string {
-  return formatPrice(cents / 100) ?? "—";
+  return formatPrice(centsToEuros(cents)) ?? "—";
 }
 
 function EmptyCart() {
@@ -54,6 +55,65 @@ function EmptyCart() {
         </p>
       </div>
       <Button href="/catalogue">Parcourir le catalogue</Button>
+    </div>
+  );
+}
+
+/**
+ * Échec de `getCartSnapshot` AU PREMIER chargement (aucun instantané
+ * précédent à afficher, cf. `CartView`) : jamais la grille sous un bandeau
+ * (elle rendrait zéro ligne et un total à 0,00 € sous un texte qui promet des
+ * données « périmées » — il n'y a rien à périmer, rien n'a jamais chargé).
+ */
+function CartUnavailable({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      className="flex flex-col items-center gap-6 border-2 border-brick bg-paper-2 px-6 py-16 text-center"
+      role="alert"
+    >
+      <p className="font-sans text-lg font-black italic text-ink">
+        Panier momentanément indisponible
+      </p>
+      <p className="max-w-md font-sans text-sm text-muted">
+        Impossible de vérifier votre panier pour le moment (catalogue momentanément
+        indisponible). Réessayez dans un instant.
+      </p>
+      <Button onClick={onRetry} className="px-5 py-2.5 text-sm tracking-[.03em]">
+        Réessayer
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Trame réelle (R8) pendant le tout premier chargement de `getCartSnapshot` —
+ * reproduit la grille des lignes (mêmes colonnes, même nombre de lignes que
+ * `state.lines`, déjà connu depuis `localStorage` avant toute relecture
+ * serveur) plutôt qu'un texte ou un spinner générique.
+ */
+function CartSkeleton({ lineCount }: { lineCount: number }) {
+  return (
+    <div aria-busy="true" aria-live="polite">
+      <FramedGrid className="grid-cols-[72px_1fr] items-stretch sm:grid-cols-[72px_1fr_auto_auto]">
+        {Array.from({ length: lineCount }, (_, i) => (
+          <Fragment key={i}>
+            <div className="flex items-center justify-center bg-paper p-2">
+              <div className="aspect-[2/3] w-14 bg-paper-2" />
+            </div>
+            <div className="flex flex-col justify-center gap-2 bg-paper p-3">
+              <div className="h-4 w-3/4 max-w-[220px] bg-paper-2" />
+              <div className="h-4 w-24 bg-paper-2" />
+            </div>
+            <div className="hidden bg-paper p-3 sm:flex sm:items-center sm:justify-end">
+              <div className="h-4 w-12 bg-paper-2" />
+            </div>
+            <div className="hidden bg-paper p-3 sm:flex sm:items-center sm:justify-end">
+              <div className="h-4 w-14 bg-paper-2" />
+            </div>
+          </Fragment>
+        ))}
+      </FramedGrid>
+      <span className="sr-only">Vérification du panier…</span>
     </div>
   );
 }
@@ -170,6 +230,15 @@ export function CartView() {
   const [snapshot, setSnapshot] = useState<CartSnapshot>({ books: [], reducedShippingFlags: [] });
   const [snapshotReady, setSnapshotReady] = useState(false);
   const [snapshotError, setSnapshotError] = useState(false);
+  // Distinct de `snapshotReady` : celui-ci retombe à `false` à CHAQUE
+  // relecture (même une relecture réussie ultérieure), alors que
+  // `hasLoadedOnce` ne repasse jamais à `false` — il marque qu'un instantané
+  // a DÉJÀ été obtenu au moins une fois, la seule chose qui distingue un
+  // premier chargement en échec (rien à montrer : pas de grille, pas de
+  // total à 0,00 €) d'un échec de relecture ultérieure (les données de la
+  // dernière relecture réussie restent affichées, bandeau « périmées »).
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     if (!ready) return;
@@ -194,6 +263,7 @@ export function CartView() {
         if (cancelled) return;
         setSnapshot(next);
         setSnapshotReady(true);
+        setHasLoadedOnce(true);
       } catch {
         if (cancelled) return;
         setSnapshotError(true);
@@ -205,9 +275,12 @@ export function CartView() {
     };
     // `idsKey` (ordre + composition, pas les quantités) est la seule chose
     // qui doive redéclencher une relecture serveur — une quantité ne change
-    // ni le prix ni la disponibilité d'une ligne.
+    // ni le prix ni la disponibilité d'une ligne. `retryNonce` redéclenche la
+    // MÊME relecture sur demande (bouton Réessayer de l'état d'échec initial).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, idsKey]);
+  }, [ready, idsKey, retryNonce]);
+
+  const retrySnapshot = useCallback(() => setRetryNonce((n) => n + 1), []);
 
   const flagsMap = useMemo(
     () => new Map(snapshot.reducedShippingFlags.map((f) => [f.id, f.flag])),
@@ -303,6 +376,16 @@ export function CartView() {
   }
   if (state.lines.length === 0) {
     return <EmptyCart />;
+  }
+  // Échec AU PREMIER chargement (aucun instantané précédent) : état dédié,
+  // jamais la grille sous le bandeau habituel — cf. `CartUnavailable`.
+  if (snapshotError && !hasLoadedOnce) {
+    return <CartUnavailable onRetry={retrySnapshot} />;
+  }
+  // Premier chargement encore en cours (pas d'échec, pas encore de succès) :
+  // trame réelle plutôt qu'un texte ou rien du tout (R8).
+  if (!snapshotReady && !hasLoadedOnce) {
+    return <CartSkeleton lineCount={state.lines.length} />;
   }
 
   return (
