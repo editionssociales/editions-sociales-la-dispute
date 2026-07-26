@@ -3,14 +3,13 @@ import { decodeCheckoutLines, type DecodedCheckoutLine } from "@/lib/checkout-co
 import { getCommerceBookRecords } from "@/lib/commerce-source";
 import {
   createOrder,
+  decrementBookStock,
   findOrderByPaymentIntent,
   findOrderBySessionId,
-  updateBookStock,
   updateOrder,
 } from "@/lib/order-source";
 import {
   buildOrderCreateData,
-  computeStockAfterDecrement,
   type OrderAddressFacts,
   type OrderCountry,
   type OrderLineFacts,
@@ -115,17 +114,20 @@ function sessionFacts(
   };
 }
 
-/** Décrémente le stock de chaque ligne — plancher 0, jamais si `stock` n'est pas suivi (`null`). */
+/**
+ * Décrémente le stock de chaque ligne — l'atomicité (plancher 0, jamais si
+ * `stock` n'est pas suivi) est portée par `decrementBookStock` elle-même
+ * (`order-source.ts`, issue #65, boucle comparer-puis-échanger) : ce module ne
+ * fait plus que sauter les lignes dont le livre a disparu entre le checkout et
+ * le webhook (`books` — snapshot `commerce-source` — ne les contient plus).
+ */
 async function decrementStock(
   decoded: DecodedCheckoutLine[],
   books: Awaited<ReturnType<typeof getCommerceBookRecords>>,
 ): Promise<void> {
   for (const line of decoded) {
-    const book = books.get(line.id);
-    if (!book) continue;
-    const nextStock = computeStockAfterDecrement(book.stock, line.qty);
-    if (nextStock === null) continue; // stock non suivi — rien à décrémenter
-    await updateBookStock(line.id, nextStock);
+    if (!books.has(line.id)) continue; // livre disparu — snapshot honnête, rien à décrémenter
+    await decrementBookStock(line.id, line.qty);
   }
 }
 

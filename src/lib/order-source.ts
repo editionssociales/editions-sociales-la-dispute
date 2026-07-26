@@ -2,7 +2,7 @@ import "server-only";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import type { Order } from "@/payload-types";
-import type { OrderCreateData } from "./order-webhook-core";
+import { computeStockAfterDecrement, type OrderCreateData } from "./order-webhook-core";
 
 /**
  * Seam Payload dédié au cycle de vie `orders` (webhook Stripe, plan §4 étape
@@ -23,9 +23,13 @@ import type { OrderCreateData } from "./order-webhook-core";
  * Centralise les appels déjà présents dans `order-handler.ts`/`health/
  * route.ts`, options reprises À L'IDENTIQUE (mêmes `where`, `sort`, `limit`,
  * `context`) — le but est de nommer le seam, pas de changer son
- * comportement. La logique métier (idempotence par `stripeSessionId`,
- * `computeStockAfterDecrement`, refus de re-crédit au remboursement) reste
- * dans `order-handler.ts` : ce module ne fait que l'I/O.
+ * comportement. La logique métier (idempotence par `stripeSessionId`, refus
+ * de re-crédit au remboursement) reste dans `order-handler.ts` : ce module ne
+ * fait que l'I/O. Exception : `decrementBookStock` porte elle-même la boucle
+ * comparer-puis-échanger (issue #65) — l'atomicité du décrément est un trait
+ * de CETTE écriture, pas une décision de l'appelant, `computeStockAfterDecrement`
+ * (`order-webhook-core.ts`) restant le cœur pur qui porte la règle (plancher 0,
+ * `null` = stock non suivi).
  */
 
 /** La commande existe-t-elle déjà pour cette session (idempotence — un event Stripe rejoué ne doit rien recréer) ? */
@@ -75,16 +79,54 @@ export async function updateOrder(id: number, data: { status: Order["status"] })
   });
 }
 
-/** Décrémente le stock d'un livre au paiement — même garde que l'import stock routeur (`stock-import.ts`) : écriture automatisée, ni `contentTouched` ni revalidation par ligne. */
-export async function updateBookStock(id: number, stock: number): Promise<void> {
+/** Tentatives max de la boucle CAS avant d'abandonner — concurrence extrême jamais rencontrée en pratique, garde-fou plutôt qu'une boucle infinie. */
+const MAX_STOCK_DECREMENT_ATTEMPTS = 5;
+
+/**
+ * Décrémente le stock d'un livre au paiement, de façon ATOMIQUE (issue #65) —
+ * le décrément est exprimé DANS l'écriture : chaque tentative relit le stock
+ * courant, calcule la valeur suivante avec le cœur pur
+ * `computeStockAfterDecrement` (plancher 0, `null` = non suivi), puis écrit en
+ * comparer-puis-échanger (`where` gardé sur la valeur LUE) — si un autre appel
+ * concurrent a modifié le stock entre la lecture et l'écriture, `payload.update`
+ * ne matche aucun document (`docs` vide) et la tentative reprend sur le stock
+ * frais. Deux commandes concurrentes sur le même livre ne se perdent donc plus
+ * l'une l'autre (contrairement à l'ancienne écriture en valeur absolue calculée
+ * côté application). Même garde que l'import stock routeur (`stock-import.ts`) :
+ * écriture automatisée, ni `contentTouched` ni revalidation par ligne.
+ */
+export async function decrementBookStock(id: number, qty: number): Promise<void> {
   const payload = await getPayload({ config });
-  await payload.update({
-    collection: "books",
-    id,
-    data: { commerce: { stock } },
-    overrideAccess: true,
-    context: { migration: true, disableRevalidate: true },
-  });
+
+  for (let attempt = 0; attempt < MAX_STOCK_DECREMENT_ATTEMPTS; attempt++) {
+    const current = await payload.findByID({
+      collection: "books",
+      id,
+      depth: 0,
+      overrideAccess: true,
+    });
+    const currentStock: number | null = current.commerce?.stock ?? null;
+    const nextStock = computeStockAfterDecrement(currentStock, qty);
+    if (nextStock === null) return; // stock non suivi — rien à décrémenter
+
+    const { docs } = await payload.update({
+      collection: "books",
+      where: {
+        id: { equals: id },
+        "commerce.stock": { equals: currentStock },
+      },
+      limit: 1,
+      data: { commerce: { stock: nextStock } },
+      overrideAccess: true,
+      context: { migration: true, disableRevalidate: true },
+    });
+    if (docs.length > 0) return; // écriture appliquée sur la valeur lue à cette tentative
+    // sinon : le stock a bougé entre la lecture et l'écriture — retente sur le stock frais
+  }
+
+  throw new Error(
+    `decrementBookStock : trop de tentatives de concurrence pour le livre ${id} (qty=${qty}).`,
+  );
 }
 
 /** `updatedAt` de la commande la plus récemment touchée (création OU passage à `refunded`) — signal `/api/health` (moniteur #8, R8), jamais d'appel réseau Stripe. */

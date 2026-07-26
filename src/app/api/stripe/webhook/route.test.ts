@@ -61,8 +61,11 @@ vi.mock("@/lib/order-source", () => ({
     if (order) Object.assign(order, data);
     return order;
   },
-  updateBookStock: async (id: number, stock: number) => {
-    stockUpdates.push({ id, stock });
+  decrementBookStock: async (id: number, qty: number) => {
+    const record = bookRecords[id];
+    if (!record || record.stock == null) return; // stock non suivi — rien à décrémenter
+    record.stock = Math.max(0, record.stock - qty);
+    stockUpdates.push({ id, stock: record.stock });
   },
 }));
 

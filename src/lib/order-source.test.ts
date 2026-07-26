@@ -21,6 +21,11 @@ interface FakeOrder {
   [key: string]: unknown;
 }
 
+interface FakeBook {
+  id: number;
+  commerce: { stock: number | null };
+}
+
 interface FakeFindArgs {
   collection: string;
   where?: {
@@ -29,6 +34,13 @@ interface FakeFindArgs {
   };
   sort?: string;
   limit?: number;
+  overrideAccess?: boolean;
+}
+
+interface FakeFindByIdArgs {
+  collection: string;
+  id: number;
+  depth?: number;
   overrideAccess?: boolean;
 }
 
@@ -41,17 +53,22 @@ interface FakeCreateArgs {
 
 interface FakeUpdateArgs {
   collection: string;
-  id: number;
+  id?: number;
+  where?: { id?: { equals?: number }; "commerce.stock"?: { equals?: number | null } };
+  limit?: number;
   data: Record<string, unknown>;
   overrideAccess?: boolean;
   context?: Record<string, unknown>;
 }
 
 let orders: FakeOrder[] = [];
+let books: FakeBook[] = [];
 let nextOrderId = 1;
 let lastFindArgs: FakeFindArgs | null = null;
 let lastCreateArgs: FakeCreateArgs | null = null;
 let lastUpdateArgsByCollection: Record<string, FakeUpdateArgs> = {};
+/** Simule un décrément concurrent glissé juste après la lecture (course #65) : consommé par `findByID`, une fois par appel. */
+let raceOnNextBookRead = 0;
 
 vi.mock("@payload-config", () => ({ default: {} }));
 vi.mock("payload", () => ({
@@ -75,6 +92,21 @@ vi.mock("payload", () => ({
       }
       return { docs: docs.slice(0, args.limit ?? docs.length) };
     },
+    findByID: async (args: FakeFindByIdArgs) => {
+      if (args.collection !== "books") {
+        throw new Error(`findByID inattendu dans le test : ${args.collection}`);
+      }
+      const book = books.find((b) => b.id === args.id);
+      if (!book) throw new Error(`livre introuvable dans le test : ${args.id}`);
+      const snapshot = { ...book, commerce: { ...book.commerce } };
+      if (raceOnNextBookRead > 0 && book.commerce.stock != null) {
+        // Une autre commande décrémente « pendant » notre lecture — la comparaison
+        // (`where` gardé sur la valeur lue) échouera à l'écriture suivante.
+        raceOnNextBookRead -= 1;
+        book.commerce.stock = Math.max(0, book.commerce.stock - 1);
+      }
+      return snapshot;
+    },
     create: async (args: FakeCreateArgs) => {
       lastCreateArgs = args;
       if (args.collection !== "orders") {
@@ -92,7 +124,18 @@ vi.mock("payload", () => ({
         return order;
       }
       if (args.collection === "books") {
-        return {};
+        // Comparer-puis-échanger : ne matche que le livre dont le stock ACTUEL
+        // égale la valeur du `where` (celle lue par `decrementBookStock`).
+        const idEq = args.where?.id?.equals;
+        const stockEq = args.where?.["commerce.stock"]?.equals;
+        const matched = books.filter(
+          (b) => b.id === idEq && (b.commerce.stock ?? null) === (stockEq ?? null),
+        );
+        const data = args.data as { commerce?: { stock?: number } };
+        for (const b of matched) {
+          if (data.commerce?.stock !== undefined) b.commerce.stock = data.commerce.stock;
+        }
+        return { docs: matched, errors: [] };
       }
       throw new Error(`update inattendu dans le test : ${args.collection}`);
     },
@@ -101,10 +144,10 @@ vi.mock("payload", () => ({
 
 const {
   createOrder,
+  decrementBookStock,
   findLatestOrderUpdatedAt,
   findOrderByPaymentIntent,
   findOrderBySessionId,
-  updateBookStock,
   updateOrder,
 } = await import("./order-source");
 
@@ -140,10 +183,12 @@ function orderCreateData(overrides: Partial<OrderCreateData> = {}): OrderCreateD
 
 beforeEach(() => {
   orders = [];
+  books = [];
   nextOrderId = 1;
   lastFindArgs = null;
   lastCreateArgs = null;
   lastUpdateArgsByCollection = {};
+  raceOnNextBookRead = 0;
 });
 
 describe("findOrderBySessionId", () => {
@@ -214,16 +259,45 @@ describe("updateOrder", () => {
   });
 });
 
-describe("updateBookStock", () => {
-  it("met à jour books.commerce.stock avec overrideAccess: true, migration + disableRevalidate", async () => {
-    await updateBookStock(12, 3);
+describe("decrementBookStock (issue #65 — écriture atomique)", () => {
+  it("décrémente en une tentative quand rien ne bouge entre lecture et écriture", async () => {
+    books = [{ id: 12, commerce: { stock: 5 } }];
+    await decrementBookStock(12, 2);
+    expect(books[0].commerce.stock).toBe(3);
     expect(lastUpdateArgsByCollection.books).toMatchObject({
       collection: "books",
-      id: 12,
+      where: { id: { equals: 12 }, "commerce.stock": { equals: 5 } },
       data: { commerce: { stock: 3 } },
       overrideAccess: true,
       context: { migration: true, disableRevalidate: true },
     });
+  });
+
+  it("plancher à 0, jamais négatif", async () => {
+    books = [{ id: 12, commerce: { stock: 1 } }];
+    await decrementBookStock(12, 5);
+    expect(books[0].commerce.stock).toBe(0);
+  });
+
+  it("stock non suivi (`null`) → aucune écriture", async () => {
+    books = [{ id: 12, commerce: { stock: null } }];
+    await decrementBookStock(12, 2);
+    expect(books[0].commerce.stock).toBeNull();
+    expect(lastUpdateArgsByCollection.books).toBeUndefined();
+  });
+
+  it("un décrément concurrent glissé entre la lecture et l'écriture fait échouer le comparer-puis-échanger → reprend sur le stock frais", async () => {
+    books = [{ id: 12, commerce: { stock: 5 } }];
+    raceOnNextBookRead = 1; // une seule course, consommée à la 1ère lecture
+    await decrementBookStock(12, 2);
+    // stock 5 → course concurrente (4) → notre décrément relu sur 4 → 4-2=2
+    expect(books[0].commerce.stock).toBe(2);
+  });
+
+  it("concurrence persistante au-delà du nombre max de tentatives → jette plutôt qu'une boucle infinie", async () => {
+    books = [{ id: 12, commerce: { stock: 5 } }];
+    raceOnNextBookRead = Number.POSITIVE_INFINITY; // course à chaque tentative
+    await expect(decrementBookStock(12, 1)).rejects.toThrow(/trop de tentatives/);
   });
 });
 
