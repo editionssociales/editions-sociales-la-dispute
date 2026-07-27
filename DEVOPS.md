@@ -245,30 +245,17 @@ build à l'époque.
 Les deux prémisses sont tombées : la **coupure OVH** (2026-07-18) a supprimé
 `catalogue-http.ts` — le catalogue lit désormais PostgreSQL (Payload), un `SELECT`, pas
 300 requêtes HTTP — et il n'y a **plus de preview Vercel par PR** (2026-07-24) pour
-vérifier le build à sa place. Le job `verify` lance donc `pnpm build` juste après
-`pnpm knip`, avec deux secrets **GitHub Actions** (`Settings → Secrets and variables →
-Actions`, distincts des secrets Vercel) :
-
-| Secret | Rôle |
-|---|---|
-| `DATABASE_URL` | requise au boot (`env.ts`) — `next build` ET `generateStaticParams` (~295 fiches) l'interrogent réellement, en lecture seule. |
-| `PAYLOAD_SECRET` | requise au boot (`env.ts`) ; peut être une valeur dédiée à la CI, n'a pas besoin d'être partagée avec un secret de production. |
-
-⚠️ **Ces deux secrets ne sont pas encore posés.** Ce commit ajoute l'étape dans
-`ci.yml` ; elle échouera (« variable requise » — `env.ts`) tant que `DATABASE_URL`/
-`PAYLOAD_SECRET` ne sont pas configurés côté dépôt GitHub — geste humain/infra, hors du
-périmètre d'un commit d'outillage (même réserve qu'aux runbooks §6). Reste aussi à
-décider **quelle base** `DATABASE_URL` doit pointer :
-
-- la base réelle (dev/staging) → le build lit **en direct** à chaque PR, ~295 lectures
-  Postgres par commit poussé, en concurrence avec le trafic de l'environnement si c'est
-  la même base que la preview/prod ;
-- une base Neon **dédiée à la CI** (branche jetable ou fixe, lecture seule suffisante)
-  → plus sûr, mais c'est une décision d'infra/coût à valider avec le porteur du compte
-  Neon, pas à deviner dans une PR d'outillage.
-
-Le job `verify` ne tranche pas laquelle : c'est cette page qui documente le choix une
-fois fait, pas ce commit.
+vérifier le build à sa place. Le job `verify` lance donc `pnpm migrate` puis
+`pnpm build` juste après `pnpm knip`, contre un **Postgres 17 jetable** (service
+container du job : schéma via les migrations versionnées, catalogue vide) — **zéro
+lecture Neon en CI**, décision du 2026-07-27 : brancher la CI sur la vraie base
+(secrets GitHub posés le 26/07) coûtait une rafale catalogue complète par push et a
+contribué à épuiser le quota de transfert Neon Free (5 Go/mois) le 26/07. Le build
+vérifie la chaîne de compilation et la collecte des pages, pas les données ; les
+fiches ne sont de toute façon plus pré-rendues au build (`generateStaticParams`
+vide, cf. `src/app/CLAUDE.md`). Les secrets GitHub Actions `DATABASE_URL`/
+`PAYLOAD_SECRET` ne servent plus à ce job et peuvent être supprimés (geste humain,
+sans urgence — ils ne sont plus référencés par `ci.yml`).
 
 ### 🟠 Risque mitigé (court terme) : le catalogue tronqué en silence
 

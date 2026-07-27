@@ -120,14 +120,6 @@ export const getBook = cache(
   },
 );
 
-/** Paramètres de génération statique pour les fiches (livres issus d'une fiche catalogue). */
-export async function getAllBookParams(): Promise<{ edition: EditionSlug; slug: string }[]> {
-  const books = await getAllBooks();
-  return books
-    .filter((b): b is Book & { edition: EditionSlug } => b.edition != null)
-    .map((b) => ({ edition: b.edition, slug: b.slug }));
-}
-
 /* --------------------------------- boutique-seuls --------------------------------- */
 
 /**
@@ -152,8 +144,3 @@ export const getBoutiqueBook = cache(async (slug: string): Promise<BookDetail | 
   return buildNativeBookDetail(null, raw, `/boutique/${slug}`, "boutique");
 });
 
-/** Paramètres de génération statique pour les fiches boutique-seules. */
-export async function getAllBoutiqueParams(): Promise<{ slug: string }[]> {
-  const books = await getBoutiqueBooks();
-  return books.map((b) => ({ slug: b.slug }));
-}

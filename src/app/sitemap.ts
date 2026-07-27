@@ -16,9 +16,10 @@ import type { Book, EditionSlug } from "@/lib/types";
  * `YYYY-MM-DD`) sur les entrées livre/boutique — SEUL champ date déjà exposé
  * par `Book` sans élargir ce type (pas de `updatedAt` distinct sur ce
  * modèle). On lit `getAllBooks`/`getBoutiqueBooks` (déjà exportés, données
- * complètes) plutôt que `getAllBookParams`/`getAllBoutiqueParams`
- * (`{edition,slug}`/`{slug}` seuls, sans date) — mêmes fonctions, même
- * data-cache tagué `catalogue`, aucun appel réseau supplémentaire. Absent
+ * complètes, même data-cache tagué `catalogue`). Ce module est la SEULE
+ * lecture catalogue restante au build depuis que les fiches sont lazy
+ * (`generateStaticParams` vide, quota Neon) — avec l'accueil, la
+ * souscription et le panier, tous dédupliqués sur la même rafale. Absent
  * (`null`) → pas de `lastModified` sur cette entrée plutôt qu'une date
  * inventée. Pages statiques (contenu éditorial Payload sans date exposée
  * ici) : pas de `lastModified` non plus.

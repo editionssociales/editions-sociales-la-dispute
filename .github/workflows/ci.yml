@@ -17,6 +17,28 @@ jobs:
     name: typecheck · lint · test · knip · build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Postgres JETABLE pour le build (schéma via `pnpm migrate`, catalogue
+    # vide) : le build vérifie la chaîne de compilation/collecte des pages,
+    # pas les données — et chaque build sur Neon coûtait une rafale complète
+    # de transfert (quota Free 5 Go/mois épuisé le 2026-07-26). Les secrets
+    # `DATABASE_URL`/`PAYLOAD_SECRET` GitHub ne servent plus à ce job.
+    # Version 17 alignée sur le serveur Neon (même contrainte que le backup).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: es_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:ci@localhost:5432/es_ci
+      PAYLOAD_SECRET: ci-build-only-not-a-secret
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +65,7 @@ jobs:
       - run: pnpm test
       # Exports morts, fichiers orphelins, dépendances inutilisées (knip.json).
       - run: pnpm knip
+      # Schéma sur le Postgres jetable du job (migrations versionnées), puis
+      # build sur catalogue vide — zéro transfert Neon.
+      - run: pnpm migrate
       - run: pnpm build
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAllBoutiqueParams, getBoutiqueBook } from "@/lib/catalogue";
+import { getBoutiqueBook } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { BuyLinksList } from "@/components/buy-links";
@@ -68,8 +68,11 @@ type ProductJsonLd = {
 
 export const revalidate = 3600;
 
+// Vide : même politique que les fiches catalogue (génération à la première
+// visite, ISR ensuite) — voir catalogue/[edition]/[slug]/page.tsx pour le
+// pourquoi (quota transfert Neon, pas de Data Cache au build).
 export async function generateStaticParams() {
-  return getAllBoutiqueParams();
+  return [];
 }
 
 export default async function BoutiqueBookPage({

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllBookParams, getBook, getBooks } from "@/lib/catalogue";
+import { getBook, getBooks } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { LibelleTag } from "@/components/libelle-tag";
@@ -129,8 +129,14 @@ type BookJsonLd = {
 
 export const revalidate = 3600;
 
+// Vide (et non la liste des ~295 fiches) : le build ne lit plus le catalogue
+// pour ce segment — chaque fiche est générée à sa première visite puis suit
+// l'ISR ci-dessus (`dynamicParams` reste au défaut `true`). Le Data Cache
+// Vercel n'existe pas au build (« not updated at build time ») : pré-rendre
+// ici rejouait la lecture Postgres à chaque deploy ET à chaque run CI —
+// quota transfert Neon épuisé le 2026-07-26.
 export async function generateStaticParams() {
-  return getAllBookParams();
+  return [];
 }
 
 export default async function BookPage({
