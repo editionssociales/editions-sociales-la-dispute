@@ -22,7 +22,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'paylo
  * de poser `context.disableRevalidate`) — un `console.warn` suffit, jamais
  * un script cassé pour un cache qui expirera de toute façon sous 24 h.
  */
-function invalidateCatalogueTag(): void {
+export function invalidateCatalogueTag(): void {
   try {
     revalidateTag('catalogue', { expire: 0 })
   } catch (err) {

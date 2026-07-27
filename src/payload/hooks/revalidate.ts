@@ -1,5 +1,7 @@
 import { revalidatePath } from 'next/cache'
 
+import { invalidateCatalogueTag } from './revalidate-catalogue.ts'
+
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
@@ -63,6 +65,28 @@ function revalidateCatalogueRoutes(): void {
 /** Revalide la seule page d'accueil (bandeau de mise en avant, E6bis). */
 function revalidateHome(): void {
   revalidatePath('/')
+}
+
+/**
+ * Revalidation complète à la demande, HORS hooks — pour les écritures en lot
+ * qui posent `context.disableRevalidate` fiche par fiche mais exigent une
+ * prise d'effet immédiate en fin de run (import stock routeur : le stock EST
+ * la disponibilité). Ordre : tag d'abord (read-your-writes du data-cache,
+ * même invariant que les paires de hooks), puis purge ISR par motifs, puis
+ * chemins LITTÉRAUX des fiches touchées (seuls fiables sur Vercel, cf.
+ * constat live plus haut). Try/catch global : hors d'une requête Next (test
+ * Vitest, script `payload run`), l'invariant « static generation store
+ * missing » jette — avertir, jamais casser, le TTL 24 h du data-cache
+ * rattrape.
+ */
+export function revalidateCatalogueNow(fichePaths: string[] = []): void {
+  try {
+    invalidateCatalogueTag()
+    revalidateCatalogueRoutes()
+    for (const path of fichePaths) revalidatePath(path)
+  } catch (err) {
+    console.warn('[revalidate] revalidation catalogue impossible (hors requête Next ?)', err)
+  }
 }
 
 /**

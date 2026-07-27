@@ -274,13 +274,13 @@ et/ou après un éventuel passage au plan Neon Launch (marge de transfert ~10×)
    pré-rendu (liste complète, ou sous-ensemble nouveautés/meilleures fiches) —
    coût : une rafale catalogue par deploy.
 2. **Data-cache catalogue TTL 24 h** (`src/lib/catalogue.ts`, tag `catalogue`) :
-   la fraîcheur temps réel vient des hooks admin ; toute écriture qui pose
-   `context.disableRevalidate` reste invisible du front jusqu'à 24 h. **Piège
-   concret : l'import stock routeur** (`stock-import.ts`) pose ce flag et ne
-   revalide jamais — or le stock EST la disponibilité. Parade actuelle :
-   re-sauvegarder n'importe quel livre dans `/admin` après un import (le hook
-   purge tout). Au lancement : faire poser un `revalidateTag('catalogue',
-   { expire: 0 })` en fin d'import stock, et/ou raccourcir le TTL.
+   la fraîcheur temps réel vient des hooks admin — et l'import stock routeur
+   revalide lui-même UNE fois en fin de run (`revalidateCatalogueNow`, effet
+   immédiat). Reste invisible jusqu'à 24 h : toute AUTRE écriture posant
+   `context.disableRevalidate` (scripts `payload run`, migrations de données).
+   Parade : re-sauvegarder n'importe quel livre dans `/admin` (le hook purge
+   tout), ou raccourcir le TTL au lancement si ces écritures deviennent
+   fréquentes.
 3. **Sauvegarde hebdomadaire** (§5) : RPO hors-fournisseur = 7 jours (la
    restore window Neon 7 j couvre le quotidien, mais chez le même
    fournisseur). Dès que la base porte des commandes réelles : repasser le

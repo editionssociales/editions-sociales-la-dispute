@@ -2,6 +2,7 @@ import { addDataAndFileToRequest } from 'payload'
 import type { Payload, PayloadHandler, PayloadRequest } from 'payload'
 
 import { isAdmin } from '../access.ts'
+import { revalidateCatalogueNow } from '../hooks/revalidate.ts'
 import {
   matchStock,
   parseRouterWorkbook,
@@ -49,9 +50,10 @@ export async function importRouterStock(
     collection: 'books',
     where: { origin: { equals: 'catalogue' } },
     // Select API (issue #68) : l'appariement (`matchStock`) ne lit que ces
-    // 4 champs — la fiche complète (richText, HTML hérité, presse[], table
-    // des matières) n'a rien à faire ici.
-    select: { slug: true, title: true, isbn: true, commerce: { stockSuivi: true } },
+    // champs — la fiche complète (richText, HTML hérité, presse[], table
+    // des matières) n'a rien à faire ici. `edition` ne sert qu'aux chemins
+    // littéraux de la revalidation de fin de run.
+    select: { slug: true, title: true, isbn: true, edition: true, commerce: { stockSuivi: true } },
     depth: 0,
     limit: 0,
     overrideAccess: true,
@@ -82,9 +84,11 @@ export async function importRouterStock(
           stockUpdatedAt,
         },
       },
-      // Import mensuel, pas une édition humaine : ni revalidation Next (295
-      // fiches en série), ni `contentTouched` (bascule Lexical) — même garde
-      // que `scripts/migrate-catalogue`/`migrate-products.ts` (CLAUDE.md).
+      // Import mensuel, pas une édition humaine : pas de revalidation PAR
+      // FICHE (295 purges en série via les hooks), ni de `contentTouched`
+      // (bascule Lexical) — mais le run entier revalide UNE fois à la fin,
+      // voir plus bas : le stock EST la disponibilité, l'effet doit être
+      // immédiat.
       context: { migration: true, disableRevalidate: true },
       overrideAccess: true,
       req,
@@ -108,6 +112,20 @@ export async function importRouterStock(
     context: { disableRevalidate: true },
     req,
   })
+
+  // UNE revalidation pour tout le run (action occasionnelle à effet
+  // immédiat) : data-cache tagué + motifs ISR + chemins LITTÉRAUX des seules
+  // fiches réellement écrites — sur Vercel la purge par motif ne débloque
+  // pas les entrées ISR existantes (constat live, cf. hooks/revalidate.ts).
+  // Sans effet (warning) hors requête Next — script `payload run`, tests.
+  revalidateCatalogueNow(
+    report.matched.flatMap((entry) => {
+      const doc = docs.find((d) => d.id === entry.bookId)
+      return typeof doc?.edition === 'string' && typeof doc.slug === 'string'
+        ? [`/catalogue/${doc.edition}/${doc.slug}`]
+        : []
+    }),
+  )
 
   return { ...report, updatedCount: report.matched.length }
 }
