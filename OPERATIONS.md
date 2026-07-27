@@ -260,7 +260,45 @@ nouveau site par lui-même : catalogue vide en silence).
 24/7 — best effort. Ce document sera complété (destinataires structure,
 astreinte, escalade) à mesure que S1b/S3 avancent.
 
-## 8. Références
+## 8. Réglages « phase de dev » — à réévaluer une fois le dev terminé
+
+Posés en juillet 2026 pour tenir le quota de transfert Neon Free (5 Go/mois,
+épuisé le 26/07) pendant les itérations. Aucun n'est un bug : chacun échange de
+la fraîcheur ou de la couverture contre du quota. À réévaluer au lancement,
+et/ou après un éventuel passage au plan Neon Launch (marge de transfert ~10×).
+
+1. **Fiches non pré-rendues** (`generateStaticParams` vide, fiches catalogue et
+   boutique — cf. `src/app/CLAUDE.md`) : la première visite de chaque fiche
+   après un deploy la génère à la volée (TTFB dégradé, y compris pour le
+   premier crawl SEO). Si le quota le permet au lancement : restaurer le
+   pré-rendu (liste complète, ou sous-ensemble nouveautés/meilleures fiches) —
+   coût : une rafale catalogue par deploy.
+2. **Data-cache catalogue TTL 24 h** (`src/lib/catalogue.ts`, tag `catalogue`) :
+   la fraîcheur temps réel vient des hooks admin ; toute écriture qui pose
+   `context.disableRevalidate` reste invisible du front jusqu'à 24 h. **Piège
+   concret : l'import stock routeur** (`stock-import.ts`) pose ce flag et ne
+   revalide jamais — or le stock EST la disponibilité. Parade actuelle :
+   re-sauvegarder n'importe quel livre dans `/admin` après un import (le hook
+   purge tout). Au lancement : faire poser un `revalidateTag('catalogue',
+   { expire: 0 })` en fin d'import stock, et/ou raccourcir le TTL.
+3. **Sauvegarde hebdomadaire** (§5) : RPO hors-fournisseur = 7 jours (la
+   restore window Neon 7 j couvre le quotidien, mais chez le même
+   fournisseur). Dès que la base porte des commandes réelles : repasser le
+   cron à quotidien (`47 3 * * *`) — ~1,3 Go/mois de transfert à budgéter.
+4. **CI sur Postgres jetable** (`DEVOPS.md` § Pipeline CI/CD) : le build CI ne
+   voit jamais les données réelles — une donnée pathologique qui casse un
+   rendu ne sera détectée qu'au deploy prod (échec = ancien déploiement
+   maintenu) ou au runtime (Sentry). Si ça mord : job planifié hebdo sur la
+   vraie base, hors chemin des PRs.
+5. **Previews Vercel coupées** (2026-07-24) : plus de QA visuelle par PR. Si
+   elle remanque, réactiver AVEC le preview branching Neon (base éphémère par
+   preview), jamais sur la base partagée.
+6. **Rafale résiduelle par deploy** (accueil, souscription, panier, sitemap —
+   seules lectures catalogue restantes au build) : irréductible avec des
+   données réelles, éventuellement payée plusieurs fois par build (workers
+   parallèles). Négligeable à cadence de deploy raisonnable.
+
+## 9. Références
 
 - `plan/06-operations.md` — spécification complète des jalons S1/S2/S3
   (préconditions, étapes, critères de recette, risques).
