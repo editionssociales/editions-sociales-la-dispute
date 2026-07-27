@@ -13,9 +13,9 @@
 ## 1. Vue d'ensemble — qui reçoit quoi, aujourd'hui
 
 À ce stade du chantier, un seul canal d'alerte est **opérationnel** : **Sentry**,
-reçu par Youri (email). Le code de la sauvegarde nocturne et du SDK Vercel Web
-Analytics est **livré** (voir §5 et §6) mais **pas encore opérationnel** —
-provisioning humain restant. Les moniteurs de disponibilité (Better Stack) et
+reçu par Youri (email). La sauvegarde hebdomadaire est **opérationnelle** (§5) ;
+le SDK Vercel Web Analytics est **livré** (voir §6) mais **pas encore
+opérationnel** — provisioning humain restant. Les moniteurs de disponibilité (Better Stack) et
 l'élargissement des destinataires à la structure
 (`toutes@editionssociales.fr`) restent **à venir** — voir §6.
 
@@ -110,7 +110,12 @@ hermétique et pourra rejoindre `ci.yml` (voir `DEVOPS.md`).
 Après tout changement de schéma Payload (collection, champ, global) :
 `pnpm generate:types` puis commit du `src/payload-types.ts` régénéré.
 
-## 5. Sauvegarde nocturne (jalon S2)
+## 5. Sauvegarde hebdomadaire (jalon S2)
+
+> **Cadence hebdomadaire depuis le 2026-07-27** (nocturne au plan et à la mise
+> en service) : un dump quotidien de ~44 Mo consommait ~1,3 Go/mois du quota
+> de transfert Neon Free (5 Go/mois, épuisé le 26/07) ; la restore window
+> native Neon (7 jours) couvre la granularité fine entre deux dumps.
 
 > **Opérationnel depuis le 2026-07-26.** Le workflow échouait chaque nuit
 > depuis le 2026-07-19 (premier step, provisioning absent). Sont désormais
@@ -122,9 +127,9 @@ Après tout changement de schéma Payload (collection, champ, global) :
 > `BETTERSTACK_HEARTBEAT_URL`, désormais optionnel — sans lui la sauvegarde
 > tourne et l'absence d'alerte est signalée en `::warning::` à chaque run).
 
-**Principe** : `.github/workflows/backup-db.yml`, cron quotidien en heure
-creuse (`47 3 * * *` UTC) + déclenchement manuel (`workflow_dispatch` pour la
-recette). Chaîne du job :
+**Principe** : `.github/workflows/backup-db.yml`, cron hebdomadaire en heure
+creuse (lundi, `47 3 * * 1` UTC) + déclenchement manuel (`workflow_dispatch`
+pour la recette). Chaîne du job :
 
 1. `pg_dump --format=custom --no-owner` sur `DATABASE_URL_UNPOOLED` (URL
    **directe** Neon, jamais le pooler) → un fichier daté.
@@ -134,12 +139,13 @@ recette). Chaîne du job :
 3. Upload sur un **store Vercel Blob privé dédié** aux sauvegardes
    (`es-ld-backups`, région `fra1`, lecture authentifiée uniquement —
    **jamais** le store médias public de la phase catalogue), sous
-   `backups/daily/…` (et une copie `backups/monthly/` le 1er du mois).
+   `backups/daily/…` (préfixe conservé malgré la cadence hebdo ; copie
+   `backups/monthly/` au premier run du mois, jour ≤ 07).
 4. (Non implémenté à ce jour — hors scope du workflow livré, cf. son en-tête :
    la copie additive des médias du store public vers le store privé s'activera
    à la migration médias.)
-5. Purge (`scripts/backup-prune.mjs`) : conserve 30 sauvegardes quotidiennes
-   + 12 mensuelles.
+5. Purge (`scripts/backup-prune.mjs`) : conserve les 30 dumps les plus récents
+   sous `daily/` (≈ 7 mois en cadence hebdo) + 12 mensuels.
 6. Dernier step (succès uniquement) : ping d'un heartbeat Better Stack — si le
    job échoue, est annulé par GitHub, ou ne tourne pas, l'absence de ping
    déclenche une alerte « sauvegarde manquante ».
@@ -201,7 +207,8 @@ encore activé** faute d'un geste humain (provisioning).
   `package.json`) et monté (`<Analytics />` dans `src/app/(site)/layout.tsx`).
   Reste à activer le produit côté dashboard Vercel (Analytics tab du projet) —
   sans quoi le composant reste un no-op silencieux, comme Sentry sans DSN.
-- **Sauvegarde nocturne** (§5) — **opérationnelle** depuis le 2026-07-26 ;
+- **Sauvegarde hebdomadaire** (§5) — **opérationnelle** depuis le 2026-07-26
+  (cadence hebdo depuis le 27/07, quota transfert Neon) ;
   restent la garde de l'identité age (gestionnaires de mots de passe) et le
   heartbeat Better Stack (surveillance, pas la sauvegarde).
 - **Test de restauration démontré** (étape 7 du jalon S2) — débloqué depuis que

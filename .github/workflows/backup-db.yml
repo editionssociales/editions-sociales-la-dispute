@@ -1,6 +1,9 @@
-# Sauvegarde nocturne, chiffrée, hors fournisseur — plan/06-operations.md,
-# jalon S2, étape 6. Étage 2 de la chaîne (l'étage 1 est la restore window
-# native Neon, 7 jours, configurée hors CI). Dump Postgres (`pg_dump`, URL
+# Sauvegarde hebdomadaire, chiffrée, hors fournisseur — plan/06-operations.md,
+# jalon S2, étape 6. Hebdomadaire (et non nocturne comme au plan) depuis le
+# 2026-07-27 : un dump quotidien de ~44 Mo consommait ~1,3 Go/mois du quota
+# de transfert Neon Free (5 Go/mois, épuisé le 26/07). Étage 2 de la chaîne
+# (l'étage 1 est la restore window native Neon, 7 jours, configurée hors CI —
+# elle couvre la granularité fine entre deux dumps). Dump Postgres (`pg_dump`, URL
 # DIRECTE `NEON_DATABASE_URL`, jamais le pooler) → chiffré par PAIRE DE CLÉS
 # age (mode passphrase non scriptable — vérifié upstream, cf. plan) → déposé
 # sur le store Vercel Blob PRIVÉ dédié `es-ld-backups` (région `fra1`, lecture
@@ -23,8 +26,9 @@
 #                                   `fra1`) — JAMAIS le token du store médias
 #                                   public de la phase catalogue.
 #     - BETTERSTACK_HEARTBEAT_URL  URL du heartbeat Better Stack (moniteur
-#                                   "sauvegarde manquante", période 24h,
-#                                   grace 6h). SEUL secret OPTIONNEL : absent,
+#                                   "sauvegarde manquante", période 7 jours,
+#                                   grace 24h — cadence hebdo, cf. cron
+#                                   ci-dessous). SEUL secret OPTIONNEL : absent,
 #                                   la sauvegarde tourne quand même et le
 #                                   dernier step se contente d'avertir — un
 #                                   backup réel non surveillé vaut mieux qu'un
@@ -55,14 +59,14 @@
 # catalogue, qui pose son propre secret de lecture ; rien à faire ici avant
 # cela (cf. plan/06-operations.md, Dépendances).
 
-name: Backup base de données (nocturne, chiffré)
+name: Backup base de données (hebdomadaire, chiffré)
 
 on:
   schedule:
-    # 03:47 UTC — heure creuse, décalée de l'heure pleine (le cron GitHub
-    # Actions n'est pas garanti à la minute près aux heures rondes, cf. plan
-    # risque R5).
-    - cron: "47 3 * * *"
+    # Lundi 03:47 UTC — hebdomadaire (quota transfert Neon, cf. en-tête),
+    # heure creuse décalée de l'heure pleine (le cron GitHub Actions n'est
+    # pas garanti à la minute près aux heures rondes, cf. plan risque R5).
+    - cron: "47 3 * * 1"
   workflow_dispatch: {}
 
 permissions:
@@ -166,8 +170,10 @@ jobs:
           rm -f "catalogue-${STAMP}.dump"
 
       # Upload direct en Node (le SDK `@vercel/blob` — pas de CLI dédiée) :
-      # dépose `backups/daily/catalogue-<STAMP>.dump.age`, et, le 1er du
-      # mois, une copie supplémentaire sous `backups/monthly/…` (même
+      # dépose `backups/daily/catalogue-<STAMP>.dump.age` (préfixe `daily/`
+      # conservé malgré la cadence hebdo : regex de `backup-prune.mjs` et
+      # blobs existants), et, au PREMIER run du mois (jour ≤ 07 en cadence
+      # hebdo), une copie supplémentaire sous `backups/monthly/…` (même
       # contenu, deux clés — retenues séparément par `backup-prune.mjs`).
       # Chemins datés déterministes : acceptable ici, le store est PRIVÉ
       # (lecture authentifiée uniquement) — cf. plan risque R4.
@@ -193,19 +199,19 @@ jobs:
           }
 
           await upload(`backups/daily/catalogue-${stamp}.dump.age`);
-          if (stamp.slice(6, 8) === "01") {
+          if (stamp.slice(6, 8) <= "07") {
             await upload(`backups/monthly/catalogue-${stamp}.dump.age`);
           }
           NODE
           node "$GITHUB_WORKSPACE/.backup-upload.mjs"
           rm -f "$GITHUB_WORKSPACE/.backup-upload.mjs" "catalogue-${STAMP}.dump.age"
 
-      - name: Purger la rétention (30 quotidiens + 12 mensuels)
+      - name: Purger la rétention (30 dumps hebdo + 12 mensuels)
         run: node scripts/backup-prune.mjs
 
       # Dernier step, SUCCÈS UNIQUEMENT (comportement par défaut de GitHub
       # Actions : un step précédent en échec saute celui-ci) — c'est ce qui
-      # rend la promesse « une sauvegarde chaque nuit » vérifiable plutôt que
+      # rend la promesse « une sauvegarde chaque semaine » vérifiable plutôt que
       # déclarative (plan, Recette #6). Tant que le secret n'est pas posé, le
       # step est neutralisé par son `if` (surveillance absente, sauvegarde
       # quand même effectuée).
