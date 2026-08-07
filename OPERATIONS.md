@@ -19,16 +19,17 @@ opérationnel** — provisioning humain restant. Les moniteurs de disponibilité
 l'élargissement des destinataires à la structure
 (`toutes@editionssociales.fr`) restent **à venir** — voir §6.
 
-## 2. Erreurs applicatives — Sentry (S1a, livré)
+## 2. Erreurs applicatives et tracing — Sentry (S1a, livré)
 
 Le SDK est en place dans le repo :
 
 - `src/instrumentation.ts` (hook serveur, Next ≥ 15 — `onRequestError`
   capture les erreurs **non gérées** des Server Components, route handlers et
   server actions) ;
-- `src/instrumentation-client.ts` (SDK navigateur) ;
-- `sentry.server.config.ts` (config serveur — erreurs seules, pas de tracing,
-  pas de PII) ;
+- `src/instrumentation-client.ts` (SDK navigateur — erreurs + spans
+  pageload/navigation, traces distribuées vers le serveur) ;
+- `sentry.server.config.ts` (config serveur — erreurs + tracing APM via
+  OpenTelemetry, spans http/fetch/pg, pas de PII) ;
 - `next.config.ts` — wrappé `withSentryConfig` (upload des source maps au
   build, `telemetry: false`).
 
@@ -52,11 +53,13 @@ gérée du handler (`Sentry.captureException`) remontent dans Sentry même
 quand la réponse HTTP reste propre. C'est le contrat imposé par
 `plan/06-operations.md` à la phase Dons, et il est en place.
 
-**Quotas** : plan Developer, 5 000 erreurs/mois, org en **région UE**
-(choix irréversible à la création — déjà fait). Si un bug en boucle mange le
-quota, la spike protection de Sentry limite la casse ; au-delà, passer en
-plan payant est documenté comme repli dans `plan/06-operations.md` (risque
-R2).
+**Quotas** : plan Developer, 5 000 erreurs/mois + 5 M spans/mois, org en
+**région UE** (choix irréversible à la création — déjà fait). Si un bug en
+boucle mange le quota, la spike protection de Sentry limite la casse ;
+au-delà, passer en plan payant est documenté comme repli dans
+`plan/06-operations.md` (risque R2). Le tracing est échantillonné à **100 %**
+tant que le trafic est quasi nul — réglage « phase de dev », à baisser au
+lancement (§8).
 
 ## 3. Secrets — où ils vivent
 
@@ -308,6 +311,13 @@ et/ou après un éventuel passage au plan Neon Launch (marge de transfert ~10×)
    seules lectures catalogue restantes au build) : irréductible avec des
    données réelles, éventuellement payée plusieurs fois par build (workers
    parallèles). Négligeable à cadence de deploy raisonnable.
+7. **Tracing Sentry à 100 %** (`tracesSampleRate: 1.0`, serveur ET client —
+   `sentry.server.config.ts`, `src/instrumentation-client.ts`) : chaque
+   requête et chaque navigation produit une trace complète (spans pg
+   compris). Confortable tant que le trafic est quasi nul ; au lancement,
+   baisser le taux (p. ex. 0.1) pour tenir les 5 M spans/mois du plan
+   Developer — les deux fichiers doivent rester alignés (traces distribuées :
+   la décision d'échantillonnage du client se propage au serveur).
 
 ## 9. Références
 
