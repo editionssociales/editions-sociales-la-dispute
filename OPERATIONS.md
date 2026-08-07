@@ -236,6 +236,17 @@ encore activé** faute d'un geste humain (provisioning).
    fait échouer le démarrage avec un message explicite (`assertEnv`,
    `src/lib/env.ts`) plutôt que de planter en silence au fond d'une requête.
 
+**« Connection terminated unexpectedly » dans les logs Vercel.** Signature
+de l'autosuspend Neon (plan Free : ~5 min sans activité, non désactivable) :
+le compute Neon s'endort et coupe tous les sockets, mais l'instance Vercel
+(Fluid) lui survit et garde son pool `pg`. Chaque client idle coupé émet
+alors `error` sur le pool — absorbé et logué en warn `[pg-pool]` par
+`attachPoolErrorHandler` (`src/payload/lib/pool-error-handler.ts`, branché
+en `onInit` ; avant ce correctif d'août 2026, l'événement non écouté tuait
+le process entier). Un warn isolé est donc bénin — la requête suivante
+rouvre une connexion. Un flot continu accompagné de 500 → vérifier
+status.neon.tech et l'état du compute dans la console Neon.
+
 **Le catalogue paraît vide ou incomplet.** Le contrat du repo est de
 dégrader proprement (jamais de 500) : une liste partielle ou vide signale
 presque toujours une source WordPress indisponible ou en limite de débit,
