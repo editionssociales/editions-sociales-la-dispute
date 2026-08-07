@@ -1,8 +1,9 @@
 # OPERATIONS.md — Runbook d'exploitation
 
-> État au 17/07/2026. Ce document distingue **code livré** (présent dans ce
-> dépôt, jalon S1a de `plan/06-operations.md` vérifié, ou jalon S2 dont le
-> code fait partie de ce même changeset) de **provisioning fait** (secrets
+> État au 07/08/2026 — après la **coupure OVH** du 2026-07-18 : Postgres/Neon
+> est la seule source, plus aucun WordPress/WooCommerce lu. Ce document
+> distingue **code livré** (présent dans ce dépôt — jalons S1a et S2 de
+> `plan/06-operations.md`) de **provisioning fait** (secrets
 > posés, comptes créés, gestes humains/infra exécutés) — les deux ne sont pas
 > synchrones : un mécanisme peut être entièrement codé et rester inopérant
 > tant que son provisioning n'est pas fait (signalé explicitement à chaque
@@ -69,9 +70,9 @@ jamais confondre :
 
 | Emplacement | Contenu | Qui y touche |
 |---|---|---|
-| **Vercel (Production / Preview / Development)** | Tout ce que l'application lit au runtime : `DATABASE_URL(_UNPOOLED)`, `PAYLOAD_SECRET`, `BLOB_READ_WRITE_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`/`SENTRY_PROJECT`, `SENTRY_DASHBOARD_TOKEN`, `CATALOGUE_SOURCE`, `COMMERCE_NATIVE`, `SITE_INDEXABLE`, `NEXT_PUBLIC_SITE_URL` | Youri (dashboard Vercel ou `vercel env`) — jamais affichées en clair, jamais dans un log |
-| **Secrets GitHub Actions** (repo → Settings → Secrets) | Ce qui sert à la CI et au workflow de sauvegarde (§5) : `DATABASE_URL` + `PAYLOAD_SECRET` (job `verify`, qui rejoue `pnpm build`) ; `NEON_DATABASE_URL` (URL Neon **directe**) et `BLOB_BACKUP_RW_TOKEN` (store privé `es-ld-backups`) pour le backup, posés le 2026-07-26 ; `BETTERSTACK_HEARTBEAT_URL` **optionnel**, pas encore posé (pas de compte Better Stack) | Youri |
-| **Poste du développeur** (`.env` / `.env.local`, hors Git — `.gitignore`) | Outillage uniquement : `GITHUB_PAT`, `VERCEL_TOKEN` — jamais lus par `src/`, jamais posés côté Vercel (un PAT GitHub exposé au runtime du site serait une escalade de privilèges gratuite) | Youri |
+| **Vercel (Production / Preview / Development)** | Tout ce que l'application lit au runtime : `DATABASE_URL(_UNPOOLED)`, `PAYLOAD_SECRET`, `BLOB_READ_WRITE_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`/`SENTRY_PROJECT`, `SENTRY_DASHBOARD_TOKEN`, `SITE_INDEXABLE`, `NEXT_PUBLIC_SITE_URL`, `BREVO_*`/`CONTACT_TO_EMAIL` (communication), `REDIRECTS_PERMANENT` | Youri (dashboard Vercel ou `vercel env`) — jamais affichées en clair, jamais dans un log |
+| **Secrets GitHub Actions** (repo → Settings → Secrets) | Ce qui sert au workflow de sauvegarde (§5) : `NEON_DATABASE_URL` (URL Neon **directe**) et `BLOB_BACKUP_RW_TOKEN` (store privé `es-ld-backups`), posés le 2026-07-26 ; `BETTERSTACK_HEARTBEAT_URL` **optionnel**, pas encore posé (pas de compte Better Stack). Le job `verify` n'utilise plus aucun secret (Postgres jetable) — les anciens `DATABASE_URL`/`PAYLOAD_SECRET` peuvent être supprimés (cf. `DEVOPS.md` §5) | Youri |
+| **Poste du développeur** (`.env` / `.env.local`, hors Git — `.gitignore`) | Outillage uniquement : `GITHUB_PAT`, `VERCEL_PAT`, `SENTRY_PAT` — jamais lus par `src/`, jamais posés côté Vercel (un PAT GitHub exposé au runtime du site serait une escalade de privilèges gratuite) | Youri |
 
 Règle d'or, rappelée de `DEVOPS.md` : **jamais de clé Stripe `sk_live_` hors
 Production** — une Preview ne doit jamais pouvoir encaisser un paiement réel.
@@ -99,16 +100,17 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm knip     # exports / fichiers / dépendances morts
+pnpm build    # hermétique — Postgres 17 jetable (service container)
 ```
 
-**`pnpm build` n'est volontairement pas dans la CI** : tant que le catalogue
-lit les WordPress via REST (`CATALOGUE_SOURCE` non posée), un build à froid
-déclenche **~300 requêtes** vers l'hébergement OVH mutualisé qui sert aussi
-le trafic public — le doubler (Actions + preview Vercel) ferait payer au
-client la charge de la CI. Le build est vérifié **une seule fois**, par le
-déploiement preview Vercel de chaque PR. Cette contrainte tombe à la bascule
-catalogue (`CATALOGUE_SOURCE=pg` en production) — le build redevient
-hermétique et pourra rejoindre `ci.yml` (voir `DEVOPS.md`).
+**`pnpm build` tourne dans la CI depuis la coupure OVH** : le build est
+hermétique (Postgres uniquement) et se joue sur un **Postgres 17 jetable**
+(service container, `pnpm migrate` + catalogue vide — zéro transfert Neon,
+cf. `DEVOPS.md` § « Pipeline CI/CD »). Les previews Vercel par PR sont
+coupées (§8) : ce job « verify » est la **seule** vérification du build
+avant merge — le build de déploiement (`vercel-build` = migrate:prod +
+next build) n'arrive qu'après, et un échec y laisse l'ancien déploiement
+en ligne.
 
 Après tout changement de schéma Payload (collection, champ, global) :
 `pnpm generate:types` puis commit du `src/payload-types.ts` régénéré.
@@ -145,8 +147,9 @@ pour la recette). Chaîne du job :
    `backups/daily/…` (préfixe conservé malgré la cadence hebdo ; copie
    `backups/monthly/` au premier run du mois, jour ≤ 07).
 4. (Non implémenté à ce jour — hors scope du workflow livré, cf. son en-tête :
-   la copie additive des médias du store public vers le store privé s'activera
-   à la migration médias.)
+   la copie additive des médias du store public vers le store privé. Les
+   couvertures/médias — désormais tous sur le store Blob public — n'ont donc
+   **pas de copie hors Vercel**.)
 5. Purge (`scripts/backup-prune.mjs`) : conserve les 30 dumps les plus récents
    sous `daily/` (≈ 7 mois en cadence hebdo) + 12 mensuels.
 6. Dernier step (succès uniquement) : ping d'un heartbeat Better Stack — si le
@@ -197,12 +200,11 @@ encore activé** faute d'un geste humain (provisioning).
 
 **Pas encore livré (S1b, S3 — aucun code dans ce dépôt)** :
 
-- **Moniteurs Better Stack** (9 sondes de disponibilité : site, catalogue,
-  souscription, fiche livre, sources WordPress ES/LD, Store API boutique,
-  santé dons, `wp-admin` de la boutique pendant le recouvrement) — non
-  configurés à ce jour.
-- **Garde du recouvrement boutique** (étape 9bis) — s'active à la fenêtre de
-  bascule unique, pas avant.
+- **Moniteurs Better Stack** — non configurés à ce jour. La liste des 9
+  sondes du plan (antérieure à la coupure OVH) visait aussi les sources
+  WordPress et la Store API boutique : caduque. Périmètre à redéfinir au
+  provisioning, autour du site seul (accueil, catalogue, fiche livre,
+  souscription, checkout, santé dons).
 
 **Livré, provisioning restant** :
 
@@ -252,9 +254,14 @@ status.neon.tech et l'état du compute dans la console Neon.
 
 **Le catalogue paraît vide ou incomplet.** Le contrat du repo est de
 dégrader proprement (jamais de 500) : une liste partielle ou vide signale
-presque toujours une source WordPress indisponible ou en limite de débit,
-pas un bug du site. Vérifier l'accessibilité de `WP_ES_URL`/`WP_LD_URL` (ou
-`CATALOGUE_SOURCE=pg`/l'état de la base Neon après la bascule).
+presque toujours un problème d'accès à la base Neon — seule source depuis
+la coupure OVH — pas un bug du site. Vérifier l'état du projet côté
+dashboard Neon (base joignable ? quotas du plan Free — compute, transfert —
+épuisés ?), les issues Sentry (§2) et la présence/forme de `DATABASE_URL`
+sur la cible. La vue `/admin/sante` (rôle admin) donne un premier état des
+lieux (observabilité, configuration). Attention : l'ISR peut masquer
+l'incident un temps — les pages déjà générées continuent de servir depuis
+le cache pendant que les régénérations échouent.
 
 **La jauge de dons ne semble pas bouger après un paiement.** Ce n'est pas
 forcément un incident : la chaîne de fraîcheur documentée
@@ -263,12 +270,17 @@ fenêtre de cache 60 s + un aller de revalidation). En dessous de ce délai,
 rien à faire. Au-delà, vérifier `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`
 et les issues Sentry du handler webhook (§2).
 
-**Rollback du catalogue Postgres** (une fois `CATALOGUE_SOURCE=pg` posé en
-production) : procédure et préconditions détaillées dans
-`plan/03-catalogue.md`, section E9 — ne jamais l'exécuter sans avoir vérifié
-au préalable que les WordPress source sont bien joignables aux URLs
-configurées (un rollback aveugle après découplage DNS ferait « relire » le
-nouveau site par lui-même : catalogue vide en silence).
+**Restaurer la base après une perte ou une corruption de données.** Il n'y
+a **plus de rollback vers WordPress** : la coupure OVH du 2026-07-18 a
+supprimé cet axe du code (`plan/03-catalogue.md` § E9 est un document
+d'époque, ne plus s'y référer). La restauration passe par deux étages, dans
+l'ordre :
+
+1. la **restore window native Neon** (dashboard Neon → Backups/Restore ;
+   7 jours visés, liée au plan Neon — cf. §5 « Restant ») pour la
+   granularité fine ;
+2. au-delà, les **dumps hebdomadaires chiffrés** (§5) : `pg_restore` sur une
+   branche Neon jetable d'abord, comptages de contrôle, puis bascule.
 
 **Qui contacter.** Un seul développeur sur ce chantier (Youri), pas de garde
 24/7 — best effort. Ce document sera complété (destinataires structure,
@@ -321,10 +333,10 @@ et/ou après un éventuel passage au plan Neon Launch (marge de transfert ~10×)
 
 ## 9. Références
 
-- `plan/06-operations.md` — spécification complète des jalons S1/S2/S3
-  (préconditions, étapes, critères de recette, risques).
-- `plan/03-catalogue.md` — procédure de bascule et de rollback du catalogue.
-- `plan/07-cloture.md`, étape 10 — dossier de réversibilité complet (voir
-  `REVERSIBILITE.md`), protocole de transfert de propriété (étape 9).
+- `plan/06-operations.md` — spécification d'époque des jalons S1/S2/S3
+  (préconditions, étapes, critères de recette, risques) ; les parties
+  liées à WordPress et à la bascule sont caduques depuis la coupure OVH.
+- `plan/07-cloture.md`, étape 9 — protocole de transfert de propriété des
+  comptes.
 - `DEVOPS.md` — contrat d'environnement détaillé, pipeline CI/CD, runbooks de
   bascule de compte (dépôt, Vercel).

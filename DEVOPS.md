@@ -1,14 +1,16 @@
-# DevOps — stack cible, comptes, CI/CD, secrets
+# DevOps — stack, comptes, CI/CD, secrets
 
-> **But.** Décrire la **stack d'exploitation finale** du site unifié (dépôt, intégration
-> continue, hébergement, environnements, secrets, surveillance), l'écart avec l'état
-> réel, et les **runbooks** de bascule. Document interne, non destiné au client.
+> **But.** Décrire la **stack d'exploitation** du site unifié (dépôt, intégration
+> continue, hébergement, environnements, secrets, surveillance) et les **runbooks**
+> de bascule de compte. Document interne, non destiné au client.
 >
-> Complète — sans les remplacer — `LEGACY-STACK.md` (inventaire de l'existant OVH/WP),
-> `COHABITATION.md` (plan de migration côté WordPress) et `plan/`
-> (phases produit, entrée : `plan/README.md`).
+> Les documents de la refonte (`plan/`, `LEGACY-STACK.md`, `REVERSIBILITE.md`,
+> `IMPLEMENTATION-PROMPT.md`) sont des **documents d'époque** — historiques depuis
+> la coupure OVH du 2026-07-18, ne plus s'y référer pour l'état courant
+> (`COHABITATION.md` a été supprimé du dépôt).
 >
-> **Relevé effectué le 2026-07-09.** Voir §2 pour tout re-vérifier.
+> **Relevé initial le 2026-07-09, re-vérifié le 2026-08-07** (remote, comptes,
+> protection de branche, contrat d'environnement). Voir §2 pour tout re-vérifier.
 >
 > ⚠️ Aucun secret ici. Jamais de valeur de token — uniquement des **noms** de variables.
 
@@ -16,44 +18,45 @@
 
 ## 0. TL;DR
 
-- Le dépôt vit sous le **compte personnel du prestataire** (`yourimerad`), l'app sous
-  une **team Vercel provisoire** (`solidz`). Le devis engage l'inverse : *« tout est
-  créé au nom de la structure du client »*. La stack finale est donc d'abord un
-  **transfert de propriété**, pas une réécriture.
-- **Aucune CI n'existe** : 4 PR ont été fusionnées sans qu'aucune vérification
-  automatique ne tourne. Corrigé par `.github/workflows/ci.yml` (ce commit).
-- **Vercel *est* relié à Git** — contrairement à ce qu'affirmait `COHABITATION.md`.
-  `vercel[bot]` déploie `main` en **Production** et chaque branche en **Preview** depuis
-  le 2026-07-02. Le build est donc déjà vérifié avant merge ; ce qui manque n'est pas la
-  liaison, c'est la **propriété** (le projet vit sur la team provisoire `solidz`).
-- Trois secrets sont posés dans `site/.env`. **Un seul est exploitable en l'état** :
-
-  | Variable | État vérifié (2026-07-09) | Conséquence |
-  |---|---|---|
-  | `GITHUB_PAT` | Valide → compte **`editionssociales`**. Renvoie **404** sur `yourimerad/editions-sociales-la-dispute`. | C'est le compte **cible** (client), pas celui qui héberge le code aujourd'hui. Ne peut rien faire tant que le dépôt n'est pas transféré. |
-  | `VERCEL_TOKEN` | Présent, **non vérifié**. | Compte/team propriétaire inconnu — à confirmer avant tout usage (§6.2). |
-  | `STRIPE_SECRET_KEY` | **Littéralement `NOT_SET`** (l'API Stripe répond `Invalid API Key provided: NOT_SET`). | 🔴 **Les dons — la pièce critique du 15 août — ne peuvent être ni construits ni testés.** |
+- Le **transfert de propriété** engagé au devis (*« tout est créé au nom de la
+  structure du client »*) est **fait** pour les deux comptes structurants : dépôt
+  GitHub sous **`editionssociales`** (compte client — `yourimerad` reste un remote
+  secondaire `perso` et intervient comme invité), projet Vercel sous la **team LDES**
+  (compte client, depuis le 2026-07-19). Restent les comptes périphériques (Sentry,
+  Better Stack…) — protocole : `plan/07-cloture.md` étape 9, suivi dans
+  `OPERATIONS.md` §6.
+- **La CI est complète** : job `verify` (typecheck · lint · test · knip · build) sur
+  chaque PR et sur `main`, build hermétique sur Postgres 17 jetable (§5). Plus de
+  previews Vercel par PR (2026-07-24) : ce job est la seule vérification avant merge.
+- **Stripe est opérationnel** : l'ancien blocage (`STRIPE_SECRET_KEY=NOT_SET`,
+  relevé du 2026-07-09) est levé — clés posées (live/test par environnement), dons et
+  boutique livrés. `STRIPE_SECRET_KEY` est l'interrupteur de paiement du site
+  (`OPERATIONS.md` §3).
+- **Postgres/Neon est la seule source** depuis la coupure OVH : plus aucun
+  WordPress/WooCommerce lu, ni en prod ni au build.
+- **La bascule DNS du lancement n'a pas eu lieu** : les domaines publics pointent
+  encore sur OVH, le site vit sur l'URL beta Vercel (§3, runbook §6.3).
 
 ---
 
-## 1. État vérifié (2026-07-09)
+## 1. État vérifié (2026-08-07)
 
 ### 1.1 Dépôt
 
 | Champ | Valeur |
 |---|---|
-| Remote `origin` | `https://github.com/yourimerad/editions-sociales-la-dispute.git` |
-| Propriétaire | **`yourimerad`** (compte personnel du prestataire) |
+| Remote `origin` | `https://github.com/editionssociales/editions-sociales-la-dispute.git` — **compte client** (type **User**, pas une organisation) |
+| Remote `perso` | `https://github.com/yourimerad/editions-sociales-la-dispute.git` — l'ancien dépôt du prestataire, conservé en secondaire |
 | Visibilité | **privé** |
 | Branche par défaut | `main` |
-| Historique | 39 commits |
-| Flux | PR → merge (4 PR : #1 draft, #2/#3/#4 fusionnées) |
-| Protection de branche | **aucune** (à confirmer §6.4) |
-| CI | **aucune** — `.github/` n'existait pas |
-| Auth locale | `gh` + trousseau macOS, compte `yourimerad` (scopes `repo`, `workflow`, `read:org`, `gist`) |
+| Flux | PR → merge |
+| Protection de branche | **indisponible** : repo privé sous compte User plan Free — l'API répond 403 « Upgrade to GitHub Pro or make this repository public » (constat 2026-08-07, cf. §6.4) |
+| CI | `.github/workflows/ci.yml`, job `verify` (typecheck · lint · test · knip · build) |
+| Auth locale | `gh` + trousseau macOS, compte `yourimerad` (invité sur le dépôt client) |
 
-Branches distantes résiduelles à nettoyer : `feat/catalogue-couverture-seule`,
-`worktree-claude-md-index-update`, `worktree-site-build`, `worktree-souscription-copy`.
+Les branches résiduelles de l'époque (`feat/catalogue-couverture-seule`,
+`worktree-*`) ne subsistent que sur le remote `perso` — sans impact sur le
+dépôt client.
 
 ### 1.2 Hébergement
 
@@ -63,26 +66,21 @@ Branches distantes résiduelles à nettoyer : `feat/catalogue-couverture-seule`,
 | Projet | `editions-sociales-la-dispute` (`prj_A5GU0DpjwpzJEK4nbhTFmK4ToBP5`) |
 | Team | **LDES** (`team_1xHVCSjDQnrhRVC139r0pODZ`, compte client `administrer-7372`) — accès API via `VERCEL_PAT` de `site/.env` |
 | URL beta | `https://editions-sociales-la-dispute-mu.vercel.app` |
-| Intégration Git | **active** (`vercel[bot]`) : `main` → Production, branche → Preview |
+| Intégration Git | **active** (`vercel[bot]`) : `main` → Production — plus de previews par branche (2026-07-24, §5) |
 | Variables d'env prod | posées à la main (non auditables depuis le dépôt) |
 
 > Note (2026-07-19) : l'ancien **projet homonyme de la team solidz**
 > (`prj_Mi6jIFHz…`, git-lié au repo perso `yourimerad/…`) doublait les builds de
 > `main` en échec et squattait le domaine nu `editions-sociales-la-dispute.vercel.app`
-> (figé au 2026-07-11) — **supprimé le 2026-07-19**. `site/.vercel/project.json`
-> pointe encore dessus : relinker (`vercel link`) avant tout usage du CLI local.
+> (figé au 2026-07-11) — **supprimé le 2026-07-19**. Le lien local est réglé :
+> `site/.vercel/project.json` pointe sur le projet de la team LDES (vérifié
+> 2026-08-07).
 
-### 1.3 Base de référence (vérifiée sur `main`, commit `012fe02`)
+### 1.3 Base de référence
 
-```
-pnpm typecheck   ✓
-pnpm lint        ✓
-pnpm test        ✓  55 tests / 4 fichiers
-pnpm build       ✓  308 pages (295 fiches livre), 30 s
-```
-
-La stack est **saine** : ce document ne corrige pas du code cassé, il pose l'outillage
-qui manquait autour.
+Plus de relevé manuel : la base verte est garantie par la CI, qui rejoue
+typecheck · lint · test · knip · build sur chaque PR et sur `main` (§5,
+`OPERATIONS.md` §4).
 
 ---
 
@@ -92,129 +90,108 @@ qui manquait autour.
 cd site
 
 # Dépôt
-gh repo view yourimerad/editions-sociales-la-dispute --json visibility,defaultBranchRef
+git remote -v                                   # origin = editionssociales/…, perso = yourimerad/…
+gh repo view editionssociales/editions-sociales-la-dispute --json visibility,defaultBranchRef
 gh pr list --state all --limit 10
-gh api repos/yourimerad/editions-sociales-la-dispute/branches/main/protection  # 404 = non protégée
+gh api repos/editionssociales/editions-sociales-la-dispute/branches/main/protection
+#   403 « Upgrade to GitHub Pro » = protection indisponible (plan Free, repo privé)
 
 # Identité du PAT posé dans .env (n'affiche jamais la valeur)
 set -a; . ./.env; set +a
 curl -s -H "Authorization: Bearer $GITHUB_PAT" https://api.github.com/user | python3 -c 'import sys,json;print(json.load(sys.stdin)["login"])'
 
-# Vercel — projet lié localement
+# Vercel — projet lié localement (attendu : editions-sociales-la-dispute, team LDES)
 python3 -c 'import json;d=json.load(open(".vercel/project.json"));print(d["projectName"])'
-vercel projects ls --token "$VERCEL_TOKEN"      # à faire une seule fois, cf. §6.2
+vercel whoami --token "$VERCEL_PAT"
 
 # Base de référence
 pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm test
 ```
 
-Inventaire OVH / WordPress : voir `LEGACY-STACK.md` §1 (API OVH, compte ES).
+L'inventaire OVH/WordPress de `LEGACY-STACK.md` §1 est un document d'époque :
+l'hébergement web qu'il décrit est coupé — seuls domaines et Email Pro restent
+chez OVH (§3).
 
 ---
 
-## 3. La stack cible, couche par couche
+## 3. La stack, couche par couche
 
 Le devis (option B, §6 « propriété des comptes ») engage : *chaque abonnement est
 souscrit **au nom de la structure du client**, payé par lui, et le prestataire
 intervient comme invité — jamais l'inverse.* La colonne **Propriétaire** est donc un
 engagement contractuel, pas une préférence.
 
-| Couche | Aujourd'hui | Cible | Propriétaire cible | Statut |
-|---|---|---|---|---|
-| Code source | GitHub `yourimerad` (privé) | GitHub **`editionssociales`** (privé) | Client | 🟠 à transférer |
-| Intégration continue | néant | GitHub Actions (typecheck/lint/test) | Client | 🟢 posée (ce commit) |
-| Build / preview | Vercel relié à Git : PR → preview, `main` → prod | identique, sur le compte client | Client | 🟢 fonctionne · suit le transfert (§6.2) |
-| Hébergement app | Vercel team `solidz` | Vercel, compte client (Pro ~20 €/mois) | Client | 🟠 à transférer |
-| Secrets / env | `.env.local` sur le portable | Vercel env (Production / Preview / Development) | Client | 🔴 à poser |
-| Base de données | néant (lit WordPress) | **PostgreSQL** managé, sauvegarde nocturne | Client | ⚪ phase 3 |
-| Back-office | 4 × `wp-admin` | back-office sur-mesure, rôles | Client | ⚪ phase 3 |
-| Paiement | WooCommerce + plugin Stripe | **Stripe natif** (ou HelloAsso pour les dons) | Client | 🔴 clé absente |
-| Médias (couvertures ~1 Go) | OVH `wp-content` | stockage objet + CDN | Client | ⚪ phase 3 |
-| E-mail transactionnel | plugins WP | service dédié, SPF/DKIM | Client | ⚪ phase 5 |
-| Newsletter | plugins WP | **Brevo** (2 848 abonnés à importer) | Client | ⚪ phase 5 |
-| Erreurs / uptime / stats | néant | remontée d'erreurs + sonde uptime + analytics sans cookie | Client | ⚪ phase 6 |
-| Domaines + Email Pro | OVH | **OVH, inchangé** | Client | 🟢 rien à faire |
+| Couche | État courant | Propriétaire | Statut |
+|---|---|---|---|
+| Code source | GitHub **`editionssociales`** (privé, compte User) | Client | 🟢 transféré |
+| Intégration continue | GitHub Actions, job `verify` (typecheck · lint · test · knip · build, Postgres jetable) | Client (suit le dépôt) | 🟢 |
+| Build / déploiement | Vercel relié à Git : `main` → Production ; **plus de previews par PR** (2026-07-24) | Client | 🟢 |
+| Hébergement app | Vercel, team **LDES** (compte client) | Client | 🟢 transféré (2026-07-19) |
+| Secrets / env | Vercel env (Production / Preview / Development) — répartition détaillée : `OPERATIONS.md` §3 | Client | 🟢 posés |
+| Base de données | **PostgreSQL Neon** (schéma `payload`), sauvegarde hebdo chiffrée hors fournisseur (`OPERATIONS.md` §5) | à confirmer au transfert des comptes périphériques | 🟢 livrée |
+| Back-office | Payload `/admin` (rôles, migrations versionnées) | — (dans l'app) | 🟢 livré |
+| Paiement | **Stripe natif** — dons ET boutique, interrupteur `STRIPE_SECRET_KEY` (`OPERATIONS.md` §3) | Client | 🟢 livré |
+| Médias (couvertures) | **Vercel Blob** (store public) + optimiseur d'images Vercel — pas de copie hors Vercel à ce jour (`OPERATIONS.md` §5) | Client | 🟢 |
+| E-mail transactionnel | **Brevo** (contact + email de commande) — dégrade proprement sans clé (`brevoConfigured`) | à confirmer | 🟢 livré côté code |
+| Newsletter | **Brevo**, double opt-in | à confirmer | 🟢 livré côté code |
+| Erreurs / uptime / stats | **Sentry** opérationnel ; Better Stack **à venir** ; Web Analytics livré, produit non activé (`OPERATIONS.md` §1, §6) | Sentry : à transférer | 🟠 partiel |
+| Domaines + Email Pro | **OVH** (registrar + MX), inchangé | Client | 🟢 rien à faire |
 
-Légende : 🟢 fait · 🟠 en attente d'accord · 🔴 bloqué · ⚪ phase produit ultérieure.
+Les comptes périphériques (Sentry, Neon, Brevo, Better Stack à venir) restent à
+transférer/confirmer au nom de la structure — protocole : `plan/07-cloture.md`
+étape 9, suivi dans `OPERATIONS.md` §6.
 
-**Ce qui ne bouge pas.** Les 6 domaines OVH et l'Email Pro restent chez OVH et hors du
-périmètre technique. Toute bascule DNS se fait **enregistrement par enregistrement**,
-sans jamais toucher les MX (cf. `COHABITATION.md` phase 3).
+**⚠️ La bascule DNS du lancement n'a pas eu lieu** (constat 2026-08-07 : les
+trois domaines publics — `editionssociales.fr`, `ladispute.fr`,
+`boutique.editionssociales.fr` — pointent encore sur l'IP mutualisée OVH
+`213.186.33.17` ; le nouveau site vit sur l'URL beta Vercel). La « coupure
+OVH » du 2026-07-18 est une coupure **du code** (plus aucun WordPress lu),
+pas des domaines. Au lancement : bascule **enregistrement par
+enregistrement**, sans **jamais** toucher les MX (`mx*.ovh.net` — l'Email Pro
+reste chez OVH), cf. runbook §6.3.
 
 ---
 
 ## 4. Contrat d'environnement
 
-Le code ne lit que **quatre** variables (vérifié : `grep -r process.env src/`).
-Tout le reste de `.env` sert à l'outillage, jamais à l'application.
+Le contrat vit dans le code : `src/lib/env.ts:envSchema`, appelé au boot par
+`instrumentation.ts:register()` (`assertEnv`), avant que le serveur Next
+n'accepte la moindre requête — dev comme prod. La liste commentée des
+variables : `.env.example` ; leur répartition (Vercel / secrets GitHub /
+poste du dev) : `OPERATIONS.md` §3.
 
-### 4.1 Variables lues par l'application (aujourd'hui)
+### 4.1 Variables lues par l'application
 
-| Variable | Repli codé en dur (mort en pratique, cf. ci-dessous) | Lue par |
-|---|---|---|
-| `WP_ES_URL` | `https://editionssociales.fr` | `src/lib/catalogue-http.ts` |
-| `WP_LD_URL` | `https://ladispute.fr` | `src/lib/catalogue-http.ts` |
-| `WC_STORE_URL` | `https://boutique.editionssociales.fr` | `src/lib/boutique.ts` |
-| `WP_REVALIDATE` | `3600` | `catalogue-http.ts`, `boutique.ts` |
+Depuis la coupure OVH, plus aucune URL WordPress : la base Postgres n'est
+plus optionnelle. Trois familles (`src/lib/env.ts`) :
 
-✅ **`WP_ES_URL`/`WP_LD_URL`/`WC_STORE_URL` sont désormais REQUISES — erreur au
-démarrage si absentes** (`src/lib/env.ts:envSchema`, via `assertEnv()` que
-`instrumentation.ts:register()` appelle avant que le serveur Next n'accepte la
-moindre requête, dev comme prod). Avant ce lot, un environnement mal configuré
-ne plantait pas : il tapait silencieusement le WordPress de prod — acceptable
-tant que le site ne fait que *lire*, plus dès qu'il y a une base de données et
-un paiement (dons). Les replis `|| "https://…"` visibles dans
-`catalogue-http.ts`/`boutique.ts` restent dans le code (ceinture
-supplémentaire, jamais atteinte tant qu'`assertEnv` a tourné sans jeter) mais
-ne sont plus le comportement attendu.
-
-🔴 **Vérification pré-merge/pré-déploiement obligatoire.** Ce fail-fast tourne
-à **chaque cold start**, Preview comme Production (`register()` — pas
-seulement au build) : si `WP_ES_URL`/`WP_LD_URL`/`WC_STORE_URL` ne sont pas
-déjà posées côté Vercel pour un environnement donné, **chaque requête** vers
-une fonction serverless de cet environnement plante au démarrage — pas
-seulement un build cassé, un environnement entier down. Avant de merger ce
-lot (ou tout PR qui en dépend) et avant tout déploiement Preview/Production,
-confirmer que les trois variables sont posées sur les **trois** scopes
-(Production, Preview, Development) — commandes `vercel env add` en §6.3 — et
-vérifier qu'une PR de test produit bien une preview fonctionnelle après
-merge. Ce geste est **humain/infra**, hors du périmètre de ce commit.
-
-⚠️ **Angle mort résiduel.** `assertEnv()` tourne au *boot du serveur*
-(`register()` — « appelé une fois quand une nouvelle instance serveur Next
-démarre », doc Next), **pas** pendant `next build` (la génération statique /
-`generateStaticParams`, qui interroge WordPress, s'exécute hors de ce hook).
-Un build lancé avec ces variables réellement absentes de tout l'environnement
-retomberait donc encore, silencieusement, sur les URL de prod. En pratique ce
-risque résiduel est couvert autrement : `.env.example` fournit déjà les trois
-URL (Next charge `.env*` à toutes les phases, y compris le build) et §6.3
-exige de les poser explicitement dans Vercel (Production/Preview/Development)
-avant tout build réel. Fermer cet angle mort pour de bon supposerait de faire
-échouer la construction même de `SITES`/`WC` (`catalogue-http.ts`/
-`boutique.ts`) — non fait ici : ces modules sont importés inconditionnellement
-par `catalogue.ts` (l'aiguillage `CATALOGUE_SOURCE=pg` ne fait que ne pas
-*appeler* `httpCatalogueSource()`, il n'empêche pas son import), donc les y
-faire jeter romprait le découplage entre les deux adaptateurs même quand `pg`
-n'a besoin d'aucune des trois URL.
+- **Requises — échec au démarrage si absentes** : `DATABASE_URL` (poolée
+  Neon) et `PAYLOAD_SECRET`. Sans elles, ni catalogue ni back-office ;
+  l'absence plante au boot avec un message explicite, jamais au fond d'une
+  requête. Le build est lui aussi bruyant : hermétique Postgres, il échoue
+  franchement sans base joignable (plus aucun repli codé en dur).
+- **Optionnelles mais validées en forme si posées** (absence = phase non
+  provisionnée ; malformée = échec au boot) : `DATABASE_URL_UNPOOLED`,
+  `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SENTRY_DSN`,
+  `SITE_INDEXABLE`, `REDIRECTS_PERMANENT`, `BREVO_DOI_TEMPLATE_ID`,
+  `BREVO_LIST_ID_SITE`, `CONTACT_TO_EMAIL`.
+- **Interrupteurs de phase, volontairement non validés en forme** :
+  `STRIPE_SECRET_KEY` (`stripe.ts:stripeEnabled` — coupe dons ET boutique,
+  cf. `OPERATIONS.md` §3) et `BREVO_API_KEY` (`brevo.ts:brevoConfigured`) —
+  une valeur absente ou non reconnue est un état documenté, pas une erreur.
+  `BLOB_READ_WRITE_TOKEN` (médias) : absent en dev, le stockage bascule en
+  local (`./media`).
 
 ### 4.2 Variables d'outillage (jamais lues par `src/`)
 
-`GITHUB_PAT`, `VERCEL_TOKEN`, `STRIPE_SECRET_KEY` vivent dans `site/.env`, **hors Git**
+`GITHUB_PAT`, `VERCEL_PAT`, `SENTRY_PAT`… vivent dans `site/.env`, **hors Git**
 (`.gitignore` : `.env*` sauf `.env.example`). Elles ne doivent **jamais** être ajoutées
 aux variables d'environnement Vercel : un PAT GitHub exposé au runtime du site est une
 escalade de privilèges gratuite.
 
-### 4.3 Cible — où vit chaque secret
-
-| Secret | Emplacement cible | Environnements |
-|---|---|---|
-| `WP_*` / `WC_STORE_URL` | Vercel env | Production, Preview, Development |
-| `DATABASE_URL` | Vercel env + fournisseur PostgreSQL | les 3, **bases distinctes** |
-| `STRIPE_SECRET_KEY` | Vercel env | `sk_live_…` en Production, `sk_test_…` en Preview/Development |
-| `STRIPE_WEBHOOK_SECRET` | Vercel env | idem, un endpoint webhook par environnement |
-| `GITHUB_PAT`, `VERCEL_TOKEN` | poste du dev / secrets GitHub Actions | **jamais** dans Vercel |
-
-Règle : **aucune clé `live` en Preview.** Une PR ne doit pas pouvoir encaisser un don.
+Règle transverse, vérifiée au boot (`env.ts:checkEnv`) : **aucune clé
+`sk_live_` hors Production.** Une PR ne doit pas pouvoir encaisser un
+paiement réel — bases et clés Stripe **distinctes par environnement**.
 
 ---
 
@@ -222,8 +199,8 @@ Règle : **aucune clé `live` en Preview.** Une PR ne doit pas pouvoir encaisser
 
 ```
   PR ouverte
-    └── GitHub Actions « verify »  → typecheck · lint · test · knip · build   (Postgres via secrets)
-         ↓ vert + revue
+    └── GitHub Actions « verify »  → typecheck · lint · test · knip · build   (Postgres 17 jetable)
+         ↓ vert
        merge sur main
          ↓
        Vercel Production Deployment  → `vercel-build` = migrate:prod + next build
@@ -257,128 +234,85 @@ vide, cf. `src/app/CLAUDE.md`). Les secrets GitHub Actions `DATABASE_URL`/
 `PAYLOAD_SECRET` ne servent plus à ce job et peuvent être supprimés (geste humain,
 sans urgence — ils ne sont plus référencés par `ci.yml`).
 
-### 🟠 Risque mitigé (court terme) : le catalogue tronqué en silence
+### Risque éteint : le catalogue tronqué en silence
 
-`listBooks()` délègue sa pagination à `fetchAllPages()` (`src/lib/fetch-all-pages.ts`),
-qui avale ses erreurs (`catch { …; break }`) et renvoie une **liste partielle**. Si
-WordPress limite le débit ou renvoie un 5xx à la page 2 pendant un build, alors :
-
-1. sans garde-fou, le build **réussirait**, avec un catalogue amputé ;
-2. l'ISR mettrait ce résultat en cache **une heure** ;
-3. `getBook()` renvoie `null` sur les slugs manquants → une fiche livre réelle serait
-   **pré-rendue en 404**.
-
-Aucune alerte ne se déclencherait. Mitigations, par ordre de coût croissant :
-
-- **court terme — posé** : `src/lib/catalogue-integrity.ts:assertCatalogueComplete()`
-  fait échouer le total des deux fonds (`es.length + ld.length`) s'il s'écarte de plus
-  de 5 % du dernier chiffre connu (`KNOWN_CATALOGUE_SIZE = 295`, constante à ajuster au
-  fil des parutions). Câblé dans `catalogue.ts:getAllBooks()` — seul point qui combine
-  les deux fonds avant fusion/cache — l'échec y frappe indifféremment le build
-  (`generateStaticParams`, rien à perdre) et la revalidation ISR/Data Cache d'une page
-  déjà servie (régénération en arrière-plan écartée, Next conserve le rendu/le cache
-  précédent — le comportement voulu, jamais une page déjà en service qui tombe).
-  Reste à faire (phase 6) : remonter ces erreurs (Sentry) pour voir aussi les
-  `console.error` de production, pas seulement les échecs de build.
-- **définitif** — phase 3 : la source devient PostgreSQL, une transaction remplace 300
-  requêtes HTTP, et une lecture partielle n'est plus représentable — ce garde-fou
-  redevient alors inutile et peut être retiré.
+Risque de l'ère WordPress (une pagination REST qui avalait ses erreurs pouvait
+livrer un catalogue amputé, mis en cache une heure, fiches réelles pré-rendues
+en 404), mitigé à l'époque par un garde-fou d'intégrité
+(`assertCatalogueComplete`, seuil ±5 % autour d'un total connu). La mitigation
+« définitive » prévue est advenue : la source est PostgreSQL, une lecture
+partielle n'est plus représentable — le garde-fou et la pagination HTTP
+(`catalogue-integrity.ts`, `fetch-all-pages.ts`, `catalogue-http.ts`) ont été
+retirés du code avec la coupure OVH. Le contrat de dégradation propre côté
+runtime (liste vide, jamais de 500) est décrit dans `OPERATIONS.md` §7.
 
 ---
 
 ## 6. Runbooks de bascule
 
-> ⚠️ Les quatre runbooks ci-dessous agissent sur des **comptes tiers** (client) et sont
-> **irréversibles ou visibles publiquement**. Aucun n'a été exécuté. Ils attendent un
-> accord explicite, et l'ordre compte : **6.1 → 6.2 → 6.3 → 6.4**.
+> ⚠️ Ces runbooks agissent sur des **comptes tiers** (client) et sont
+> **irréversibles ou visibles publiquement** — jamais sans accord explicite.
+> **6.1 et 6.2 ont été exécutés** (dépôt et projet Vercel transférés) et ne
+> subsistent qu'à l'état de trace. Restent à faire : **6.3** (bascule DNS du
+> lancement) et **6.4** (protection de `main`, bloquée par le plan GitHub).
 
-### 6.1 Transférer le dépôt vers le compte client
+### 6.1 ✅ Dépôt transféré vers le compte client
 
-Prérequis : savoir si `editionssociales` est un **compte utilisateur** ou une
-**organisation** (change la commande et la facturation des Actions).
+Fait (constaté le 2026-08-07) : `origin` =
+`editionssociales/editions-sociales-la-dispute` (compte **User**). Le transfert
+GitHub a préservé historique et PR ; `yourimerad` intervient comme invité,
+conformément au devis. L'ancien dépôt subsiste en remote `perso` — ses branches
+résiduelles (`feat/catalogue-couverture-seule`, `worktree-*`) sont sans impact
+(nettoyage possible : `git push perso --delete …`).
 
-Le transfert GitHub **préserve l'historique, les PR et les issues**, et laisse une
-redirection depuis l'ancienne URL. C'est préférable à un miroir (`git push` vers un
-dépôt neuf), qui perdrait les 4 PR.
+Après tout renouvellement du `GITHUB_PAT` (fine-grained), vérifier qu'il porte
+`Contents: write`, `Pull requests: write`, `Administration: write` sur le dépôt.
 
-```bash
-# Depuis le compte propriétaire actuel (yourimerad)
-gh api -X POST repos/yourimerad/editions-sociales-la-dispute/transfer \
-  -f new_owner='editionssociales'
+### 6.2 ✅ Projet Vercel transféré
 
-# Puis, sur le poste du dev
-git remote set-url origin https://github.com/editionssociales/editions-sociales-la-dispute.git
-git remote -v
-```
+Fait le 2026-07-19 : projet `editions-sociales-la-dispute` sous la team **LDES**
+(compte client `administrer-7372`) ; ancien projet homonyme de la team `solidz`
+supprimé (§1.2) ; lien local (`vercel link`) refait. Accès API : `VERCEL_PAT`
+(`site/.env`).
 
-Ensuite : réinviter `yourimerad` en **collaborateur** (le devis dit « j'interviens comme
-invité sur vos comptes »), et vérifier que le `GITHUB_PAT` (fine-grained) porte bien les
-droits `Contents: write`, `Pull requests: write`, `Administration: write` sur le dépôt.
+> ⚠️ Piège vérifié à l'époque, toujours vrai pour toute bascule future : un
+> transfert de dépôt GitHub **casse** la liaison Vercel↔Git tant que l'app
+> GitHub « Vercel » n'est pas réautorisée sur le nouveau propriétaire — les
+> déploiements cessent **silencieusement** (plus de `vercel[bot]`, aucun
+> message d'erreur). Après toute bascule : vérifier qu'un push sur `main`
+> produit bien un déploiement Production.
 
-Nettoyage à faire après transfert :
+### 6.3 Bascule DNS du lancement (à faire)
 
-```bash
-git push origin --delete feat/catalogue-couverture-seule \
-  worktree-claude-md-index-update worktree-site-build worktree-souscription-copy
-```
+Les variables d'environnement sont posées (`OPERATIONS.md` §3, `.env.example`
+pour la liste) — le geste restant est la bascule des domaines publics (§3 :
+encore sur l'IP mutualisée OVH au 2026-08-07). Au lancement, dans la zone OVH
+de chaque domaine :
 
-### 6.2 Transférer le projet Vercel
+- basculer **enregistrement par enregistrement** les entrées web (`A`/`CNAME`
+  de l'apex et de `www`, plus `boutique.editionssociales.fr`) vers Vercel
+  (valeurs : dashboard Vercel → Domains, après ajout des domaines au projet) ;
+- ne **jamais** toucher les MX (`mx*.ovh.net`) ni les enregistrements Email
+  Pro — l'email reste chez OVH ;
+- après bascule : poser `SITE_INDEXABLE=1`, puis — une fois les destinations
+  de reprise validées — `REDIRECTS_PERMANENT=1` (302 → 301, cf.
+  `.env.example`) ;
+- réévaluer les réglages « phase de dev » (`OPERATIONS.md` §8).
 
-La liaison Git **existe déjà et fonctionne** (§1.2) : il n'y a rien à « brancher ».
-Ce runbook déplace la **propriété**, pas la plomberie.
+### 6.4 Protéger `main` — bloqué par le plan GitHub
 
-**D'abord identifier le propriétaire du `VERCEL_TOKEN`** — tant que ce n'est pas fait,
-ne rien exécuter :
+Indisponible en l'état : repo **privé** sous compte **User plan Free** — l'API
+répond 403 « Upgrade to GitHub Pro or make this repository public » (constat
+2026-08-07). Options : passer le compte client en GitHub Pro, ou rendre le
+dépôt public. En attendant, la discipline PR + le job `verify` tiennent lieu
+de garde-fou — aucune protection technique n'empêche un push direct sur `main`.
 
-```bash
-set -a; . ./.env; set +a
-vercel whoami --token "$VERCEL_TOKEN"
-vercel teams ls --token "$VERCEL_TOKEN"
-```
-
-- S'il appartient à `solidz` → il sert au **transfert**, pas à la cible.
-- S'il appartient à un compte client → c'est la destination.
-
-Le projet se transfère **sans perte d'historique de déploiement**
-(*Project Settings → Advanced → Transfer*). Puis, sur le poste du dev :
-
-```bash
-vercel link                                    # re-lier le dossier au projet transféré
-```
-
-> ⚠️ **Piège d'ordonnancement.** Le transfert du dépôt GitHub (§6.1) **casse** la
-> liaison Vercel↔Git : l'app GitHub « Vercel » est autorisée sur `yourimerad`, pas sur
-> `editionssociales`. Tant qu'elle n'est pas réinstallée sur le nouveau propriétaire,
-> **les previews et les déploiements de production cessent silencieusement** — aucun
-> message d'erreur, simplement plus de `vercel[bot]`.
->
-> Ordre sûr : transférer le dépôt → réinstaller/autoriser l'app Vercel sur le compte
-> client → transférer le projet Vercel → **vérifier qu'une PR de test produit bien une
-> preview** avant de considérer la bascule faite.
-
-### 6.3 Poser les variables d'environnement
-
-```bash
-for env in production preview development; do
-  vercel env add WP_ES_URL     "$env"
-  vercel env add WP_LD_URL     "$env"
-  vercel env add WC_STORE_URL  "$env"
-  vercel env add WP_REVALIDATE "$env"
-done
-vercel env pull .env.local     # resynchronise le poste du dev depuis la source de vérité
-```
-
-Après la **phase 2** de `COHABITATION.md` (découplage CMS), `WP_ES_URL` et `WP_LD_URL`
-devront pointer sur les hostnames **non publics** des WordPress, sans quoi la bascule
-DNS coupera la source de données du site.
-
-### 6.4 Protéger `main`
+Le jour où c'est débloqué :
 
 ```bash
 gh api -X PUT repos/editionssociales/editions-sociales-la-dispute/branches/main/protection \
   -F required_status_checks[strict]=true \
-  -F 'required_status_checks[contexts][]=typecheck · lint · test' \
-  -F 'required_status_checks[contexts][]=Vercel' \
+  -F 'required_status_checks[contexts][]=typecheck · lint · test · knip · build' \
   -F required_pull_request_reviews[required_approving_review_count]=0 \
   -F enforce_admins=false \
   -F restrictions=null
@@ -391,25 +325,32 @@ exige donc les **checks verts**, pas un approbateur.
 
 ## 7. Ce qui bloque, et qui peut le débloquer
 
-| # | Blocage | Effet | Débloqué par |
-|---|---|---|---|
-| 1 | `STRIPE_SECRET_KEY` = `NOT_SET` | 🔴 **Les dons ne sont pas implémentables.** C'est la seule échéance dure du projet (**~15 août**). | Le client crée son compte Stripe → fournir une clé **`sk_test_…`** (le mode test suffit pour tout développer). |
-| 2 | Statut juridique de la structure fusionnée | Décide **Stripe vs HelloAsso** pour les dons — deux implémentations différentes, même prix au devis. | Confirmer si la structure est une **association loi 1901** (HelloAsso : 0 % de commission + reçus fiscaux automatiques). |
-| 3 | Propriétaire du `VERCEL_TOKEN` inconnu | Impossible de savoir si on transfère *vers* ce compte ou *depuis*. | `vercel whoami` (§6.2). |
-| 4 | `editionssociales` : compte ou organisation ? | Change la commande de transfert et la facturation Actions. | Accord + vérification. |
-| 5 | Dépendance à la **Legacy REST API** de WooCommerce | Interdit d'éteindre la boutique tant qu'on ignore ce qui l'appelle (export compta suspecté). | Tracer les appels avant la phase 4 (`LEGACY-STACK.md` §11). |
+**Plus aucun blocage dur.** Les cinq blocages du relevé initial (2026-07-09)
+sont levés :
 
-**Le chemin critique passe par le blocage n°1.** Tout le reste du plan peut avancer
-sans lui ; les dons, non.
+| # | Blocage d'époque | Résolution |
+|---|---|---|
+| 1 | `STRIPE_SECRET_KEY` = `NOT_SET` — les dons (échéance du 15 août) non implémentables | Levé : clés posées (test/live par environnement), dons **et** boutique livrés (Stripe Checkout natif). |
+| 2 | Stripe vs HelloAsso selon le statut juridique | Tranché : **Stripe natif**, un seul moteur pour dons et commandes. |
+| 3 | Propriétaire du token Vercel inconnu | Réglé : `VERCEL_PAT` (`site/.env`) sur la team client **LDES**. |
+| 4 | `editionssociales` : compte ou organisation ? | Compte **User** — transfert du dépôt fait (§6.1). |
+| 5 | Dépendance à la **Legacy REST API** de WooCommerce | Caduc : la boutique WooCommerce s'est éteinte avec la coupure OVH ; l'export comptable est natif (moteur de commerce). |
+
+Les gestes restants sont du provisioning et du transfert, pas des blocages :
+bascule DNS du lancement (§6.3), protection de `main` (§6.4), comptes
+périphériques, moniteurs et garde de l'identité age (`OPERATIONS.md` §5–§6).
 
 ---
 
 ## 8. Références
 
-- `plan/` — les phases produit, séquencées contre l'échéance du 15 août (entrée : `plan/README.md`).
-- `IMPLEMENTATION-PROMPT.md` — le cadrage haut niveau dont ce plan est la mise en œuvre.
-- `LEGACY-STACK.md` — inventaire vérifié OVH + 4 WordPress (source de vérité).
-- `COHABITATION.md` — les 4 phases de migration côté WordPress.
+- `OPERATIONS.md` — runbook d'exploitation : secrets, sauvegarde, incidents,
+  réglages de la phase de dev.
 - `../devis/DEVIS-MULTI-OPTIONS.md` — cadrage commercial (option B retenue).
+- Documents d'époque de la refonte — historiques, ne plus s'y référer pour
+  l'état courant : `plan/` (entrée : `plan/README.md`),
+  `IMPLEMENTATION-PROMPT.md`, `LEGACY-STACK.md` (l'inventaire OVH/WordPress
+  qu'il décrit est coupé), `REVERSIBILITE.md` (`COHABITATION.md` a été
+  supprimé).
 
 <!-- Maintenir à jour à chaque bascule de compte ou changement de pipeline. -->

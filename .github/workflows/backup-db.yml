@@ -54,10 +54,10 @@
 # silencieusement inopérant, jamais de dump non chiffré.
 # ─────────────────────────────────────────────────────────────────────────
 #
-# Hors scope de ce workflow (pour l'instant) : la copie additive des médias
-# (plan étape 6 point 5) — elle s'active à la migration médias de la phase
-# catalogue, qui pose son propre secret de lecture ; rien à faire ici avant
-# cela (cf. plan/06-operations.md, Dépendances).
+# Hors scope de ce workflow (non implémenté) : la copie additive des médias
+# du store Blob public vers ce store privé. Les médias (couvertures, PDF)
+# vivent désormais tous sur le store public — ils n'ont donc pas de copie
+# hors Vercel à ce jour (cf. OPERATIONS.md §5).
 
 name: Backup base de données (hebdomadaire, chiffré)
 
