@@ -9,12 +9,15 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV,
+  // Même réglage 100 % « phase de dev » que le serveur — OPERATIONS.md §8.
+  tracesSampleRate: 1.0,
   sendDefaultPii: false,
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 0,
 });
 
-// Spans de navigation App Router (routing/tracing, pas des breadcrumbs) — sans
-// tracesSampleRate ni tracesSampler ici, ils ne sont jamais échantillonnés ni
-// envoyés : cohérent avec l'intention "erreurs seules" du serveur, no-op assumé.
+// Spans de navigation App Router : avec tracesSampleRate posé ci-dessus, le
+// browserTracingIntegration (ajouté par défaut par @sentry/nextjs) échantillonne
+// pageloads et navigations, et les fetch same-origin propagent la trace au
+// serveur (traces distribuées client → RSC/route handler → pg).
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
