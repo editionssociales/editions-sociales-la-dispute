@@ -19,16 +19,17 @@ opérationnel** — provisioning humain restant. Les moniteurs de disponibilité
 l'élargissement des destinataires à la structure
 (`toutes@editionssociales.fr`) restent **à venir** — voir §6.
 
-## 2. Erreurs applicatives — Sentry (S1a, livré)
+## 2. Erreurs applicatives et tracing — Sentry (S1a, livré)
 
 Le SDK est en place dans le repo :
 
 - `src/instrumentation.ts` (hook serveur, Next ≥ 15 — `onRequestError`
   capture les erreurs **non gérées** des Server Components, route handlers et
   server actions) ;
-- `src/instrumentation-client.ts` (SDK navigateur) ;
-- `sentry.server.config.ts` (config serveur — erreurs seules, pas de tracing,
-  pas de PII) ;
+- `src/instrumentation-client.ts` (SDK navigateur — erreurs + spans
+  pageload/navigation, traces distribuées vers le serveur) ;
+- `sentry.server.config.ts` (config serveur — erreurs + tracing APM via
+  OpenTelemetry, spans http/fetch/pg, pas de PII) ;
 - `next.config.ts` — wrappé `withSentryConfig` (upload des source maps au
   build, `telemetry: false`).
 
@@ -52,11 +53,13 @@ gérée du handler (`Sentry.captureException`) remontent dans Sentry même
 quand la réponse HTTP reste propre. C'est le contrat imposé par
 `plan/06-operations.md` à la phase Dons, et il est en place.
 
-**Quotas** : plan Developer, 5 000 erreurs/mois, org en **région UE**
-(choix irréversible à la création — déjà fait). Si un bug en boucle mange le
-quota, la spike protection de Sentry limite la casse ; au-delà, passer en
-plan payant est documenté comme repli dans `plan/06-operations.md` (risque
-R2).
+**Quotas** : plan Developer, 5 000 erreurs/mois + 5 M spans/mois, org en
+**région UE** (choix irréversible à la création — déjà fait). Si un bug en
+boucle mange le quota, la spike protection de Sentry limite la casse ;
+au-delà, passer en plan payant est documenté comme repli dans
+`plan/06-operations.md` (risque R2). Le tracing est échantillonné à **100 %**
+tant que le trafic est quasi nul — réglage « phase de dev », à baisser au
+lancement (§8).
 
 ## 3. Secrets — où ils vivent
 
@@ -236,6 +239,17 @@ encore activé** faute d'un geste humain (provisioning).
    fait échouer le démarrage avec un message explicite (`assertEnv`,
    `src/lib/env.ts`) plutôt que de planter en silence au fond d'une requête.
 
+**« Connection terminated unexpectedly » dans les logs Vercel.** Signature
+de l'autosuspend Neon (plan Free : ~5 min sans activité, non désactivable) :
+le compute Neon s'endort et coupe tous les sockets, mais l'instance Vercel
+(Fluid) lui survit et garde son pool `pg`. Chaque client idle coupé émet
+alors `error` sur le pool — absorbé et logué en warn `[pg-pool]` par
+`attachPoolErrorHandler` (`src/payload/lib/pool-error-handler.ts`, branché
+en `onInit` ; avant ce correctif d'août 2026, l'événement non écouté tuait
+le process entier). Un warn isolé est donc bénin — la requête suivante
+rouvre une connexion. Un flot continu accompagné de 500 → vérifier
+status.neon.tech et l'état du compute dans la console Neon.
+
 **Le catalogue paraît vide ou incomplet.** Le contrat du repo est de
 dégrader proprement (jamais de 500) : une liste partielle ou vide signale
 presque toujours une source WordPress indisponible ou en limite de débit,
@@ -297,6 +311,13 @@ et/ou après un éventuel passage au plan Neon Launch (marge de transfert ~10×)
    seules lectures catalogue restantes au build) : irréductible avec des
    données réelles, éventuellement payée plusieurs fois par build (workers
    parallèles). Négligeable à cadence de deploy raisonnable.
+7. **Tracing Sentry à 100 %** (`tracesSampleRate: 1.0`, serveur ET client —
+   `sentry.server.config.ts`, `src/instrumentation-client.ts`) : chaque
+   requête et chaque navigation produit une trace complète (spans pg
+   compris). Confortable tant que le trafic est quasi nul ; au lancement,
+   baisser le taux (p. ex. 0.1) pour tenir les 5 M spans/mois du plan
+   Developer — les deux fichiers doivent rester alignés (traces distribuées :
+   la décision d'échantillonnage du client se propage au serveur).
 
 ## 9. Références
 

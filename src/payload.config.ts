@@ -19,6 +19,7 @@ import { Orders } from './payload/collections/Orders.ts'
 import { PromoCodes } from './payload/collections/PromoCodes.ts'
 import { Rencontres } from './payload/collections/Rencontres.ts'
 import { Users } from './payload/collections/Users.ts'
+import { attachPoolErrorHandler } from './payload/lib/pool-error-handler.ts'
 import { PageAPropos } from './payload/globals/PageAPropos.ts'
 import { PageSouscription } from './payload/globals/PageSouscription.ts'
 import { PagesLegales } from './payload/globals/PagesLegales.ts'
@@ -82,6 +83,10 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
+      // Borne l'attente de `pool.connect()` (défaut pg : infinie) — couvre le
+      // réveil d'un compute Neon autosuspendu sans laisser une saturation du
+      // pool dégénérer en timeout de fonction Vercel silencieux.
+      connectionTimeoutMillis: 15_000,
     },
     schemaName: 'payload',
     // Jamais de push en prod — le schéma vit dans des migrations versionnées
@@ -89,6 +94,9 @@ export default buildConfig({
     push: false,
     migrationDir: path.resolve(dirname, 'migrations'),
   }),
+  // Sans listener `error` sur le pool pg, un client idle coupé par Neon
+  // (autosuspend) fait tomber tout le process — cf. pool-error-handler.ts.
+  onInit: attachPoolErrorHandler,
   i18n: {
     supportedLanguages: { fr },
     fallbackLanguage: 'fr',
