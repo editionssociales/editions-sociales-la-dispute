@@ -41,4 +41,13 @@ données ni le routage.
   (confirmé au `getComputedStyle`). La largeur ne peut donc PAS rester une
   affaire de `className` seul pour ce composant précis ; prop à valeurs
   closes plutôt qu'une dépendance de merge (`twMerge`, hors périmètre —
-  `package.json` n'appartient pas à `src/components`).
+  `package.json` n'appartient pas à `src/components`). **Même piège sur la
+  famille `display`** : `Button` porte `inline-flex` en dur dans BASE et
+  `.inline-flex` est écrit APRÈS `.hidden` dans la feuille — un `hidden` NU
+  passé en `className` à un `<Button>` ne masque RIEN (livré une fois : le CTA
+  final de /souscription rendu deux fois sous `lg`). Masquer un `Button` se
+  fait par un `<span>` enveloppant (`lg:hidden` / `hidden lg:block` — un
+  `<span>` n'a pas de classe display concurrente) ou par une variante `@media`
+  seule (`lg:hidden`, écrite après BASE, qui elle gagne). Verrouillé par
+  `button-display.test.tsx` : ordre réel de la feuille compilée + aucun
+  appelant ne passe d'utilitaire `display` nu.

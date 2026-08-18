@@ -19,6 +19,11 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * pour se distinguer de lui.
  */
 
+// `inline-flex` est en DUR ici : un `hidden` nu passé en `className` ne masque
+// donc PAS un `<Button>` — Tailwind écrit `.inline-flex` après `.hidden`, et à
+// égalité de spécificité c'est le dernier écrit qui gagne, quel que soit
+// l'ordre dans l'attribut. Masquer un Button : `<span>` enveloppant, ou une
+// variante `@media` seule (`lg:hidden`). Verrouillé par `button-display.test.tsx`.
 const BASE =
   "inline-flex items-center justify-center font-sans font-bold uppercase transition-colors motion-reduce:transition-none border-2 active:brightness-90 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:brightness-100";
 

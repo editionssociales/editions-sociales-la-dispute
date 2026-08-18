@@ -938,21 +938,30 @@ export default async function SouscriptionPage() {
                   sous `lg` l'ancre redéploie la feuille sur les contreparties,
                   à partir de `lg` elle fait défiler le rail jusqu'à la carte
                   montant libre (viser le rail lui-même ne bougeait rien — il
-                  est déjà collé en haut de page). */}
-              <Button
-                href={SHEET_CTA}
-                aria-label="Contribuer — voir les contreparties"
-                className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10 lg:hidden"
-              >
-                Contribuer&nbsp;↓
-              </Button>
-              <Button
-                href={RAIL_CTA}
-                aria-label="Contribuer — voir les contreparties"
-                className="mt-8 hidden px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10 lg:inline-flex"
-              >
-                Contribuer&nbsp;↓
-              </Button>
+                  est déjà collé en haut de page). L'exclusion est portée par
+                  des `<span>` enveloppants et JAMAIS par un `hidden` passé au
+                  `Button` : celui-ci a `inline-flex` en dur dans sa recette, et
+                  `.inline-flex` est écrit APRÈS `.hidden` dans la feuille
+                  générée — le bouton resterait visible. Même forme qu'au CTA du
+                  compteur plus haut. */}
+              <span className="lg:hidden">
+                <Button
+                  href={SHEET_CTA}
+                  aria-label="Contribuer — voir les contreparties"
+                  className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
+                >
+                  Contribuer&nbsp;↓
+                </Button>
+              </span>
+              <span className="hidden lg:block">
+                <Button
+                  href={RAIL_CTA}
+                  aria-label="Contribuer — voir les contreparties"
+                  className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
+                >
+                  Contribuer&nbsp;↓
+                </Button>
+              </span>
             </Reveal>
           </Container>
         </section>
