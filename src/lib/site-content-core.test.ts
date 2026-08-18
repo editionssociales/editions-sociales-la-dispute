@@ -128,9 +128,6 @@ describe("mergeReglagesSite — pages-legales (pied/SEO) vide ⇒ layout et foot
     expect(merged.footer.adresse).toBe(
       "La maison de la pensée critique, des sciences sociales et du mouvement ouvrier. Paris, France.",
     );
-    expect(merged.footer.texteDiffusion).toBe(
-      "Vente directe et distribution indépendante — sans mécène ni actionnaire.",
-    );
     expect(merged.footer.reseauxSociaux).toEqual([]);
     expect(merged.seo.titre).toBe("Les Éditions sociales × La Dispute");
     expect(merged.seo.description).toBe(
@@ -141,7 +138,7 @@ describe("mergeReglagesSite — pages-legales (pied/SEO) vide ⇒ layout et foot
   it("document sauvegardé sans saisie (champs vides/espaces) → mêmes défauts", () => {
     const merged = mergeReglagesSite({
       id: 1,
-      footer: { adresse: "  ", texteDiffusion: "" },
+      footer: { adresse: "  " },
       reseauxSociaux: [],
       seo: { titreParDefaut: null, descriptionParDefaut: "   " },
     });
@@ -151,13 +148,10 @@ describe("mergeReglagesSite — pages-legales (pied/SEO) vide ⇒ layout et foot
   it("chaque champ saisi surcharge son défaut, indépendamment des autres", () => {
     const merged = mergeReglagesSite({
       id: 1,
-      footer: { adresse: "12 rue Exemple, 75000 Paris", texteDiffusion: null },
+      footer: { adresse: "12 rue Exemple, 75000 Paris" },
       seo: { titreParDefaut: "Nouveau titre", descriptionParDefaut: null },
     });
     expect(merged.footer.adresse).toBe("12 rue Exemple, 75000 Paris");
-    expect(merged.footer.texteDiffusion).toBe(
-      "Vente directe et distribution indépendante — sans mécène ni actionnaire.",
-    );
     expect(merged.seo.titre).toBe("Nouveau titre");
     expect(merged.seo.description).toContain("essais critiques");
   });

@@ -76,7 +76,6 @@ export interface ReseauSocial {
 export interface ReglagesSiteContent {
   footer: {
     adresse: string;
-    texteDiffusion: string;
     reseauxSociaux: ReseauSocial[];
   };
   seo: {
@@ -95,8 +94,6 @@ const REGLAGES_SITE_DEFAUT: ReglagesSiteContent = {
   footer: {
     adresse:
       "La maison de la pensée critique, des sciences sociales et du mouvement ouvrier. Paris, France.",
-    texteDiffusion:
-      "Vente directe et distribution indépendante — sans mécène ni actionnaire.",
     reseauxSociaux: [],
   },
   seo: {
@@ -122,10 +119,6 @@ export function mergeReglagesSite(
   return {
     footer: {
       adresse: texteOuDefaut(global?.footer?.adresse, REGLAGES_SITE_DEFAUT.footer.adresse),
-      texteDiffusion: texteOuDefaut(
-        global?.footer?.texteDiffusion,
-        REGLAGES_SITE_DEFAUT.footer.texteDiffusion,
-      ),
       // Entrée sans libellé ou sans URL (ne devrait pas arriver, champs
       // requis côté admin) : ignorée plutôt que de rendre un lien cassé.
       reseauxSociaux: (global?.reseauxSociaux ?? []).flatMap((lien) => {

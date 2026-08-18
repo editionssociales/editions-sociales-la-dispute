@@ -120,24 +120,32 @@ function MentionsCell({ className = "", year }: { className?: string; year: numb
   );
 }
 
+/**
+ * Cellule newsletter — SANS phrase de présentation (« Parutions, rencontres et
+ * souscriptions… », supprimée sur retour Clara 2026-08-07) : le titre de la
+ * cellule et la mention Brevo sous le champ (`NewsletterForm`) disent déjà tout
+ * ce qu'il y a à dire.
+ */
 function NewsletterCell({ className = "" }: { className?: string }) {
   return (
     <div className={`${CELL_CLASS} ${className}`}>
       <p className={HEADING_CLASS}>S&apos;abonner à la newsletter</p>
-      <p className={BODY_CLASS}>
-        Parutions, rencontres et souscriptions : l&apos;essentiel, une fois
-        par mois.
-      </p>
       <NewsletterForm />
     </div>
   );
 }
 
-function DiffusionCell({ className = "", texte }: { className?: string; texte: string }) {
+/**
+ * Cellule diffusion — titre + sortie catalogue seuls. La phrase « Vente directe
+ * et distribution indépendante… » est supprimée (retour Clara 2026-08-07) ;
+ * elle venait du global `pages-legales`, dont le champ `texteDiffusion` est
+ * retiré avec elle (`mergeReglagesSite` retombait sur le défaut dur pour tout
+ * champ vidé, la suppression n'était donc PAS faisable depuis /admin).
+ */
+function DiffusionCell({ className = "" }: { className?: string }) {
   return (
     <div className={`${CELL_CLASS} ${className}`}>
       <p className={HEADING_CLASS}>Diffusion-Distribution</p>
-      <p className={BODY_CLASS}>{texte}</p>
       <Link href="/catalogue" className={`${LINK_CLASS} text-sm`}>
         Parcourir le catalogue
       </Link>
@@ -192,7 +200,7 @@ export function SiteFooter({ footer }: { footer: ReglagesSiteContent["footer"] }
         <AdresseCell className="lg:col-start-1 lg:row-start-1" adresse={footer.adresse} />
         <MentionsCell className="lg:col-start-1 lg:row-start-2" year={year} />
         <NewsletterCell className="lg:col-start-3 lg:row-start-1" />
-        <DiffusionCell className="lg:col-start-3 lg:row-start-2" texte={footer.texteDiffusion} />
+        <DiffusionCell className="lg:col-start-3 lg:row-start-2" />
         {reseaux.length > 0 ? (
           <ReseauxCell
             className="lg:col-start-2 lg:row-span-2 lg:row-start-1"

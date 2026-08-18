@@ -92,14 +92,12 @@ export const PagesLegales: GlobalConfig = {
                       'Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.',
                   },
                 },
-                {
-                  name: 'texteDiffusion',
-                  type: 'textarea',
-                  label: 'Texte de la cellule « Diffusion-Distribution »',
-                  admin: {
-                    description: 'Vide = texte actuel.',
-                  },
-                },
+                // Plus de champ « Texte de la cellule Diffusion-Distribution » :
+                // la phrase est supprimée du pied de page (retour Clara
+                // 2026-08-07) et le champ avec elle — le vider dans /admin
+                // n'aurait rien enlevé (`mergeReglagesSite` retombe sur le
+                // défaut dur à champ vide). Colonne larguée par la migration
+                // `20260817_..._footer_sans_texte_diffusion`.
               ],
             },
           ],
