@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { FOCUS_RING_DARK } from "@/lib/ui";
+import { FOCUS_RING_INVERTING } from "@/lib/ui";
 
 /**
  * Feuille de bas d'écran (bottom sheet) TÉLÉPHONE UNIQUEMENT — sort une
@@ -302,7 +302,7 @@ export function BottomSheet({
         onPointerCancel={endGesture}
         // touch-none : le navigateur ne doit pas voler le geste vertical pour
         // défiler la page pendant qu'on tire la feuille.
-        className={`flex h-14 w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange ${FOCUS_RING_DARK} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
+        className={`flex h-14 w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange ${FOCUS_RING_INVERTING} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
       >
         {/* Poignée (grip) — barre pleine aux angles droits (R8), à la couleur
             du texte pour survivre à l'inversion au survol. */}

@@ -33,6 +33,29 @@ export const FOCUS_RING_DARK =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-pop-yellow focus-visible:outline-offset-[-2px]";
 
 /**
+ * Troisième anneau — et le seul justifié, R5 : les surfaces qui S'INVERSENT
+ * orange ↔ ink au survol (variante `alarm` de `button.tsx`, poignée de
+ * `bottom-sheet.tsx` ; les deux entrées vers le paiement de /souscription).
+ * Une couleur d'outline est FIXE, mais le fond de ces deux surfaces change
+ * sous le pointeur : aucun anneau à une seule couleur ne tient les deux états.
+ *
+ * - au repos, fond `pop-orange` : outline `ink` — 5,09:1 ;
+ * - au survol, fond `ink` : outline `paper` — 17,19:1.
+ *
+ * Le `pop-yellow` de `FOCUS_RING_DARK` a été essayé ici et retiré : 2,99:1 sur
+ * l'orange, juste SOUS le seuil de 3:1 de WCAG 1.4.11 (le commentaire de
+ * `button.tsx` annonçait « ≈3:1 » ; c'était en dessous). `FOCUS_RING_LIGHT`
+ * seul ne marche pas non plus : son outline ink devient invisible (1:1) sur
+ * l'ink du survol. La variante empilée `hover:focus-visible:` porte une
+ * pseudo-classe de plus que la règle de base, donc une spécificité plus haute :
+ * elle gagne quel que soit l'ordre d'écriture dans la feuille — c'est le piège
+ * d'ordre documenté pour `Container.width` et `Button`, ici désamorcé par la
+ * spécificité et non par l'ordre.
+ */
+export const FOCUS_RING_INVERTING =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink focus-visible:outline-offset-[-2px] hover:focus-visible:outline-paper";
+
+/**
  * Cellule inversante : fond clair au repos, inversion en ink à l'état actif —
  * et au survol quand elle est inactive. Recette partagée par les étiquettes de
  * filtres, la mosaïque de thèmes et les numéros de pagination.

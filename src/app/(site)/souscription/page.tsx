@@ -692,9 +692,11 @@ export default async function SouscriptionPage() {
             compris) sur bandeau bleu, le 90 % en marquage inline (le bleu ne
             tient pas en couleur de texte sur paper — cf. `pop-palette.ts` —,
             l'exergue devient donc un aplat, comme « la fin de la propriété
-            privée… »), « un devoir politique » en soulignement bleu (padding
+            privée… »), « un devoir politique » en soulignement ORANGE (padding
             vertical nul + leading du paragraphe hôte : le marqueur ne
-            percute jamais la ligne précédente). */}
+            percute jamais la ligne précédente). Orange et non bleu : sur
+            paper, seule cette teinte de la palette passe 3:1 en TRAIT
+            (3,38:1 ; le bleu tombe à 1,74:1) — cf. `pop-palette.ts`. */}
         <section className="mt-12 sm:mt-16">
           <Reveal>
             <h2 className="font-sans font-black italic text-ink">
@@ -745,8 +747,9 @@ export default async function SouscriptionPage() {
                 matérielle, soutenir les éditeurs indépendants est{" "}
                 {/* Soulignement (retour Youri 25/07, remplace le marqueur à
                     fond bleu) — même recette que « préserver notre
-                    indépendance » plus bas. */}
-                <span className="underline decoration-pop-teal decoration-4 underline-offset-4">
+                    indépendance » plus bas, en ORANGE : seule teinte de la
+                    palette qui tienne en trait sur paper (`pop-palette.ts`). */}
+                <span className="underline decoration-pop-orange decoration-4 underline-offset-4">
                   un devoir politique
                 </span>
                 .
@@ -860,7 +863,7 @@ export default async function SouscriptionPage() {
                 Nous voulons que notre histoire se poursuive ; c’est pourquoi
                 nous faisons appel à vous. En faisant un don, vous nous aiderez
                 à surmonter cette crise, à{" "}
-                <strong className="font-bold underline decoration-pop-pink decoration-4 underline-offset-4">
+                <strong className="font-bold underline decoration-pop-orange decoration-4 underline-offset-4">
                   préserver notre indépendance
                 </strong>{" "}
                 et à poursuivre un travail éditorial engagé, exigeant et
@@ -922,14 +925,15 @@ export default async function SouscriptionPage() {
                 La phrase coule d'un seul trait (aucun span `block` : les
                 retours à la ligne forcés de l'ancienne opposition d'échelle
                 sont retirés) et « la fin du capitalisme » n'est plus qu'un
-                SOULIGNEMENT rose — plus de surlignage, plus de display
-                géant. UN SEUL <h2>. Le montant libre vivant en clôture du
+                SOULIGNEMENT orange (la seule teinte de la palette lisible en
+                trait sur paper, cf. `pop-palette.ts`) — plus de surlignage,
+                plus de display géant. UN SEUL <h2>. Le montant libre vivant en clôture du
                 rail, le CTA y renvoie simplement. */}
             <Reveal>
               <h2 className="mt-12 max-w-[38ch] font-sans text-[clamp(24px,5vw,40px)] font-black italic leading-[1.15] text-ink sm:mt-16">
                 Vous nous permettrez de continuer à publier les livres qui
                 imaginent{" "}
-                <span className="underline decoration-pop-pink decoration-4 underline-offset-4">
+                <span className="underline decoration-pop-orange decoration-4 underline-offset-4">
                   la fin du capitalisme
                 </span>{" "}
                 plutôt que la fin du monde.

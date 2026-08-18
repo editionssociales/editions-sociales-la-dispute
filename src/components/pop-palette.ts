@@ -11,10 +11,16 @@
  * qu'elle a relevées.
  *
  * **Contraste** : les quatre teintes sont CLAIRES — le texte posé dessus est
- * toujours `ink`, jamais `paper` (paper sur orange ≈ 2,9:1, sous AA). Dans
- * l'autre sens, seul `orange` tient un texte pop SUR paper (≈3,4:1, AA large
- * seulement) : rose, bleu et jaune ne s'y emploient qu'en APLAT ou en filet,
- * jamais en couleur de texte ni en filet fin sur fond clair.
+ * toujours `ink` (5,09:1 sur l'orange), jamais `paper` (3,38:1, sous les
+ * 4,5:1 de AA — et c'est le MÊME couple que « orange sur paper » plus bas, le
+ * contraste étant symétrique : un seul chiffre pour les deux sens). Dans
+ * l'autre sens, SUR paper, seul `orange` passe le seuil de 3:1 (3,38:1) : lui
+ * seul y sert de couleur de TEXTE (AA large seulement, corps ≥ 24px ou ≥ 19px
+ * gras) et de TRAIT — soulignement décoratif, filet, contour (3:1 = seuil
+ * WCAG 1.4.11 pour un objet graphique). Rose (1,73:1), bleu (1,74:1) et jaune
+ * (1,13:1) n'y servent QU'EN APLAT, texte `ink` par-dessus : en trait sur
+ * paper ils sont à la limite de l'invisible. Un soulignement d'emphase se
+ * peint donc en `decoration-pop-orange`, jamais en rose ni en bleu.
  *
  * Fichier plat, sans `"use client"` : importable des deux arbres (le header
  * client comme les pages serveur), précédent `nav-accent.ts`/`rail-inset.ts`.

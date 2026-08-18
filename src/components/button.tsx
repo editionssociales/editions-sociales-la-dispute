@@ -1,6 +1,6 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_INVERTING, FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /**
  * Bouton CTA — recette couleur/bordure/hover/focus partagée par les
@@ -9,8 +9,9 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * cette recette. L'anneau de focus dépend du fond AU REPOS de chaque variante
  * (R5) : SOLID démarre sur ink → anneau sombre (pop-yellow) ; OUTLINE démarre
  * sur paper → anneau clair (ink) ; HOUSE démarre sur navy/brick (accent
- * sombre) → anneau sombre, comme SOLID ; ALARM démarre sur orange → anneau
- * sombre aussi. États `disabled`/`active` (R7) : `disabled` — opacité
+ * sombre) → anneau sombre, comme SOLID ; ALARM, seule variante dont le fond
+ * S'INVERSE orange → ink, prend l'anneau inversant `FOCUS_RING_INVERTING`
+ * (voir plus bas). États `disabled`/`active` (R7) : `disabled` — opacité
  * réduite, curseur bloqué, hover neutralisé (n'a de prise que sur le
  * `<button>` rendu sans `href` — un lien ne peut pas être `disabled` en
  * HTML, cf. le type discriminé `ButtonProps` plus bas, qui rend le couple
@@ -59,13 +60,17 @@ const HOUSE: Record<"navy" | "brick", string> = {
  * du compteur de /souscription ; brick à l'origine, passé à l'orange le
  * 2026-08-07 avec toute la page, retour Clara) : bordure INK et non paper —
  * posée sur paper, une bordure paper disparaîtrait ; le contour reste celui des
- * objets du fond clair. L'orange est CLAIR : le texte y est `ink`, jamais
- * `paper` (≈2,9:1), et l'inversion au survol se fait donc vers ink et non vers
- * paper. Anneau sombre (pop-yellow) : il tient sur l'orange au repos (≈3:1)
- * comme sur l'ink du survol. Elle rime avec le bandeau de la feuille de bas
- * d'écran : les deux entrées vers le paiement portent le même orange.
+ * objets du fond clair. L'orange est CLAIR : le texte y est `ink` (5,09:1),
+ * jamais `paper` (3,38:1, sous les 4,5:1 de AA), et l'inversion au survol se
+ * fait donc vers ink et non vers paper. Anneau : ni DARK ni LIGHT mais `FOCUS_RING_INVERTING` (`lib/ui.ts`) —
+ * le pop-yellow de DARK ne fait que 2,99:1 sur l'orange, SOUS le seuil de 3:1
+ * de WCAG 1.4.11 (ce commentaire annonçait « ≈3:1 » ; c'était en dessous,
+ * corrigé le 2026-08-18), et l'ink de LIGHT disparaîtrait sur l'ink du survol.
+ * L'anneau inversant tient les DEUX états : ink 5,09:1 au repos, paper 17,19:1
+ * au survol. Elle rime avec le bandeau de la feuille de bas d'écran : les deux
+ * entrées vers le paiement portent le même orange — et le même anneau.
  */
-const ALARM = `border-ink bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange disabled:hover:bg-pop-orange disabled:hover:text-ink ${FOCUS_RING_DARK}`;
+const ALARM = `border-ink bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange disabled:hover:bg-pop-orange disabled:hover:text-ink ${FOCUS_RING_INVERTING}`;
 
 type ButtonCommonProps = {
   variant?: "solid" | "outline" | "house" | "invert" | "alarm";
