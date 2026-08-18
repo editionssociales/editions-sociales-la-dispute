@@ -16,7 +16,7 @@ const HANDOFF_MS = 700;
 /**
  * Liseré de collecte fixé en haut du viewport, sur /souscription seulement —
  * variante V2 « lecture = lutte » du prototype validé client
- * (`prototypes/liseret-viewport.html`), portée à 10px : le remplissage ocher
+ * (`prototypes/liseret-viewport.html`), portée à 10px : le remplissage orange
  * progresse AVEC le scroll, rescalé sur le niveau réel de la collecte — arrivé
  * au bas de la page, le liseré affiche exactement ce qui est réuni. Lire, ici,
  * c'est mener la collecte à son état vrai.
@@ -42,7 +42,7 @@ const HANDOFF_MS = 700;
  * masqué ; le masque ne s'applique qu'au groupe de barre posé dessus (reste à
  * collecter + part collectée + paliers). Les tirets de fin découpent donc la
  * barre sur du paper imposé, jamais sur la section traversée (paper, ink,
- * brick, navy, ocher, bottle). Paper plutôt qu'une autre teinte de jauge :
+ * et les quatre couleurs du site). Paper plutôt qu'une autre teinte de jauge :
  * c'est le fond du site, donc ce que le prototype validé montrait déjà sous la
  * queue sur la majorité de la page, et c'est le contraste maximal avec l'aplat
  * ink du reste-à-collecter — la frange de la demi-droite reste lisible sur
@@ -152,7 +152,7 @@ export function CollecteTicker({
         {/* Part collectée : `origin-left` + scaleX, jamais de `width`. */}
         <div
           ref={fillRef}
-          className="rail-handoff absolute inset-0 origin-left bg-ocher"
+          className="rail-handoff absolute inset-0 origin-left bg-pop-orange"
           style={{ transform: `scaleX(${real})` }}
         />
       </div>
@@ -165,7 +165,7 @@ export function CollecteTicker({
 
           Triangle PAPER pointe en bas, 10×8 en bordures CSS (aplat R8, zéro
           radius), CONTENU dans les 10px du bandeau : au front il chevauche
-          l'ocher à sa gauche et l'ink à sa droite — paper est la seule teinte
+          l'orange à sa gauche et l'ink à sa droite — paper est la seule teinte
           lisible sur les deux d'un coup.
 
           Comme le remplissage : niveau RÉEL au rendu serveur (fail-open), même

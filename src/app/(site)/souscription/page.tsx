@@ -9,6 +9,7 @@ import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { RAIL_GRID_CLASS } from "@/components/rail-inset";
+import { POP_BG, POP_ORDER } from "@/components/pop-palette";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
@@ -35,14 +36,22 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * d'ouverture (l'aplat ink a glissé sur le bloc vidéo qui suit, retour Youri
  * 26/07 — l'affiche s'ouvre clair et bascule au noir sur la vidéo), ask
  * éclaté en trois échelles (le h1 reste UN SEUL <h1>, spans stylés), récit en quatre sections-bandeaux full-bleed
- * (brick/navy/ocher/bottle — la seule bande hazard de la page coiffe
+ * (orange/bleu/jaune/rose — la seule bande hazard de la page coiffe
  * « danger maximal »), objectifs en escalier typographique sous ombre dure
  * (R8) clos par la chute du docx et le CTA final (sur paper, sans bandeau —
  * retour Youri 25/07). Interdits d'arbitrage : aucun texte ajouté (pas de
  * numéros de section, pas de légende), pas de lettres au trait
- * (-webkit-text-stroke), pas de compression scaleX, palette pop réservée au
- * seul liseré qui clôt le bloc de collecte. Les displays géants sont en clamp() (variantes `lg:` : la
+ * (-webkit-text-stroke), pas de compression scaleX. Les displays géants sont en clamp() (variantes `lg:` : la
  * colonne perd 380px au profit du rail, la pente vw doit se resserrer).
+ *
+ * Palette (retour Clara 2026-08-07, « attention à bien utiliser les couleurs
+ * du site : le bleu, le rose, le jaune et l'orange ») : TOUTE la page est
+ * passée des accents de couverture (navy/bottle/ocher/brick) aux quatre
+ * couleurs du site — `pop-palette.ts`. Elles sont claires : rien n'y porte
+ * plus `text-paper`, et seul l'orange sert de couleur de texte sur paper (AA
+ * large). Restent hors palette, à dessein, les pages d'état du parcours
+ * (`/souscription/merci`, `/souscription/erreur`), où bottle/ocher/brick sont
+ * la SÉMANTIQUE succès/attente/échec partagée avec le panier (R3).
  *
  * Sections de l'ancienne maquette (campagne Ulule 2024) supprimées à
  * dessein, aucune ne correspondant à un extrait des documents livrés :
@@ -55,7 +64,7 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  *
  * Ce qui reste, dans l'ordre du DOM (retour client 2026-07-24) : colonne
  * principale — jauge de collecte en direct (TOUJOURS visible, paliers
- * réinscrits sous la barre et gros CTA brick à droite du compteur — retour
+ * réinscrits sous la barre et gros CTA orange à droite du compteur — retour
  * Youri, soir du 26/07 ; rail et feuille mobile restent les entrées
  * principales vers le paiement), corps de texte ouvert par le slot
  * vidéo (placeholder tant qu'aucune vidéo n'est livrée) puis ask — h1, lien
@@ -84,10 +93,12 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  */
 
 /**
- * Liseré multicolore qui clôt le bloc de collecte (R2/R3) : `POP_BG` ne sert
- * que cette décoration ponctuelle — récupérée de l'ex-CTA final (25/07), elle
- * marque désormais le pied de la jauge. Les paliers du rail cyclent, eux, les
- * 4 accents de marque, jamais la palette pop (réservée nav/statut).
+ * Liseré multicolore qui clôt le bloc de collecte : les quatre couleurs du
+ * site dans leur ordre canonique (`POP_ORDER`, `pop-palette.ts`) — depuis le
+ * retour Clara du 2026-08-07, cette palette n'est plus l'exception de la page
+ * mais SA palette (bandeaux du récit, escalier des objectifs, cartes du rail,
+ * jauge et liseré de collecte) : les accents de couverture navy/bottle/ocher/
+ * brick ont quitté /souscription.
  *
  * Ses coupes ne sont plus quatre parts égales mais les ABSCISSES DE LA JAUGE,
  * sur l'empan total de la demi-droite (120 k€ = objectif × 1,2) : 0-50 k
@@ -103,7 +114,7 @@ import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
  * qu'à 105 k€ (87,5 % de l'empan), pas au palier — un dernier segment tireté
  * copierait une coupe qui n'existe pas.
  */
-const POP_BG = ["bg-pop-pink", "bg-pop-teal", "bg-pop-orange", "bg-pop-yellow"];
+const POP_LISERE = POP_ORDER.map((c) => POP_BG[c]);
 const POP_COLS = "grid-cols-[41.666fr_25fr_16.667fr_16.667fr]";
 
 /**
@@ -123,7 +134,7 @@ const CAMPAIGN_VIDEO_URL: string | null = null;
  * une révision client d'un palier ne se reporte qu'à un seul endroit) ;
  * seuls les descriptifs (docx client, VERBATIM) et la présentation vivent
  * ici. La progression sauver → résister → construire est portée par le
- * liseré d'accent (brick → ocher → bottle, même échelle que les sections du
+ * liseré d'accent (orange → jaune → rose, même échelle que les sections du
  * récit) ET par le montant qui grossit d'une marche à l'autre (`display`,
  * classes clamp littérales — contrat JIT) ; la barre du sommet
  * (« On construit », l'objectif plein) est la seule inversée en ink.
@@ -148,19 +159,19 @@ const OBJECTIF_EXTRAS: Record<
 > = {
   50_000: {
     desc: "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
-    accent: "bg-brick",
+    accent: POP_BG.orange,
     display: "text-[clamp(32px,8vw,52px)]",
   },
   80_000: {
     desc: "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
-    accent: "bg-ocher",
+    accent: POP_BG.yellow,
     display: "text-[clamp(38px,9.5vw,68px)]",
   },
   100_000: {
     // TODO(contenu) : phrase possiblement tronquée dans le docx (le point
     // final manque) — conservée telle quelle.
     desc: "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
-    accent: "bg-bottle",
+    accent: POP_BG.pink,
     display: "text-[clamp(44px,11vw,84px)]",
     sommet: true,
   },
@@ -223,12 +234,13 @@ const JSON_LD = JSON.stringify({
 });
 
 /**
- * Bande hazard ink/brick — la SEULE de la page (arbitrage du panel), au
+ * Bande hazard ink/orange — la SEULE de la page (arbitrage du panel), au
  * sommet du bandeau « danger maximal ». Hachures en repeating-linear-gradient
- * arbitrary (classe littérale, variables de thème — R1).
+ * arbitrary (classe littérale, variables de thème — R1). Noir/orange est le
+ * couple de danger canonique : l'ex-brick s'y lisait mal contre l'ink.
  */
 const HAZARD_BG =
-  "bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_12px,var(--color-brick)_12px_24px)]";
+  "bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_12px,var(--color-pop-orange)_12px_24px)]";
 
 /**
  * Équivalent Container utilisable DANS un h1/h2 : les bandeaux full-bleed
@@ -270,13 +282,13 @@ export default async function SouscriptionPage() {
   // (l'objectif, lui, reste vrai). L'ISR (1 h) peut prolonger cet état
   // quelques minutes après le retour de Stripe.
   const outage = enabled && campaign2026 === null;
-  // CTA « Contribuer » du bloc collecte : une seule définition, rendue à DEUX
-  // endroits (repli `lg`, cf. plus bas) — jamais les deux en même temps
+  // CTA « Contribuer » du bloc collecte : une seule définition PARAMÉTRÉE par
+  // sa cible, rendue à plusieurs endroits — jamais deux en même temps
   // (`hidden`/`lg:hidden` s'excluent), donc aucun doublon dans l'arbre a11y.
-  const contribuerCta = (
+  const contribuerCta = (href: string) => (
     <div className="text-center">
       <Button
-        href="#paliers"
+        href={href}
         variant="alarm"
         aria-label="Contribuer — voir les contreparties"
         className="px-10 py-5 text-lg tracking-[.04em] sm:px-14 sm:py-7 sm:text-3xl"
@@ -293,6 +305,24 @@ export default async function SouscriptionPage() {
       )}
     </div>
   );
+  /**
+   * Cible des CTA d'ancre, par régime d'affichage (retour Clara 2026-08-07 :
+   * « le bouton ne marche pas »). Le diagnostic n'est pas un lien cassé mais
+   * une ancre SANS EFFET : à partir de `lg`, `#paliers` — le rail — est déjà
+   * collé en haut de page, à droite du compteur ; le saut n'a nulle part où
+   * aller et le clic ne produit RIEN à l'écran. Le rail, lui, défile dans sa
+   * propre boîte : viser la carte « montant libre » qui le CLÔT (`RAIL_CTA`)
+   * fait défiler cette boîte sur toute sa hauteur — mouvement visible, et le
+   * clic atterrit sur le seul endroit de la page où l'on saisit un montant.
+   * Sous `lg` le rail est une feuille de bas d'écran repliée : `#paliers` la
+   * redéploie sur les contreparties (`BottomSheet.anchors`), comportement
+   * inchangé — c'est là qu'il faut entrer par le haut de la liste.
+   *
+   * D'où le rendu des CTA en DEUX exemplaires exclusifs (`lg:hidden` /
+   * `hidden lg:…`) là où un seul emplacement sert les deux régimes.
+   */
+  const SHEET_CTA = "#paliers";
+  const RAIL_CTA = "#montant-libre";
 
   return (
     <div className={`lg:grid ${RAIL_GRID_CLASS} lg:items-start`}>
@@ -315,7 +345,7 @@ export default async function SouscriptionPage() {
       <div className="min-w-0">
         {/* 1 ▪ La collecte en direct OUVRE la page — compteur de lutte
             monumental sur bloc paper pleine largeur (inversion paper↔ink avec
-            le bloc vidéo, retour Youri 26/07), gros CTA brick sur son flanc
+            le bloc vidéo, retour Youri 26/07), gros CTA orange sur son flanc
             droit et jauge 2026 vivante en demi-droite, paliers réinscrits
             sous la barre (retour Youri, soir du 26/07 — la barre nue et la
             suppression du CTA du matin sont revenues en arrière ; le module
@@ -332,9 +362,9 @@ export default async function SouscriptionPage() {
                   et la barre se posent alors sur la même frame. Le fondu du
                   `Reveal` garde, lui, son propre seuil. */}
               <ImpactFrame>
-                {/* Compteur à gauche, gros CTA brick à droite : le CTA d'ancre
+                {/* Compteur à gauche, gros CTA orange à droite : le CTA d'ancre
                     revient (retour Youri — « comble le vide à droite du
-                    montant ») en variante `alarm` (brick bordé d'ink, seul
+                    montant ») en variante `alarm` (orange bordé d'ink, seul
                     rouge qui tienne sur paper) et en corps d'affiche. Il
                     DOUBLE l'entrée vers le paiement que portent déjà le rail
                     et la feuille mobile ; sous `lg`, la feuille intercepte
@@ -410,9 +440,10 @@ export default async function SouscriptionPage() {
                   {/* CTA en position « à côté du montant » : UNIQUEMENT dès
                       `xl` (marge saine mesurée, cf. commentaire plus haut),
                       masqué en dessous — le second rendu, après la jauge,
-                      prend le relais (cf. plus bas). */}
+                      prend le relais (cf. plus bas). Toujours en régime rail
+                      (xl > lg), donc toujours `RAIL_CTA`. */}
                   <div className="hidden xl:flex xl:grow xl:items-center xl:justify-center">
-                    {contribuerCta}
+                    {contribuerCta(RAIL_CTA)}
                   </div>
                 </div>
                 {/* La barre SOULIGNE le bloc du compteur au lieu de flotter
@@ -434,17 +465,22 @@ export default async function SouscriptionPage() {
                 )}
                 {/* CTA en position de repli : sous `xl` SEULEMENT (exclusif
                     avec le rendu ci-dessus), toujours APRÈS la jauge — jamais
-                    entre elle et le montant. */}
-                <div className="mt-6 flex justify-center xl:hidden">{contribuerCta}</div>
+                    entre elle et le montant. Cette position couvre les DEUX
+                    régimes (feuille sous `lg`, rail de `lg` à `xl`) : d'où
+                    deux rendus exclusifs, chacun avec sa cible. */}
+                <div className="mt-6 flex justify-center xl:hidden">
+                  <span className="lg:hidden">{contribuerCta(SHEET_CTA)}</span>
+                  <span className="hidden lg:block">{contribuerCta(RAIL_CTA)}</span>
+                </div>
               </ImpactFrame>
             </Reveal>
           </Container>
-          {/* Liseré pop en pied de bloc : la seule décoration pop de la page,
-              posée sur la couture paper → ink. Décoratif pur (aria-hidden).
-              Coupé aux abscisses des paliers (cf. POP_COLS) : le pied du bloc
-              rime avec la barre qui le surmonte. */}
+          {/* Liseré des quatre couleurs du site en pied de bloc, posé sur la
+              couture paper → ink. Décoratif pur (aria-hidden). Coupé aux
+              abscisses des paliers (cf. POP_COLS) : le pied du bloc rime avec
+              la barre qui le surmonte. */}
           <div className={`grid ${POP_COLS}`} aria-hidden="true">
-            {POP_BG.map((c) => (
+            {POP_LISERE.map((c) => (
               <div key={c} className={`h-1.5 ${c}`} />
             ))}
           </div>
@@ -456,7 +492,7 @@ export default async function SouscriptionPage() {
             dure (R8, recette littérale), INVERSÉ : depuis l'échange des fonds
             avec le bloc de collecte (retour Youri 26/07) la vidéo est posée
             sur ink — bordure et ombre passent donc en paper, et la hachure du
-            placeholder en ink/navy. Le bloc porte sa propre gouttière basse
+            placeholder en ink/bleu. Le bloc porte sa propre gouttière basse
             (un aplat de couleur ne peut pas s'appuyer sur le padding de la
             section suivante, restée sur paper). */}
         <section className="bg-ink text-paper">
@@ -475,7 +511,7 @@ export default async function SouscriptionPage() {
                   />
                 </div>
               ) : (
-                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-navy)_14px_28px)] shadow-[8px_8px_0_0_var(--color-paper)] print:hidden">
+                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-pop-teal)_14px_28px)] shadow-[8px_8px_0_0_var(--color-paper)] print:hidden">
                   {/* SVG plutôt que le caractère ▶ : Effra ne couvre pas les
                       glyphes géométriques, le rendu retombait sur la fonte
                       système (forme et centrage variables selon l'OS). */}
@@ -567,8 +603,9 @@ export default async function SouscriptionPage() {
               >
                 aidez-nous à poursuivre l’histoire.
               </p>
+              {/* Bloc `lg:hidden` : ce CTA n'existe qu'en régime feuille. */}
               <Button
-                href="#paliers"
+                href={SHEET_CTA}
                 aria-label="Contribuer — voir les contreparties"
                 className="shrink-0 px-4 py-3 text-[13px] font-extrabold tracking-[.03em] sm:px-6 sm:py-3.5 sm:text-sm"
               >
@@ -581,29 +618,34 @@ export default async function SouscriptionPage() {
         {/* 4 ▪ Récit — quatre sections-bandeaux (texte du docx VERBATIM,
             seule la composition varie) : chaque h2 reste UN SEUL <h2> —
             kicker en corps modéré ET chute en display géant DANS le même
-            bandeau plein full-bleed à l'accent de la section (25/07, retour
-            Youri : plus de kicker isolé sur paper — texte paper sur le
-            bandeau, AA large tenu : brick ≈5,4:1, navy ≈12:1) — crise = brick
-            (le langage d'alerte du site, cf. panier), bataille politique =
-            navy, héritage centenaire = ocher (texte ink, AA ≈5,5:1), appel =
-            bottle en crescendo. Les descriptifs partagent tous la MÊME
-            recette de corps de texte (retour Youri 25/07, alignée sur le
-            paragraphe de l'appel) : `max-w-[52ch] font-sans text-lg
-            font-medium text-ink sm:text-2xl sm:leading-[1.45]` — plus de
-            corps 15-17px/ink-70. Jamais de palette pop ici (R2). */}
+            bandeau plein full-bleed à l'accent de la section. Les quatre
+            accents sont désormais LES COULEURS DU SITE (retour Clara
+            2026-08-07) : crise = orange (le plus proche du brick d'alerte),
+            bataille politique = bleu, héritage centenaire = jaune, appel =
+            rose en crescendo. Elles sont toutes CLAIRES : le texte des
+            bandeaux est en `ink` (l'ancien `text-paper` des aplats sombres
+            tombe avec eux) et aucune ne sert de couleur de TEXTE sur paper,
+            sauf l'orange (AA large seulement) — cf. `pop-palette.ts`.
+            Les descriptifs partagent tous la MÊME recette de corps de texte
+            (retour Youri 25/07, alignée sur le paragraphe de l'appel), d'un
+            cran plus petite depuis le 2026-08-07 (« les textes sont trop
+            gros ? On doit scroller pas mal » — Clara) : `max-w-[52ch]
+            font-sans text-lg font-medium text-ink sm:text-xl
+            sm:leading-[1.55]`. Le plancher de 18px posé le 25/07 tient — le
+            corps 15-17px reste banni. */}
 
-        {/* Section 1 — la crise : « danger maximal » crié sur bandeau brick
+        {/* Section 1 — la crise : « danger maximal » crié sur bandeau orange
             coiffé de la bande hazard, le montant perdu en exergue inline
             (max 1.8em — jamais un display dans la ligne), la chute (« coup
-            fatal ») en display liseré brick au pied du descriptif, dans la
+            fatal ») en display liseré orange au pied du descriptif, dans la
             colonne de texte. Marge réduite au minimum
             (25/07, retour Youri) : seule cette occurrence — juste après
             l'ask/étagère — perd le rythme mt-16/mt-24 commun aux autres
             transitions de section. */}
         <section className="mt-4 sm:mt-6">
           <Reveal>
-            <h2 className="font-sans font-black italic text-paper">
-              <span className="block bg-brick">
+            <h2 className="font-sans font-black italic text-ink">
+              <span className={`block ${POP_BG.orange}`}>
                 <span aria-hidden="true" className={`block h-3 ${HAZARD_BG}`} />
                 <span className={`${SPAN_CONTAINER} py-7 sm:py-9`}>
                   <span className="block text-xl uppercase leading-tight tracking-[.04em] sm:text-2xl">
@@ -617,7 +659,7 @@ export default async function SouscriptionPage() {
               </span>
             </h2>
             <Container className="pt-8 sm:pt-10">
-              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-2xl sm:leading-[1.45]">
+              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-xl sm:leading-[1.55]">
                 <p>
                   En cette fin d’été 2026, l’édition de critique sociale fait
                   face à une des pires crises de son histoire. Des centaines de
@@ -626,7 +668,7 @@ export default async function SouscriptionPage() {
                 </p>
                 <p>
                   Pour Les éditions sociales et La Dispute, c’est plus de{" "}
-                  <strong className="whitespace-nowrap font-sans text-[1.5em] font-black italic leading-none text-brick sm:text-[1.8em]">
+                  <strong className="whitespace-nowrap font-sans text-[1.5em] font-black italic leading-none text-pop-orange sm:text-[1.8em]">
                     130&nbsp;000&nbsp;€
                   </strong>{" "}
                   de ventes en librairie que nous ne toucherons jamais
@@ -638,8 +680,8 @@ export default async function SouscriptionPage() {
               {/* La chute clôt le descriptif DANS la colonne de texte (retour
                   Youri 25/07) : plus de bandeau ink pleine largeur, qui
                   ouvrait un gap et un second changement de fond dans la même
-                  section. Le liseré brick reste le seul marqueur d'accent. */}
-              <p className="mt-8 max-w-[70ch] border-l-[14px] border-brick pl-5 font-sans text-[clamp(24px,5vw,36px)] font-black italic leading-[1.1] text-ink sm:mt-10 sm:pl-7">
+                  section. Le liseré orange reste le seul marqueur d'accent. */}
+              <p className="mt-8 max-w-[70ch] border-l-[14px] border-pop-orange pl-5 font-sans text-[clamp(24px,5vw,36px)] font-black italic leading-[1.1] text-ink sm:mt-10 sm:pl-7">
                 Pour nos maisons, c’est le genre de coup qui peut être fatal.
               </p>
             </Container>
@@ -647,14 +689,16 @@ export default async function SouscriptionPage() {
         </section>
 
         {/* Section 2 — la bataille matérielle : tout le titre (kicker
-            compris) sur bandeau navy, le 90 % en exergue inline, « la fin de la propriété
-            privée… » et « un devoir politique » en marquages navy (padding
+            compris) sur bandeau bleu, le 90 % en marquage inline (le bleu ne
+            tient pas en couleur de texte sur paper — cf. `pop-palette.ts` —,
+            l'exergue devient donc un aplat, comme « la fin de la propriété
+            privée… »), « un devoir politique » en soulignement bleu (padding
             vertical nul + leading du paragraphe hôte : le marqueur ne
             percute jamais la ligne précédente). */}
-        <section className="mt-16 sm:mt-24">
+        <section className="mt-12 sm:mt-16">
           <Reveal>
-            <h2 className="font-sans font-black italic text-paper">
-              <span className="block bg-navy">
+            <h2 className="font-sans font-black italic text-ink">
+              <span className={`block ${POP_BG.teal}`}>
                 <span className={`${SPAN_CONTAINER} py-7 sm:py-9`}>
                   <span className="block text-xl leading-tight sm:text-2xl">
                     La guerre culturelle est aussi une
@@ -667,12 +711,12 @@ export default async function SouscriptionPage() {
               </span>
             </h2>
             <Container className="pt-8 sm:pt-10">
-              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-2xl sm:leading-[1.45]">
+              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-xl sm:leading-[1.55]">
                 <p>
                   La faillite de Makassar est le résultat d’un marché de
                   l’édition où les grands groupes — Hachette, Editis,
                   Média-Participations, Madrigall — détiennent à eux seuls près de{" "}
-                  <strong className="whitespace-nowrap font-sans text-[1.5em] font-black italic leading-none text-navy sm:text-[1.8em]">
+                  <strong className="whitespace-nowrap box-decoration-clone bg-pop-teal px-1.5 font-sans text-[1.5em] font-black italic leading-none text-ink sm:text-[1.8em]">
                     90&nbsp;%
                   </strong>{" "}
                   de la production éditoriale et de la distribution. Ces
@@ -687,7 +731,7 @@ export default async function SouscriptionPage() {
                 </p>
                 <p>
                   Face à eux, nous devons aller à la racine en exigeant{" "}
-                  <strong className="box-decoration-clone bg-navy px-1 font-semibold text-paper">
+                  <strong className="box-decoration-clone bg-pop-teal px-1 font-semibold text-ink">
                     la fin de la propriété privée des moyens de production
                     culturelle et des infrastructures de distribution
                   </strong>
@@ -695,14 +739,14 @@ export default async function SouscriptionPage() {
                 </p>
               </div>
               {/* Punchline en carton « Spécimen » : boîte bordée sous ombre
-                  dure navy (R8). */}
-              <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-2xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_var(--color-navy)] sm:mt-12 sm:p-8 sm:text-3xl">
+                  dure bleue (R8). */}
+              <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_var(--color-pop-teal)] sm:mt-12 sm:p-8 sm:text-2xl">
                 Et, parce que la bataille des idées est aussi une guerre
                 matérielle, soutenir les éditeurs indépendants est{" "}
                 {/* Soulignement (retour Youri 25/07, remplace le marqueur à
-                    fond navy) — même recette que « préserver notre
+                    fond bleu) — même recette que « préserver notre
                     indépendance » plus bas. */}
-                <span className="underline decoration-navy decoration-4 underline-offset-4">
+                <span className="underline decoration-pop-teal decoration-4 underline-offset-4">
                   un devoir politique
                 </span>
                 .
@@ -712,15 +756,17 @@ export default async function SouscriptionPage() {
         </section>
 
         {/* Section 3 — les maisons, cent ans : le titre entier en display
-            sur bandeau ocher (texte ink — AA ≈5,5:1), le « 100 ans » en
-            tampon penché conservé, l'anaphore « Cent ans de… » en barres
+            sur bandeau jaune, le « 100 ans » en tampon penché conservé —
+            REMPLI en jaune bordé d'ink depuis le passage à la palette du site
+            (un filet jaune sur paper serait invisible, ≈1,1:1 — cf.
+            `pop-palette.ts`) —, l'anaphore « Cent ans de… » en barres
             empilées séparées de hairlines ink. Reveal en deux blocs frères —
             héritage de l'ex-étagère-séparatrice (remontée sous le titre de
             l'ask le 25/07) ; sans coût, chaque bloc se révèle
             indépendamment. */}
-        <section className="mt-16 sm:mt-24">
+        <section className="mt-12 sm:mt-16">
           <Reveal>
-            <h2 className="bg-ocher font-sans font-black italic text-ink">
+            <h2 className={`${POP_BG.yellow} font-sans font-black italic text-ink`}>
               <span
                 className={`${SPAN_CONTAINER} py-6 text-[clamp(28px,6.5vw,64px)] uppercase leading-[0.95] sm:py-8`}
               >
@@ -728,21 +774,21 @@ export default async function SouscriptionPage() {
               </span>
             </h2>
             <Container className="pt-8 sm:pt-10">
-              <p className="max-w-[30ch] font-sans text-xl font-bold leading-snug text-ink sm:text-2xl">
+              <p className="max-w-[30ch] font-sans text-lg font-bold leading-snug text-ink sm:text-xl">
                 En 2027, nos maisons fêteront leurs{" "}
-                <span className="mx-1 my-2 inline-block -rotate-2 whitespace-nowrap border-4 border-ocher px-3 py-1 align-middle font-black italic text-[clamp(40px,10vw,64px)] leading-[0.9] text-ocher-text">
+                <span className="mx-1 my-2 inline-block -rotate-2 whitespace-nowrap border-4 border-ink bg-pop-yellow px-3 py-1 align-middle font-black italic text-[clamp(40px,10vw,64px)] leading-[0.9] text-ink">
                   100 ans
                 </span>{" "}
                 d’existence.
               </p>
               <div className="mt-8 flex flex-col gap-[2px] border-2 border-ink bg-ink sm:mt-10">
-                <p className="bg-ocher px-5 py-5 font-sans text-lg font-bold leading-snug text-ink sm:px-7 sm:py-6 sm:text-[22px]">
+                <p className="bg-pop-yellow px-5 py-5 font-sans text-base font-bold leading-snug text-ink sm:px-7 sm:py-6 sm:text-lg">
                   <span className="font-black italic uppercase">Cent ans</span> de
                   traductions de Marx et de livres marxistes et de formation
                   militante.
                 </p>
-                <p className="bg-paper-2 px-5 py-5 font-sans text-lg font-bold leading-snug text-ink sm:px-7 sm:py-6 sm:text-[22px]">
-                  <span className="font-black italic uppercase text-ocher-text">Cent ans</span> de
+                <p className="bg-paper-2 px-5 py-5 font-sans text-base font-bold leading-snug text-ink sm:px-7 sm:py-6 sm:text-lg">
+                  <span className="box-decoration-clone bg-pop-yellow px-1.5 font-black italic uppercase text-ink">Cent ans</span> de
                   publications exigeantes, pour éclairer les transformations du
                   capitalisme, des classes sociales, mener la critique féministe
                   et faire vivre le débat à gauche.
@@ -782,7 +828,7 @@ export default async function SouscriptionPage() {
           </Reveal>
         </section>
 
-        {/* Section 4 — l'appel : tout le h2 sur bandeau bottle, en crescendo
+        {/* Section 4 — l'appel : tout le h2 sur bandeau rose, en crescendo
             (« Nous avons besoin » modéré, « de vous » géant), clos par un
             POINT D'EXCLAMATION à la hauteur des deux lignes (retour Youri
             25/07) — seul ajout de texte au verbatim du docx, assumé comme
@@ -792,9 +838,9 @@ export default async function SouscriptionPage() {
             de glyphe), et son `leading` serré l'empêche de dicter la hauteur
             de la rangée. Le paragraphe unique reste agrandi (c'est l'ask du
             récit, pas un descriptif). */}
-        <section className="mt-16 sm:mt-24">
+        <section className="mt-12 sm:mt-16">
           <Reveal>
-            <h2 className="bg-bottle font-sans font-black italic text-paper">
+            <h2 className={`${POP_BG.pink} font-sans font-black italic text-ink`}>
               <span className="mx-auto flex w-full max-w-6xl items-center gap-2 px-5 pb-8 pt-8 sm:gap-5 sm:px-8 sm:pb-10 sm:pt-10">
                 <span className="block min-w-0 flex-1">
                   <span className="block text-[clamp(22px,5vw,44px)] uppercase leading-[0.9]">
@@ -810,11 +856,11 @@ export default async function SouscriptionPage() {
               </span>
             </h2>
             <Container className="pt-8 sm:pt-10">
-              <p className="max-w-[52ch] font-sans text-lg font-medium leading-relaxed text-ink sm:text-2xl sm:leading-[1.45]">
+              <p className="max-w-[52ch] font-sans text-lg font-medium leading-relaxed text-ink sm:text-xl sm:leading-[1.55]">
                 Nous voulons que notre histoire se poursuive ; c’est pourquoi
                 nous faisons appel à vous. En faisant un don, vous nous aiderez
                 à surmonter cette crise, à{" "}
-                <strong className="font-bold underline decoration-bottle decoration-4 underline-offset-4">
+                <strong className="font-bold underline decoration-pop-pink decoration-4 underline-offset-4">
                   préserver notre indépendance
                 </strong>{" "}
                 et à poursuivre un travail éditorial engagé, exigeant et
@@ -832,7 +878,7 @@ export default async function SouscriptionPage() {
             section se clôt sur la chute du récit et le CTA final — d'où le
             `pb-` : dernière section de la colonne, le CTA butait sinon
             directement sur le pied de page (zéro pixel sous le bouton). */}
-        <section className="mt-16 pb-16 sm:mt-24 sm:pb-24">
+        <section className="mt-12 pb-16 sm:mt-16 sm:pb-24">
           <Container>
             <Reveal>
               <div className="flex flex-col gap-[2px] border-2 border-ink bg-ink shadow-[8px_8px_0_0_var(--color-ink)]">
@@ -876,22 +922,34 @@ export default async function SouscriptionPage() {
                 La phrase coule d'un seul trait (aucun span `block` : les
                 retours à la ligne forcés de l'ancienne opposition d'échelle
                 sont retirés) et « la fin du capitalisme » n'est plus qu'un
-                SOULIGNEMENT bottle — plus de surlignage, plus de display
+                SOULIGNEMENT rose — plus de surlignage, plus de display
                 géant. UN SEUL <h2>. Le montant libre vivant en clôture du
                 rail, le CTA y renvoie simplement. */}
             <Reveal>
               <h2 className="mt-12 max-w-[38ch] font-sans text-[clamp(24px,5vw,40px)] font-black italic leading-[1.15] text-ink sm:mt-16">
                 Vous nous permettrez de continuer à publier les livres qui
                 imaginent{" "}
-                <span className="underline decoration-bottle decoration-4 underline-offset-4">
+                <span className="underline decoration-pop-pink decoration-4 underline-offset-4">
                   la fin du capitalisme
                 </span>{" "}
                 plutôt que la fin du monde.
               </h2>
+              {/* Deux rendus exclusifs, même raison qu'au CTA du compteur :
+                  sous `lg` l'ancre redéploie la feuille sur les contreparties,
+                  à partir de `lg` elle fait défiler le rail jusqu'à la carte
+                  montant libre (viser le rail lui-même ne bougeait rien — il
+                  est déjà collé en haut de page). */}
               <Button
-                href="#paliers"
+                href={SHEET_CTA}
                 aria-label="Contribuer — voir les contreparties"
-                className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
+                className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10 lg:hidden"
+              >
+                Contribuer&nbsp;↓
+              </Button>
+              <Button
+                href={RAIL_CTA}
+                aria-label="Contribuer — voir les contreparties"
+                className="mt-8 hidden px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10 lg:inline-flex"
               >
                 Contribuer&nbsp;↓
               </Button>

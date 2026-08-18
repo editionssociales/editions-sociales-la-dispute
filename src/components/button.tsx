@@ -9,7 +9,7 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * cette recette. L'anneau de focus dépend du fond AU REPOS de chaque variante
  * (R5) : SOLID démarre sur ink → anneau sombre (pop-yellow) ; OUTLINE démarre
  * sur paper → anneau clair (ink) ; HOUSE démarre sur navy/brick (accent
- * sombre) → anneau sombre, comme SOLID ; ALARM démarre sur brick → anneau
+ * sombre) → anneau sombre, comme SOLID ; ALARM démarre sur orange → anneau
  * sombre aussi. États `disabled`/`active` (R7) : `disabled` — opacité
  * réduite, curseur bloqué, hover neutralisé (n'a de prise que sur le
  * `<button>` rendu sans `href` — un lien ne peut pas être `disabled` en
@@ -50,15 +50,17 @@ const HOUSE: Record<"navy" | "brick", string> = {
 };
 
 /**
- * Variante « alarme » (brick sur fond CLAIR — le CTA du compteur de
- * /souscription, retour Youri soir du 26/07) : même recette que HOUSE brick,
- * bordure INK et non paper — posée sur paper, une bordure paper
- * disparaîtrait ; le contour reste celui des objets du fond clair. Repos sur
- * brick (accent sombre) → anneau sombre, comme SOLID/HOUSE. Elle rime avec le
- * bandeau brick de la feuille de bas d'écran : les deux entrées vers le
- * paiement portent le même rouge.
+ * Variante « alarme » (l'ORANGE DE LA PALETTE DU SITE sur fond clair — le CTA
+ * du compteur de /souscription ; brick à l'origine, passé à l'orange le
+ * 2026-08-07 avec toute la page, retour Clara) : bordure INK et non paper —
+ * posée sur paper, une bordure paper disparaîtrait ; le contour reste celui des
+ * objets du fond clair. L'orange est CLAIR : le texte y est `ink`, jamais
+ * `paper` (≈2,9:1), et l'inversion au survol se fait donc vers ink et non vers
+ * paper. Anneau sombre (pop-yellow) : il tient sur l'orange au repos (≈3:1)
+ * comme sur l'ink du survol. Elle rime avec le bandeau de la feuille de bas
+ * d'écran : les deux entrées vers le paiement portent le même orange.
  */
-const ALARM = `border-ink bg-brick text-paper hover:bg-paper hover:text-brick disabled:hover:bg-brick disabled:hover:text-paper ${FOCUS_RING_DARK}`;
+const ALARM = `border-ink bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange disabled:hover:bg-pop-orange disabled:hover:text-ink ${FOCUS_RING_DARK}`;
 
 type ButtonCommonProps = {
   variant?: "solid" | "outline" | "house" | "invert" | "alarm";

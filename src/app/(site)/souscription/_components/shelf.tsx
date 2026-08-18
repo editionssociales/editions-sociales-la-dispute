@@ -82,12 +82,12 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
           return (
             // Anneau focus fait main (exception R5) : les dos font 20-36px de
             // large, un anneau EXTÉRIEUR (FOCUS_RING_*_OUTER) y déborderait
-            // de 20-36px ; ocher INTÉRIEUR contraste sur la couverture sans
+            // de 20-36px ; orange INTÉRIEUR contraste sur la couverture sans
             // jamais dépasser du dos (choix de cadrage d'origine).
             <Link
               key={book.id}
               href={`/catalogue/${book.edition}/${book.slug}`}
-              className={`book3d${i < 2 ? " book3d--edge" : ""} relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] focus-visible:z-30 focus-visible:outline-[3px] focus-visible:outline-ocher focus-visible:outline-offset-[-3px]`}
+              className={`book3d${i < 2 ? " book3d--edge" : ""} relative block shrink-0 animate-[spine-rise_0.7s_ease-out_both] focus-visible:z-30 focus-visible:outline-[3px] focus-visible:outline-pop-orange focus-visible:outline-offset-[-3px]`}
               style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
             >
               <span className="sr-only">

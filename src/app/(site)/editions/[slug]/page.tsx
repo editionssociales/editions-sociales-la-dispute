@@ -7,6 +7,7 @@ import { Button } from "@/components/button";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import type { EditionSlug } from "@/lib/types";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
+import { POP_BG } from "@/components/pop-palette";
 import { getPageAPropos, getReglagesSite } from "@/lib/site-content";
 
 export const revalidate = 3600; // même fenêtre ISR que le reste du contenu Payload
@@ -18,17 +19,27 @@ export const revalidate = 3600; // même fenêtre ISR que le reste du contenu Pa
  * l'accueil). Gabarit repris de l'ex-`/a-propos` (maquette PDF client
  * 2026-07-20) : bandeau-titre sur aplat → encadré de texte principal
  * (justifié) → boîte réseaux sociaux → bandeau ÉQUIPE | DÉPÔT DE MANUSCRIT →
- * deux colonnes encadrées. L'aplat n'est plus le pop-teal de la page commune
- * mais la couleur d'identité de la maison (R3 : navy=Éditions,
- * brick=Dispute) — classes littérales (contrat Tailwind JIT).
+ * deux colonnes encadrées. L'aplat porte une des quatre couleurs du site
+ * (`BAND_BG` ci-dessous) — classes littérales (contrat Tailwind JIT).
  *
  * Textes : nom/tagline/description viennent du global `page-a-propos`
  * (onglet Maisons, surcharge champ par champ — vide = `EDITION_LIST` en
  * dur, via `mergePageAPropos`).
  */
+
+/**
+ * Aplats des bandeaux — LES COULEURS DU SITE (retour Clara 2026-08-07 : ces
+ * pages « n'utilisent pas les bonnes couleurs »), plus les accents de
+ * couverture navy/brick de R3. Correspondance choisie sur la famille de teinte
+ * de chaque maison, pour que le repère de couleur ne se retourne pas :
+ * Éditions sociales gardait un bleu (navy → le « bleu » turquoise de la
+ * palette), La Dispute un rouge (brick → orange). Texte `ink` obligatoire sur
+ * ces quatre teintes claires (cf. `pop-palette.ts`) : le `text-paper` des
+ * anciens aplats sombres tombe avec eux.
+ */
 const BAND_BG: Record<EditionSlug, string> = {
-  "editions-sociales": "bg-navy",
-  "la-dispute": "bg-brick",
+  "editions-sociales": POP_BG.teal,
+  "la-dispute": POP_BG.orange,
 };
 
 /**
@@ -53,12 +64,16 @@ const INLINE_LINK =
   "font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper " +
   FOCUS_RING_LIGHT_OUTER;
 
-/** Bandeau de sous-titre sur l'aplat maison (gabarit) : centré, gras droit. */
+/**
+ * Bandeau de sous-titre sur l'aplat maison (gabarit) : centré, gras droit.
+ * L'aplat vient de `BAND_BG` — la correspondance maison → couleur n'est écrite
+ * qu'une fois.
+ */
+const BAND_HEADING_BASE =
+  "px-6 py-4 text-center font-sans text-base font-extrabold uppercase tracking-[.08em] text-ink sm:text-lg";
 const BAND_HEADING: Record<EditionSlug, string> = {
-  "editions-sociales":
-    "bg-navy px-6 py-4 text-center font-sans text-base font-extrabold uppercase tracking-[.08em] text-paper sm:text-lg",
-  "la-dispute":
-    "bg-brick px-6 py-4 text-center font-sans text-base font-extrabold uppercase tracking-[.08em] text-paper sm:text-lg",
+  "editions-sociales": `${BAND_BG["editions-sociales"]} ${BAND_HEADING_BASE}`,
+  "la-dispute": `${BAND_BG["la-dispute"]} ${BAND_HEADING_BASE}`,
 };
 
 export function generateStaticParams() {
@@ -106,7 +121,7 @@ export default async function EditionPage({
           n'a pas de ton « aplat ». */}
       <section className={`border-b-2 border-ink ${BAND_BG[slug]}`}>
         <Container className="py-[clamp(36px,6vw,72px)]">
-          <h1 className="font-sans text-[clamp(36px,6vw,72px)] font-black uppercase leading-[0.95] text-paper">
+          <h1 className="font-sans text-[clamp(36px,6vw,72px)] font-black uppercase leading-[0.95] text-ink">
             {maison.name}
           </h1>
         </Container>

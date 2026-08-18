@@ -3,7 +3,7 @@ import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { SubmitButton } from "@/components/submit-button";
 import { formatInt } from "@/lib/format";
-import { ACCENTS, ACCENT_BG as BG } from "@/lib/accents";
+import { POP_BG, POP_ORDER } from "@/components/pop-palette";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { RAIL_MAX_HEIGHT_CLASS, TICKER_INSET_CLASS } from "@/components/rail-inset";
 import { type DonationTierId, FREE_AMOUNT } from "@/lib/donation-tiers";
@@ -210,8 +210,10 @@ export function TiersRail({
             CTA final et l'ancre externe `#montant-libre` y mènent. */}
         <FramedGrid className="grid-cols-1">
           {content.contreparties.map((p, i) => {
-            // Paliers de don : les 4 accents de marque, jamais le cycle pop (R2/R3).
-            const accentBg = BG[ACCENTS[i % 4]];
+            // Paliers de don : les quatre couleurs du site, dans leur ordre
+            // canonique (retour Clara 2026-08-07 — la page entière a quitté les
+            // accents de couverture navy/bottle/ocher/brick).
+            const accentBg = POP_BG[POP_ORDER[i % 4]];
             // Un palier ajouté à DONATION_TIERS sans visuel dans
             // TIER_IMAGES rend une carte sans image, jamais un crash.
             const img = TIER_IMAGE_LOOKUP[p.tier.id];
@@ -328,13 +330,13 @@ export function TiersRail({
           })}
           {/* Carte de clôture — montant libre (retour client 2026-07-24) : le
               formulaire à montant personnalisé vit tout en bas de la liste,
-              après les 9 paliers, et poursuit le cycle des 4 accents de
-              marque. */}
+              après les 9 paliers, et poursuit le cycle des 4 couleurs du
+              site. */}
           <div className="h-full">
             <div id="montant-libre" className="flex h-full flex-col bg-paper">
               <div
                 aria-hidden="true"
-                className={`h-2 ${BG[ACCENTS[content.contreparties.length % 4]]}`}
+                className={`h-2 ${POP_BG[POP_ORDER[content.contreparties.length % 4]]}`}
               />
               <div className="flex flex-1 flex-col p-6">
                 <h3>

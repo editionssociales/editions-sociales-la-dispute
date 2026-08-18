@@ -1,4 +1,5 @@
 import type { NavSectionId } from "@/lib/nav";
+import { POP_BG } from "./pop-palette";
 
 /**
  * Code couleur pop des 4 sections de nav (`NAV_SECTIONS`) — classes Tailwind
@@ -9,14 +10,16 @@ import type { NavSectionId } from "@/lib/nav";
  *
  * Source unique de la correspondance section → aplat pop : consommée par le
  * quadrillage du header (`site-header.tsx`, cellules actives) ET par la
- * mosaïque de pied de page de l'accueil (chantier 4 §4) — la palette pop
- * boucle entre les deux, un seul jeu de valeurs (R2 : « pop = langage de
- * navigation, rien d'autre »). Fichier plat, sans `"use client"` : importable
+ * mosaïque de pied de page de l'accueil (chantier 4 §4) — un seul jeu de
+ * valeurs. Les classes elles-mêmes viennent de `pop-palette.ts`, source unique
+ * des quatre couleurs du site depuis qu'elles ne servent plus qu'à la
+ * navigation (retour Clara 2026-08-07 : /souscription et les pages maisons
+ * passent sur la même palette). Fichier plat, sans `"use client"` : importable
  * aussi bien par le header (client) que par la page d'accueil (serveur).
  */
 export const NAV_ACCENT_BG: Record<NavSectionId, string> = {
-  catalogue: "bg-pop-pink",
-  geme: "bg-pop-teal",
-  "a-paraitre": "bg-pop-orange",
-  agenda: "bg-pop-yellow",
+  catalogue: POP_BG.pink,
+  geme: POP_BG.teal,
+  "a-paraitre": POP_BG.orange,
+  agenda: POP_BG.yellow,
 };

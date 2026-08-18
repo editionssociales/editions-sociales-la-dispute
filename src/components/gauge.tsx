@@ -130,7 +130,7 @@ function buildCutMask(cuts: readonly string[]): CSSProperties {
 }
 
 /**
- * Jauge de collecte : un aplat ocher porte la barre entière ; un cache couleur
+ * Jauge de collecte : un aplat orange (palette du site) porte la barre entière ; un cache couleur
  * `line` se retire vers la droite à l'entrée dans le viewport pour révéler la
  * part collectée. Ce cache est `line` dans LES DEUX tones (retour client
  * 26/07, revert de l'inversion de charge du 25/07 : un cache ink fusionnait
@@ -160,7 +160,7 @@ function buildCutMask(cuts: readonly string[]): CSSProperties {
  * positions et jouer l'effet de révélation.
  *
  * `tone` recolore l'ombre et le curseur — la barre elle-même porte des teintes
- * FIXES (ocher, cache `line`, trait de coupe et contour ink), lisibles sur
+ * FIXES (orange, cache `line`, trait de coupe et contour ink), lisibles sur
  * les deux fonds : `"light"` (défaut, ombre ink) pour une jauge posée sur
  * paper — c'est le cas du héros de `/souscription` depuis l'inversion des fonds
  * du 26/07 ; `"dark"` (ombre paper translucide) pour une jauge posée sur ink.
@@ -265,9 +265,10 @@ export function Gauge({
           role="img"
           aria-label={`${formatInt(value)} € collectés sur un objectif de ${formatInt(max)} €`}
           // Barre ORANGE d'un bout à l'autre (retour Youri 25/07, remplace les
-          // quatre blocs navy/bottle/ocher/brick) : ocher est l'orange de la
-          // charte (R3, accent d'attente) — lisible sur ink comme sur paper.
-          className="relative h-full overflow-hidden bg-ocher"
+          // quatre blocs navy/bottle/ocher/brick) : depuis le 2026-08-07 c'est
+          // l'orange DE LA PALETTE DU SITE (`pop-palette.ts`, retour Clara) et
+          // non plus l'ocher — lisible sur ink comme sur paper.
+          className="relative h-full overflow-hidden bg-pop-orange"
           style={maskStyle}
         >
           {/* Cache : recouvre la part non collectée, glisse vers la droite.
@@ -284,7 +285,7 @@ export function Gauge({
                 Enfant du cache : le même translateX l'emporte, gratuitement.
                 En ink dans les DEUX tones, comme le curseur qui la coiffe : le
                 cache est `line` partout, et ink est la seule teinte qui tranche
-                à la fois sur lui et sur l'ocher qu'il borde à gauche. */}
+                à la fois sur lui et sur l'orange qu'il borde à gauche. */}
             <div className="absolute inset-y-0 left-0 w-0.5 bg-ink" />
           </div>
           {/* CONTOUR ink des morceaux de barre — le « contour noir habituel des
@@ -294,7 +295,7 @@ export function Gauge({
               ce qui est le rendu voulu, « comme à la fin » — et APRÈS le cache
               dans le DOM : sans z-index, l'ordre de peinture suffit, et le
               contour reste visible aussi bien sur la part `line` que sur la
-              part ocher.
+              part orange.
               Pas de bord DROIT : la barre ne s'arrête pas, elle se dissout dans
               la queue. */}
           <div className="absolute inset-x-0 top-0 h-[2px] bg-ink" />
@@ -331,13 +332,13 @@ export function Gauge({
             lame) ; à `-8px` il visait ce bord gauche.
 
             Triangle en bordures CSS (aplat R8, zéro radius). En light, les
-            trois fonds qu'il traverse sont tous CLAIRS — ocher à gauche du
+            trois fonds qu'il traverse sont tous CLAIRS — orange à gauche du
             front, cache `line` à droite, paper nu au-dessus de la barre et
             quand le front entre dans la queue en pointillés (> 105 k€) : un
             aplat ink SEUL y est la marque la plus dense, alors qu'un cœur
             paper l'ajourerait sur le `line`. En dark, l'ink ne tient plus
             au-dessus de la barre (fond ink) : le triangle passe en paper et
-            REPREND un cœur ink, seule teinte qui tranche à la fois sur l'ocher
+            REPREND un cœur ink, seule teinte qui tranche à la fois sur l'orange
             et sur le `line` — cœur calé pour garder son apex 2px au-dessus de
             celui du triangle externe. */}
         <div
