@@ -36,7 +36,7 @@ import camaradePourLaVieImg from "../_contreparties/camarade-pour-la-vie.jpg";
  */
 
 /** Microcopie honnête (R7) : le paiement n'ouvre qu'à cette date, jamais un CTA muet. */
-export const OPENING_MICROCOPY = "Ouverture le 15 août";
+export const OPENING_MICROCOPY = "Ouverture le 20 août";
 
 /**
  * Recette du CTA de soumission (solid ink sur fond paper) — partagée par le

@@ -401,7 +401,7 @@ export default async function SouscriptionPage() {
                          annoncer la date plutôt qu'un « soyez les premier·ères »
                          contradictoire avec des boutons morts. */
                       <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                        La souscription ouvre le 15 août — découvrez déjà les
+                        La souscription ouvre le 20 août — découvrez déjà les
                         contreparties.
                       </p>
                     ) : liveCampaign.collected > 0 ? (
