@@ -9,8 +9,10 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV,
-  // Même réglage 100 % « phase de dev » que le serveur — OPERATIONS.md §8.
-  tracesSampleRate: 1.0,
+  // Même réglage que le serveur (10 % depuis le 2026-08-18, lancement de la
+  // campagne — OPERATIONS.md §8) : les deux fichiers DOIVENT rester alignés,
+  // la décision d'échantillonnage du client se propage au serveur.
+  tracesSampleRate: 0.1,
   sendDefaultPii: false,
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 0,

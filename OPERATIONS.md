@@ -323,13 +323,17 @@ et/ou après un éventuel passage au plan Neon Launch (marge de transfert ~10×)
    seules lectures catalogue restantes au build) : irréductible avec des
    données réelles, éventuellement payée plusieurs fois par build (workers
    parallèles). Négligeable à cadence de deploy raisonnable.
-7. **Tracing Sentry à 100 %** (`tracesSampleRate: 1.0`, serveur ET client —
-   `sentry.server.config.ts`, `src/instrumentation-client.ts`) : chaque
-   requête et chaque navigation produit une trace complète (spans pg
-   compris). Confortable tant que le trafic est quasi nul ; au lancement,
-   baisser le taux (p. ex. 0.1) pour tenir les 5 M spans/mois du plan
-   Developer — les deux fichiers doivent rester alignés (traces distribuées :
-   la décision d'échantillonnage du client se propage au serveur).
+7. **Tracing Sentry à 10 %** (`tracesSampleRate: 0.1`, serveur ET client —
+   `sentry.server.config.ts`, `src/instrumentation-client.ts`) : le taux de
+   phase de dev (1.0, une trace complète par requête et par navigation, spans
+   pg compris) a été ramené à 0.1 le 2026-08-18, avant l'ouverture de la
+   campagne, pour tenir les 5 M spans/mois du plan Developer. Les deux
+   fichiers DOIVENT rester alignés (traces distribuées : la décision
+   d'échantillonnage du client se propage au serveur). Ne jamais poser `0`
+   pour couper l'APM : `0 != null`, l'instrumentation OpenTelemetry
+   pg/http/fetch resterait active — il faut OMETTRE la clé et poser
+   `skipOpenTelemetrySetup: true` (cf. commentaire de
+   `sentry.server.config.ts`).
 
 ## 9. Références
 
