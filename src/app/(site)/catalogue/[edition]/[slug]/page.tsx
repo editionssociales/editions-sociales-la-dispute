@@ -13,6 +13,7 @@ import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import { getReglagesSite } from "@/lib/site-content";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
+import { catalogueHref } from "@/lib/browse";
 import { ACCENT_BG } from "@/lib/accents";
 import { FOCUS_RING_LIGHT, FOCUS_RING_LIGHT_OUTER, PDF_LINK_CLASS } from "@/lib/ui";
 
@@ -205,11 +206,27 @@ export default async function BookPage({
   const bookJsonLdScript = JSON.stringify(bookJsonLd).replace(/</g, "\\u003c");
 
   // Onglets de la fiche (maquette client « essai page de livre »,
-  // 2026-07-23) : « La presse en parle » (citations + vidéo YouTube) et
-  // « Table des matières » (richText, sinon lien vers le PDF téléversé).
+  // 2026-07-23) : « Pour aller plus loin », « La presse en parle » (citations
+  // + vidéo YouTube) et « Table des matières » (richText SEUL — cf. plus bas).
   // Aucun contenu = pas de bloc d'onglets du tout.
   const videoEmbed = book.videoUrl ? youTubeEmbedUrl(book.videoUrl) : null;
   const tabs: BookTab[] = [];
+  // « Pour aller plus loin » rejoint les onglets (retour Clara 2026-08-07 :
+  // « à mettre dans un autre onglet ») au lieu de s'empiler en section sous la
+  // présentation — c'est le PREMIER onglet, il prolonge directement la lecture
+  // du texte de présentation qu'il suit.
+  if (book.furtherReading) {
+    tabs.push({
+      id: "pour-aller-plus-loin",
+      label: "Pour aller plus loin",
+      panel: (
+        <div
+          className="prose-book max-w-none"
+          dangerouslySetInnerHTML={{ __html: book.furtherReading }}
+        />
+      ),
+    });
+  }
   if (book.press.length > 0 || videoEmbed) {
     tabs.push({
       id: "presse",
@@ -261,24 +278,21 @@ export default async function BookPage({
       ),
     });
   }
-  if (book.tocHtml || book.tocUrl) {
+  // Onglet « Table des matières » SEULEMENT quand la table est saisie en
+  // richText. Sans richText, l'onglet ne contenait qu'un second bouton
+  // « Table des matières (PDF) » — le même que celui de la colonne de gauche,
+  // deux clics plus loin : doublon supprimé (retour Clara 2026-08-07, « déjà
+  // présent dans un autre bouton »). Le PDF reste donc accessible par l'unique
+  // bouton de la colonne d'achat.
+  if (book.tocHtml) {
     tabs.push({
       id: "table-des-matieres",
       label: "Table des matières",
-      panel: book.tocHtml ? (
+      panel: (
         <div
           className="prose-book max-w-none"
           dangerouslySetInnerHTML={{ __html: book.tocHtml }}
         />
-      ) : (
-        <a
-          href={book.tocUrl!}
-          target="_blank"
-          rel="noreferrer"
-          className={`inline-flex min-h-11 items-center border-2 border-ink bg-paper px-4 py-2.5 font-sans text-xs font-bold uppercase tracking-[.04em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
-        >
-          Table des matières (PDF)
-        </a>
       ),
     });
   }
@@ -367,9 +381,26 @@ export default async function BookPage({
             {book.title}
           </h1>
           <div className={`mt-4 h-1 w-16 ${accentBg}`} aria-hidden="true" />
+          {/* Auteur·rice·s CLIQUABLES (retour Clara 2026-08-07 : « pour
+              chercher les autres livres de l'auteur ») — chaque nom mène au
+              catalogue filtré sur cette personne, les DEUX fonds confondus
+              (`/catalogue?author=`, jamais l'édition courante seule : un·e
+              auteur·rice peut publier chez les deux maisons). URL construite
+              par `catalogueHref`, l'unique encodeur de filtres (`lib/browse`).
+              Le séparateur reste une virgule en texte nu, hors des liens. */}
           {book.authors.length > 0 && (
             <p className="mt-4 font-sans text-lg font-bold text-ink/80">
-              {book.authors.map((a) => a.name).join(", ")}
+              {book.authors.map((a, i) => (
+                <span key={a.slug}>
+                  {i > 0 && ", "}
+                  <Link
+                    href={catalogueHref({ author: a.slug })}
+                    className={`text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper hover:decoration-paper ${FOCUS_RING_LIGHT}`}
+                  >
+                    {a.name}
+                  </Link>
+                </span>
+              ))}
             </p>
           )}
 
@@ -382,22 +413,9 @@ export default async function BookPage({
             </section>
           )}
 
-          {book.furtherReading && (
-            <section className="mt-8">
-              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rotate-45 ${accentBg}`}
-                  aria-hidden="true"
-                />
-                Pour aller plus loin
-              </h2>
-              <div
-                className="prose-book max-w-none"
-                dangerouslySetInnerHTML={{ __html: book.furtherReading }}
-              />
-            </section>
-          )}
-
+          {/* « Pour aller plus loin » n'est plus une section empilée sous la
+              présentation : c'est le premier ONGLET du bloc ci-dessous (retour
+              Clara 2026-08-07). */}
           {tabs.length > 0 && (
             <section className="mt-10">
               <BookTabs tabs={tabs} />
