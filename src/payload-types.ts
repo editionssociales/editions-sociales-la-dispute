@@ -1181,10 +1181,6 @@ export interface PagesLegales {
      * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
      */
     adresse?: string | null;
-    /**
-     * Vide = texte actuel.
-     */
-    texteDiffusion?: string | null;
   };
   /**
    * Affichés dans le pied de page (cellule « Suivez-nous »). Aucun lien = pied de page inchangé.
@@ -1292,7 +1288,6 @@ export interface PagesLegalesSelect<T extends boolean = true> {
     | T
     | {
         adresse?: T;
-        texteDiffusion?: T;
       };
   reseauxSociaux?:
     | T
