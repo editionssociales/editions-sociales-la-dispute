@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-07-17T15:19:49.797Z",
-  "source": "bootstrap : WP REST (WP_ES_URL/WP_LD_URL live) + Store API live (WC_STORE_URL) — PAS la Local API Payload (DATABASE_URL absente de l'environnement de génération). À régénérer avec scripts/build-product-redirects.ts (pnpm payload run) dès qu'un DATABASE_URL est disponible, avant J-7 (P7 du plan) — cf. caveat de livraison.",
-  "productsTotal": 224,
+  "generatedAt": "2026-08-19T19:06:56.307Z",
+  "source": "scripts/build-product-redirects.ts (Local API Payload + inventaire gelé scripts/produits-boutique-legacy.json — la Store API a disparu avec la coupure OVH)",
+  "inventoryTotal": 224,
   "matchedTotal": 208,
-  "orphansTotal": 16,
+  "orphansTotal": 0,
   "entries": {
     "1382": {
       "edition": "la-dispute",
@@ -852,70 +852,6 @@
     "lev-vygotski-pensee-et-langage-prevente": {
       "edition": "la-dispute",
       "slug": "pensee-et-langage-2"
-    },
-    "sac-en-toile-imake-marxism-great-again-i": {
-      "edition": null,
-      "slug": "sac-en-toile-imake-marxism-great-again-i"
-    },
-    "friedrich-engels-ludwig-feuerbach-et-la-fin-de-la-philosophie-allemande-classique": {
-      "edition": null,
-      "slug": "friedrich-engels-ludwig-feuerbach-et-la-fin-de-la-philosophie-allemande-classique"
-    },
-    "friedrich-engels-et-karl-marx-correspondance-tome-5-1857-1859-couverture-rigide": {
-      "edition": null,
-      "slug": "friedrich-engels-et-karl-marx-correspondance-tome-5-1857-1859-couverture-rigide"
-    },
-    "andre-seve-ortho-vert-dictionnaire-orthographique-et-grammatical": {
-      "edition": null,
-      "slug": "andre-seve-ortho-vert-dictionnaire-orthographique-et-grammatical"
-    },
-    "je-lis-jecris-manuelcahier-dexercices-cp": {
-      "edition": null,
-      "slug": "je-lis-jecris-manuelcahier-dexercices-cp"
-    },
-    "je-lis-jecris-manuelcahier-dexercices-ce2": {
-      "edition": null,
-      "slug": "je-lis-jecris-manuelcahier-dexercices-ce2"
-    },
-    "je-lis-jecris-ce2-cahier-dexercices": {
-      "edition": null,
-      "slug": "je-lis-jecris-ce2-cahier-dexercices"
-    },
-    "je-lis-jecris-ce2-manuel": {
-      "edition": null,
-      "slug": "je-lis-jecris-ce2-manuel"
-    },
-    "karl-marx-le-chapitre-vi-manuscrits-de-1863-1867": {
-      "edition": null,
-      "slug": "karl-marx-le-chapitre-vi-manuscrits-de-1863-1867"
-    },
-    "je-lis-jecris-manuelcahier-dexercices-ce1": {
-      "edition": null,
-      "slug": "je-lis-jecris-manuelcahier-dexercices-ce1"
-    },
-    "roger-martelli-une-dispute-communiste-le-comite-central-dargenteuil-sur-la-culture": {
-      "edition": null,
-      "slug": "roger-martelli-une-dispute-communiste-le-comite-central-dargenteuil-sur-la-culture"
-    },
-    "lucien-seve-structuralisme-et-dialectique": {
-      "edition": null,
-      "slug": "lucien-seve-structuralisme-et-dialectique"
-    },
-    "friedrich-engels-et-karl-marx-correspondance-tome-7-1862-1864": {
-      "edition": null,
-      "slug": "friedrich-engels-et-karl-marx-correspondance-tome-7-1862-1864"
-    },
-    "friedrich-engels-et-karl-marx-correspondance-tome-3-1852-1853": {
-      "edition": null,
-      "slug": "friedrich-engels-et-karl-marx-correspondance-tome-3-1852-1853"
-    },
-    "karl-marx-et-friedrich-engels-la-nouvelle-gazette-rhenane-tome-1": {
-      "edition": null,
-      "slug": "karl-marx-et-friedrich-engels-la-nouvelle-gazette-rhenane-tome-1"
-    },
-    "jean-jaures-histoire-socialiste-de-la-revolution-francaise-tome-2": {
-      "edition": null,
-      "slug": "jean-jaures-histoire-socialiste-de-la-revolution-francaise-tome-2"
     }
   }
 }
