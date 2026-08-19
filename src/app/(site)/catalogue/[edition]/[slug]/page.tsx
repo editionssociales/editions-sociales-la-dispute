@@ -191,7 +191,7 @@ export default async function BookPage({
       ? {
           image: new URL(
             book.cover.url,
-            process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr",
+            process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr",
           ).toString(),
         }
       : {}),

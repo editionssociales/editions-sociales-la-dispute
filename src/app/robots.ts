@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
   // Slash final normalisé : évite un double slash si la variable d'env est
   // un jour saisie avec un `/` final (cf. `sitemap.ts`, même normalisation).
   const base = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr"
   ).replace(/\/+$/, "");
 
   if (process.env.SITE_INDEXABLE !== "1") {

@@ -37,7 +37,7 @@ type EventJsonLd = {
 
 /** URL absolue exigée par schema.org — même repli que la fiche livre (`catalogue/[edition]/[slug]/page.tsx`). */
 function absoluteUrl(url: string): string {
-  return new URL(url, process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr").toString();
+  return new URL(url, process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr").toString();
 }
 
 export default async function RencontresPage() {
