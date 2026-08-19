@@ -126,3 +126,26 @@ describe("brevoOrderMailer — envoi réel (msw)", () => {
     }
   });
 });
+
+describe("renderOrderConfirmationEmail — version texte (multipart)", () => {
+  it("numéro de commande, total TTC et mention TVA présents dans le texte", () => {
+    const { text } = renderOrderConfirmationEmail(PAYLOAD);
+    expect(text).toContain(PAYLOAD.orderNumber);
+    expect(text).toContain("Total TTC (TVA 5,5 % incluse)");
+  });
+
+  it("remise seulement si positive, dans le texte aussi", () => {
+    const withoutDiscount = { ...PAYLOAD, discountTTC: 0 };
+    expect(renderOrderConfirmationEmail(withoutDiscount).text).not.toContain("Remise");
+    expect(renderOrderConfirmationEmail(PAYLOAD).text).toContain("Remise");
+  });
+
+  it("texte brut : aucune structure HTML, données reprises SANS échappement", () => {
+    const { text } = renderOrderConfirmationEmail(PAYLOAD);
+    expect(text).not.toContain("<table");
+    expect(text).not.toContain("</");
+    // Le titre est du text/plain : repris tel quel, jamais échappé (contrairement au HTML).
+    expect(text).toContain("Salaires & <profits>");
+    expect(text).not.toContain("&amp;");
+  });
+});

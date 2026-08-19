@@ -1,7 +1,8 @@
 /**
  * Email de remerciement de don (souscription 2026, webhook `/api/stripe/webhook`)
- * — même architecture que `order-mail.ts` : module dédié, rendu HTML pur et
- * testable, mailer sélectionné par `brevoConfigured()` (Brevo réel via
+ * — même architecture que `order-mail.ts` : module dédié, rendu HTML + texte
+ * brut (multipart, `textContent` — classification Gmail et accessibilité) pur
+ * et testable, mailer sélectionné par `brevoConfigured()` (Brevo réel via
  * `sendTransactionalEmail`, sinon log console). Aucune donnée requise au-delà
  * de l'email du donateur — pas de récapitulatif de montant, le reçu Stripe
  * natif (`payment_intent_data`, `souscription/actions.ts`) s'en charge déjà.
@@ -64,6 +65,23 @@ function paragraphRow(text: string, opts: { strong?: boolean } = {}): string {
 }
 
 /**
+ * Rendu texte brut (multipart) — mêmes paragraphes VERBATIM que le HTML
+ * (constantes `PARAGRAPHS`/`SIGNATURE`, jamais retapés), séparés par des
+ * lignes vides, puis le même pied que le HTML (contact, domaine). Sert deux
+ * fins : classification Gmail (un mail HTML seul part en onglet Promotions)
+ * et accessibilité (lecteurs texte brut).
+ */
+function renderDonationThanksText(): string {
+  return (
+    [...PARAGRAPHS, SIGNATURE].join("\n\n") +
+    "\n\n" +
+    `Une question ? Écrivez-nous à ${CONTACT_EMAIL}.` +
+    "\n\n" +
+    `Les Éditions sociales × La Dispute — ld-es.fr`
+  );
+}
+
+/**
  * Rendu HTML du mail de remerciement — pur (aucune I/O), aucune donnée
  * variable (pas de nom, pas de montant) donc pas de paramètre. Pas de
  * bouton CTA marketing (contrairement au mail de commande) : le ton du
@@ -71,7 +89,7 @@ function paragraphRow(text: string, opts: { strong?: boolean } = {}): string {
  * signature (adresse de contact + domaine), même recette que
  * `order-mail.ts` sans le bouton « Consulter le site ».
  */
-export function renderDonationThanksEmail(): { subject: string; html: string } {
+export function renderDonationThanksEmail(): { subject: string; html: string; text: string } {
   const bodyHtml =
     PARAGRAPHS.map((p) => paragraphRow(p)).join("") +
     paragraphRow(SIGNATURE, { strong: true }) +
@@ -93,7 +111,7 @@ export function renderDonationThanksEmail(): { subject: string; html: string } {
     bodyHtml,
   });
 
-  return { subject: "Merci pour votre don", html };
+  return { subject: "Merci pour votre don", html, text: renderDonationThanksText() };
 }
 
 /**
@@ -104,8 +122,8 @@ export function renderDonationThanksEmail(): { subject: string; html: string } {
 export const brevoDonationMailer: DonationMailer = {
   async sendDonationThanks(payload) {
     try {
-      const { subject, html } = renderDonationThanksEmail();
-      const result = await sendTransactionalEmail({ to: payload.email, subject, html });
+      const { subject, html, text } = renderDonationThanksEmail();
+      const result = await sendTransactionalEmail({ to: payload.email, subject, html, textContent: text });
       if (!result.ok) {
         console.error(
           `[donation-mail] envoi Brevo échoué pour le remerciement de don à ${payload.email} (${result.reason ?? "raison inconnue"}) — jamais bloquant, le reçu Stripe natif reste la confirmation immédiate.`,

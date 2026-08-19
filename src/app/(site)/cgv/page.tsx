@@ -44,17 +44,14 @@ export default async function CgvPage() {
               commande, et n&apos;ouvre droit à aucune contrepartie
               commerciale au sens du droit de la consommation.
             </p>
-            {/* Deux phrases de PHASE DE DÉVELOPPEMENT retirées ici le
-                2026-08-18, avant l'ouverture de la collecte du 20 août :
-                « Le dispositif de don en ligne n'est pas encore opérationnel
-                sur ce site » (faux dès l'ouverture — les CTA Stripe sont
-                actifs) et la promesse « un email de confirmation sera envoyé
-                […] faisant office de reçu » (aucun mail de don n'est émis :
-                le webhook Stripe n'appelle aucun mailer, cf.
-                `api/stripe/webhook/route.ts`). Une CGV qui décrit un parcours
-                de paiement autrement qu'il ne se déroule est une information
-                trompeuse. Ne PAS réintroduire de promesse d'email tant que
-                l'accusé de don n'est pas réellement branché. */}
+            {/* Un mail de remerciement de don part bien depuis 2026-08-19
+                (`donation-mail.ts` via `api/stripe/webhook/route.ts`), mais
+                SANS montant ni valeur de reçu (best effort, non idempotent —
+                le reçu Stripe natif reste la seule confirmation). Ne pas
+                promettre ici de « reçu » par email tant que l'issue #95
+                (montant dans le mail) n'est pas livrée : une CGV qui décrit
+                un parcours de paiement autrement qu'il ne se déroule est une
+                information trompeuse. */}
             <p className={LEGAL_BODY}>
               Le don n&apos;étant pas un contrat de vente à distance, le droit
               de rétractation de 14 jours prévu par le code de la consommation
