@@ -74,14 +74,45 @@ function ChevronGlyph({ className }: { className: string }) {
   );
 }
 
-export function TiersDrawer({ children }: { children: ReactNode }) {
+export function TiersDrawer({
+  anchors = [],
+  children,
+}: {
+  /**
+   * Ids d'ancre de la page (sans `#`) dont les liens DÉCLENCHENT le tiroir —
+   * mêmes ids que `BottomSheet.anchors`, l'un pour chaque régime. Le CTA
+   * « Contribuer » du compteur en est le premier client.
+   */
+  anchors?: string[];
+  children: ReactNode;
+}) {
   const mobile = useMediaQuery(MOBILE_QUERY);
   // Le tiroir NAÎT OUVERT : c'est l'état rendu par le serveur, et les
   // contreparties sont le point le plus urgent de la page.
   const [open, setOpen] = useState(true);
+  /** Liseré d'appel : réaction visible quand un CTA vise un tiroir DÉJÀ ouvert. */
+  const [pulsing, setPulsing] = useState(false);
+  /**
+   * Ancre à amener en vue au prochain commit. Objet renouvelé à chaque
+   * demande (jamais une simple chaîne) : deux clics de suite sur le MÊME
+   * bouton doivent rejouer le défilement.
+   */
+  const [pending, setPending] = useState<{ id: string } | null>(() => {
+    // Lecture SYNCHRONE du hash d'arrivée à l'initialisation, jamais dans un
+    // effet (`react-hooks/set-state-in-effect`) — même parade que
+    // `useInitialSearch` du header. Rendu serveur : `null`, et cet état ne
+    // change rien au JSX (il ne pilote qu'un défilement) : zéro divergence
+    // d'hydratation.
+    if (typeof window === "undefined") return null;
+    const landing = window.location.hash.slice(1);
+    return landing && anchors.includes(landing) ? { id: landing } : null;
+  });
   const panelRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const pulseTimer = useRef(0);
+  /** État courant lu par l'écouteur de clics, qui ne se réabonne pas à chaque bascule. */
+  const openRef = useRef(open);
   // La bascule CHANGE de place d'un état à l'autre (bord du viewport ↔ haut du
   // panneau) : au clavier, le bouton qu'on vient d'actionner s'escamote et le
   // focus tomberait sur le <body>. On le suit — après le commit, l'élément
@@ -95,10 +126,13 @@ export function TiersDrawer({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    openRef.current = open;
     if (!followFocus.current) return;
     followFocus.current = false;
     (open ? closeRef : handleRef).current?.focus();
   }, [open]);
+
+  useEffect(() => () => window.clearTimeout(pulseTimer.current), []);
 
   // Publication de l'état vers les DEUX autres consommateurs de la largeur (la
   // grille de `souscription/page.tsx` et la réserve du header) : une propriété
@@ -131,6 +165,76 @@ export function TiersDrawer({ children }: { children: ReactNode }) {
     },
     [open, toggle],
   );
+
+  /**
+   * Réaction du tiroir DÉJÀ ouvert à un CTA (« léger indice visuel
+   * supplémentaire », retour client) : le liseré du panneau s'allume et
+   * retombe. C'est une COULEUR, pas un mouvement — l'indice reste donc
+   * perceptible sous `prefers-reduced-motion`, où la transition tombe et où
+   * l'allumage devient simplement sec.
+   */
+  const firePulse = useCallback(() => {
+    setPulsing(true);
+    window.clearTimeout(pulseTimer.current);
+    pulseTimer.current = window.setTimeout(() => setPulsing(false), 700);
+  }, []);
+
+  /**
+   * Les CTA d'ancre de la page DÉCLENCHENT le tiroir — c'est tout le propos du
+   * retour client : « le bouton Contribuer sert maintenant à déclencher
+   * l'ouverture de la barre latérale des paliers ». Fermé, il l'ouvre ; ouvert,
+   * il allume le liseré et ramène la liste en haut. Interception `document`
+   * (les CTA vivent dans la colonne principale, hors de ce composant) — la
+   * seule chose qui ne DOIT jamais être écoutée là, c'est Échap.
+   *
+   * Chaîne stable plutôt que le tableau, recréé à chaque rendu de l'appelant :
+   * l'écouteur ne se réabonne pas pour rien. L'arrivée AVEC l'ancre
+   * (`cancel_url` Stripe → `/souscription#paliers`, page d'erreur) est traitée
+   * à l'initialisation de `pending` : le tiroir est déjà ouvert, mais le saut
+   * natif ne défile QUE la page — la liste, elle, a sa propre boîte.
+   */
+  const anchorKey = anchors.join(" ");
+  useEffect(() => {
+    const ids = anchorKey ? anchorKey.split(" ") : [];
+    if (mobile || ids.length === 0) return;
+    const onClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      const link = (event.target as Element | null)?.closest?.("a[href*='#']");
+      if (!(link instanceof HTMLAnchorElement)) return;
+      const id = link.hash.slice(1);
+      if (!id || !ids.includes(id) || link.pathname !== window.location.pathname) return;
+      event.preventDefault();
+      if (openRef.current) {
+        firePulse();
+        // Le focus va au haut du panneau : au clavier, la suite de la
+        // tabulation entre dans la liste des paliers, comme à l'ouverture.
+        closeRef.current?.focus();
+      } else {
+        toggle(true);
+      }
+      setPending({ id });
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [mobile, anchorKey, firePulse, toggle]);
+
+  /**
+   * Défilement vers l'ancre — APRÈS le commit, jamais dans le tick de
+   * l'ouverture : la mise en page a été recalculée quand cet effet lit
+   * `scrollHeight`. La mesure est de toute façon indépendante de la course,
+   * le contenu du panneau gardant une largeur FIXE (`rail-inset.ts`) : rien ne
+   * s'y recompose entre 0 et 380px.
+   */
+  useEffect(() => {
+    if (mobile || !pending) return;
+    const target = panelRef.current?.querySelector<HTMLElement>(`#${CSS.escape(pending.id)}`);
+    if (!target) return;
+    // `#paliers` EST la boîte défilante du rail : `scrollIntoView` y ferait
+    // défiler la PAGE et laisserait la liste où elle en était. On la ramène
+    // à son sommet — c'est le « retour en haut de la liste » demandé.
+    if (target.scrollHeight > target.clientHeight + 1) target.scrollTop = 0;
+    else target.scrollIntoView({ block: "start" });
+  }, [mobile, pending]);
 
   if (mobile) return <>{children}</>;
 
@@ -181,7 +285,13 @@ export function TiersDrawer({ children }: { children: ReactNode }) {
           lui donne la hauteur de la rangée entière — sans quoi le `sticky` du
           rail, qui n'est plus l'item de grille, n'aurait plus aucune course.
           `overflow-x-clip` (et non `overflow-hidden`) rogne l'horizontale sans
-          faire de la colonne un conteneur de défilement : le `sticky` survit. */}
+          faire de la colonne un conteneur de défilement : le `sticky` survit.
+
+          Le LISERÉ D'APPEL est l'`outline` de cette colonne : peint À
+          L'INTÉRIEUR (`-outline-offset-4`), il allume les deux bords du
+          panneau sur toute la hauteur du viewport. Une couleur qui monte et
+          retombe, aucun mouvement — l'indice survit à
+          `prefers-reduced-motion`, où seule la douceur du fondu tombe. */}
       <div
         id={panelId}
         ref={panelRef}
@@ -189,7 +299,9 @@ export function TiersDrawer({ children }: { children: ReactNode }) {
         // `inert` — jamais par `visibility`/`hidden` (grammaire des déroulés).
         inert={!open}
         onKeyDown={onKeyDown}
-        className="min-w-0 lg:self-stretch lg:overflow-x-clip"
+        className={`min-w-0 outline-4 -outline-offset-4 transition-[outline-color] duration-300 ease-out motion-reduce:transition-none lg:self-stretch lg:overflow-x-clip ${
+          pulsing ? "outline-pop-orange" : "outline-transparent"
+        }`}
       >
         {children}
       </div>

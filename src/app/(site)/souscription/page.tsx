@@ -307,23 +307,22 @@ export default async function SouscriptionPage() {
     </div>
   );
   /**
-   * Cible des CTA d'ancre, par régime d'affichage (retour Clara 2026-08-07 :
-   * « le bouton ne marche pas »). Le diagnostic n'est pas un lien cassé mais
-   * une ancre SANS EFFET : à partir de `lg`, `#paliers` — le rail — est déjà
-   * collé en haut de page, à droite du compteur ; le saut n'a nulle part où
-   * aller et le clic ne produit RIEN à l'écran. Le rail, lui, défile dans sa
-   * propre boîte : viser la carte « montant libre » qui le CLÔT (`RAIL_CTA`)
-   * fait défiler cette boîte sur toute sa hauteur — mouvement visible, et le
-   * clic atterrit sur le seul endroit de la page où l'on saisit un montant.
-   * Sous `lg` le rail est une feuille de bas d'écran repliée : `#paliers` la
-   * redéploie sur les contreparties (`BottomSheet.anchors`), comportement
-   * inchangé — c'est là qu'il faut entrer par le haut de la liste.
+   * Cible UNIQUE de tous les CTA d'ancre de la page. Elle l'est redevenue le
+   * 2026-08-19 : le rail est un TIROIR dans les deux régimes — feuille de bas
+   * d'écran sous `lg`, panneau latéral au-dessus — et `#paliers` le DÉPLOIE
+   * partout. C'était tout l'objet du retour Clara du 2026-08-07 (« le bouton
+   * ne marche pas ») : à l'époque le rail desktop était toujours ouvert, le
+   * saut n'avait nulle part où aller et le clic ne produisait rien ; on visait
+   * alors `#montant-libre` en `lg+` pour au moins faire défiler la boîte du
+   * rail, d'où deux cibles et un rendu des CTA en deux exemplaires exclusifs.
+   * Les deux ont disparu : un CTA, une cible, un geste.
    *
-   * D'où le rendu des CTA en DEUX exemplaires exclusifs (`lg:hidden` /
-   * `hidden lg:…`) là où un seul emplacement sert les deux régimes.
+   * Ouvert, le tiroir répond quand même (liseré d'appel + retour en haut de la
+   * liste) — cf. `_components/tiers-drawer.tsx`. `#montant-libre` reste une
+   * ancre VALIDE (elle arrive encore par lien externe) : les deux régimes la
+   * déclarent dans leurs `anchors`.
    */
-  const SHEET_CTA = "#paliers";
-  const RAIL_CTA = "#montant-libre";
+  const PALIERS_CTA = "#paliers";
 
   return (
     /* La colonne du rail EST le panneau du tiroir (`_components/tiers-drawer.tsx`) :
@@ -456,10 +455,9 @@ export default async function SouscriptionPage() {
                   {/* CTA en position « à côté du montant » : UNIQUEMENT dès
                       `xl` (marge saine mesurée, cf. commentaire plus haut),
                       masqué en dessous — le second rendu, après la jauge,
-                      prend le relais (cf. plus bas). Toujours en régime rail
-                      (xl > lg), donc toujours `RAIL_CTA`. */}
+                      prend le relais (cf. plus bas). */}
                   <div className="hidden xl:flex xl:grow xl:items-center xl:justify-center">
-                    {contribuerCta(RAIL_CTA)}
+                    {contribuerCta(PALIERS_CTA)}
                   </div>
                 </div>
                 {/* La barre SOULIGNE le bloc du compteur au lieu de flotter
@@ -485,8 +483,7 @@ export default async function SouscriptionPage() {
                     régimes (feuille sous `lg`, rail de `lg` à `xl`) : d'où
                     deux rendus exclusifs, chacun avec sa cible. */}
                 <div className="mt-6 flex justify-center xl:hidden">
-                  <span className="lg:hidden">{contribuerCta(SHEET_CTA)}</span>
-                  <span className="hidden lg:block">{contribuerCta(RAIL_CTA)}</span>
+                  {contribuerCta(PALIERS_CTA)}
                 </div>
               </ImpactFrame>
             </Reveal>
@@ -621,7 +618,7 @@ export default async function SouscriptionPage() {
               </p>
               {/* Bloc `lg:hidden` : ce CTA n'existe qu'en régime feuille. */}
               <Button
-                href={SHEET_CTA}
+                href={PALIERS_CTA}
                 aria-label="Contribuer — voir les contreparties"
                 className="shrink-0 px-4 py-3 text-[13px] font-extrabold tracking-[.03em] sm:px-6 sm:py-3.5 sm:text-sm"
               >
@@ -954,34 +951,17 @@ export default async function SouscriptionPage() {
                 </span>{" "}
                 plutôt que la fin du monde.
               </h2>
-              {/* Deux rendus exclusifs, même raison qu'au CTA du compteur :
-                  sous `lg` l'ancre redéploie la feuille sur les contreparties,
-                  à partir de `lg` elle fait défiler le rail jusqu'à la carte
-                  montant libre (viser le rail lui-même ne bougeait rien — il
-                  est déjà collé en haut de page). L'exclusion est portée par
-                  des `<span>` enveloppants et JAMAIS par un `hidden` passé au
-                  `Button` : celui-ci a `inline-flex` en dur dans sa recette, et
-                  `.inline-flex` est écrit APRÈS `.hidden` dans la feuille
-                  générée — le bouton resterait visible. Même forme qu'au CTA du
-                  compteur plus haut. */}
-              <span className="lg:hidden">
-                <Button
-                  href={SHEET_CTA}
-                  aria-label="Contribuer — voir les contreparties"
-                  className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
-                >
-                  Contribuer&nbsp;↓
-                </Button>
-              </span>
-              <span className="hidden lg:block">
-                <Button
-                  href={RAIL_CTA}
-                  aria-label="Contribuer — voir les contreparties"
-                  className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
-                >
-                  Contribuer&nbsp;↓
-                </Button>
-              </span>
+              {/* UN SEUL rendu depuis que la cible est unique : l'ancre
+                  déploie la feuille sous `lg`, le tiroir au-dessus. Les deux
+                  `<span>` exclusifs qui portaient les deux cibles ont disparu
+                  avec elles. */}
+              <Button
+                href={PALIERS_CTA}
+                aria-label="Contribuer — voir les contreparties"
+                className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
+              >
+                Contribuer&nbsp;↓
+              </Button>
             </Reveal>
           </Container>
         </section>
@@ -998,7 +978,7 @@ export default async function SouscriptionPage() {
         anchors={["paliers", "montant-libre"]}
         autoOpenDelayMs={1000}
       >
-        <TiersDrawer>
+        <TiersDrawer anchors={["paliers", "montant-libre"]}>
           <TiersRail content={content} enabled={enabled} />
         </TiersDrawer>
       </BottomSheet>
