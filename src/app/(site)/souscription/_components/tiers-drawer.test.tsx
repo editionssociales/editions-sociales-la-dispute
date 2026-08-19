@@ -37,6 +37,10 @@ import { TiersDrawer } from "./tiers-drawer";
  *  - le repli passe par `inert`, jamais par `visibility`/`hidden` ;
  *  - Échap n'est PAS écouté sur `document` : il ne ferme pas le tiroir depuis
  *    le champ « montant libre », qui vit pourtant dans le panneau ;
+ *  - les TROIS points porteurs de la largeur (grille de page, réserve du
+ *    header, largeur du contenu du rail) sont réellement INTERPOLÉS chez
+ *    leurs porteurs — on pouvait supprimer chacun des trois sans qu'une
+ *    seule assertion ne bronche ;
  *  - l'INDICE D'APPEL est peint sur l'aside, la seule surface visible.
  */
 
@@ -304,6 +308,41 @@ describe("TiersDrawer — Échap n'est pas écouté sur `document`", () => {
       panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
     expect(panel.hasAttribute("inert")).toBe(true);
+  });
+});
+
+// ------------------------------------------------ les trois points porteurs
+
+/**
+ * Les trois constantes de `rail-inset.ts` ne valent QUE si elles atteignent
+ * leur porteur. On pouvait, avant ces trois tests, supprimer `RAIL_GRID_CLASS`
+ * de la grille de page, `RAIL_WIDTH_CLASS` du `<header>` ou
+ * `RAIL_CONTENT_WIDTH_CLASS` de l'aside sans qu'une seule assertion ne rougisse
+ * — les trois piliers de la conception, non testés.
+ *
+ * Chaque assertion porte sur l'INTERPOLATION RÉELLE, dans le gabarit passé à
+ * `className` : une simple mention du NOM de la constante (import inutilisé,
+ * commentaire, doc) ne peut PAS la satisfaire. C'est le piège déjà rencontré
+ * sur les classes de course.
+ */
+describe("Les trois points porteurs de la largeur atteignent leur porteur", () => {
+  it("la grille de page interpole RAIL_GRID_CLASS dans son className", () => {
+    const page = read("src/app/(site)/souscription/page.tsx");
+    expect(page).toMatch(/className=\{`lg:grid \$\{RAIL_GRID_CLASS\}[^`]*`\}/);
+  });
+
+  it("le <header> interpole RAIL_WIDTH_CLASS dans son className", () => {
+    const header = read("src/components/site-header.tsx");
+    // La marge vit sur le <header> et JAMAIS sur le <nav> (sa boîte sticky
+    // intercepterait les clics du rail) : l'assertion est ancrée sur la balise.
+    expect(header).toMatch(/<header\s+className=\{[\s\S]{0,120}?`[^`]*\$\{RAIL_WIDTH_CLASS\}[^`]*`/);
+  });
+
+  it("l'aside du rail interpole RAIL_CONTENT_WIDTH_CLASS dans son className", () => {
+    const rail = read("src/app/(site)/souscription/_components/tiers-rail.tsx");
+    expect(rail).toMatch(
+      /<aside[\s\S]{0,400}?className=\{`[^`]*\$\{RAIL_CONTENT_WIDTH_CLASS\}[^`]*`\}/,
+    );
   });
 });
 
