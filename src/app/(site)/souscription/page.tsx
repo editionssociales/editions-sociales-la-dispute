@@ -67,8 +67,8 @@ import { TiersDrawer } from "./_components/tiers-drawer";
  * principale — jauge de collecte en direct (TOUJOURS visible, paliers
  * réinscrits sous la barre et gros CTA orange à droite du compteur — retour
  * Youri, soir du 26/07 ; rail et feuille mobile restent les entrées
- * principales vers le paiement), corps de texte ouvert par le slot
- * vidéo (placeholder tant qu'aucune vidéo n'est livrée) puis ask — h1, lien
+ * principales vers le paiement), corps de texte ouvert par la vidéo
+ * (SEULEMENT une fois livrée — section absente sinon) puis ask — h1, lien
  * d'ancre mobile vers `#paliers`, étagère 3D des dernières parutions
  * (preuve matérielle du slogan, 3D en lg+, repli en grille de couvertures
  * 2×4 sous `lg`) —, quatre sections narratives, objectifs de jauge, CTA
@@ -124,8 +124,9 @@ const POP_COLS = "grid-cols-[41.666fr_25fr_16.667fr_16.667fr]";
  * brute à réception (watch, youtu.be, shorts ou déjà embed —
  * `youTubeEmbedUrl` la normalise en youtube-nocookie, règle single-source de
  * `src/lib/video.ts` ; si la vidéo n'est pas YouTube, étendre `video.ts`
- * plutôt que d'inliner). En attendant, un placeholder au format vidéo tient
- * la place (jamais un vide).
+ * plutôt que d'inliner). URL absente ou non reconnue : la section vidéo
+ * n'est PAS rendue (arbitrage client 2026-08-19 — la vidéo n'arrivera que
+ * plusieurs jours après le lancement, le placeholder d'attente est retiré).
  */
 const CAMPAIGN_VIDEO_URL: string | null = null;
 
@@ -489,9 +490,10 @@ export default async function SouscriptionPage() {
             </Reveal>
           </Container>
           {/* Liseré des quatre couleurs du site en pied de bloc, posé sur la
-              couture paper → ink. Décoratif pur (aria-hidden). Coupé aux
-              abscisses des paliers (cf. POP_COLS) : le pied du bloc rime avec
-              la barre qui le surmonte. */}
+              couture avec la section suivante (vidéo sur ink quand elle est
+              livrée, ask sur paper sinon). Décoratif pur (aria-hidden). Coupé
+              aux abscisses des paliers (cf. POP_COLS) : le pied du bloc rime
+              avec la barre qui le surmonte. */}
           <div className={`grid ${POP_COLS}`} aria-hidden="true">
             {POP_LISERE.map((c) => (
               <div key={c} className={`h-1.5 ${c}`} />
@@ -499,19 +501,19 @@ export default async function SouscriptionPage() {
           </div>
         </section>
 
-        {/* 2 ▪ Vidéo de présentation — OUVRE le corps de texte ; tant
-            qu'aucune vidéo n'est livrée, un placeholder au même format tient
-            la place (le bloc ne disparaît jamais). Cadre hachuré à ombre
+        {/* 2 ▪ Vidéo de présentation — OUVRE le corps de texte quand une
+            vidéo existe, et DISPARAÎT entièrement sinon (arbitrage client
+            2026-08-19 : la vidéo n'arrivera que plusieurs jours après le
+            lancement, plus de placeholder qui tient la place). Cadre à ombre
             dure (R8, recette littérale), INVERSÉ : depuis l'échange des fonds
             avec le bloc de collecte (retour Youri 26/07) la vidéo est posée
-            sur ink — bordure et ombre passent donc en paper, et la hachure du
-            placeholder en ink/bleu. Le bloc porte sa propre gouttière basse
-            (un aplat de couleur ne peut pas s'appuyer sur le padding de la
-            section suivante, restée sur paper). */}
-        <section className="bg-ink text-paper">
-          <Container className="py-14 sm:py-16">
-            <Reveal>
-              {videoEmbed ? (
+            sur ink — bordure et ombre passent donc en paper. Le bloc porte sa
+            propre gouttière basse (un aplat de couleur ne peut pas s'appuyer
+            sur le padding de la section suivante, restée sur paper). */}
+        {videoEmbed && (
+          <section className="bg-ink text-paper">
+            <Container className="py-14 sm:py-16">
+              <Reveal>
                 <div className="border-2 border-paper bg-ink shadow-[8px_8px_0_0_var(--color-paper)]">
                   <iframe
                     src={videoEmbed}
@@ -523,27 +525,10 @@ export default async function SouscriptionPage() {
                     referrerPolicy="strict-origin-when-cross-origin"
                   />
                 </div>
-              ) : (
-                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border-2 border-paper bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_14px,var(--color-pop-teal)_14px_28px)] shadow-[8px_8px_0_0_var(--color-paper)] print:hidden">
-                  {/* SVG plutôt que le caractère ▶ : Effra ne couvre pas les
-                      glyphes géométriques, le rendu retombait sur la fonte
-                      système (forme et centrage variables selon l'OS). */}
-                  <span
-                    aria-hidden="true"
-                    className="flex h-16 w-16 items-center justify-center border-2 border-paper bg-paper text-ink"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
-                      <path d="M6 4 L20 12 L6 20 Z" />
-                    </svg>
-                  </span>
-                  <p className="px-4 text-center font-sans text-xs font-extrabold uppercase tracking-[.22em] text-paper/80">
-                    La vidéo de la souscription — bientôt
-                  </p>
-                </div>
-              )}
-            </Reveal>
-          </Container>
-        </section>
+              </Reveal>
+            </Container>
+          </section>
+        )}
 
         {/* 3 ▪ L'ask 2026 — le slogan en trois échelles (affiche) : « 100
             ans » en aplat plein très grand, la qualification en capitales,
