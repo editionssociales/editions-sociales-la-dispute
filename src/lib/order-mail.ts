@@ -112,16 +112,56 @@ function totalsRow(
  * volontairement prudent, l'expédition réelle n'est pas pilotée par ce
  * module).
  */
+/**
+ * Phrases partagées entre les rendus HTML et texte brut — une seule source :
+ * toute retouche éditoriale vaut pour les deux formats d'un coup.
+ */
+const SHIPPING_LABEL = "Livraison";
+const DISCOUNT_LABEL = "Remise";
+const TOTAL_LABEL = "Total TTC (TVA 5,5 % incluse)";
+const SHIPPING_NOTE =
+  "Votre commande est en cours de préparation ; nous vous informerons dès son expédition.";
+const introSentence = (orderNumberMarkup: string) =>
+  `Nous avons bien reçu votre commande ${orderNumberMarkup}. Merci de votre confiance.`;
+const contactSentence = (emailMarkup: string) =>
+  `Une question sur votre commande ? Écrivez-nous à ${emailMarkup} — nous vous répondrons avec plaisir.`;
+
+/**
+ * Rendu texte brut (multipart, `textContent`) — mêmes phrases que le HTML
+ * (constantes partagées ci-dessus), données non échappées (text/plain).
+ * Classification Gmail (un HTML seul part en onglet Promotions) et
+ * accessibilité.
+ */
+function renderOrderConfirmationText(payload: OrderMailPayload): string {
+  const lines = payload.lines
+    .map((l) => `- ${l.titleSnapshot} ×${l.quantity} — ${euros(l.unitPriceTTC)}`)
+    .join("\n");
+  return [
+    "Bonjour,",
+    introSentence(payload.orderNumber),
+    "RÉCAPITULATIF\n" +
+      lines +
+      `\n${SHIPPING_LABEL} : ${euros(payload.shippingCostTTC)}` +
+      (payload.discountTTC > 0 ? `\n${DISCOUNT_LABEL} : -${euros(payload.discountTTC)}` : "") +
+      `\n${TOTAL_LABEL} : ${euros(payload.totalTTC)}`,
+    SHIPPING_NOTE,
+    contactSentence(CONTACT_EMAIL),
+    `Consulter le site : ${SITE_URL}`,
+    "Les Éditions sociales × La Dispute",
+  ].join("\n\n");
+}
+
 export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
   subject: string;
   html: string;
+  text: string;
 } {
   const orderNumber = escapeHtml(payload.orderNumber);
   const rows = payload.lines.map(lineRow).join("");
   const totals =
-    totalsRow("Livraison", euros(payload.shippingCostTTC)) +
-    (payload.discountTTC > 0 ? totalsRow("Remise", `-${euros(payload.discountTTC)}`) : "") +
-    totalsRow("Total TTC (TVA 5,5 % incluse)", euros(payload.totalTTC), {
+    totalsRow(SHIPPING_LABEL, euros(payload.shippingCostTTC)) +
+    (payload.discountTTC > 0 ? totalsRow(DISCOUNT_LABEL, `-${euros(payload.discountTTC)}`) : "") +
+    totalsRow(TOTAL_LABEL, euros(payload.totalTTC), {
       strong: true,
       topBorder: true,
     });
@@ -181,7 +221,11 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     bodyHtml,
   });
 
-  return { subject: `Confirmation de votre commande ${payload.orderNumber}`, html };
+  return {
+    subject: `Confirmation de votre commande ${payload.orderNumber}`,
+    html,
+    text: renderOrderConfirmationText(payload),
+  };
 }
 
 /**
@@ -194,8 +238,13 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
 export const brevoOrderMailer: OrderMailer = {
   async sendOrderConfirmation(payload) {
     try {
-      const { subject, html } = renderOrderConfirmationEmail(payload);
-      const result = await sendTransactionalEmail({ to: payload.email, subject, html });
+      const { subject, html, text } = renderOrderConfirmationEmail(payload);
+      const result = await sendTransactionalEmail({
+        to: payload.email,
+        subject,
+        html,
+        textContent: text,
+      });
       if (!result.ok) {
         console.error(
           `[order-mail] envoi Brevo échoué pour la commande ${payload.orderNumber} (${result.reason ?? "raison inconnue"}) — jamais bloquant, le reçu Stripe natif reste la confirmation immédiate.`,

@@ -118,7 +118,8 @@ export interface TransactionalEmailInput {
   toName?: string;
   subject: string;
   html: string;
-  text?: string;
+  /** Version texte brut (multipart) — transmise telle quelle (`textContent`), aucune dérivation depuis `html` ici : c'est l'appelant (`order-mail.ts`/`donation-mail.ts`/`contact/actions.ts`) qui la produit. Améliore la délivrabilité (classification Gmail) et l'accessibilité. Optionnelle : son absence ne change rien au comportement existant. */
+  textContent?: string;
   replyTo?: string;
   replyToName?: string;
 }
@@ -155,7 +156,7 @@ export async function sendTransactionalEmail(
         : {}),
       subject: input.subject,
       htmlContent: input.html,
-      ...(input.text ? { textContent: input.text } : {}),
+      ...(input.textContent ? { textContent: input.textContent } : {}),
     },
     env,
   );

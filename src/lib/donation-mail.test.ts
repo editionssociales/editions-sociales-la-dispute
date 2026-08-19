@@ -147,3 +147,19 @@ describe("brevoDonationMailer — envoi réel (msw)", () => {
     }
   });
 });
+
+describe("renderDonationThanksEmail — version texte (multipart)", () => {
+  it("reprend le verbatim dans la version texte aussi", () => {
+    const { text } = renderDonationThanksEmail();
+    expect(text).toContain("informé·es");
+    expect(text).toContain("100 ans d’existence");
+    expect(text).not.toContain("100 ans d'existence");
+    expect(text).toContain("L’équipe des éditions sociales et de La Dispute");
+  });
+
+  it("texte brut : aucun balisage HTML, aucune salutation ajoutée", () => {
+    const { text } = renderDonationThanksEmail();
+    expect(text).not.toMatch(/<[a-z]/i);
+    expect(text).not.toContain("Bonjour");
+  });
+});

@@ -167,4 +167,25 @@ describe("sendTransactionalEmail — appel réel", () => {
       htmlContent: "<p>Bonjour</p>",
     });
   });
+
+  it("transmet la version texte (textContent) quand fournie", async () => {
+    let capturedBody: unknown = null;
+    server.use(
+      http.post("https://api.brevo.com/v3/smtp/email", async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json({ messageId: "1" }, { status: 201 });
+      }),
+    );
+    const result = await sendTransactionalEmail(
+      {
+        to: "toutes@editionssociales.fr",
+        subject: "Test",
+        html: "<p>Bonjour</p>",
+        textContent: "Bonjour",
+      },
+      CONFIGURED_ENV,
+    );
+    expect(result).toEqual({ ok: true });
+    expect(capturedBody).toMatchObject({ textContent: "Bonjour" });
+  });
 });
