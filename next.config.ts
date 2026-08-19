@@ -215,11 +215,12 @@ async function redirects() {
         // DOIT rester après `productRedirectRules()` (premier match gagnant).
         r({ source: "/produit/:slug", destination: "https://ld-es.fr/catalogue" }),
         // Panier/checkout/compte WooCommerce → panier natif unifié. `/panier`
-        // n'a toujours PAS sa propre règle : ce host ne sert plus rien
-        // nativement (bascule canonique ld-es.fr), donc plus de risque de
-        // boucle locale — mais il tombe désormais dans le catch-all générique
-        // ci-dessous (→ `/catalogue`, pas `/panier`), même repli que tout
-        // chemin boutique sans équivalent structurel dédié.
+        // a désormais SA règle : du temps du host servi nativement, source ===
+        // destination aurait créé une boucle ; depuis la bascule canonique
+        // ld-es.fr ce host ne sert plus rien, et `/panier` (slug de panier
+        // WooCommerce FR, bookmarkable) a un équivalent structurel exact —
+        // le laisser tomber dans le catch-all `/catalogue` perdrait le sens.
+        r({ source: "/panier", destination: "https://ld-es.fr/panier" }),
         r({ source: "/commander", destination: "https://ld-es.fr/panier" }),
         r({ source: "/mon-compte", destination: "https://ld-es.fr/panier" }),
         // Catégories produit (`product_cat`) — seules les deux maisons sont
