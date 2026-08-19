@@ -2,7 +2,11 @@ import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { NAV_HOUSES, NAV_SECTIONS } from "@/lib/nav";
-import { buildMailto, CONTACT_EMAIL } from "@/lib/contact-address";
+import {
+  buildMailto,
+  CONTACT_EMAIL,
+  NEWSLETTER_MAILTO_SUBJECT,
+} from "@/lib/contact-address";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
@@ -133,16 +137,43 @@ function MentionsCell({ className = "", year }: { className?: string; year: numb
 }
 
 /**
+ * Repli sans Brevo — le double opt-in EST la liste Brevo : sans clé, il n'y a
+ * aucun dispositif d'inscription, seulement un champ qui échouerait en
+ * silence. On rend donc une invitation honnête à écrire, objet pré-rempli.
+ * AUCUNE mention de sous-traitance ici : rien n'est transmis à Brevo sur ce
+ * chemin, la mention du formulaire (`NewsletterForm`) n'aurait plus d'objet —
+ * elle suit l'état réel plutôt que de survivre par habitude.
+ */
+function NewsletterByEmail() {
+  const { href } = buildMailto({ subject: NEWSLETTER_MAILTO_SUBJECT });
+
+  return (
+    <>
+      <p className={BODY_CLASS}>
+        L&apos;inscription en ligne n&apos;est pas encore en service. Écrivez-nous,
+        nous vous inscrivons à la main :
+      </p>
+      <a href={href} className={`${LINK_CLASS} text-sm`}>
+        {CONTACT_EMAIL}
+      </a>
+    </>
+  );
+}
+
+/**
  * Cellule newsletter — SANS phrase de présentation (« Parutions, rencontres et
  * souscriptions… », supprimée sur retour Clara 2026-08-07) : le titre de la
  * cellule et la mention Brevo sous le champ (`NewsletterForm`) disent déjà tout
  * ce qu'il y a à dire.
+ *
+ * `enabled` (descendu du layout, jamais lu ici — cf. `SiteFooter`) aiguille
+ * entre le formulaire à double opt-in et le repli manuel.
  */
-function NewsletterCell({ className = "" }: { className?: string }) {
+function NewsletterCell({ className = "", enabled }: { className?: string; enabled: boolean }) {
   return (
     <div className={`${CELL_CLASS} ${className}`}>
       <p className={HEADING_CLASS}>S&apos;abonner à la newsletter</p>
-      <NewsletterForm />
+      {enabled ? <NewsletterForm /> : <NewsletterByEmail />}
     </div>
   );
 }
@@ -190,7 +221,18 @@ function ReseauxCell({
   );
 }
 
-export function SiteFooter({ footer }: { footer: ReglagesSiteContent["footer"] }) {
+export function SiteFooter({
+  footer,
+  newsletterEnabled,
+}: {
+  footer: ReglagesSiteContent["footer"];
+  /**
+   * `true` quand la chaîne e-mail est provisionnée (`brevoConfigured()`, lu
+   * dans le layout) — le composant reste de pure présentation et ne lit ni
+   * l'environnement ni le réseau (`src/components/CLAUDE.md`).
+   */
+  newsletterEnabled: boolean;
+}) {
   const year = new Date().getFullYear();
   const reseaux = footer.reseauxSociaux;
 
@@ -211,7 +253,7 @@ export function SiteFooter({ footer }: { footer: ReglagesSiteContent["footer"] }
       <FramedGrid className="grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] lg:grid-rows-2">
         <AdresseCell className="lg:col-start-1 lg:row-start-1" adresse={footer.adresse} />
         <MentionsCell className="lg:col-start-1 lg:row-start-2" year={year} />
-        <NewsletterCell className="lg:col-start-3 lg:row-start-1" />
+        <NewsletterCell className="lg:col-start-3 lg:row-start-1" enabled={newsletterEnabled} />
         <DiffusionCell className="lg:col-start-3 lg:row-start-2" />
         {reseaux.length > 0 ? (
           <ReseauxCell

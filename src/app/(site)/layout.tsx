@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CartProvider } from "@/components/cart/cart-context";
 import { getReglagesSite } from "@/lib/site-content";
+import { brevoConfigured } from "@/lib/brevo";
 import { FOCUS_RING_DARK } from "@/lib/ui";
 
 const inter = Inter({
@@ -129,7 +130,13 @@ export default async function RootLayout({
             {children}
           </main>
         </CartProvider>
-        <SiteFooter footer={footer} />
+        {/* `newsletterEnabled` : sans `BREVO_API_KEY`, le double opt-in n'a
+            pas d'objet (c'est la liste Brevo elle-même) — le pied rend une
+            invitation à écrire plutôt qu'un champ qui échouerait en silence.
+            Lecture au prérendu pour les pages statiques : sur Vercel, une
+            variable ajoutée n'atteint le runtime qu'au déploiement suivant,
+            la réversibilité est donc intacte (cf. `contact/page.tsx`). */}
+        <SiteFooter footer={footer} newsletterEnabled={brevoConfigured()} />
         {/* Vercel Web Analytics (plan/06-operations.md, étape 4) — un
             <script> first-party sans cookie, aucun nœud visible : seule
             modification de DOM de cette phase, iso-rendu visuel préservé. */}
