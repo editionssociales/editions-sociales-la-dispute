@@ -240,8 +240,22 @@ export function TiersDrawer({
     // `#paliers` EST la boîte défilante du rail : `scrollIntoView` y ferait
     // défiler la PAGE et laisserait la liste où elle en était. On la ramène
     // à son sommet — c'est le « retour en haut de la liste » demandé.
-    if (target.scrollHeight > target.clientHeight + 1) target.scrollTop = 0;
-    else target.scrollIntoView({ block: "start" });
+    //
+    // JAMAIS en affectation sèche (`scrollTop = 0`) : c'est le SEUL geste du
+    // tiroir qui se voit vraiment sur une liste défilée (~1 500 px), et
+    // « aucun changement d'état n'est sec » (grammaire des déroulés). Sous
+    // `prefers-reduced-motion` le saut sec redevient, lui, le bon
+    // comportement — d'où la lecture du réglage plutôt qu'un `smooth` en dur.
+    const behavior: ScrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)")
+      .matches
+      ? "auto"
+      : "smooth";
+    if (target.scrollHeight > target.clientHeight + 1) {
+      // `scrollTo` plutôt que `scrollTop` : c'est la seule forme qui accepte
+      // un `behavior`. Repli sur l'affectation là où il n'existe pas (jsdom).
+      if (typeof target.scrollTo === "function") target.scrollTo({ top: 0, behavior });
+      else target.scrollTop = 0;
+    } else target.scrollIntoView({ block: "start", behavior });
   }, [mobile, pending]);
 
   if (mobile) return <>{children}</>;

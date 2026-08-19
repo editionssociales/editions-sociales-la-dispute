@@ -359,3 +359,38 @@ describe("Indice d'appel — peint sur l'aside, pas sur la colonne", () => {
     cta.remove();
   });
 });
+
+// ------------------------------------------- le retour en haut n'est pas sec
+
+describe("Retour en haut de la liste — jamais une affectation sèche", () => {
+  it("le rail défilé est ramené par `scrollTo`, en `smooth`", () => {
+    const el = mount(
+      <TiersDrawer anchors={["paliers"]}>
+        <Cartes />
+      </TiersDrawer>,
+    );
+    const liste = el.querySelector<HTMLElement>("#paliers")!;
+    // jsdom ne fait pas de mise en page : on lui donne une liste défilée.
+    Object.defineProperty(liste, "scrollHeight", { value: 5000, configurable: true });
+    Object.defineProperty(liste, "clientHeight", { value: 900, configurable: true });
+    const calls: ScrollToOptions[] = [];
+    liste.scrollTo = ((options: ScrollToOptions) => {
+      calls.push(options);
+    }) as HTMLElement["scrollTo"];
+
+    const cta = document.createElement("a");
+    cta.setAttribute("href", "#paliers");
+    document.body.appendChild(cta);
+    act(() => {
+      cta.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    });
+
+    expect(calls).toEqual([{ top: 0, behavior: "smooth" }]);
+    // `matchMedia` est bouchonné à `matches: false` : pas de réglage
+    // « mouvement réduit », donc `smooth`. Le code lit RÉELLEMENT le réglage.
+    expect(read("src/app/(site)/souscription/_components/tiers-drawer.tsx")).toContain(
+      '"(prefers-reduced-motion: reduce)"',
+    );
+    cta.remove();
+  });
+});
