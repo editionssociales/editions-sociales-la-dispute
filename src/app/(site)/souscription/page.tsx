@@ -412,13 +412,13 @@ export default async function SouscriptionPage() {
                       </p>
                     ) : (
                       /* Le montant monumental est TOUJOURS rendu, 0 EUR compris
-                         (arbitrage client 2026-08-19) : l'ancien repli
-                         « Campagne tout juste lancée — soyez les premier·ères à
-                         contribuer » est supprimé, il tenait la place du chiffre
-                         au lieu de le montrer. Seules les DEUX branches
-                         d'honnêteté au-dessus (panne Stripe, dons pas encore
-                         ouverts) remplacent encore le compteur — ce sont des
-                         garde-fous, pas des placeholders.
+                         (arbitrage client 2026-08-19) : le placeholder de
+                         lancement qui prenait sa place sous 1 € est supprimé —
+                         il tenait la place du chiffre au lieu de le montrer.
+                         Seules les DEUX branches d'honnêteté au-dessus (panne
+                         Stripe, dons pas encore ouverts) remplacent encore le
+                         compteur — ce sont des garde-fous, pas des
+                         placeholders (`counter.test.tsx` le verrouille).
                          Les `{" "}` autour des <CountUp> sont porteurs : JSX
                          supprime les blancs contenant un retour à la ligne — sans
                          eux, AT/copier-coller lisent « 11 014 €réunis ». Les
