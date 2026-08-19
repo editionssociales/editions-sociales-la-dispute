@@ -123,3 +123,62 @@ describe("sendContactMessage — soumission valide", () => {
     expect(state.message).not.toMatch(/http-500/);
   });
 });
+
+/**
+ * Un échec d'envoi ne doit jamais se solder par « une erreur est survenue » :
+ * le message est écrit, il repart par le chemin manuel — déjà pré-rempli.
+ */
+describe("sendContactMessage — chemin manuel des échecs", () => {
+  it("Brevo échoue → mailto vers l'adresse publique, objet ET corps saisis", async () => {
+    process.env.CONTACT_TO_EMAIL = "toutes@editionssociales.fr";
+    sendTransactionalEmail.mockResolvedValueOnce({ ok: false, reason: "network-error" });
+
+    const state = await sendContactMessage(CONTACT_INITIAL_STATE, form(VALID));
+
+    expect(state.fallback?.address).toBe("ecrire@editionssociales.fr");
+    expect(state.fallback?.truncated).toBe(false);
+    const href = state.fallback?.href ?? "";
+    expect(href.startsWith("mailto:ecrire@editionssociales.fr?")).toBe(true);
+    expect(decodeURIComponent(href)).toContain(VALID.subject);
+    expect(decodeURIComponent(href)).toContain(VALID.message);
+  });
+
+  it("CONTACT_TO_EMAIL absente → même chemin manuel (rien n'est parti non plus)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const state = await sendContactMessage(CONTACT_INITIAL_STATE, form(VALID));
+
+    expect(state.fallback?.href).toContain("mailto:ecrire@editionssociales.fr");
+    warn.mockRestore();
+  });
+
+  it("message très long → corps tronqué, lien jamais cassé", async () => {
+    process.env.CONTACT_TO_EMAIL = "toutes@editionssociales.fr";
+    sendTransactionalEmail.mockResolvedValueOnce({ ok: false, reason: "http-500" });
+
+    const state = await sendContactMessage(
+      CONTACT_INITIAL_STATE,
+      form({ ...VALID, message: "Un très long message. ".repeat(200) }),
+    );
+
+    expect(state.fallback?.truncated).toBe(true);
+    expect((state.fallback?.href ?? "").length).toBeLessThanOrEqual(1800);
+  });
+
+  it("succès → aucun chemin manuel (rien à rattraper)", async () => {
+    process.env.CONTACT_TO_EMAIL = "toutes@editionssociales.fr";
+    const state = await sendContactMessage(CONTACT_INITIAL_STATE, form(VALID));
+
+    expect(state.status).toBe("ok");
+    expect(state.fallback).toBeUndefined();
+  });
+
+  it("refus de validation → aucun chemin manuel (le message n'a pas de forme exploitable)", async () => {
+    const state = await sendContactMessage(
+      CONTACT_INITIAL_STATE,
+      form({ ...VALID, message: "court" }),
+    );
+
+    expect(state.status).toBe("error");
+    expect(state.fallback).toBeUndefined();
+  });
+});
