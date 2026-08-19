@@ -1141,7 +1141,7 @@ export interface PagesLegales {
     [k: string]: unknown;
   } | null;
   /**
-   * Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site, avec ses placeholders [À COMPLÉTER…].
+   * Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site (identité légale de l’éditeur).
    */
   mentionsLegales?: {
     root: {
