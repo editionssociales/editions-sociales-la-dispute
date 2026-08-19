@@ -28,11 +28,11 @@ const PAGE = readFileSync(
 
 describe("Compteur de collecte — le montant est TOUJOURS rendu", () => {
   it("`CountUp` rend un 0 € réel, jamais un vide", () => {
-    const html = renderToStaticMarkup(<CountUp value={0} suffix=" €" />);
+    const html = renderToStaticMarkup(<CountUp value={0} suffix=" €" />);
     const container = document.createElement("div");
     container.innerHTML = html;
-    expect(container.querySelector(".sr-only")?.textContent).toBe("0 €");
-    expect(container.textContent).toContain("0 €");
+    expect(container.querySelector(".sr-only")?.textContent).toBe("0 €");
+    expect(container.textContent).toContain("0 €");
   });
 
   it("la page n'a plus de branche `collected > 0` ni le placeholder de lancement", () => {

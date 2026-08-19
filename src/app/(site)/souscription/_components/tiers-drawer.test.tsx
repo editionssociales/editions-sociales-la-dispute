@@ -30,7 +30,7 @@ import { TiersDrawer } from "./tiers-drawer";
  *    même durée et sur la même courbe que la feuille mobile ;
  *  - le repli passe par `inert`, jamais par `visibility`/`hidden` ;
  *  - Échap n'est PAS écouté sur `document` : il ne ferme pas le tiroir depuis
- *    le champ « montant libre », qui vit pourtant dans le panneau.
+ *    le champ « montant libre », qui vit pourtant dans le panneau ;
  */
 
 const ROOT = process.cwd();

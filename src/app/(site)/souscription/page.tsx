@@ -431,7 +431,7 @@ export default async function SouscriptionPage() {
                         <span className="block">
                           <CountUp
                             value={liveCampaign.collected}
-                            suffix=" €"
+                            suffix=" €"
                             className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-ink lg:text-[clamp(56px,9vw,128px)]"
                           />
                         </span>{" "}
