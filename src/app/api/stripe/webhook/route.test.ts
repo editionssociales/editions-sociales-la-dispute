@@ -99,6 +99,12 @@ vi.mock("@/lib/order-mail", () => ({
   selectOrderMailer: () => ({ sendOrderConfirmation }),
 }));
 
+const sendDonationThanks = vi.fn(async () => {});
+vi.mock("@/lib/donation-mail", () => ({
+  logDonationMailer: { sendDonationThanks },
+  selectDonationMailer: () => ({ sendDonationThanks }),
+}));
+
 const WEBHOOK_SECRET = "whsec_test_composition";
 process.env.STRIPE_SECRET_KEY = "sk_test_composition";
 process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
@@ -242,6 +248,103 @@ describe("POST /api/stripe/webhook — événements signés (dons, kind absent)"
     const res = await POST(signedRequest({ id: "evt_boom", type: "charge.refunded" }));
     expect(res.status).toBe(500);
     expect(Sentry.captureException).toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/stripe/webhook — mail de remerciement (dons)", () => {
+  function donationSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "cs_test_donation_1",
+      object: "checkout.session",
+      payment_status: "paid",
+      customer_details: { email: "donatrice@exemple.fr" },
+      metadata: { kind: "donation", campaign: "souscription-2026", tier: "palier-50" },
+      ...overrides,
+    };
+  }
+
+  it("checkout.session.completed payé → envoie le remerciement au donateur, invalide quand même la jauge", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_donation_1",
+        type: "checkout.session.completed",
+        object: donationSession(),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendDonationThanks).toHaveBeenCalledTimes(1);
+    expect(sendDonationThanks).toHaveBeenCalledWith({ email: "donatrice@exemple.fr" });
+    expect(revalidateTag).toHaveBeenCalledWith("donations", "max");
+  });
+
+  it("checkout.session.async_payment_succeeded payé (moyen différé confirmé) → envoie aussi le remerciement", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_donation_async",
+        type: "checkout.session.async_payment_succeeded",
+        object: donationSession(),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendDonationThanks).toHaveBeenCalledTimes(1);
+  });
+
+  it("metadata.kind absente (don legacy) → traité comme un don, remerciement envoyé", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_donation_no_kind",
+        type: "checkout.session.completed",
+        object: donationSession({ metadata: {} }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendDonationThanks).toHaveBeenCalledTimes(1);
+  });
+
+  it("payment_status non « paid » (moyen différé en attente) → aucun email, jauge quand même invalidée", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_donation_pending",
+        type: "checkout.session.completed",
+        object: donationSession({ payment_status: "unpaid" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendDonationThanks).not.toHaveBeenCalled();
+    expect(revalidateTag).toHaveBeenCalledWith("donations", "max");
+  });
+
+  it("customer_details.email absent → aucun email, jamais d'exception", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_donation_no_email",
+        type: "checkout.session.completed",
+        object: donationSession({ customer_details: null }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendDonationThanks).not.toHaveBeenCalled();
+  });
+
+  it("charge.refunded → jamais d'email (objet Charge, pas de session à remercier)", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_donation_refund",
+        type: "charge.refunded",
+        object: { id: "ch_test_donation", object: "charge", metadata: { kind: "donation" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendDonationThanks).not.toHaveBeenCalled();
+    expect(revalidateTag).toHaveBeenCalledWith("donations", "max");
+  });
+
+  it("kind: order (commande) → jamais le mailer de dons, même si la session porte un email", async () => {
+    const res = await POST(
+      signedEventRequest({ id: "evt_order_not_donation", type: "checkout.session.completed", object: checkoutSession() }),
+    );
+    expect(res.status).toBe(200);
+    expect(sendDonationThanks).not.toHaveBeenCalled();
   });
 });
 

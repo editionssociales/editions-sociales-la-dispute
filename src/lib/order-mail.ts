@@ -13,7 +13,18 @@
  * `sendTransactionalEmail` dans `brevo.ts` qui ne jette déjà pas).
  */
 import { brevoConfigured, sendTransactionalEmail } from "./brevo";
+import { CONTACT_EMAIL } from "./contact-address";
 import { formatPrice } from "./format";
+import {
+  FONT_STACK,
+  INK,
+  LINE_COLOR,
+  MUTED,
+  PAPER,
+  SITE_URL,
+  escapeHtml,
+  renderMailShell,
+} from "./mail-shell";
 
 export interface OrderMailLine {
   titleSnapshot: string;
@@ -49,17 +60,40 @@ export const logOrderMailer: OrderMailer = {
   },
 };
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function euros(amount: number): string {
   return formatPrice(amount) ?? `${amount.toFixed(2)} €`;
+}
+
+/** Ligne d'article du récapitulatif — titre échappé (contrat verrouillé par `order-mail.test.ts`). */
+function lineRow(line: OrderMailLine): string {
+  const cell =
+    `padding:8px 6px;border-bottom:1px solid ${LINE_COLOR};font-family:${FONT_STACK};` +
+    `font-size:14px;color:${INK};`;
+  return (
+    `<tr>` +
+    `<td style="${cell}">${escapeHtml(line.titleSnapshot)}</td>` +
+    `<td style="${cell}text-align:center;white-space:nowrap;">${line.quantity}</td>` +
+    `<td style="${cell}text-align:right;white-space:nowrap;">${euros(line.unitPriceTTC)}</td>` +
+    `</tr>`
+  );
+}
+
+/** Ligne totalisante (livraison / remise / total) — deux premières colonnes fusionnées. */
+function totalsRow(
+  label: string,
+  value: string,
+  opts: { strong?: boolean; topBorder?: boolean } = {},
+): string {
+  const weight = opts.strong ? "800" : "400";
+  const border = opts.topBorder ? `border-top:2px solid ${INK};padding-top:10px;` : "";
+  return (
+    `<tr>` +
+    `<td colspan="2" style="padding:6px 6px 2px;${border}font-family:${FONT_STACK};font-size:14px;` +
+    `font-weight:${weight};color:${INK};">${label}</td>` +
+    `<td style="padding:6px 6px 2px;${border}font-family:${FONT_STACK};font-size:14px;font-weight:${weight};` +
+    `color:${INK};text-align:right;white-space:nowrap;">${value}</td>` +
+    `</tr>`
+  );
 }
 
 /**
@@ -71,38 +105,81 @@ function euros(amount: number): string {
  * cette chaîne part directement vers l'API Brevo, jamais vers
  * `dangerouslySetInnerHTML`).
  *
- * [À COMPLÉTER : texte définitif du mail de confirmation de commande —
- * habillage, ton éditorial, mentions complémentaires — à valider par le
- * client ; la structure et les données ci-dessous sont fonctionnelles et
- * exactes en attendant.]
+ * Contrainte clients mail réels : tables + styles inline uniquement, aucune
+ * CSS externe ni webfont, largeur max ~560px centrée. DA du site rejouée en
+ * dur (mêmes teintes que `globals.css`, mêmes monogrammes que
+ * `site-header.tsx`) — aucune promesse de délai de livraison (texte
+ * volontairement prudent, l'expédition réelle n'est pas pilotée par ce
+ * module).
  */
 export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
   subject: string;
   html: string;
 } {
-  const rows = payload.lines
-    .map(
-      (line) =>
-        `<tr><td style="padding:4px 8px;">${escapeHtml(line.titleSnapshot)}</td>` +
-        `<td style="padding:4px 8px;text-align:center;">${line.quantity}</td>` +
-        `<td style="padding:4px 8px;text-align:right;">${euros(line.unitPriceTTC)}</td></tr>`,
-    )
-    .join("");
+  const orderNumber = escapeHtml(payload.orderNumber);
+  const rows = payload.lines.map(lineRow).join("");
+  const totals =
+    totalsRow("Livraison", euros(payload.shippingCostTTC)) +
+    (payload.discountTTC > 0 ? totalsRow("Remise", `-${euros(payload.discountTTC)}`) : "") +
+    totalsRow("Total TTC (TVA 5,5 % incluse)", euros(payload.totalTTC), {
+      strong: true,
+      topBorder: true,
+    });
 
-  const html =
-    `<div style="font-family:sans-serif;color:#111;">` +
-    `<p>Bonjour,</p>` +
-    `<p>Votre commande <strong>${escapeHtml(payload.orderNumber)}</strong> est confirmée. Voici son récapitulatif :</p>` +
-    `<table style="border-collapse:collapse;width:100%;">` +
-    `<thead><tr><th style="text-align:left;padding:4px 8px;">Article</th>` +
-    `<th style="padding:4px 8px;">Qté</th><th style="text-align:right;padding:4px 8px;">Prix</th></tr></thead>` +
-    `<tbody>${rows}</tbody>` +
+  const bodyHtml =
+    // Corps.
+    `<tr><td style="padding-bottom:20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${INK};">` +
+    `Bonjour,<br />` +
+    `Nous avons bien reçu votre commande <strong>${orderNumber}</strong>. Merci de votre confiance.` +
+    `</td></tr>` +
+    // Encadré récapitulatif — bordure 2px ink.
+    `<tr><td style="border:2px solid ${INK};padding:16px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td colspan="3" style="padding-bottom:12px;font-family:${FONT_STACK};font-size:13px;` +
+    `font-weight:800;color:${INK};">RÉCAPITULATIF</td></tr>` +
+    `<tr>` +
+    `<th align="left" style="padding:0 6px 8px;font-family:${FONT_STACK};font-size:12px;` +
+    `font-weight:800;text-transform:uppercase;color:${MUTED};border-bottom:1px solid ${INK};">Article</th>` +
+    `<th align="center" style="padding:0 6px 8px;font-family:${FONT_STACK};font-size:12px;` +
+    `font-weight:800;text-transform:uppercase;color:${MUTED};border-bottom:1px solid ${INK};">Qté</th>` +
+    `<th align="right" style="padding:0 6px 8px;font-family:${FONT_STACK};font-size:12px;` +
+    `font-weight:800;text-transform:uppercase;color:${MUTED};border-bottom:1px solid ${INK};">Prix unitaire</th>` +
+    `</tr>` +
+    rows +
+    totals +
     `</table>` +
-    `<p>Livraison : ${euros(payload.shippingCostTTC)}<br/>` +
-    (payload.discountTTC > 0 ? `Remise : -${euros(payload.discountTTC)}<br/>` : "") +
-    `Total TTC (TVA 5,5 % incluse) : <strong>${euros(payload.totalTTC)}</strong></p>` +
-    `<p>Merci de votre confiance.<br/>Les Éditions sociales × La Dispute</p>` +
-    `</div>`;
+    `</td></tr>` +
+    // Expédition — texte prudent, aucun délai promis.
+    `<tr><td style="padding:20px 0 20px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${INK};">` +
+    `Votre commande est en cours de préparation ; nous vous informerons dès son expédition.` +
+    `</td></tr>` +
+    // Contact.
+    `<tr><td style="padding-bottom:24px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${MUTED};">` +
+    `Une question sur votre commande ? Écrivez-nous à ` +
+    `<a href="mailto:${CONTACT_EMAIL}" style="color:${INK};">${CONTACT_EMAIL}</a> — nous vous répondrons avec plaisir.` +
+    `</td></tr>` +
+    // CTA — même recette que « Nous soutenir » (`site-header.tsx` : fond ink, texte paper, extrabold italique majuscule).
+    `<tr><td style="padding-bottom:20px;">` +
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>` +
+    `<td style="background-color:${INK};">` +
+    `<a href="${SITE_URL}" style="display:inline-block;padding:12px 24px;font-family:${FONT_STACK};` +
+    `font-size:14px;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:0.02em;` +
+    `color:${PAPER};text-decoration:none;">Consulter le site</a>` +
+    `</td>` +
+    `</tr></table>` +
+    `</td></tr>` +
+    // Pied de page.
+    `<tr><td style="padding-top:12px;border-top:1px solid ${LINE_COLOR};font-family:${FONT_STACK};` +
+    `font-size:12px;color:${MUTED};">` +
+    `Les Éditions sociales × La Dispute` +
+    `</td></tr>`;
+
+  const html = renderMailShell({
+    documentTitle: "Confirmation de commande",
+    preheader: `Votre commande ${orderNumber} est confirmée.`,
+    heading: "COMMANDE CONFIRMÉE",
+    bodyHtml,
+  });
 
   return { subject: `Confirmation de votre commande ${payload.orderNumber}`, html };
 }

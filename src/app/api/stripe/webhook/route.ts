@@ -1,16 +1,22 @@
 import * as Sentry from "@sentry/nextjs";
 import { revalidateTag } from "next/cache";
 import type Stripe from "stripe";
+import { selectDonationMailer } from "@/lib/donation-mail";
 import { getStripe } from "@/lib/stripe";
 import { handleOrderWebhookEvent } from "./order-handler";
 
 /**
  * Premier route handler du repo — POST, dynamique par nature (hors ISR).
  *
- * N'écrit rien (pas de base de données) : rejouer un événement n'a aucun
- * effet secondaire, donc **aucune déduplication par `event.id` n'est
- * nécessaire à ce stade** (à ajouter le jour où ce handler écrira — email
- * Brevo, ligne en base — phases ultérieures).
+ * N'écrit dans AUCUNE base de données côté DONS (la jauge lit les charges
+ * Stripe directement, zéro stockage, cf. `donations.ts`) : rejouer un
+ * événement n'a donc aucun effet secondaire PERSISTANT, et **aucune
+ * déduplication par `event.id` n'est nécessaire** pour l'invalidation de
+ * cache ci-dessous. Un effet non idempotent existe déjà malgré tout : le
+ * mail de remerciement (`donation-mail.ts`, best effort) peut repartir en
+ * double sur un rejeu Stripe (retry réseau, redélivrance manuelle) faute
+ * d'une ligne où marquer « déjà envoyé » — contrairement à
+ * `Orders.confirmationSent` côté commande (`order-handler.ts`).
  *
  * Rôle honnête (côté DONS, `kind: "donation"` ou absent) : un
  * **accélérateur best-effort**, pas le mécanisme de fraîcheur de la jauge. La
@@ -76,6 +82,20 @@ export async function POST(req: Request) {
       event.type === "checkout.session.async_payment_succeeded" ||
       event.type === "charge.refunded"
     ) {
+      if (event.type !== "charge.refunded") {
+        const session = event.data.object as Stripe.Checkout.Session;
+        // Paiement réellement confirmé — jamais pour un moyen différé encore
+        // en attente (`checkout.session.completed` peut se présenter en
+        // `payment_status !== "paid"`, `async_payment_succeeded` relaiera
+        // l'event le jour où il se confirme, même logique que côté commande).
+        // `sendDonationThanks` ne jette jamais (contrat `DonationMailer`) —
+        // best effort assumé, cf. docblock de fichier.
+        if (session.payment_status === "paid" && session.customer_details?.email) {
+          await selectDonationMailer().sendDonationThanks({
+            email: session.customer_details.email,
+          });
+        }
+      }
       revalidateTag("donations", "max"); // Next 16 : signature à 2 arguments
     }
     return Response.json({ received: true });
