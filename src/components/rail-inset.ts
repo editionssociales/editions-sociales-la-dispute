@@ -107,3 +107,9 @@ export const RAIL_PULSE_ATTRIBUTE = "data-rail-pulse";
 export const RAIL_PULSE_GROUP_CLASS = "group/rail";
 export const RAIL_PULSE_CLASS =
   "lg:outline-4 lg:-outline-offset-4 lg:outline-transparent lg:transition-[outline-color] lg:duration-500 lg:ease-out lg:motion-reduce:transition-none lg:group-data-[rail-pulse=on]/rail:outline-pop-orange lg:group-data-[rail-pulse=on]/rail:transition-none";
+
+/**
+ * Marqueur des deux commandes fixées au bord droit du viewport,
+ * `"handle"` | `"close"` — elles ne s'impriment jamais (`globals.css`).
+ */
+export const RAIL_EDGE_ATTRIBUTE = "data-rail-edge";

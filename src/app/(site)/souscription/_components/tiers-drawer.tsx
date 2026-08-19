@@ -12,6 +12,7 @@ import {
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { FOCUS_RING_INVERTING } from "@/lib/ui";
 import {
+  RAIL_EDGE_ATTRIBUTE,
   RAIL_EDGE_TRANSITION_CLASS,
   RAIL_OPEN_PROPERTY,
   RAIL_PULSE_ATTRIBUTE,
@@ -227,6 +228,35 @@ export function TiersDrawer({
   }, [mobile, anchorKey, firePulse, toggle]);
 
   /**
+   * Les CTA d'ancre sont devenus les COMMANDES de ce déroulé : ils doivent
+   * l'annoncer. Ce sont des `<a href="#paliers">` rendus par la page
+   * (composant serveur, hors de cet arbre) : impossible de leur passer une
+   * prop — on les annote depuis ici, comme on intercepte déjà leur clic.
+   *
+   * Fail-open intact : sans JS aucun attribut n'est posé et l'ancre reste une
+   * ancre qui mène au rail déployé. `aria-expanded` est un état SUPPORTÉ par
+   * `role=link` (ARIA 1.2) : le lien n'est pas travesti en bouton, il dit
+   * seulement ce que son activation a fait.
+   */
+  useEffect(() => {
+    const ids = anchorKey ? anchorKey.split(" ") : [];
+    if (mobile || ids.length === 0) return;
+    const links = ids.flatMap((id) =>
+      Array.from(document.querySelectorAll<HTMLAnchorElement>(`a[href="#${CSS.escape(id)}"]`)),
+    );
+    for (const link of links) {
+      link.setAttribute("aria-expanded", String(open));
+      link.setAttribute("aria-controls", panelId);
+    }
+    return () => {
+      for (const link of links) {
+        link.removeAttribute("aria-expanded");
+        link.removeAttribute("aria-controls");
+      }
+    };
+  }, [mobile, anchorKey, open, panelId]);
+
+  /**
    * Défilement vers l'ancre — APRÈS le commit, jamais dans le tick de
    * l'ouverture : la mise en page a été recalculée quand cet effet lit
    * `scrollHeight`. La mesure est de toute façon indépendante de la course,
@@ -269,8 +299,15 @@ export function TiersDrawer({
       <button
         ref={handleRef}
         type="button"
+        {...{ [RAIL_EDGE_ATTRIBUTE]: "handle" }}
         aria-expanded={open}
         aria-controls={panelId}
+        // Nom DISTINCT de « Contribuer » : les dix boutons de palier, le CTA
+        // du compteur et celui du pied portent déjà ce libellé — douze entrées
+        // homonymes dans la liste de boutons d'un lecteur d'écran. Le texte
+        // visible reste « Contribuer » (il vend l'action), le nom accessible
+        // dit ce que la commande FAIT, en miroir de « Replier ».
+        aria-label="Déplier les contreparties"
         // Escamotée hors écran tant que le tiroir est ouvert : `inert` la sort
         // du parcours clavier ET de l'arbre a11y (jamais `hidden`, dont la
         // bascule serait sèche et qui empêcherait le focus de la SUIVRE).
@@ -293,6 +330,7 @@ export function TiersDrawer({
         aria-expanded={open}
         aria-controls={panelId}
         aria-label="Replier les contreparties"
+        {...{ [RAIL_EDGE_ATTRIBUTE]: "close" }}
         inert={!open}
         onClick={() => toggle(false)}
         onKeyDown={onKeyDown}

@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  RAIL_EDGE_ATTRIBUTE,
   RAIL_EDGE_TRANSITION_CLASS,
   RAIL_GRID_CLASS,
   RAIL_GRID_TRANSITION_CLASS,
@@ -392,5 +393,56 @@ describe("Retour en haut de la liste — jamais une affectation sèche", () => {
       '"(prefers-reduced-motion: reduce)"',
     );
     cta.remove();
+  });
+});
+
+// ---------------------------------------------- les CTA sont des commandes
+
+describe("Les CTA d'ancre annoncent l'état du tiroir", () => {
+  it("`aria-expanded` / `aria-controls` sont posés puis suivent la bascule", () => {
+    const cta = document.createElement("a");
+    cta.setAttribute("href", "#paliers");
+    document.body.appendChild(cta);
+
+    const el = mount(
+      <TiersDrawer anchors={["paliers"]}>
+        <Cartes />
+      </TiersDrawer>,
+    );
+    expect(cta.getAttribute("aria-expanded")).toBe("true");
+    expect(cta.getAttribute("aria-controls")).toBe(panelOf(el).id);
+
+    act(() => {
+      closeButton(el).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(cta.getAttribute("aria-expanded")).toBe("false");
+
+    // Fail-open : ces attributs n'existent QUE tant que le tiroir vit. Sans
+    // JS (ou une fois la route quittée) l'ancre redevient une ancre nue, qui
+    // mène au rail déployé — c'est le seul comportement que le HTML servi
+    // promet.
+    act(() => {
+      root!.unmount();
+    });
+    root = null;
+    expect(cta.hasAttribute("aria-expanded")).toBe(false);
+    expect(cta.hasAttribute("aria-controls")).toBe(false);
+    expect(cta.getAttribute("href")).toBe("#paliers");
+    cta.remove();
+  });
+
+  it("la poignée d'ouverture ne s'appelle pas « Contribuer »", () => {
+    // Dix boutons de palier, le CTA du compteur et celui du pied portent déjà
+    // ce libellé : douze entrées homonymes dans la liste de boutons d'un
+    // lecteur d'écran. La poignée dit ce qu'elle FAIT, en miroir de la
+    // fermeture.
+    const el = mount(
+      <TiersDrawer>
+        <Cartes />
+      </TiersDrawer>,
+    );
+    const handle = el.querySelector<HTMLButtonElement>(`[${RAIL_EDGE_ATTRIBUTE}="handle"]`)!;
+    expect(handle.getAttribute("aria-label")).toBe("Déplier les contreparties");
+    expect(closeButton(el).getAttribute("aria-label")).toBe("Replier les contreparties");
   });
 });
