@@ -11,7 +11,12 @@ import {
   type NavSearch,
   type NavSectionId,
 } from "@/lib/nav";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import {
+  FOCUS_RING_DARK,
+  FOCUS_RING_HOVER_DARK,
+  FOCUS_RING_HOVER_LIGHT,
+  FOCUS_RING_LIGHT,
+} from "@/lib/ui";
 import { NAV_ACCENT_BG } from "./nav-accent";
 import { HEADER_TICKER_RESERVE_CLASS, RAIL_WIDTH_CLASS } from "./rail-inset";
 import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
@@ -162,12 +167,17 @@ const LAYER_MORPH = "transition-opacity duration-200 ease-out";
 function maisonCellClass(compact: boolean) {
   // Échelle rem (#88, R7 zoom-texte) : 14/16/22/30px → 0.875/1/1.375/1.875rem.
   const lg = compact ? "lg:py-3 lg:text-[0.875rem]" : "lg:py-7 lg:text-[clamp(1.375rem,2vw,1.875rem)]";
-  return `flex min-h-11 items-center bg-paper px-6 py-4 font-sans text-[1rem] font-black italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg}`;
+  // Fond paper au repos, ink au survol : anneau clair + sa surcharge de survol
+  // (R5) — l'ink seul serait invisible sur l'ink du survol (1:1).
+  return `flex min-h-11 items-center bg-paper px-6 py-4 font-sans text-[1rem] font-black italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK} ${lg}`;
 }
 
 function navCellClass(section: NavSectionId, active: boolean, compact: boolean) {
-  // Fond au repos toujours clair (bg-paper) ou pop (R2) : anneau clair dans
-  // les deux cas (R5). Taille fixe sous `lg` (compact par défaut) ; à `lg`
+  // Fond toujours clair (bg-paper) ou pop (R2), au repos COMME au survol :
+  // l'anneau clair tient les deux états sans surcharge (R5) — ink 17,19:1 sur
+  // paper, 15,19:1 sur le jaune, 9,92:1 sur le rose, 9,89:1 sur le bleu,
+  // 5,09:1 sur l'orange ; la cellule active ne change pas de fond du tout.
+  // Taille fixe sous `lg` (compact par défaut) ; à `lg`
   // la hauteur suit la rangée (py-0), seule la taille de texte varie au scroll.
   // Échelle rem (#88, R7 zoom-texte) : 12/14/13px → 0.75/0.875/0.8125rem.
   const lg = compact ? "lg:min-h-0 lg:py-0 lg:text-[0.75rem]" : "lg:min-h-0 lg:py-0 lg:text-[0.875rem]";
@@ -183,9 +193,10 @@ function soutenirClass(placement: string) {
   // pile : les deux calques occupent la MÊME cellule ([grid-area:1/1]). `relative`
   // ancre la flèche déployée (hors des calques, pour garder sa position d'origine).
   // `min-h-11` : cible tactile garantie sous `lg`, où le calque compact seul
-  // porte la hauteur de la cellule (chantier 3 §3). Fond ink au repos :
-  // anneau de focus sombre (pop-yellow, R2/R5).
-  return `relative grid min-h-11 bg-ink px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-paper hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_RING_DARK} ${placement}`;
+  // porte la hauteur de la cellule (chantier 3 §3). Fond ink au repos, jaune au
+  // survol : anneau sombre (pop-yellow, 15,19:1 sur l'ink) + sa surcharge de
+  // survol (R5) — sans elle, le jaune se posait sur le jaune (1:1).
+  return `relative grid min-h-11 bg-ink px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-paper hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT} ${placement}`;
 }
 
 /**
@@ -212,17 +223,26 @@ function HomeGlyph() {
  * mobile : entre les monogrammes LD/ES. Hover ink↔paper (identité de marque,
  * pas une section pop R2) ; actif = ink plein + `aria-current`. `placement`
  * fixe la taille (carré sur la rangée, ou taille fixe mobile).
+ *
+ * La cellule s'INVERSE au survol dans les deux états (paper → ink inactive,
+ * ink → paper active) : l'anneau de base suit le fond de REPOS, la surcharge
+ * `*_HOVER_*` suit celui du survol (R5). Un anneau seul serait faux dans un
+ * état sur deux — ink sur ink (1:1) inactive, pop-yellow sur paper (1,13:1)
+ * active.
  */
 function HomeNavCell({ placement, active }: { placement: string; active: boolean }) {
   const tone = active
     ? "bg-ink text-paper hover:bg-paper hover:text-ink"
     : "bg-paper text-ink hover:bg-ink hover:text-paper";
+  const ring = active
+    ? `${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`
+    : `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`;
   return (
     <Link
       href={NAV_HOME.href}
       aria-label={NAV_HOME.label}
       aria-current={active ? "page" : undefined}
-      className={`flex items-center justify-center ${tone} ${CELL_TRANSITION} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${placement}`}
+      className={`flex items-center justify-center ${tone} ${CELL_TRANSITION} ${ring} ${placement}`}
     >
       <HomeGlyph />
     </Link>
@@ -291,6 +311,8 @@ function MobileMenuToggle({
       aria-label={label}
       // La largeur vient de l'emplacement : carré `w-14` de la rangée haute
       // (porté par la pile de calques) ou barre pleine largeur du menu.
+      // Paper au repos, pop-yellow au survol : deux fonds CLAIRS, l'anneau
+      // clair tient les deux (17,19:1 puis 15,19:1) — aucune surcharge (R5).
       className={`relative flex h-full min-h-11 w-full items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT}`}
     >
       <span className={open ? "rotate-180" : undefined}>
@@ -301,14 +323,25 @@ function MobileMenuToggle({
   );
 }
 
-/** Monogramme maison (rangée mobile) — sigle + accent R3. */
+/**
+ * Monogramme maison (rangée mobile) — sigle + accent R3.
+ *
+ * L'accent maison est SOMBRE et s'inverse vers paper au survol : anneau sombre
+ * au repos (pop-yellow — 4,99:1 sur le brick, 11,07:1 sur le navy) + surcharge
+ * claire au survol (R5), sans quoi le jaune se posait sur le paper (1,13:1).
+ * Le repli sans accent (maison inconnue) part d'un fond clair : anneau et
+ * surcharge s'inversent avec lui.
+ */
 function MaisonMonogramLink({ href, label }: { href: string; label: string }) {
   const m = MAISON_MONOGRAM[label];
+  const ring = m
+    ? `${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`
+    : `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`;
   return (
     <Link
       href={href}
       aria-label={label}
-      className={`flex min-h-11 w-14 items-center justify-center font-sans text-[15px] font-black italic uppercase leading-none ${m?.cellClass ?? "bg-paper text-ink hover:bg-ink hover:text-paper"} ${CELL_TRANSITION} ${FOCUS_RING_DARK}`}
+      className={`flex min-h-11 w-14 items-center justify-center font-sans text-[15px] font-black italic uppercase leading-none ${m?.cellClass ?? "bg-paper text-ink hover:bg-ink hover:text-paper"} ${CELL_TRANSITION} ${ring}`}
     >
       <span aria-hidden="true">{m?.sigle ?? label.slice(0, 2)}</span>
     </Link>

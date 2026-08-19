@@ -9,8 +9,11 @@ import { useCart } from "./cart-context";
  * transition reprend exactement la recette des cellules nav voisines
  * (`CELL_TRANSITION` de `site-header.tsx`, redéfinie ici en petit plutôt que
  * ré-exportée : une constante, pas une dépendance inverse `cart →
- * site-header`) ; le focus vient de `FOCUS_RING_LIGHT` (`lib/ui.ts`, fond
- * paper au repos, R5). Toujours rendue sous `<CartProvider>`.
+ * site-header`) ; le focus vient de `FOCUS_RING_LIGHT` SEUL (`lib/ui.ts`) — la
+ * cellule passe de paper à pop-yellow au survol, deux fonds CLAIRS, et l'ink de
+ * l'anneau y tient les deux états (17,19:1 puis 15,19:1) : aucune surcharge
+ * `hover:focus-visible:` n'est nécessaire ici, contrairement aux cellules
+ * voisines qui virent à l'ink (R5). Toujours rendue sous `<CartProvider>`.
  *
  * Rendu unique : pictogramme panier (carré Accueil/Panier du header desktop,
  * et rangée mobile) — SVG inline aux angles droits (R8) ; le compteur est
