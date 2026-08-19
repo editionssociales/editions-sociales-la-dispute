@@ -13,6 +13,7 @@ import {
   RAIL_GRID_TRANSITION_CLASS,
   RAIL_INSET_TRANSITION_CLASS,
   RAIL_OPEN_PROPERTY,
+  RAIL_PANEL_ATTRIBUTE,
   RAIL_PULSE_ATTRIBUTE,
   RAIL_PULSE_CLASS,
   RAIL_PULSE_GROUP_CLASS,
@@ -445,4 +446,30 @@ describe("Les CTA d'ancre annoncent l'état du tiroir", () => {
     expect(handle.getAttribute("aria-label")).toBe("Déplier les contreparties");
     expect(closeButton(el).getAttribute("aria-label")).toBe("Replier les contreparties");
   });
+});
+
+// ---------------------------------------------------------------- impression
+
+describe("Impression", () => {
+  const css = read("src/app/(site)/globals.css");
+
+  it("le tiroir se rouvre et ne rogne plus rien, quel que soit son état", () => {
+    // Fermé, la colonne vaut 0 et `overflow-x-clip` mange le rail : sans ces
+    // règles les contreparties ne s'impriment PAS DU TOUT.
+    expect(css).toMatch(/@media print \{[\s\S]*?--rail-open: 1 !important;/);
+    expect(css).toMatch(
+      new RegExp(`@media print \\{[\\s\\S]*?\\[${RAIL_PANEL_ATTRIBUTE}\\][\\s\\S]*?overflow: visible !important;`),
+    );
+    expect(css).toMatch(
+      new RegExp(`@media print \\{[\\s\\S]*?\\[${RAIL_EDGE_ATTRIBUTE}\\] \\{\\s*display: none !important;`),
+    );
+    // Et l'aside ne compte plus sur des variantes `lg:print:*` : la largeur
+    // de PAGE tombe sous `lg`, où elles ne matchent pas. Assertion portée sur
+    // le className seul — la doc du fichier, elle, EXPLIQUE ce piège.
+    const rail = read("src/app/(site)/souscription/_components/tiers-rail.tsx");
+    const asideClass = rail.match(/<aside[\s\S]{0,400}?className=\{`[^`]*`\}/)?.[0] ?? "";
+    expect(asideClass).not.toBe("");
+    expect(asideClass).not.toContain("lg:print:");
+  });
+
 });

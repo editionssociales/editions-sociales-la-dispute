@@ -15,6 +15,7 @@ import {
   RAIL_EDGE_ATTRIBUTE,
   RAIL_EDGE_TRANSITION_CLASS,
   RAIL_OPEN_PROPERTY,
+  RAIL_PANEL_ATTRIBUTE,
   RAIL_PULSE_ATTRIBUTE,
   RAIL_PULSE_GROUP_CLASS,
   TICKER_INSET_CLASS,
@@ -356,7 +357,7 @@ export function TiersDrawer({
       <div
         id={panelId}
         ref={panelRef}
-        {...{ [RAIL_PULSE_ATTRIBUTE]: pulsing ? "on" : "off" }}
+        {...{ [RAIL_PANEL_ATTRIBUTE]: "", [RAIL_PULSE_ATTRIBUTE]: pulsing ? "on" : "off" }}
         // Replié, le panneau reste MONTÉ et sort du parcours clavier par
         // `inert` — jamais par `visibility`/`hidden` (grammaire des déroulés).
         inert={!open}

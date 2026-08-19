@@ -109,6 +109,16 @@ export const RAIL_PULSE_CLASS =
   "lg:outline-4 lg:-outline-offset-4 lg:outline-transparent lg:transition-[outline-color] lg:duration-500 lg:ease-out lg:motion-reduce:transition-none lg:group-data-[rail-pulse=on]/rail:outline-pop-orange lg:group-data-[rail-pulse=on]/rail:transition-none";
 
 /**
+ * Marqueur du PANNEAU du tiroir, lu par `globals.css` : à l'impression la
+ * colonne se rouvre et ne rogne plus rien, QUEL QUE SOIT l'état du tiroir à
+ * l'écran. Règle en CSS pur et non en variante Tailwind : `--rail-open` est
+ * posée en style INLINE sur `<html>` (seul un `!important` d'auteur la
+ * reprend), et `print:` ne rattrape de toute façon pas un `lg:` que la
+ * largeur de PAGE ne fait pas matcher.
+ */
+export const RAIL_PANEL_ATTRIBUTE = "data-rail-panel";
+
+/**
  * Marqueur des deux commandes fixées au bord droit du viewport,
  * `"handle"` | `"close"` — elles ne s'impriment jamais (`globals.css`).
  */

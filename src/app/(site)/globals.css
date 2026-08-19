@@ -303,3 +303,31 @@ h1, h2, h3, h4 {
 /* Bordure franche (R8) : zéro border-radius, y compris sur les images
    éditoriales — seul arrondi du site avant ce correctif. */
 .prose-book img { max-width: 100%; height: auto; border: 2px solid var(--color-ink); }
+
+/* Tiroir des contreparties de /souscription (`souscription/_components/`,
+   marqueurs exportés par `components/rail-inset.ts`) — À L'IMPRESSION, les
+   contreparties sortent QUEL QUE SOIT l'état du tiroir à l'écran. Fermé, la
+   colonne vaut 0 et rogne son contenu : sans ces règles, la page imprimée
+   n'en montre AUCUNE. En CSS pur et non en variantes Tailwind — `--rail-open`
+   est posée en style INLINE sur <html> (seul un `!important` d'auteur la
+   reprend), et `print:` ne rattrape pas un `lg:` que la largeur de PAGE ne
+   fait pas matcher. */
+@media print {
+  :root {
+    --rail-open: 1 !important;
+  }
+  [data-rail-panel] {
+    overflow: visible !important;
+  }
+  #paliers {
+    position: static !important;
+    margin-top: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  /* Les deux commandes du tiroir sont fixées au bord droit du viewport :
+     imprimées, elles ne seraient que deux pastilles orange sur la 1re page. */
+  [data-rail-edge] {
+    display: none !important;
+  }
+}
