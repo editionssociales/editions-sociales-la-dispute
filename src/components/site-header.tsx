@@ -18,7 +18,11 @@ import {
   FOCUS_RING_LIGHT,
 } from "@/lib/ui";
 import { NAV_ACCENT_BG } from "./nav-accent";
-import { HEADER_TICKER_RESERVE_CLASS, RAIL_WIDTH_CLASS } from "./rail-inset";
+import {
+  HEADER_TICKER_RESERVE_CLASS,
+  RAIL_INSET_TRANSITION_CLASS,
+  RAIL_WIDTH_CLASS,
+} from "./rail-inset";
 import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
 import { useCart } from "./cart/cart-context";
 
@@ -44,6 +48,13 @@ import { useCart } from "./cart/cart-context";
  * que soit le scroll. La marge vit sur le <header> (pas sur le <nav>) :
  * sinon sa boîte sticky z-50 continuerait de couvrir le haut du rail et
  * intercepterait les clics.
+ *
+ * Depuis le 2026-08-19 ce rail est un TIROIR (`souscription/_components/
+ * tiers-drawer.tsx`) : la marge n'est plus 380px mais `380px × --rail-open`.
+ * Elle porte donc la MÊME transition que la grille de la page
+ * (`RAIL_INSET_TRANSITION_CLASS`, 540 ms easeInOutCubic) — les deux
+ * consommateurs de cette largeur bougent ensemble, sinon la navbar sauterait
+ * d'un bloc pendant que la colonne glisse.
  *
  * Cette même route porte le LISERÉ DE COLLECTE fixé en haut du viewport
  * (z-60 — `souscription/_components/collecte-ticker.tsx`) : le header lui
@@ -516,7 +527,7 @@ function SiteHeaderChrome({
     <header
       className={
         railInset
-          ? `sticky top-0 z-50 bg-paper ${HEADER_TICKER_RESERVE_CLASS} ${RAIL_WIDTH_CLASS}`
+          ? `sticky top-0 z-50 bg-paper ${HEADER_TICKER_RESERVE_CLASS} ${RAIL_WIDTH_CLASS} ${RAIL_INSET_TRANSITION_CLASS}`
           : "sticky top-0 z-50"
       }
     >

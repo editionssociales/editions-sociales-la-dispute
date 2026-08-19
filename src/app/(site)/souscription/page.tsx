@@ -8,7 +8,7 @@ import { Reveal } from "@/components/reveal";
 import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
-import { RAIL_GRID_CLASS } from "@/components/rail-inset";
+import { RAIL_GRID_CLASS, RAIL_GRID_TRANSITION_CLASS } from "@/components/rail-inset";
 import { POP_BG, POP_ORDER } from "@/components/pop-palette";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
@@ -18,6 +18,7 @@ import { CollecteTicker } from "./_components/collecte-ticker";
 import { HeroShelf, MobileShelf } from "./_components/shelf";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
+import { TiersDrawer } from "./_components/tiers-drawer";
 
 /**
  * Page /souscription — livraison définitive de la campagne 2026 (Clara,
@@ -325,7 +326,13 @@ export default async function SouscriptionPage() {
   const RAIL_CTA = "#montant-libre";
 
   return (
-    <div className={`lg:grid ${RAIL_GRID_CLASS} lg:items-start`}>
+    /* La colonne du rail EST le panneau du tiroir (`_components/tiers-drawer.tsx`) :
+       elle vaut 380px ouverte, 0 fermée, et sa course vit ICI, sur
+       `grid-template-columns` — la même que celle de la réserve du header
+       (`site-header.tsx`) et des commandes fixées au bord droit. Les trois
+       partent et arrivent ensemble ; une seule qui sauterait suffirait à
+       casser le geste. */
+    <div className={`lg:grid ${RAIL_GRID_CLASS} ${RAIL_GRID_TRANSITION_CLASS} lg:items-start`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       {/* Liseré de collecte fixé en haut du viewport (10px, prototype validé
           client — variante V2 « lecture = lutte ») : le remplissage progresse
@@ -991,7 +998,9 @@ export default async function SouscriptionPage() {
         anchors={["paliers", "montant-libre"]}
         autoOpenDelayMs={1000}
       >
-        <TiersRail content={content} enabled={enabled} />
+        <TiersDrawer>
+          <TiersRail content={content} enabled={enabled} />
+        </TiersDrawer>
       </BottomSheet>
     </div>
   );

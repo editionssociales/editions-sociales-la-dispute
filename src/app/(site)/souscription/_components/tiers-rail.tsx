@@ -5,7 +5,11 @@ import { SubmitButton } from "@/components/submit-button";
 import { formatInt } from "@/lib/format";
 import { POP_BG, POP_ORDER } from "@/components/pop-palette";
 import { FOCUS_RING_DARK, FOCUS_RING_HOVER_LIGHT, FOCUS_RING_LIGHT } from "@/lib/ui";
-import { RAIL_MAX_HEIGHT_CLASS, TICKER_INSET_CLASS } from "@/components/rail-inset";
+import {
+  RAIL_CONTENT_WIDTH_CLASS,
+  RAIL_MAX_HEIGHT_CLASS,
+  TICKER_INSET_CLASS,
+} from "@/components/rail-inset";
 import { type DonationTierId, FREE_AMOUNT } from "@/lib/donation-tiers";
 import type { PageSouscriptionContent } from "@/lib/site-content-core";
 import { createDonationCheckout } from "../actions";
@@ -202,9 +206,12 @@ export function TiersRail({
     <aside
       id="paliers"
       aria-label="Contreparties"
-      className={`border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky ${TICKER_INSET_CLASS} lg:-mt-24 ${RAIL_MAX_HEIGHT_CLASS} lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 lg:print:static lg:print:mt-0 lg:print:max-h-none lg:print:overflow-visible`}
+      className={`border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky ${TICKER_INSET_CLASS} lg:-mt-24 ${RAIL_CONTENT_WIDTH_CLASS} ${RAIL_MAX_HEIGHT_CLASS} lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 lg:print:static lg:print:mt-0 lg:print:max-h-none lg:print:overflow-visible`}
     >
-      <div className="px-5 py-4 sm:px-8 sm:py-6">
+      {/* `lg:pt-14` : réserve du bouton de fermeture du tiroir, fixé au coin
+          haut-droit du panneau (`tiers-drawer.tsx`) — sans elle, il couvrirait
+          le coin de la première carte au repos. */}
+      <div className="px-5 py-4 sm:px-8 sm:py-6 lg:pt-14">
         {/* Plus d'ancre « Ou donnez un montant libre ↓ » en tête (retirée
             25/07) : la carte montant libre reste en CLÔTURE du rail, seuls le
             CTA final et l'ancre externe `#montant-libre` y mènent. */}
