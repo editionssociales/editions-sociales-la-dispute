@@ -4,6 +4,7 @@ import { Container } from "@/components/container";
 import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY, LEGAL_LINK } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
+import { buildMailto, CONTACT_EMAIL } from "@/lib/contact-address";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
@@ -12,9 +13,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Ligne d'identité (libellé + valeur), certaines encore en placeholder
- * client — distinguées visuellement (`italic text-ocher-text`, R6/5.2) pour
- * que l'inachevé se voie comme un état, pas comme une donnée réelle.
+ * Ligne d'identité (libellé + valeur) — une valeur non encore renseignée est
+ * distinguée visuellement (`italic text-ocher-text`, R6/5.2) pour que
+ * l'inachevé se voie comme un état, pas comme une donnée réelle.
  * `placeholder` est un booléen EXPLICITE posé par l'appelant (issue #91) —
  * jamais dérivé d'une comparaison de chaîne (`.startsWith("[À COMPLÉTER")`
  * cassait silencieusement au moindre reformulage du texte français).
@@ -42,9 +43,8 @@ function IdentityRow({
 
 export default async function MentionsLegalesPage() {
   // Global `pages-legales` : onglet rempli = corps entier (chapeau compris)
-  // édité en back-office ; onglet vide = le JSX en dur ci-dessous, avec ses
-  // placeholders [À COMPLÉTER…] volontairement visibles (bloquant légal à
-  // lever par le client — spec lot 1).
+  // édité en back-office ; onglet vide = le JSX en dur ci-dessous, avec
+  // l'identité légale de l'éditeur (raison sociale, SIRET, RCS…).
   const { mentionsLegales } = await getPagesLegales();
   return (
     <>
@@ -65,43 +65,15 @@ export default async function MentionsLegalesPage() {
           {/* Éditeur du site */}
           <LegalSection title="Éditeur du site">
             <dl className="mt-6 border-2 border-ink">
-              <IdentityRow label="Raison sociale" value="[À COMPLÉTER : raison sociale]" placeholder />
-              <IdentityRow
-                label="Forme juridique"
-                value="[À COMPLÉTER : forme juridique — SARL / association]"
-                placeholder
-              />
-              <IdentityRow
-                label="Siège social"
-                value="[À COMPLÉTER : adresse du siège social]"
-                placeholder
-              />
-              <IdentityRow label="SIRET" value="[À COMPLÉTER : SIRET]" placeholder />
-              <IdentityRow
-                label="RCS"
-                value="[À COMPLÉTER : n° RCS et ville d'immatriculation, le cas échéant]"
-                placeholder
-              />
-              <IdentityRow
-                label="Capital social"
-                value="[À COMPLÉTER : capital social, le cas échéant]"
-                placeholder
-              />
-              <IdentityRow
-                label="N° TVA intracommunautaire"
-                value="[À COMPLÉTER : n° TVA intracommunautaire]"
-                placeholder
-              />
-              <IdentityRow
-                label="Directeur de la publication"
-                value="[À COMPLÉTER : nom du directeur de la publication]"
-                placeholder
-              />
-              <IdentityRow
-                label="Contact"
-                value="[À COMPLÉTER : email de contact et téléphone]"
-                placeholder
-              />
+              <IdentityRow label="Raison sociale" value="LA DISPUTE EDITIONS SOCIALES" />
+              <IdentityRow label="Forme juridique" value="SARL (société à responsabilité limitée)" />
+              <IdentityRow label="Siège social" value="73 rue Pixérécourt, 75020 Paris" />
+              <IdentityRow label="SIRET" value="414 271 981 00014" />
+              <IdentityRow label="RCS" value="RCS Paris 414 271 981" />
+              <IdentityRow label="Capital social" value="7 622,45 €" />
+              <IdentityRow label="N° TVA intracommunautaire" value="FR60 414 271 981" />
+              <IdentityRow label="Directrice de la publication" value="Antonia Naim (gérante)" />
+              <IdentityRow label="Contact" value={CONTACT_EMAIL} />
             </dl>
           </LegalSection>
 
@@ -124,7 +96,10 @@ export default async function MentionsLegalesPage() {
           <LegalSection title="Contact">
             <p className={LEGAL_BODY}>
               Pour toute question relative au site ou à son contenu :{" "}
-              <span className="italic text-ocher-text">[À COMPLÉTER : email de contact]</span>.
+              <a href={buildMailto().href} className={LEGAL_LINK}>
+                {CONTACT_EMAIL}
+              </a>
+              .
             </p>
           </LegalSection>
 
