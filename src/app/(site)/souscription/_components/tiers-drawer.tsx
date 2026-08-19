@@ -103,6 +103,7 @@ export function TiersDrawer({
   const [open, setOpen] = useState(true);
   /** Liseré d'appel : réaction visible quand un CTA vise un tiroir DÉJÀ ouvert. */
   const [pulsing, setPulsing] = useState(false);
+  const pulseRearm = useRef(0);
   /**
    * Ancre à amener en vue au prochain commit. Objet renouvelé à chaque
    * demande (jamais une simple chaîne) : deux clics de suite sur le MÊME
@@ -143,7 +144,13 @@ export function TiersDrawer({
     (open ? closeRef : handleRef).current?.focus();
   }, [open]);
 
-  useEffect(() => () => window.clearTimeout(pulseTimer.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(pulseTimer.current);
+      window.clearTimeout(pulseRearm.current);
+    },
+    [],
+  );
 
   // Publication de l'état vers les DEUX autres consommateurs de la largeur (la
   // grille de `souscription/page.tsx` et la réserve du header) : une propriété
@@ -190,9 +197,18 @@ export function TiersDrawer({
    * `prefers-reduced-motion`, où seule la retombée redevient sèche.
    */
   const firePulse = useCallback(() => {
-    setPulsing(true);
     window.clearTimeout(pulseTimer.current);
-    pulseTimer.current = window.setTimeout(() => setPulsing(false), 700);
+    // Re-cliquer PENDANT l'indice doit rallumer, pas rester inerte : passer
+    // `true` à un état déjà `true` ne recommite rien côté React, l'attribut ne
+    // bouge pas d'un pixel et le geste « je reclique parce que je n'ai pas vu »
+    // ne rend rien. On éteint donc d'abord, et on rallume à la frame suivante —
+    // deux commits distincts, donc une vraie retombée puis un vrai allumage.
+    setPulsing(false);
+    window.clearTimeout(pulseRearm.current);
+    pulseRearm.current = window.setTimeout(() => {
+      setPulsing(true);
+      pulseTimer.current = window.setTimeout(() => setPulsing(false), 700);
+    }, 0);
   }, []);
 
   /**
@@ -314,7 +330,7 @@ export function TiersDrawer({
         // homonymes dans la liste de boutons d'un lecteur d'écran. Le texte
         // visible reste « Contribuer » (il vend l'action), le nom accessible
         // dit ce que la commande FAIT, en miroir de « Replier ».
-        aria-label="Déplier les contreparties"
+        aria-label="Contribuer — déplier les contreparties"
         // Escamotée hors écran tant que le tiroir est ouvert : `inert` la sort
         // du parcours clavier ET de l'arbre a11y (jamais `hidden`, dont la
         // bascule serait sèche et qui empêcherait le focus de la SUIVRE).

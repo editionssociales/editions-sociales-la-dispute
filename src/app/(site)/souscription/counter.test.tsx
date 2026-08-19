@@ -53,4 +53,13 @@ describe("Compteur de collecte — le montant est TOUJOURS rendu", () => {
     // Avant l'ouverture des dons : la date, pas un appel à contribuer.
     expect(PAGE).toContain("La souscription ouvre le 20 août");
   });
+
+  // L'espace avant « € » du compteur monumental est INSÉCABLE (U+00A0). Elle a
+  // déjà sauté une fois dans un diff sans que rien ne rougisse : les assertions
+  // voisines passent leur propre littéral à `<CountUp>` et ne voient donc jamais
+  // celui de la page. Celle-ci lit la SOURCE.
+  it("le suffixe du compteur porte une espace INSÉCABLE avant l'euro", () => {
+    expect(PAGE).toContain('suffix="\u00a0€"');
+    expect(PAGE).not.toContain('suffix=" €"');
+  });
 });

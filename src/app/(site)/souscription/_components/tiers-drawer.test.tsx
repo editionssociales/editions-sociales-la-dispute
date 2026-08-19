@@ -378,7 +378,7 @@ describe("Indice d'appel — peint sur l'aside, pas sur la colonne", () => {
     expect(RAIL_PULSE_CLASS).not.toMatch(/\bborder-/);
   });
 
-  it("un CTA visant un tiroir DÉJÀ ouvert allume l'attribut lu par l'aside", () => {
+  it("un CTA visant un tiroir DÉJÀ ouvert allume l'attribut lu par l'aside", async () => {
     const el = mount(
       <TiersDrawer anchors={["paliers"]}>
         <Cartes />
@@ -391,9 +391,18 @@ describe("Indice d'appel — peint sur l'aside, pas sur la colonne", () => {
     const cta = document.createElement("a");
     cta.setAttribute("href", "#paliers");
     document.body.appendChild(cta);
-    act(() => {
-      cta.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
-    });
+    // `firePulse` éteint puis rallume au tick suivant : sans deux commits
+    // distincts, un second clic PENDANT l'indice ne rallumerait rien (React ne
+    // recommite pas un état déjà à `true`). Le test doit donc laisser passer ce
+    // ré-armement, sinon il verrouille un indice qui ne se rejoue jamais —
+    // exactement le geste « je reclique parce que je n'ai pas vu ».
+    const clic = async () => {
+      await act(async () => {
+        cta.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    };
+    await clic();
 
     // Le tiroir était ouvert : il ne s'ouvre pas deux fois, il RÉAGIT.
     expect(panel.hasAttribute("inert")).toBe(false);
@@ -472,18 +481,27 @@ describe("Les CTA d'ancre annoncent l'état du tiroir", () => {
     cta.remove();
   });
 
-  it("la poignée d'ouverture ne s'appelle pas « Contribuer »", () => {
-    // Dix boutons de palier, le CTA du compteur et celui du pied portent déjà
-    // ce libellé : douze entrées homonymes dans la liste de boutons d'un
-    // lecteur d'écran. La poignée dit ce qu'elle FAIT, en miroir de la
-    // fermeture.
+  it("le nom accessible de la poignée CONTIENT son texte visible, sans être homonyme", () => {
+    // Deux contraintes qui tirent en sens inverse, et qu'il faut tenir ENSEMBLE.
+    // (1) WCAG 2.5.3 « Label in Name » (niveau A) : le nom accessible doit
+    //     contenir le texte VISIBLE, sinon la commande vocale décroche — dire
+    //     « Contribuer » ne déclenche pas un bouton nommé « Déplier les
+    //     contreparties ». (2) Dix boutons de palier et deux CTA portent déjà ce
+    //     libellé : un nom nu « Contribuer » ferait treize entrées homonymes
+    //     dans la liste de boutons d'un lecteur d'écran.
+    // D'où un nom qui commence par le texte visible et dit ensuite ce qu'il FAIT.
     const el = mount(
       <TiersDrawer>
         <Cartes />
       </TiersDrawer>,
     );
     const handle = el.querySelector<HTMLButtonElement>(`[${RAIL_EDGE_ATTRIBUTE}="handle"]`)!;
-    expect(handle.getAttribute("aria-label")).toBe("Déplier les contreparties");
+    const nom = handle.getAttribute("aria-label")!;
+    const visible = handle.textContent!.trim();
+    expect(visible).toBe("Contribuer");
+    expect(nom).toContain(visible); // WCAG 2.5.3
+    expect(nom).not.toBe(visible); // pas une treizième homonyme
+    expect(nom).toBe("Contribuer — déplier les contreparties");
     expect(closeButton(el).getAttribute("aria-label")).toBe("Replier les contreparties");
   });
 });
