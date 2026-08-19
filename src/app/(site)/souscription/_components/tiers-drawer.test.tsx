@@ -17,6 +17,7 @@ import {
   RAIL_PULSE_ATTRIBUTE,
   RAIL_PULSE_CLASS,
   RAIL_PULSE_GROUP_CLASS,
+  RAIL_READY_ATTRIBUTE,
   RAIL_WIDTH_CLASS,
 } from "@/components/rail-inset";
 import { TiersDrawer } from "./tiers-drawer";
@@ -472,4 +473,28 @@ describe("Impression", () => {
     expect(asideClass).not.toContain("lg:print:");
   });
 
+});
+
+// ------------------------------------------------------------- absence de JS
+
+describe("Absence de JS", () => {
+  const css = read("src/app/(site)/globals.css");
+
+  it("le bouton de fermeture n'existe pas", () => {
+    // `open` vaut `true` au rendu serveur : `inert={!open}` laisse un bouton
+    // VISIBLE et inopérant tant que rien ne l'hydrate.
+    expect(css).toMatch(
+      new RegExp(
+        `html:not\\(\\[${RAIL_READY_ATTRIBUTE}\\]\\) \\[${RAIL_EDGE_ATTRIBUTE}="close"\\] \\{\\s*display: none;`,
+      ),
+    );
+    // ... et le marqueur n'est jamais rendu côté serveur.
+    expect(
+      renderToStaticMarkup(
+        <TiersDrawer>
+          <Cartes />
+        </TiersDrawer>,
+      ),
+    ).not.toContain(RAIL_READY_ATTRIBUTE);
+  });
 });

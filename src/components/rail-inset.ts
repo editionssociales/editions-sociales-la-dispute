@@ -123,3 +123,11 @@ export const RAIL_PANEL_ATTRIBUTE = "data-rail-panel";
  * `"handle"` | `"close"` — elles ne s'impriment jamais (`globals.css`).
  */
 export const RAIL_EDGE_ATTRIBUTE = "data-rail-edge";
+
+/**
+ * Posé sur `<html>` par le tiroir HYDRATÉ. Sans lui, `globals.css` ne rend
+ * pas le bouton de fermeture : le HTML serveur ouvre le tiroir pour de bon
+ * (fail-open) et rien ne peut le replier — une commande visible et inopérante
+ * serait un mensonge cliquable.
+ */
+export const RAIL_READY_ATTRIBUTE = "data-rail-ready";

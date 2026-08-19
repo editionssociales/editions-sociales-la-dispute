@@ -331,3 +331,11 @@ h1, h2, h3, h4 {
     display: none !important;
   }
 }
+
+/* SANS JS, le bouton de fermeture du tiroir n'existe pas : le HTML serveur
+   rend le tiroir ouvert (fail-open), rien ne peut le replier — une commande
+   visible et inopérante serait un mensonge cliquable. Il n'apparaît qu'une
+   fois `data-rail-ready` posé sur <html> par le tiroir hydraté. */
+html:not([data-rail-ready]) [data-rail-edge="close"] {
+  display: none;
+}

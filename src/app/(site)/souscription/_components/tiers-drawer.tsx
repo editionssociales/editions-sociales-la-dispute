@@ -18,6 +18,7 @@ import {
   RAIL_PANEL_ATTRIBUTE,
   RAIL_PULSE_ATTRIBUTE,
   RAIL_PULSE_GROUP_CLASS,
+  RAIL_READY_ATTRIBUTE,
   TICKER_INSET_CLASS,
 } from "@/components/rail-inset";
 
@@ -153,8 +154,13 @@ export function TiersDrawer({
     if (mobile) return;
     const root = document.documentElement;
     root.style.setProperty(RAIL_OPEN_PROPERTY, open ? "1" : "0");
+    // Marque « le tiroir est hydraté » : `globals.css` ne révèle le bouton de
+    // fermeture qu'à cette condition. Sans JS il n'apparaît jamais — le HTML
+    // serveur rend le tiroir ouvert, rien ne peut le replier.
+    root.setAttribute(RAIL_READY_ATTRIBUTE, "");
     return () => {
       root.style.removeProperty(RAIL_OPEN_PROPERTY);
+      root.removeAttribute(RAIL_READY_ATTRIBUTE);
     };
   }, [mobile, open]);
 
