@@ -12,6 +12,9 @@ import {
   RAIL_GRID_TRANSITION_CLASS,
   RAIL_INSET_TRANSITION_CLASS,
   RAIL_OPEN_PROPERTY,
+  RAIL_PULSE_ATTRIBUTE,
+  RAIL_PULSE_CLASS,
+  RAIL_PULSE_GROUP_CLASS,
   RAIL_WIDTH_CLASS,
 } from "@/components/rail-inset";
 import { TiersDrawer } from "./tiers-drawer";
@@ -31,6 +34,7 @@ import { TiersDrawer } from "./tiers-drawer";
  *  - le repli passe par `inert`, jamais par `visibility`/`hidden` ;
  *  - Échap n'est PAS écouté sur `document` : il ne ferme pas le tiroir depuis
  *    le champ « montant libre », qui vit pourtant dans le panneau ;
+ *  - l'INDICE D'APPEL est peint sur l'aside, la seule surface visible.
  */
 
 const ROOT = process.cwd();
@@ -297,5 +301,61 @@ describe("TiersDrawer — Échap n'est pas écouté sur `document`", () => {
       panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
     expect(panel.hasAttribute("inert")).toBe(true);
+  });
+});
+
+// ----------------------------------------------------------- indice d'appel
+
+/**
+ * Le liseré d'appel a été peint une première fois sur la COLONNE du tiroir :
+ * `outline-color` calculée juste, et pas un pixel perceptible — l'aside qui
+ * vit dedans est `sticky`, `bg-paper` opaque, exactement aussi large que la
+ * colonne et haut comme le viewport, il le recouvre intégralement. La surface
+ * qui porte l'indice doit être celle qui est DEVANT.
+ */
+describe("Indice d'appel — peint sur l'aside, pas sur la colonne", () => {
+  it("l'aside porte RAIL_PULSE_CLASS ; le panneau ne peint AUCUN contour", () => {
+    const rail = read("src/app/(site)/souscription/_components/tiers-rail.tsx");
+    expect(rail).toMatch(/<aside[\s\S]{0,400}?className=\{`[^`]*\$\{RAIL_PULSE_CLASS\}[^`]*`\}/);
+    // Le panneau ne porte plus d'utilitaire `outline-*` : il déclare l'état,
+    // il ne le peint pas.
+    const drawer = read("src/app/(site)/souscription/_components/tiers-drawer.tsx");
+    const panelClass = drawer.match(/className=\{`min-w-0[^`]*`\}/)?.[0] ?? "";
+    expect(panelClass).not.toBe("");
+    expect(panelClass).not.toMatch(/outline-/);
+  });
+
+  it("l'indice est une COULEUR : aucune transformation, aucune opacité", () => {
+    // Perceptible sous `prefers-reduced-motion`, où seule la retombée
+    // redevient sèche — un mouvement, lui, y disparaîtrait entièrement.
+    expect(RAIL_PULSE_CLASS).toMatch(/outline-pop-orange/);
+    expect(RAIL_PULSE_CLASS).not.toMatch(/translate|scale|opacity|animate/);
+    // Peint À L'INTÉRIEUR : un contour n'occupe aucune place, et l'offset
+    // négatif le garde dans la gouttière de l'aside. Zéro pixel déplacé.
+    expect(RAIL_PULSE_CLASS).toContain("-outline-offset-4");
+    expect(RAIL_PULSE_CLASS).not.toMatch(/\bborder-/);
+  });
+
+  it("un CTA visant un tiroir DÉJÀ ouvert allume l'attribut lu par l'aside", () => {
+    const el = mount(
+      <TiersDrawer anchors={["paliers"]}>
+        <Cartes />
+      </TiersDrawer>,
+    );
+    const panel = panelOf(el);
+    expect(panel.classList.contains(RAIL_PULSE_GROUP_CLASS)).toBe(true);
+    expect(panel.getAttribute(RAIL_PULSE_ATTRIBUTE)).toBe("off");
+
+    const cta = document.createElement("a");
+    cta.setAttribute("href", "#paliers");
+    document.body.appendChild(cta);
+    act(() => {
+      cta.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    });
+
+    // Le tiroir était ouvert : il ne s'ouvre pas deux fois, il RÉAGIT.
+    expect(panel.hasAttribute("inert")).toBe(false);
+    expect(panel.getAttribute(RAIL_PULSE_ATTRIBUTE)).toBe("on");
+    cta.remove();
   });
 });

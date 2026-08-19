@@ -14,6 +14,8 @@ import { FOCUS_RING_INVERTING } from "@/lib/ui";
 import {
   RAIL_EDGE_TRANSITION_CLASS,
   RAIL_OPEN_PROPERTY,
+  RAIL_PULSE_ATTRIBUTE,
+  RAIL_PULSE_GROUP_CLASS,
   TICKER_INSET_CLASS,
 } from "@/components/rail-inset";
 
@@ -41,6 +43,12 @@ import {
  * OUVERT, avec les dix cartes en clair — `--rail-open` n'est jamais posée
  * côté serveur et `var(--rail-open, 1)` retombe sur 1. Un navigateur sans JS
  * (ou un bot) voit la liste entière, jamais une colonne effondrée.
+ *
+ * INDICE D'APPEL : un CTA qui vise un tiroir DÉJÀ ouvert allume l'`outline`
+ * de l'ASIDE (`RAIL_PULSE_CLASS`, posée par `tiers-rail.tsx`) — jamais celle
+ * de la colonne, qui vit DERRIÈRE l'aside opaque et n'atteindrait aucun œil.
+ * Ce composant ne fait que porter l'état (`RAIL_PULSE_ATTRIBUTE` sur le
+ * panneau, groupe nommé `/rail`) : l'aside est un composant serveur.
  *
  * Le contenu vit dans un enfant de LARGEUR FIXE (`RAIL_CONTENT_WIDTH_CLASS`,
  * posée par `tiers-rail.tsx`), la colonne le rognant à l'horizontale
@@ -168,10 +176,10 @@ export function TiersDrawer({
 
   /**
    * Réaction du tiroir DÉJÀ ouvert à un CTA (« léger indice visuel
-   * supplémentaire », retour client) : le liseré du panneau s'allume et
-   * retombe. C'est une COULEUR, pas un mouvement — l'indice reste donc
-   * perceptible sous `prefers-reduced-motion`, où la transition tombe et où
-   * l'allumage devient simplement sec.
+   * supplémentaire », retour client) : le liseré de l'ASIDE s'allume SEC et
+   * retombe en douceur (`RAIL_PULSE_CLASS`). C'est une COULEUR, pas un
+   * mouvement — l'indice reste donc entièrement perceptible sous
+   * `prefers-reduced-motion`, où seule la retombée redevient sèche.
    */
   const firePulse = useCallback(() => {
     setPulsing(true);
@@ -287,21 +295,21 @@ export function TiersDrawer({
           `overflow-x-clip` (et non `overflow-hidden`) rogne l'horizontale sans
           faire de la colonne un conteneur de défilement : le `sticky` survit.
 
-          Le LISERÉ D'APPEL est l'`outline` de cette colonne : peint À
-          L'INTÉRIEUR (`-outline-offset-4`), il allume les deux bords du
-          panneau sur toute la hauteur du viewport. Une couleur qui monte et
-          retombe, aucun mouvement — l'indice survit à
-          `prefers-reduced-motion`, où seule la douceur du fondu tombe. */}
+          Il ne PORTE PAS l'indice d'appel, il le DÉCLARE : l'aside qui vit
+          dedans est `sticky`, opaque, aussi large que la colonne et haut comme
+          le viewport — un liseré peint ici serait intégralement recouvert
+          (mesuré). L'`outline` est donc peinte sur l'aside lui-même
+          (`RAIL_PULSE_CLASS`, `tiers-rail.tsx`), qui lit cet attribut par le
+          groupe nommé `/rail`. */}
       <div
         id={panelId}
         ref={panelRef}
+        {...{ [RAIL_PULSE_ATTRIBUTE]: pulsing ? "on" : "off" }}
         // Replié, le panneau reste MONTÉ et sort du parcours clavier par
         // `inert` — jamais par `visibility`/`hidden` (grammaire des déroulés).
         inert={!open}
         onKeyDown={onKeyDown}
-        className={`min-w-0 outline-4 -outline-offset-4 transition-[outline-color] duration-300 ease-out motion-reduce:transition-none lg:self-stretch lg:overflow-x-clip ${
-          pulsing ? "outline-pop-orange" : "outline-transparent"
-        }`}
+        className={`min-w-0 ${RAIL_PULSE_GROUP_CLASS} lg:self-stretch lg:overflow-x-clip`}
       >
         {children}
       </div>
