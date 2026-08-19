@@ -4,6 +4,7 @@ import { Container } from "@/components/container";
 import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY, LEGAL_LINK } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
+import { buildMailto, CONTACT_EMAIL } from "@/lib/contact-address";
 
 export const metadata: Metadata = {
   title: "Confidentialité",
@@ -88,7 +89,10 @@ export default async function ConfidentialitePage() {
               d&apos;accès, de rectification, d&apos;effacement, de limitation
               et d&apos;opposition sur les données vous concernant. Pour
               exercer ces droits, contactez{" "}
-              <span className="italic text-ocher-text">[À COMPLÉTER : email de contact]</span>.
+              <a href={buildMailto().href} className={LEGAL_LINK}>
+                {CONTACT_EMAIL}
+              </a>
+              .
             </p>
             <p className={LEGAL_BODY}>
               Vous disposez également du droit d&apos;introduire une
