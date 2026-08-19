@@ -85,7 +85,7 @@ describe("sendDoiConfirmation — appel réel", () => {
     const result = await sendDoiConfirmation(
       {
         email: "test@exemple.fr",
-        redirectionUrl: "https://editionssociales.fr/newsletter/confirmation",
+        redirectionUrl: "https://ld-es.fr/newsletter/confirmation",
         source: "site-2026",
       },
       CONFIGURED_ENV,
@@ -96,7 +96,7 @@ describe("sendDoiConfirmation — appel réel", () => {
       email: "test@exemple.fr",
       includeListIds: [42],
       templateId: 7,
-      redirectionUrl: "https://editionssociales.fr/newsletter/confirmation",
+      redirectionUrl: "https://ld-es.fr/newsletter/confirmation",
       attributes: { SOURCE: "site-2026" },
     });
   });

@@ -26,7 +26,7 @@ const inter = Inter({
 export async function generateMetadata(): Promise<Metadata> {
   const { seo } = await getReglagesSite();
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"),
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr"),
     title: {
       default: seo.titre,
       template: `%s — ${seo.titre}`,
@@ -82,7 +82,7 @@ export default async function RootLayout({
   // derrière `<Suspense>` (piège documenté : sans ça, le layout racine
   // dynamiserait tout le site).
   const { footer, seo } = await getReglagesSite();
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr").replace(
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr").replace(
     /\/+$/,
     "",
   );

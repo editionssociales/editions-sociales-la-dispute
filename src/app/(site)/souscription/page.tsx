@@ -221,7 +221,7 @@ export const revalidate = 3600; // fenêtre ISR (contreparties lues dans Payload
  * jamais de contenu CMS : hors de la règle SafeHtml (`src/app/CLAUDE.md`),
  * qui vise le HTML éditorial injecté.
  */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr";
 const JSON_LD = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Organization",

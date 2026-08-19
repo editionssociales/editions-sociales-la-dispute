@@ -49,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Slash final normalisé : évite un double slash si la variable d'env est
   // un jour saisie avec un `/` final (cf. `robots.ts`, même normalisation).
   const base = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://editionssociales.fr"
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr"
   ).replace(/\/+$/, "");
   const allBooks = await getAllBooks();
   const books = allBooks.filter(

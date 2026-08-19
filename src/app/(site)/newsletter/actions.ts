@@ -28,12 +28,11 @@ import type { NewsletterFormState } from "./state";
  * le client, donc spoofable ; sans validation, un visiteur malveillant
  * pourrait faire pointer le lien de confirmation DOI envoyé PAR EMAIL vers un
  * domaine arbitraire. Domaines couverts (+ sous-domaines, frontière `.`
- * stricte pour éviter le contournement `evil` + suffixe, ex.
- * `evileditionssociales.fr`) : le domaine canonique et son ex-jumeau
- * (`ladispute.fr` redirige entièrement dessus, cf. `next.config.ts`), plus
- * `vercel.app` (previews).
+ * stricte pour éviter le contournement `evil` + suffixe, ex. `evild-es.fr`) :
+ * le domaine canonique et son ex-jumeau (`ladispute.fr` redirige entièrement
+ * dessus, cf. `next.config.ts`), plus `vercel.app` (previews).
  */
-const TRUSTED_HOST_DOMAINS = ["editionssociales.fr", "ladispute.fr", "vercel.app"];
+const TRUSTED_HOST_DOMAINS = ["ld-es.fr", "ladispute.fr", "vercel.app"];
 
 function isTrustedHostname(hostname: string): boolean {
   return TRUSTED_HOST_DOMAINS.some(
@@ -42,7 +41,7 @@ function isTrustedHostname(hostname: string): boolean {
 }
 
 /** Domaine canonique de repli (cf. `.env.example`) quand le host de la requête n'est pas en liste blanche. */
-const FALLBACK_ORIGIN = "https://editionssociales.fr";
+const FALLBACK_ORIGIN = "https://ld-es.fr";
 
 /** Host de la requête → origine absolue de confiance, ou repli sur le domaine canonique si le host est hors liste blanche. */
 function resolveOrigin(hostHeader: string | null): string {

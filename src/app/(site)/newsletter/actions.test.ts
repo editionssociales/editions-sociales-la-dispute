@@ -104,27 +104,27 @@ describe("subscribeToNewsletter — origine de redirectionUrl (liste blanche de 
     await subscribeToNewsletter(NEWSLETTER_INITIAL_STATE, form({ email: "test@exemple.fr" }));
     expect(sendDoiConfirmation).toHaveBeenCalledWith(
       expect.objectContaining({
-        redirectionUrl: "https://editionssociales.fr/newsletter/confirmation",
+        redirectionUrl: "https://ld-es.fr/newsletter/confirmation",
       }),
     );
   });
 
   it("host qui se termine par le domaine sans en être un sous-domaine (contournement de suffixe) → repli sur le domaine canonique", async () => {
-    setMockHost("evileditionssociales.fr");
+    setMockHost("evild-es.fr");
     await subscribeToNewsletter(NEWSLETTER_INITIAL_STATE, form({ email: "test@exemple.fr" }));
     expect(sendDoiConfirmation).toHaveBeenCalledWith(
       expect.objectContaining({
-        redirectionUrl: "https://editionssociales.fr/newsletter/confirmation",
+        redirectionUrl: "https://ld-es.fr/newsletter/confirmation",
       }),
     );
   });
 
-  it("sous-domaine editionssociales.fr → host de la requête utilisé tel quel", async () => {
-    setMockHost("preview.editionssociales.fr");
+  it("sous-domaine ld-es.fr → host de la requête utilisé tel quel", async () => {
+    setMockHost("preview.ld-es.fr");
     await subscribeToNewsletter(NEWSLETTER_INITIAL_STATE, form({ email: "test@exemple.fr" }));
     expect(sendDoiConfirmation).toHaveBeenCalledWith(
       expect.objectContaining({
-        redirectionUrl: "https://preview.editionssociales.fr/newsletter/confirmation",
+        redirectionUrl: "https://preview.ld-es.fr/newsletter/confirmation",
       }),
     );
   });

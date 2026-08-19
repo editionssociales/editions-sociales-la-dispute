@@ -29,6 +29,7 @@ Does NOT own : le schéma SQL `public` (réservé — p. ex. dons) ; la jauge de
 ## Decisions
 
 - **Coupure OVH brute** (2026-07-18, remplace la bascule fenêtrée du plan) : l'axe WordPress/WooCommerce (adaptateur http, Store API, flags `CATALOGUE_SOURCE`/`COMMERCE_NATIVE`, scripts de migration, rewrites `wc-api`, redirects `cms-*`) est supprimé du code — pg + commerce natif sont le seul chemin. Historique : `plan/`, `LEGACY-STACK.md`, `REVERSIBILITE.md`.
+- **ld-es.fr canonique** (2026-08-19, décision client, abandon assumé de l'historique SEO) : remplace `editionssociales.fr` comme domaine du site. Tous les hosts legacy (editionssociales.fr, ladispute.fr, la-dispute.fr, boutique.\*, editions-sociales.\*) redirigent vers lui — règles host `redirects()` de `next.config.ts`, 302 tant que `REDIRECTS_PERMANENT` ≠ `1`. Les adresses email restent `@editionssociales.fr`.
 - **Ports & adaptateurs** : cœur pur testable, adaptateurs pg (Payload) / mémoire (tests) derrière le même port.
 - **Fraîcheur par ISR** (`revalidate = 3600` sur le catalogue) ; à l'édition back-office, les hooks purgent en **chemins littéraux** + `revalidateTag(…, { expire: 0 })` (read-your-writes) — les motifs `revalidatePath` avec groupe de routes ou segment dynamique sont inopérants sur Vercel (constat live 2026-07-19, `src/payload/hooks/revalidate.ts`). **Back-office dans l'app** : Payload 3.x épinglé, schéma Postgres dédié `payload`, migrations versionnées, jamais de `push` en prod.
 
