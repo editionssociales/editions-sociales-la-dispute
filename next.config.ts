@@ -49,6 +49,14 @@ const onHost = (host: string, rules: StatusedRule[]): HostRule[] =>
 const BOUTIQUE_HOSTS = ["boutique.editionssociales.fr", "www.boutique.editionssociales.fr"];
 
 /**
+ * Deux anciens hosts publics de La Dispute déménagent en entier vers
+ * ld-es.fr, mêmes règles pour les deux : `ladispute.fr` et `la-dispute.fr`
+ * (le VRAI ancien site public de La Dispute, tiret — à ne pas confondre avec
+ * le premier). Factorisé comme `BOUTIQUE_HOSTS` ci-dessus.
+ */
+const LA_DISPUTE_HOSTS = ["ladispute.fr", "la-dispute.fr"];
+
+/**
  * Table de redirections `/produit/<slug>` — artefact **versionné**
  * (`src/lib/redirects-produits.json`, généré par
  * `scripts/build-product-redirects.ts`), lu ici en synchrone : aucune I/O
@@ -93,9 +101,45 @@ function productRedirectRules(): StatusedRule[] {
     r({
       source: `/produit/${productSlug}`,
       destination:
-        target.edition != null ? `/catalogue/${target.edition}/${target.slug}` : `/boutique/${target.slug}`,
+        target.edition != null
+          ? `https://ld-es.fr/catalogue/${target.edition}/${target.slug}`
+          : `https://ld-es.fr/boutique/${target.slug}`,
     }),
   );
+}
+
+/**
+ * Règles communes aux deux hosts `LA_DISPUTE_HOSTS` : le domaine déménage en
+ * entier vers ld-es.fr/catalogue/la-dispute. Mêmes URLs WordPress vérifiées
+ * que le fonds ES (cf. commentaire ci-dessous), mais toutes les destinations
+ * sont ABSOLUES (ld-es.fr) puisque ce host n'est plus jamais servi.
+ */
+function laDisputeRedirectRules(): StatusedRule[] {
+  return [
+    // 1-3 — le domaine déménage en entier vers ld-es.fr/catalogue/la-dispute
+    r({ source: "/catalogue/page/:n(\\d+)", destination: "https://ld-es.fr/catalogue/la-dispute" }),
+    r({ source: "/catalogue/:slug", destination: "https://ld-es.fr/catalogue/la-dispute/:slug" }),
+    r({ source: "/catalogue", destination: "https://ld-es.fr/catalogue/la-dispute" }),
+    // 4-6 — taxonomies WP → facettes de l'archive LD (le terme `a-paraitre`
+    // existe côté LD, count=1, vérifié dans le plan).
+    r({ source: "/auteur/:slug", destination: "https://ld-es.fr/catalogue/la-dispute?author=:slug" }),
+    r({
+      source: "/collection/:slug",
+      destination: "https://ld-es.fr/catalogue/la-dispute?libelle=:slug",
+    }),
+    r({ source: "/parution/:slug", destination: "https://ld-es.fr/catalogue/la-dispute?upcoming=1" }),
+    // 7 — page « à propos » LD → page « éditions » dédiée du site unifié
+    r({ source: "/a-propos", destination: "https://ld-es.fr/editions/la-dispute" }),
+    // 8 — rencontres (Q8 : si la page est retirée faute d'événements réels,
+    // re-cibler vers `/editions/la-dispute` — cf. plan)
+    r({ source: "/rencontres", destination: "https://ld-es.fr/rencontres" }),
+    // 9 — anciennes pages d'archive par taxonomie
+    r({ source: "/catalogue-auteurs", destination: "https://ld-es.fr/catalogue/la-dispute" }),
+    r({ source: "/catalogue-collection", destination: "https://ld-es.fr/catalogue/la-dispute" }),
+    // 10 — catch-all FINAL (dernier de la liste : couvre `/`, `/article-0`,
+    // `/feed`, les anciens `wp-*` et tout le reste du domaine qui déménage).
+    r({ source: "/:path*", destination: "https://ld-es.fr/" }),
+  ];
 }
 
 /**
@@ -110,65 +154,55 @@ async function redirects() {
   return [
     ...onHost("editionssociales.fr", [
       // 1 — pagination de l'archive catalogue WP → archive ES (pas de pagination distincte côté nouveau site)
-      r({ source: "/catalogue/page/:n(\\d+)", destination: "/catalogue/editions-sociales" }),
+      r({ source: "/catalogue/page/:n(\\d+)", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
       // 2 — fiche livre WP → fiche ES. Lookahead négatif : ne doit PAS capturer
       // les slugs de maison eux-mêmes (`/catalogue/editions-sociales`,
-      // `/catalogue/la-dispute` doivent rester servis en 200 — cas négatif
-      // exigé par verify-redirects).
+      // `/catalogue/la-dispute` doivent rester servis en 200 sur le domaine
+      // canonique — ce host-ci les laisse volontairement tomber dans le
+      // catch-all final ci-dessous, chemin préservé, cf. règle 12).
       r({
         source: "/catalogue/:slug((?!editions-sociales$)(?!la-dispute$)[^/]+)",
-        destination: "/catalogue/editions-sociales/:slug",
+        destination: "https://ld-es.fr/catalogue/editions-sociales/:slug",
       }),
       // 3-5 — taxonomies WP → facettes de l'archive ES (mêmes clés que
       // `parseBookFilters`, `src/lib/parse-filters.ts:14-25`).
-      r({ source: "/auteur/:slug", destination: "/catalogue/editions-sociales?author=:slug" }),
-      r({ source: "/collection/:slug", destination: "/catalogue/editions-sociales?libelle=:slug" }),
-      r({ source: "/parution/:slug", destination: "/catalogue/editions-sociales?upcoming=1" }),
+      r({ source: "/auteur/:slug", destination: "https://ld-es.fr/catalogue/editions-sociales?author=:slug" }),
+      r({
+        source: "/collection/:slug",
+        destination: "https://ld-es.fr/catalogue/editions-sociales?libelle=:slug",
+      }),
+      r({ source: "/parution/:slug", destination: "https://ld-es.fr/catalogue/editions-sociales?upcoming=1" }),
       // 6 — anciennes pages d'archive par taxonomie
-      r({ source: "/catalogue-collection", destination: "/catalogue/editions-sociales" }),
-      r({ source: "/catalogue-auteur", destination: "/catalogue/editions-sociales" }),
+      r({ source: "/catalogue-collection", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
+      r({ source: "/catalogue-auteur", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
       // 7 — page orpheline (défaut Q2, à ajuster avant E7 selon retour client)
-      r({ source: "/les-emissions-sociales", destination: "/a-propos" }),
-      // 8 — page orpheline (défaut Q2)
+      r({ source: "/les-emissions-sociales", destination: "https://ld-es.fr/a-propos" }),
+      // 8 — page orpheline (défaut Q2). Cible externe (GEME Marx-Engels, hors
+      // périmètre de la bascule) : jamais réécrite vers ld-es.fr.
       r({ source: "/la-geme", destination: "https://gememarxengels.org" }),
       // 9 — la phase Newsletter re-ciblera cette règle vers le vrai formulaire d'inscription
-      t({ source: "/newsletter", destination: "/" }),
+      t({ source: "/newsletter", destination: "https://ld-es.fr/" }),
       // 10 — page orpheline (défaut Q2)
-      r({ source: "/marx-passe-lagreg", destination: "/catalogue/editions-sociales" }),
+      r({ source: "/marx-passe-lagreg", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
       // 11 — flux RSS : 3 règles séparées. Jamais `/feed{/:rest*}` — les
       // accolades ne compilent pas avec le path-to-regexp embarqué de Next 16
       // (« Unexpected MODIFIER », vérifié dans le plan).
-      r({ source: "/feed", destination: "/" }),
-      r({ source: "/feed/:rest*", destination: "/" }),
-      r({ source: "/comments/feed", destination: "/" }),
+      r({ source: "/feed", destination: "https://ld-es.fr/" }),
+      r({ source: "/feed/:rest*", destination: "https://ld-es.fr/" }),
+      r({ source: "/comments/feed", destination: "https://ld-es.fr/" }),
       // Coupure OVH : plus aucune règle `wp-content`/`wp-admin`/`wp-json` —
       // les installs WordPress sont éteintes, ces URLs répondent 404 ici.
+      //
+      // 12 — catch-all FINAL (dernier de la liste : premier match gagnant,
+      // toutes les règles spécifiques ci-dessus passent avant) : bascule
+      // canonique ld-es.fr. editionssociales.fr ne sert plus aucun 200 —
+      // couvre `/`, `/catalogue/editions-sociales`, `/catalogue/la-dispute`
+      // (cas négatifs de la règle 2) et tout le reste du domaine.
+      r({ source: "/:path*", destination: "https://ld-es.fr/:path*" }),
     ]),
-    ...onHost("ladispute.fr", [
-      // 1-3 — le domaine déménage en entier vers editionssociales.fr/catalogue/la-dispute
-      r({ source: "/catalogue/page/:n(\\d+)", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
-      r({ source: "/catalogue/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute/:slug" }),
-      r({ source: "/catalogue", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
-      // 4-6 — taxonomies WP → facettes de l'archive LD (le terme `a-paraitre`
-      // existe côté LD, count=1, vérifié dans le plan).
-      r({ source: "/auteur/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute?author=:slug" }),
-      r({
-        source: "/collection/:slug",
-        destination: "https://editionssociales.fr/catalogue/la-dispute?libelle=:slug",
-      }),
-      r({ source: "/parution/:slug", destination: "https://editionssociales.fr/catalogue/la-dispute?upcoming=1" }),
-      // 7 — page « à propos » LD → page « éditions » dédiée du site unifié
-      r({ source: "/a-propos", destination: "https://editionssociales.fr/editions/la-dispute" }),
-      // 8 — rencontres (Q8 : si la page est retirée faute d'événements réels,
-      // re-cibler vers `/editions/la-dispute` — cf. plan)
-      r({ source: "/rencontres", destination: "https://editionssociales.fr/rencontres" }),
-      // 9 — anciennes pages d'archive par taxonomie
-      r({ source: "/catalogue-auteurs", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
-      r({ source: "/catalogue-collection", destination: "https://editionssociales.fr/catalogue/la-dispute" }),
-      // 10 — catch-all FINAL (dernier de la liste : couvre `/`, `/article-0`,
-      // `/feed`, les anciens `wp-*` et tout le reste du domaine qui déménage).
-      r({ source: "/:path*", destination: "https://editionssociales.fr/" }),
-    ]),
+    // Hosts ladispute.fr / la-dispute.fr — mêmes règles, factorisées dans
+    // `laDisputeRedirectRules()` (même pattern que BOUTIQUE_HOSTS ci-dessous).
+    ...LA_DISPUTE_HOSTS.flatMap((host) => onHost(host, laDisputeRedirectRules())),
     // Host boutique.editionssociales.fr / www.boutique.editionssociales.fr —
     // plan/02-mise-en-production.md §Table de redirections, câblé avant J-7 (P7).
     ...BOUTIQUE_HOSTS.flatMap((host) =>
@@ -179,26 +213,36 @@ async function redirects() {
         // Repli : `/produit/<slug>` inconnu de la table (vieux lien mort déjà à
         // l'époque WooCommerce, jamais couvert par aucun produit ni arbitrage) —
         // DOIT rester après `productRedirectRules()` (premier match gagnant).
-        r({ source: "/produit/:slug", destination: "/catalogue" }),
+        r({ source: "/produit/:slug", destination: "https://ld-es.fr/catalogue" }),
         // Panier/checkout/compte WooCommerce → panier natif unifié. `/panier`
-        // n'a PAS sa propre règle : source === destination créerait une boucle
-        // de redirection infinie (`/panier` est déjà servi nativement,
-        // identique sur ce host — rien à rediriger).
-        r({ source: "/commander", destination: "/panier" }),
-        r({ source: "/mon-compte", destination: "/panier" }),
+        // n'a toujours PAS sa propre règle : ce host ne sert plus rien
+        // nativement (bascule canonique ld-es.fr), donc plus de risque de
+        // boucle locale — mais il tombe désormais dans le catch-all générique
+        // ci-dessous (→ `/catalogue`, pas `/panier`), même repli que tout
+        // chemin boutique sans équivalent structurel dédié.
+        r({ source: "/commander", destination: "https://ld-es.fr/panier" }),
+        r({ source: "/mon-compte", destination: "https://ld-es.fr/panier" }),
         // Catégories produit (`product_cat`) — seules les deux maisons sont
         // nommément tranchées par le plan (`la-dispute`/`editions-sociales`) ;
         // toute autre catégorie (« collections → filtres », mapping encore
         // ouvert faute de liste exhaustive des slugs `product_cat`) retombe sur
         // `/catalogue` — défaut conservateur, même politique que `/wp-content`
         // (cms-* en filet) ou `/newsletter` (Q2/Q8) ailleurs dans ce fichier.
-        r({ source: "/categorie-produit/la-dispute", destination: "/catalogue/la-dispute" }),
-        r({ source: "/categorie-produit/editions-sociales", destination: "/catalogue/editions-sociales" }),
-        r({ source: "/categorie-produit/:cat", destination: "/catalogue" }),
+        r({ source: "/categorie-produit/la-dispute", destination: "https://ld-es.fr/catalogue/la-dispute" }),
+        r({
+          source: "/categorie-produit/editions-sociales",
+          destination: "https://ld-es.fr/catalogue/editions-sociales",
+        }),
+        r({ source: "/categorie-produit/:cat", destination: "https://ld-es.fr/catalogue" }),
         // Accueil boutique → catalogue unifié. (Coupure OVH : le proxy
         // `?wc-api=…` vers WooCommerce a disparu avec les rewrites — un
         // callback Paybox résiduel suit désormais cette redirection.)
-        r({ source: "/", destination: "/catalogue" }),
+        r({ source: "/", destination: "https://ld-es.fr/catalogue" }),
+        // Catch-all FINAL (dernier de la liste, premier match gagnant) : les
+        // chemins boutique n'ont pas d'équivalent structurel sur le domaine
+        // canonique — même repli conservateur que `/categorie-produit/:cat`
+        // et `/produit/:slug` ci-dessus, pour tout le reste du host.
+        r({ source: "/:path*", destination: "https://ld-es.fr/catalogue" }),
       ]),
     ),
   ];
