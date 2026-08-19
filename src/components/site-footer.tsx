@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { NAV_HOUSES, NAV_SECTIONS } from "@/lib/nav";
+import { buildMailto, CONTACT_EMAIL } from "@/lib/contact-address";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import type { ReglagesSiteContent, ReseauSocial } from "@/lib/site-content-core";
 
@@ -41,6 +42,14 @@ const LINK_CLASS =
 
 const AGENDA_HREF = NAV_SECTIONS.find((section) => section.id === "agenda")!.href;
 
+/**
+ * Adresse publique de la maison — UNE LIGNE dans la cellule « Adresse »
+ * (épure du pied de page), à côté de l'adresse postale. Elle ne dépend pas de
+ * Brevo : c'est le seul moyen de joindre la maison qui tienne dans tous les
+ * états de provisioning, et le site n'en affichait aucun jusqu'ici.
+ */
+const CONTACT_MAILTO = buildMailto().href;
+
 function AdresseCell({ className = "", adresse }: { className?: string; adresse: string }) {
   return (
     <div className={`${CELL_CLASS} ${className}`}>
@@ -50,6 +59,9 @@ function AdresseCell({ className = "", adresse }: { className?: string; adresse:
         La Dispute
       </p>
       <p className={BODY_CLASS}>{adresse}</p>
+      <a href={CONTACT_MAILTO} className={`${LINK_CLASS} text-sm`}>
+        {CONTACT_EMAIL}
+      </a>
 
       <nav aria-label="Explorer" className="mt-1">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">

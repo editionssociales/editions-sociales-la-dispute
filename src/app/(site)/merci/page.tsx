@@ -3,6 +3,7 @@ import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
 import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirmation";
+import { ContactLine } from "@/components/contact-line";
 import { formatPrice } from "@/lib/format";
 import { ACCENT_BG } from "@/lib/accents";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
@@ -124,6 +125,16 @@ export default async function MerciPage({
               </Button>
             )}
           </div>
+
+          {/* Adresse de la maison — indépendante de Brevo : tant que la chaîne
+              e-mail n'est pas provisionnée, AUCUN récapitulatif de commande ne
+              part, et cette ligne est le seul recours de l'acheteur·se. Elle
+              reste utile ensuite (question sur un envoi, une facture). */}
+          <ContactLine
+            subject="À propos de ma commande"
+            lead="Une question sur votre commande ?"
+            className="mt-10"
+          />
         </Container>
       </section>
     </>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
+import { ContactLine } from "@/components/contact-line";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { CAMPAIGN_KEY, DONATION_TIERS } from "@/lib/donation-tiers";
 import { ACCENT_BG } from "@/lib/accents";
@@ -113,6 +114,16 @@ export default async function MerciPage({
               Retour à la souscription
             </Button>
           </div>
+
+          {/* Adresse de la maison — indépendante de Brevo : le reçu Stripe
+              part de Stripe, mais aucun message de la maison (remerciement,
+              suivi de contrepartie) ne partira tant que la chaîne e-mail
+              n'est pas provisionnée. Un donateur doit savoir à qui écrire. */}
+          <ContactLine
+            subject="À propos de mon don"
+            lead="Une question sur votre don ?"
+            className="mt-10"
+          />
         </Container>
       </section>
     </>
