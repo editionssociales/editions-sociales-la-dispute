@@ -59,13 +59,11 @@ const LA_DISPUTE_HOSTS = ["ladispute.fr", "la-dispute.fr"];
 /**
  * Table de redirections `/produit/<slug>` — artefact **versionné**
  * (`src/lib/redirects-produits.json`, généré par
- * `scripts/build-product-redirects.ts`), lu ici en synchrone : aucune I/O
- * réseau/DB au build, contrairement à `scripts/redirect-inventory.csv`
- * (régénéré à chaque étape, jamais commité — cf. le commentaire de
- * `build-redirect-inventory.mjs`). Décision d'arbitrage du plan : UNE seule
- * table, générée une fois, réutilisée telle quelle au Jour J (302) puis à la
- * clôture (301) — seul `REDIRECTS_PERMANENT` change le statut, jamais le
- * contenu de la table entre les deux moments.
+ * `scripts/build-product-redirects.ts` depuis la base Payload et l'inventaire
+ * GELÉ des slugs de la boutique WooCommerce disparue), lu ici en synchrone :
+ * aucune I/O réseau/DB au build. Régénérer (`pnpm build:product-redirects`)
+ * seulement pour rafraîchir les destinations — jamais comme étape du
+ * build/déploiement ; seul `REDIRECTS_PERMANENT` change le statut servi.
  */
 interface ProductRedirectTarget {
   /** `null` = fiche `origin: "boutique"` (produit orphelin), destination `/boutique/<slug>`. */
