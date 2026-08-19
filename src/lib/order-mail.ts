@@ -15,6 +15,16 @@
 import { brevoConfigured, sendTransactionalEmail } from "./brevo";
 import { CONTACT_EMAIL } from "./contact-address";
 import { formatPrice } from "./format";
+import {
+  FONT_STACK,
+  INK,
+  LINE_COLOR,
+  MUTED,
+  PAPER,
+  SITE_URL,
+  escapeHtml,
+  renderMailShell,
+} from "./mail-shell";
 
 export interface OrderMailLine {
   titleSnapshot: string;
@@ -50,43 +60,8 @@ export const logOrderMailer: OrderMailer = {
   },
 };
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function euros(amount: number): string {
   return formatPrice(amount) ?? `${amount.toFixed(2)} €`;
-}
-
-/**
- * DA e-mail — mêmes teintes que `globals.css` (brutalisme R1-R8), rejouées en
- * dur : un client mail ne charge ni CSS externe ni variable, donc pas de
- * `var(--color-*)` ici. `ink` littéral (jamais `#000`), `paper` littéral
- * (jamais `#fff`/`white`), zéro `border-radius` (R8) dans tout le gabarit.
- */
-const PAPER = "#faf7f2";
-const INK = "#17140f";
-const LINE_COLOR = "#e4ded1";
-const MUTED = "#5c574c";
-const NAVY = "#262a5c";
-const BRICK = "#a8422b";
-/** Aucun client mail ne charge une webfont de façon fiable : pile système seule. */
-const FONT_STACK = "ui-sans-serif, system-ui, sans-serif";
-/** Domaine canonique — littéral : ce module reste pur (aucune I/O), donc pas de lecture de `NEXT_PUBLIC_SITE_URL`/requête entrante ici. */
-const SITE_URL = "https://ld-es.fr";
-
-/** Monogramme carré d'en-tête — même recette que `MaisonMonogramLink` (`site-header.tsx`) : fond accent maison, sigle en `paper`, extrabold italique. */
-function monogramCell(sigle: string, background: string): string {
-  return (
-    `<td width="44" height="44" style="width:44px;height:44px;background-color:${background};` +
-    `font-family:${FONT_STACK};font-size:15px;font-weight:800;font-style:italic;color:${PAPER};` +
-    `text-align:center;vertical-align:middle;">${sigle}</td>`
-  );
 }
 
 /** Ligne d'article du récapitulatif — titre échappé (contrat verrouillé par `order-mail.test.ts`). */
@@ -151,34 +126,7 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
       topBorder: true,
     });
 
-  const html =
-    `<!doctype html>` +
-    `<html lang="fr">` +
-    `<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />` +
-    `<title>Confirmation de commande</title></head>` +
-    `<body style="margin:0;padding:0;background-color:${PAPER};">` +
-    // Préheader masqué : résumé lu en aperçu par les clients mail (liste des
-    // messages), jamais affiché dans le corps du message lui-même.
-    `<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">` +
-    `Votre commande ${orderNumber} est confirmée.` +
-    `</div>` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PAPER};">` +
-    `<tr><td align="center" style="padding:24px 16px;">` +
-    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">` +
-    // En-tête : monogrammes ES/LD + wordmark.
-    `<tr><td style="padding-bottom:24px;">` +
-    `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>` +
-    monogramCell("ES", NAVY) +
-    `<td width="2"></td>` +
-    monogramCell("LD", BRICK) +
-    `<td style="padding-left:12px;font-family:${FONT_STACK};font-size:13px;font-weight:800;` +
-    `font-style:italic;letter-spacing:0.02em;color:${INK};">` +
-    `LES ÉDITIONS SOCIALES × LA DISPUTE</td>` +
-    `</tr></table>` +
-    `</td></tr>` +
-    // Titre.
-    `<tr><td style="padding-bottom:12px;font-family:${FONT_STACK};font-size:22px;font-weight:800;` +
-    `color:${INK};">COMMANDE CONFIRMÉE</td></tr>` +
+  const bodyHtml =
     // Corps.
     `<tr><td style="padding-bottom:20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${INK};">` +
     `Bonjour,<br />` +
@@ -224,11 +172,14 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     `<tr><td style="padding-top:12px;border-top:1px solid ${LINE_COLOR};font-family:${FONT_STACK};` +
     `font-size:12px;color:${MUTED};">` +
     `Les Éditions sociales × La Dispute` +
-    `</td></tr>` +
-    `</table>` +
-    `</td></tr>` +
-    `</table>` +
-    `</body></html>`;
+    `</td></tr>`;
+
+  const html = renderMailShell({
+    documentTitle: "Confirmation de commande",
+    preheader: `Votre commande ${orderNumber} est confirmée.`,
+    heading: "COMMANDE CONFIRMÉE",
+    bodyHtml,
+  });
 
   return { subject: `Confirmation de votre commande ${payload.orderNumber}`, html };
 }
