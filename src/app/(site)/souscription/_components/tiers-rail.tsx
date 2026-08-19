@@ -48,12 +48,12 @@ export const OPENING_MICROCOPY = "Ouverture le 20 août";
 const SUBMIT_CTA = `min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`;
 
 /**
- * Visuel par palier (PDF client, montages produits fond blanc) — keyé par
- * id de `DONATION_TIERS`.
- *
- * TODO(visuel) : le visuel « coup de pouce » (et la planche de stickers
- * présente dans tous les montages) est un rectangle crème VIDE — la planche
- * n'est pas encore dessinée ; visuels à re-livrer par Clara.
+ * Visuel par palier (montages produits fond blanc) — keyé par id de
+ * `DONATION_TIERS`. Livraison Clara du 2026-08-19 : la planche de stickers,
+ * rectangle crème vide dans la livraison de juillet, est désormais dessinée
+ * dans les 9 montages (« coup de pouce » EST cette planche). Recette de
+ * fabrication des assets depuis le zip client, rejouable :
+ * `scripts/contreparties-visuels.mjs`.
  */
 const TIER_IMAGES: Record<DonationTierId, StaticImageData> = {
   // Les deux premiers visuels sont recadrés à la source (trim sharp des
