@@ -56,7 +56,7 @@ export const PagesLegales: GlobalConfig = {
               label: 'Mentions légales',
               admin: {
                 description:
-                  'Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site, avec ses placeholders [À COMPLÉTER…].',
+                  'Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site (identité légale de l’éditeur).',
               },
             },
           ],
