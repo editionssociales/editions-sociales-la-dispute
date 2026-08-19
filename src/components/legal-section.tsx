@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Container } from "./container";
 import type { SafeHtml } from "@/lib/cms-html";
+import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 /**
  * Section des pages légales (mentions, confidentialité, CGV) — l'échafaudage
@@ -25,9 +26,17 @@ const H2_CLASS =
 /** Paragraphe courant des pages légales (corps + chapeau du héro). */
 export const LEGAL_BODY = "mt-4 text-[15px] leading-relaxed text-ink/70";
 
-/** Lien dans un corps de texte légal. */
+/**
+ * Lien dans un corps de texte légal — MÊME recette que ses deux jumelles
+ * (`LINK_CLASS` du pied de page, `INLINE_LINK` de /editions/[slug]), anneau de
+ * focus COMPRIS : elle en était la seule dépourvue, et son fond passe en ink au
+ * survol, ce qui effaçait aussi l'anneau par défaut du navigateur. Le défaut
+ * mordait au clavier sur /contact et sur l'inscription newsletter, où ce lien
+ * porte la mention légale sous le champ.
+ */
 export const LEGAL_LINK =
-  "font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper";
+  "font-bold text-ink underline decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper " +
+  FOCUS_RING_LIGHT_OUTER;
 
 export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (

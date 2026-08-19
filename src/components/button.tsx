@@ -58,7 +58,7 @@ export const INVERT = `border-paper bg-paper text-ink hover:bg-ink hover:text-pa
  */
 const HOUSE: Record<"navy" | "brick", string> = {
   navy: `border-paper bg-navy text-paper hover:bg-paper hover:text-navy disabled:hover:bg-navy disabled:hover:text-paper ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`,
-  brick: `border-paper bg-brick text-paper hover:bg-paper hover:text-brick disabled:hover:bg-paper disabled:hover:text-brick ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`,
+  brick: `border-paper bg-brick text-paper hover:bg-paper hover:text-brick disabled:hover:bg-brick disabled:hover:text-paper ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`,
 };
 
 /**
