@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
+import {
+  FOCUS_RING_DARK,
+  FOCUS_RING_HOVER_DARK,
+  FOCUS_RING_LIGHT,
+  invertingCell,
+} from "@/lib/ui";
 
 interface Props {
   page: number;
@@ -9,10 +14,15 @@ interface Props {
   hrefFor: (page: number) => string;
 }
 
-/** Flèches Précédent/Suivant — cellules de 44px de haut (cible tactile R7), grille encadrée. */
+/** Flèches Précédent/Suivant — cellules de 44px de haut (cible tactile R7), grille encadrée.
+ *  Active, la flèche vire à l'ink au survol : la surcharge d'anneau voyage avec
+ *  le `hover:bg-ink` de la même branche (R5) — désactivée, il n'y a ni survol
+ *  ni focus (la flèche n'est alors qu'un `<span>`). */
 function arrowClass(disabled: boolean): string {
   return `flex h-11 items-center gap-1.5 bg-paper px-4 text-sm font-bold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
-    disabled ? "pointer-events-none text-ink/30" : "hover:bg-ink hover:text-paper"
+    disabled
+      ? "pointer-events-none text-ink/30"
+      : `hover:bg-ink hover:text-paper ${FOCUS_RING_HOVER_DARK}`
   }`;
 }
 

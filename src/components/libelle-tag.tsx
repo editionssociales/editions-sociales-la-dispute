@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Term } from "@/lib/types";
-import { FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /**
  * Étiquette de libellé — grille brutaliste : cellule plate encadrée de
@@ -24,7 +24,7 @@ export function LibelleTag({
     return (
       <Link
         href={href}
-        className={`transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${base} ${FOCUS_RING_LIGHT}`}
+        className={`transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${base} ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
       >
         {libelle.name}
       </Link>

@@ -15,7 +15,12 @@ import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { catalogueHref } from "@/lib/browse";
 import { ACCENT_BG } from "@/lib/accents";
-import { FOCUS_RING_LIGHT, FOCUS_RING_LIGHT_OUTER, PDF_LINK_CLASS } from "@/lib/ui";
+import {
+  FOCUS_RING_HOVER_DARK,
+  FOCUS_RING_LIGHT,
+  FOCUS_RING_LIGHT_OUTER,
+  PDF_LINK_CLASS,
+} from "@/lib/ui";
 
 export async function generateMetadata({
   params,
@@ -395,7 +400,7 @@ export default async function BookPage({
                   {i > 0 && ", "}
                   <Link
                     href={catalogueHref({ author: a.slug })}
-                    className={`text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper hover:decoration-paper ${FOCUS_RING_LIGHT}`}
+                    className={`text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper hover:decoration-paper ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
                   >
                     {a.name}
                   </Link>

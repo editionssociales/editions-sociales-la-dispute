@@ -14,7 +14,7 @@ import {
   withoutFilter,
   type FilterField,
 } from "@/lib/browse";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { ACCENT_BG } from "@/lib/accents";
 import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
@@ -130,6 +130,11 @@ function SelectCell({
  * qu'ink : le filtre de maison est d'une autre nature que les libellés
  * (identité de collection, pas un thème), il mérite son propre petit groupe
  * distinct.
+ *
+ * Active, la cellule reste sur son accent sombre — anneau sombre seul, aucun
+ * survol ne change son fond. Inactive, elle vire à l'ink au survol : anneau
+ * clair + surcharge sombre (R5), sinon l'ink de l'anneau se pose sur l'ink du
+ * survol (1:1).
  */
 function HouseTag({
   active,
@@ -147,7 +152,11 @@ function HouseTag({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`min-h-11 whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${active ? `${accentBg} text-paper` : "bg-paper text-ink hover:bg-ink hover:text-paper"}`}
+      className={`min-h-11 whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${
+        active
+          ? `${accentBg} text-paper ${FOCUS_RING_DARK}`
+          : `bg-paper text-ink hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`
+      }`}
     >
       {children}
     </button>

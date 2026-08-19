@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Button } from "@/components/button";
-import { FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { useCart } from "./cart-context";
 
 /**
@@ -19,11 +19,16 @@ import { useCart } from "./cart-context";
  * `book-card`, un changement de boîte y ferait sauter la grille. Le retour est
  * donc porté par la seule couleur — l'inversion `ink↔paper` de R4/R7, en aplat
  * dur (R8), la même que celle du survol.
+ *
+ * Chaque état porte SON anneau (R5) : la puce au repos part d'un fond jaune et
+ * vire à l'ink au survol — anneau clair + surcharge de survol sombre ; la puce
+ * « ajoutée » est déjà en ink et ne bouge plus — anneau sombre seul. Un anneau
+ * unique serait invisible dans l'un des deux (ink sur ink, 1:1).
  */
 const CHIP_BASE =
   "flex h-11 w-11 flex-none items-center justify-center border-2 border-ink font-sans text-lg font-black leading-none transition-colors motion-reduce:transition-none";
-const CHIP_IDLE = `${CHIP_BASE} bg-pop-yellow text-black hover:bg-ink hover:text-pop-yellow`;
-const CHIP_ADDED = `${CHIP_BASE} bg-ink text-pop-yellow`;
+const CHIP_IDLE = `${CHIP_BASE} bg-pop-yellow text-black hover:bg-ink hover:text-pop-yellow ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`;
+const CHIP_ADDED = `${CHIP_BASE} bg-ink text-pop-yellow ${FOCUS_RING_DARK}`;
 
 export function AddToCartButton({
   id,
@@ -78,7 +83,7 @@ export function AddToCartButton({
         // focus provoquerait une seconde annonce en plus de celle de la
         // région live du provider.
         aria-label="Ajouter au panier"
-        className={`${justAdded ? CHIP_ADDED : CHIP_IDLE} ${FOCUS_RING_LIGHT} ${className ?? ""}`}
+        className={`${justAdded ? CHIP_ADDED : CHIP_IDLE} ${className ?? ""}`}
       >
         {justAdded ? "✓" : "+"}
       </button>

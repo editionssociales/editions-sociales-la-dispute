@@ -4,7 +4,7 @@ import { Button } from "@/components/button";
 import { SubmitButton } from "@/components/submit-button";
 import { formatInt } from "@/lib/format";
 import { POP_BG, POP_ORDER } from "@/components/pop-palette";
-import { FOCUS_RING_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_HOVER_LIGHT, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { RAIL_MAX_HEIGHT_CLASS, TICKER_INSET_CLASS } from "@/components/rail-inset";
 import { type DonationTierId, FREE_AMOUNT } from "@/lib/donation-tiers";
 import type { PageSouscriptionContent } from "@/lib/site-content-core";
@@ -45,7 +45,7 @@ export const OPENING_MICROCOPY = "Ouverture le 20 août";
  * à la main. Le padding/marge propres à chaque emplacement restent chez
  * l'appelant.
  */
-const SUBMIT_CTA = `min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK}`;
+const SUBMIT_CTA = `min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-4 py-2.5 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`;
 
 /**
  * Visuel par palier (PDF client, montages produits fond blanc) — keyé par

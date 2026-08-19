@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
 import type { NouveauteBook } from "@/lib/nouveaute-book";
-import { FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 
 export type { NouveauteBook };
 
@@ -344,7 +344,9 @@ export function NouveautesCarousel({
                   disabled={atStart}
                   onClick={() => step(-1)}
                   className={`flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
-                    atStart ? "pointer-events-none text-ink/30" : "hover:bg-ink hover:text-paper"
+                    atStart
+                      ? "pointer-events-none text-ink/30"
+                      : `hover:bg-ink hover:text-paper ${FOCUS_RING_HOVER_DARK}`
                   }`}
                 >
                   ←
@@ -355,7 +357,9 @@ export function NouveautesCarousel({
                   disabled={atEnd}
                   onClick={() => step(1)}
                   className={`flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] items-center justify-center border-[1.5px] border-ink bg-paper text-xl text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
-                    atEnd ? "pointer-events-none text-ink/30" : "hover:bg-ink hover:text-paper"
+                    atEnd
+                      ? "pointer-events-none text-ink/30"
+                      : `hover:bg-ink hover:text-paper ${FOCUS_RING_HOVER_DARK}`
                   }`}
                 >
                   →
