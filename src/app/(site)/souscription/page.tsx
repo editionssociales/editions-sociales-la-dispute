@@ -404,8 +404,16 @@ export default async function SouscriptionPage() {
                         La souscription ouvre le 20 août — découvrez déjà les
                         contreparties.
                       </p>
-                    ) : liveCampaign.collected > 0 ? (
-                      /* Les `{" "}` autour des <CountUp> sont porteurs : JSX
+                    ) : (
+                      /* Le montant monumental est TOUJOURS rendu, 0 EUR compris
+                         (arbitrage client 2026-08-19) : l'ancien repli
+                         « Campagne tout juste lancée — soyez les premier·ères à
+                         contribuer » est supprimé, il tenait la place du chiffre
+                         au lieu de le montrer. Seules les DEUX branches
+                         d'honnêteté au-dessus (panne Stripe, dons pas encore
+                         ouverts) remplacent encore le compteur — ce sont des
+                         garde-fous, pas des placeholders.
+                         Les `{" "}` autour des <CountUp> sont porteurs : JSX
                          supprime les blancs contenant un retour à la ligne — sans
                          eux, AT/copier-coller lisent « 11 014 €réunis ». Les
                          nœuds espace entre spans `block` ne sont pas rendus : zéro
@@ -417,23 +425,24 @@ export default async function SouscriptionPage() {
                         <span className="block">
                           <CountUp
                             value={liveCampaign.collected}
-                            suffix=" €"
+                            suffix=" €"
                             className="font-sans text-[clamp(56px,18vw,128px)] font-black italic leading-[0.85] tracking-[-0.02em] text-ink lg:text-[clamp(56px,9vw,128px)]"
                           />
                         </span>{" "}
-                        <span className="mt-4 block">
-                          réunis auprès de{" "}
-                          <CountUp
-                            value={liveCampaign.contributors}
-                            className="font-sans text-2xl font-black italic text-ink"
-                          />{" "}
-                          contributeur·rices.
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="max-w-md text-[15px] leading-relaxed text-ink-soft">
-                        Campagne tout juste lancée — soyez les premier·ères à
-                        contribuer.
+                        {/* Sous-ligne rendue seulement À PARTIR DE 1
+                            contributeur·rice : « réunis auprès de 0
+                            contributeur·rices » serait la même phrase creuse que
+                            le placeholder supprimé. */}
+                        {liveCampaign.contributors > 0 && (
+                          <span className="mt-4 block">
+                            réunis auprès de{" "}
+                            <CountUp
+                              value={liveCampaign.contributors}
+                              className="font-sans text-2xl font-black italic text-ink"
+                            />{" "}
+                            contributeur·rices.
+                          </span>
+                        )}
                       </p>
                     )}
                   </div>
