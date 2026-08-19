@@ -1,6 +1,7 @@
 "use server";
 
 import { sendTransactionalEmail } from "@/lib/brevo";
+import { buildMailto } from "@/lib/contact-address";
 import { validateContactSubmission, type ContactSubmission } from "@/lib/contact-form";
 import type { ContactFormState } from "./state";
 
@@ -24,8 +25,13 @@ import type { ContactFormState } from "./state";
 
 const OK_MESSAGE =
   "Merci, votre message a bien été envoyé. Nous vous répondrons dès que possible.";
+/**
+ * Échec d'envoi — jamais un « une erreur est survenue » sec : le message est
+ * écrit, il ne doit pas mourir ici. Le texte annonce le chemin manuel que
+ * `fallback` rend cliquable (`state.ts`), avec la saisie déjà dedans.
+ */
 const GENERIC_ERROR_MESSAGE =
-  "L'envoi est momentanément indisponible. Réessayez dans un instant ; si le problème persiste, revenez un peu plus tard.";
+  "Votre message n'a pas pu être envoyé depuis le site. Il n'est pas perdu : envoyez-le-nous directement par e-mail, il est déjà pré-rempli.";
 
 function str(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
@@ -90,10 +96,16 @@ export async function sendContactMessage(
     }
   }
 
+  // Chemin manuel armé UNE fois pour tous les échecs d'envoi : le message
+  // validé (objet + corps) part dans le `mailto:` de l'adresse publique, et
+  // `buildMailto` tronque proprement le corps plutôt que de produire une URL
+  // que le client de messagerie refuserait.
+  const fallback = buildMailto({ subject: result.subject, body: result.message });
+
   const to = process.env.CONTACT_TO_EMAIL;
   if (!to) {
     console.warn("[contact] CONTACT_TO_EMAIL absente — envoi ignoré (dégradation propre).");
-    return { status: "error", message: GENERIC_ERROR_MESSAGE };
+    return { status: "error", message: GENERIC_ERROR_MESSAGE, fallback };
   }
 
   const outcome = await sendTransactionalEmail({
@@ -105,7 +117,7 @@ export async function sendContactMessage(
   });
 
   if (!outcome.ok) {
-    return { status: "error", message: GENERIC_ERROR_MESSAGE };
+    return { status: "error", message: GENERIC_ERROR_MESSAGE, fallback };
   }
 
   return { status: "ok", message: OK_MESSAGE };

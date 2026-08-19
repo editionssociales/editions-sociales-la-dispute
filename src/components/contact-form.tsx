@@ -153,7 +153,41 @@ export function ContactForm() {
             state.status === "ok" ? "border-bottle" : "border-brick"
           }`}
         >
-          {state.message}
+          <p>{state.message}</p>
+
+          {/* Chemin manuel d'un envoi qui a échoué (`state.fallback`, posé par
+              la server action) : le message saisi est DÉJÀ dans le lien. Rendu
+              DANS la région live, pour être annoncé avec le message d'erreur
+              plutôt que d'apparaître muet à côté. Le formulaire n'est pas
+              réinitialisé en cas d'erreur : la saisie reste aussi dans les
+              champs, ce que dit la phrase ci-dessous. */}
+          {state.fallback && (
+            <div className="mt-3 flex flex-col items-start gap-2">
+              <Button
+                href={state.fallback.href}
+                variant="outline"
+                className="px-5 py-2.5 text-xs tracking-[.03em]"
+              >
+                Envoyer par e-mail
+              </Button>
+              <p className="font-normal">
+                {state.fallback.truncated ? (
+                  <>
+                    Votre message est trop long pour tenir dans ce lien : il y
+                    est raccourci. Copiez-le depuis le champ ci-dessus et
+                    écrivez-nous à{" "}
+                    <strong className="font-bold">{state.fallback.address}</strong>.
+                  </>
+                ) : (
+                  <>
+                    Ou écrivez-nous à{" "}
+                    <strong className="font-bold">{state.fallback.address}</strong> — votre
+                    message reste dans le formulaire.
+                  </>
+                )}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
