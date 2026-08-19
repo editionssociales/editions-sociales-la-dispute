@@ -4,6 +4,7 @@ import type { Payload } from 'payload'
 
 import { expiredActivePromos, STOCK_SEUIL_FALLBACK } from './derive.ts'
 import { parseStoredImportReport } from '../../lib/import-run-report-core.ts'
+import { brevoConfigured } from '../../../lib/brevo.ts'
 
 /**
  * Lecteurs I/O du dashboard `/admin` v3 (home = zones A/B/C, issue #23) —
@@ -330,6 +331,13 @@ export interface ConfigData {
   sentryBuildToken: boolean
   sentryDashboardToken: boolean
   databaseUrl: boolean
+  /**
+   * `BREVO_API_KEY` posée — donc chaîne e-mail active. Fausse, AUCUN e-mail ne
+   * part (contact, newsletter, récapitulatif de commande) et le site bascule
+   * sur son repli manuel. Lu par `brevoConfigured()` (`src/lib/brevo.ts`),
+   * jamais réécrit ici : c'est ce même prédicat qui aiguille le front.
+   */
+  brevoKey: boolean
   /** `null` = compte illisible. */
   lockedAccounts: number | null
 }
@@ -360,6 +368,7 @@ export async function readConfig(payload: Payload, now: Date): Promise<ConfigDat
     sentryBuildToken: Boolean(process.env.SENTRY_AUTH_TOKEN),
     sentryDashboardToken: Boolean(process.env.SENTRY_DASHBOARD_TOKEN),
     databaseUrl: Boolean(process.env.DATABASE_URL),
+    brevoKey: brevoConfigured(),
     lockedAccounts,
   }
 }

@@ -8,6 +8,7 @@ import { Pill } from '@payloadcms/ui'
 import { dotClass, dotLabel, pillStyleForState } from '../dashboard/dashboard-classes.ts'
 import { readConfig, readLastOrder, readSentryIssues } from '../dashboard/data.ts'
 import { fmtDateTimeFr, sentrySignal } from '../dashboard/derive.ts'
+import { CONTACT_EMAIL } from '../../../lib/contact-address.ts'
 import styles from '../dashboard/dashboard.module.css'
 import { DashboardLegend } from '../dashboard/Legend.tsx'
 
@@ -181,6 +182,25 @@ export async function HealthPage(props: AdminViewServerProps) {
                   <>
                     contacter le développeur : <code>SENTRY_DASHBOARD_TOKEN</code> (2ᵉ token, lecture
                     des erreurs) absente — panneau « Observabilité » gris tant qu’elle manque
+                  </>
+                )}
+              </div>
+              {/* Chaîne e-mail — jamais de vert par défaut : sans clé, ce
+                  n'est pas « à surveiller », AUCUN e-mail ne part (contact,
+                  newsletter, récapitulatif de commande). L'adresse du repli
+                  manuel est nommée ici : c'est celle que le site affiche aux
+                  visiteurs, et donc celle que l'équipe doit relever. */}
+              <div className={styles.configRow}>
+                <span className={dotClass(config.brevoKey ? 'ok' : 'alert')} />
+                {config.brevoKey ? (
+                  <>
+                    <code>BREVO_API_KEY</code> posée — les e-mails partent
+                  </>
+                ) : (
+                  <>
+                    contacter le développeur : <code>BREVO_API_KEY</code> absente — AUCUN e-mail ne
+                    part (contact, newsletter, récapitulatif de commande) ; repli manuel actif,
+                    relever <code>{CONTACT_EMAIL}</code>
                   </>
                 )}
               </div>
