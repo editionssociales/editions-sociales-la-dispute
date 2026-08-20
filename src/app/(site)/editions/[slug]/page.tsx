@@ -36,7 +36,9 @@ export const revalidate = 3600; // même fenêtre ISR que le reste du contenu Pa
  * Éditions sociales gardait un bleu (navy → le « bleu » turquoise de la
  * palette), La Dispute un rouge (brick → orange). Texte `ink` obligatoire sur
  * ces quatre teintes claires (cf. `pop-palette.ts`) : le `text-paper` des
- * anciens aplats sombres tombe avec eux.
+ * anciens aplats sombres tombe avec eux. Depuis le 2026-08-20, l'orange est
+ * devenu l'identité La Dispute sur TOUT le site (`lib/editions.ts`,
+ * `accent: "pop-orange"`) — cette page en était le précédent.
  */
 const BAND_BG: Record<EditionSlug, string> = {
   "editions-sociales": POP_BG.teal,

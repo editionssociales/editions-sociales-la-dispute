@@ -49,16 +49,21 @@ const OUTLINE = `border-ink bg-paper text-ink hover:bg-ink hover:text-paper disa
 export const INVERT = `border-paper bg-paper text-ink hover:bg-ink hover:text-paper disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_INVERTING}`;
 
 /**
- * Variante « maison » (R3 — navy = Éditions sociales, brick = La Dispute) :
- * CTA à bordure paper sur fond navy/brick, réservée aux liens de maison du
- * héros de marque de l'accueil (chantier 4 §1). Même recette d'inversion au
- * survol que SOLID/OUTLINE (R4), appliquée à l'accent de la maison plutôt
- * qu'à ink. Correspondance littérale (contrat JIT) : jamais `bg-${tone}`
- * assemblé dynamiquement.
+ * Variante « maison » (R3 — navy = Éditions sociales, pop-orange = La
+ * Dispute, ex-brick depuis le retour client 2026-08-20, cf. `lib/editions.ts`) :
+ * réservée aux liens de maison du héros de marque de l'accueil (chantier 4
+ * §1). Correspondance littérale (contrat JIT) : jamais `bg-${tone}` assemblé
+ * dynamiquement — la clef `brick` reste le NOM de la teinte La Dispute dans
+ * l'API, sa recette porte l'orange.
+ *
+ * Deux natures d'accent, deux recettes : navy est SOMBRE (bordure paper,
+ * inversion vers paper — R4, anneau sombre + surcharge claire) ; l'orange est
+ * CLAIR — la recette d'`ALARM` (bordure ink, texte ink 5,09:1, inversion vers
+ * l'INK : l'orange en texte sur paper est sous AA — et anneau inversant).
  */
 const HOUSE: Record<"navy" | "brick", string> = {
   navy: `border-paper bg-navy text-paper hover:bg-paper hover:text-navy disabled:hover:bg-navy disabled:hover:text-paper ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`,
-  brick: `border-paper bg-brick text-paper hover:bg-paper hover:text-brick disabled:hover:bg-brick disabled:hover:text-paper ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`,
+  brick: `border-ink bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange disabled:hover:bg-pop-orange disabled:hover:text-ink ${FOCUS_RING_INVERTING}`,
 };
 
 /**

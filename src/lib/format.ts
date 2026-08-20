@@ -2,7 +2,11 @@
  * Helpers de formatage — purs, réutilisables côté serveur comme client.
  */
 
-export type Accent = "navy" | "bottle" | "ocher" | "brick";
+// `pop-orange` a rejoint l'union comme couleur d'IDENTITÉ de La Dispute
+// (ex-brick, retour client 2026-08-20) — ce n'est pas un accent de couverture :
+// il ne figure pas dans `ACCENTS` (`lib/accents.ts`), la liste qu'itèrent les
+// dos de livres décoratifs, qui gardent leur brick.
+export type Accent = "navy" | "bottle" | "ocher" | "brick" | "pop-orange";
 
 const DATE_FR = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",

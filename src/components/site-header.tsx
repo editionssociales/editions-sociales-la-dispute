@@ -105,19 +105,30 @@ const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
 
 /**
  * Monogrammes maisons de la rangée mobile — carrés sur l'accent de la maison
- * (R3 : navy = Éditions sociales, brick = La Dispute), inversion accent↔paper
- * au survol. Clefs = labels de `NAV_HOUSES` (clef stable, indépendante des
- * hrefs — désormais les pages maisons `/editions/[slug]`), classes
- * littérales (contrat JIT) ; le nom complet reste porté par l'`aria-label`.
+ * (R3 : navy = Éditions sociales, pop-orange = La Dispute depuis le retour
+ * client 2026-08-20 — ex-brick, cf. `lib/editions.ts`). Clefs = labels de
+ * `NAV_HOUSES` (clef stable, indépendante des hrefs — désormais les pages
+ * maisons `/editions/[slug]`), classes littérales (contrat JIT) ; le nom
+ * complet reste porté par l'`aria-label`.
+ *
+ * Les DEUX accents n'ont plus la même nature — d'où l'anneau PORTÉ PAR
+ * L'ENTRÉE, plus par une règle commune : navy est SOMBRE (texte paper,
+ * inversion vers paper, anneau sombre + surcharge claire) ; l'orange est
+ * CLAIR — texte ink (5,09:1 ; paper serait à 3,38:1, sous AA), inversion vers
+ * l'INK au survol (jamais vers paper : l'orange en texte à ce corps y est
+ * sous AA, cf. `pop-palette.ts` — même recette qu'`ALARM` de `button.tsx`),
+ * anneau clair + surcharge sombre (R5).
  */
-const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string }> = {
+const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string; ring: string }> = {
   "La Dispute": {
     sigle: "LD",
-    cellClass: "bg-brick text-paper hover:bg-paper hover:text-brick",
+    cellClass: "bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange",
+    ring: `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`,
   },
   "Les Éditions sociales": {
     sigle: "ES",
     cellClass: "bg-navy text-paper hover:bg-paper hover:text-navy",
+    ring: `${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`,
   },
 };
 
@@ -343,19 +354,15 @@ function MobileMenuToggle({
 }
 
 /**
- * Monogramme maison (rangée mobile) — sigle + accent R3.
- *
- * L'accent maison est SOMBRE et s'inverse vers paper au survol : anneau sombre
- * au repos (pop-yellow — 4,99:1 sur le brick, 11,07:1 sur le navy) + surcharge
- * claire au survol (R5), sans quoi le jaune se posait sur le paper (1,13:1).
- * Le repli sans accent (maison inconnue) part d'un fond clair : anneau et
- * surcharge s'inversent avec lui.
+ * Monogramme maison (rangée mobile) — sigle + accent R3. L'anneau vient de
+ * L'ENTRÉE (`MAISON_MONOGRAM.ring`) : les deux maisons n'ont plus la même
+ * nature d'accent (navy sombre, orange clair — cf. le commentaire du record).
+ * Le repli sans accent (maison inconnue) part d'un fond clair : anneau clair
+ * + surcharge sombre, comme sa recette d'inversion.
  */
 function MaisonMonogramLink({ href, label }: { href: string; label: string }) {
   const m = MAISON_MONOGRAM[label];
-  const ring = m
-    ? `${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`
-    : `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`;
+  const ring = m?.ring ?? `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`;
   return (
     <Link
       href={href}

@@ -16,7 +16,7 @@ import {
   type FilterField,
 } from "@/lib/browse";
 import { FOCUS_RING_DARK, FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
-import { ACCENT_BG } from "@/lib/accents";
+import type { Accent } from "@/lib/format";
 import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
 
@@ -127,24 +127,40 @@ function SelectCell({
 }
 
 /**
- * Étiquette de maison — cellule inversante accentée (navy/brick, R3) plutôt
- * qu'ink : le filtre de maison est d'une autre nature que les libellés
- * (identité de collection, pas un thème), il mérite son propre petit groupe
- * distinct.
+ * Recette de l'étiquette de maison ACTIVE, par accent (classes littérales,
+ * contrat JIT) — plus un `ACCENT_BG[…]` + texte commun : depuis que
+ * l'identité La Dispute est l'ORANGE (accent CLAIR, ex-brick — cf.
+ * `lib/editions.ts`), texte et anneau dépendent de la nature de l'accent.
+ * Accents sombres : texte paper + anneau sombre (R5). Orange : texte ink
+ * (5,09:1 — paper y serait sous AA) + anneau clair (ink, 5,09:1, au-dessus
+ * du seuil 3:1 de WCAG 1.4.11). Aucun survol ne change le fond d'une cellule
+ * active, l'anneau de repos suffit dans les deux cas.
+ */
+const HOUSE_TAG_ACTIVE: Record<Accent, string> = {
+  navy: `bg-navy text-paper ${FOCUS_RING_DARK}`,
+  bottle: `bg-bottle text-paper ${FOCUS_RING_DARK}`,
+  ocher: `bg-ocher text-paper ${FOCUS_RING_DARK}`,
+  brick: `bg-brick text-paper ${FOCUS_RING_DARK}`,
+  "pop-orange": `bg-pop-orange text-ink ${FOCUS_RING_LIGHT}`,
+};
+
+/**
+ * Étiquette de maison — cellule inversante accentée plutôt qu'ink : le filtre
+ * de maison est d'une autre nature que les libellés (identité de collection,
+ * pas un thème), il mérite son propre petit groupe distinct.
  *
- * Active, la cellule reste sur son accent sombre — anneau sombre seul, aucun
- * survol ne change son fond. Inactive, elle vire à l'ink au survol : anneau
- * clair + surcharge sombre (R5), sinon l'ink de l'anneau se pose sur l'ink du
- * survol (1:1).
+ * Active, la cellule reste sur son accent (`HOUSE_TAG_ACTIVE`). Inactive,
+ * elle vire à l'ink au survol : anneau clair + surcharge sombre (R5), sinon
+ * l'ink de l'anneau se pose sur l'ink du survol (1:1).
  */
 function HouseTag({
   active,
-  accentBg,
+  activeClass,
   onClick,
   children,
 }: {
   active: boolean;
-  accentBg: string;
+  activeClass: string;
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -155,7 +171,7 @@ function HouseTag({
       aria-pressed={active}
       className={`min-h-11 whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${
         active
-          ? `${accentBg} text-paper ${FOCUS_RING_DARK}`
+          ? activeClass
           : `bg-paper text-ink hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`
       }`}
     >
@@ -271,7 +287,7 @@ export function CatalogueFilters({
           {EDITION_LIST.map((e) => (
             <HouseTag
               key={e.slug}
-              accentBg={ACCENT_BG[e.accent]}
+              activeClass={HOUSE_TAG_ACTIVE[e.accent]}
               active={activeEdition === e.slug}
               onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
             >

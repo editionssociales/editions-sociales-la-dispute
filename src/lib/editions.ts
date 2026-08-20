@@ -35,7 +35,11 @@ export const EDITIONS: Record<EditionSlug, EditionInfo> = {
     description:
       "La Dispute publie des essais de sciences humaines et sociales, à la croisée de la recherche universitaire et des mouvements sociaux.",
     legacyUrl: "https://ladispute.fr",
-    accent: "brick",
+    // Ex-`brick` : l'identité La Dispute est l'ORANGE de la palette du site
+    // depuis le retour client 2026-08-20 (prolonge la bascule des pages
+    // maisons du 2026-08-07, `editions/[slug]` — brick → orange). Le brick
+    // reste la couleur d'ERREUR du site et un accent de couverture.
+    accent: "pop-orange",
   },
 };
 
