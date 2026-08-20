@@ -29,6 +29,7 @@ interface FakeOrder {
   id: number;
   stripeSessionId: string;
   stripePaymentIntentId: string | null;
+  orderType: string;
   status: string;
   email: string;
   stockDecremented: boolean;
@@ -39,7 +40,7 @@ interface FakeOrder {
 let orders: FakeOrder[] = [];
 let nextOrderId = 1;
 let stockUpdates: { id: number; stock: number }[] = [];
-/** Simule un crash APRÈS la création de la commande mais AVANT le décrément (issue #64) — consommé une fois. */
+/** Simule un crash APRÈS la création de la commande mais AVANT le décrément (issue #64) — consommé une fois, sur le PROCHAIN décrément (quelle que soit la partie, commande ou précommande). */
 let failNextDecrement = false;
 
 interface FakeBookRecord {
@@ -51,10 +52,10 @@ interface FakeBookRecord {
 let bookRecords: Record<number, FakeBookRecord> = {};
 
 vi.mock("@/lib/order-source", () => ({
-  findOrderBySessionId: async (stripeSessionId: string) =>
-    orders.find((o) => o.stripeSessionId === stripeSessionId) ?? null,
-  findOrderByPaymentIntent: async (stripePaymentIntentId: string) =>
-    orders.find((o) => o.stripePaymentIntentId === stripePaymentIntentId) ?? null,
+  findOrderBySessionId: async (stripeSessionId: string, orderType: string) =>
+    orders.find((o) => o.stripeSessionId === stripeSessionId && o.orderType === orderType) ?? null,
+  findOrdersByPaymentIntent: async (stripePaymentIntentId: string) =>
+    orders.filter((o) => o.stripePaymentIntentId === stripePaymentIntentId),
   createOrder: async (data: Record<string, unknown>) => {
     const doc: FakeOrder = {
       id: nextOrderId++,
@@ -463,6 +464,7 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
       id: 1,
       stripeSessionId: "cs_test_order_1",
       stripePaymentIntentId: "pi_test_order_1",
+      orderType: "commande",
       status: "paid",
       email: "client@exemple.fr",
       stockDecremented: true,
@@ -515,5 +517,199 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
     expect(res.status).toBe(500); // aucune ligne exploitable → `buildOrderCreateData` refuse, remonte en erreur
     expect(Sentry.captureException).toHaveBeenCalled();
     expect(orders).toHaveLength(0);
+  });
+});
+
+describe("POST /api/stripe/webhook — scission commande/précommande (client 2026-08-20)", () => {
+  const MIXED_METADATA = {
+    kind: "order",
+    zone: "FR",
+    shippingMethod: "standard",
+    shippingCostCents: "550",
+    discountCents: "0",
+    preorderDiscountCents: "0",
+    promoCodeId: "",
+    lines: "12:2:1500", // commande normale : Le Capital ×2
+    preorderLines: "13:1:1000", // précommande : À paraître ×1
+  };
+
+  function mixedCheckoutSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "cs_test_mixte_1",
+      object: "checkout.session",
+      payment_status: "paid",
+      // normal: 2×1500 + 550 port = 3550 ; précommande: 1000 + 550 port = 1550 → 5100 combiné.
+      amount_total: 5100,
+      payment_intent: "pi_test_mixte_1",
+      customer_details: { email: "client@exemple.fr" },
+      collected_information: {
+        shipping_details: {
+          name: "Jean Dupont",
+          address: { line1: "1 rue Paul Lafargue", line2: null, city: "Paris", postal_code: "75001", country: "FR" },
+        },
+      },
+      metadata: MIXED_METADATA,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    bookRecords = {
+      12: { title: "Le Capital", isbn: "978-1", stock: 5 },
+      13: { title: "À paraître", isbn: "978-2", stock: 3 },
+    };
+  });
+
+  it("panier mixte payé → crée DEUX commandes (une par type), décrémente les DEUX stocks, envoie DEUX mails", async () => {
+    const res = await POST(
+      signedEventRequest({ id: "evt_mixte_1", type: "checkout.session.completed", object: mixedCheckoutSession() }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(2);
+
+    const commande = orders.find((o) => o.orderType === "commande");
+    const precommande = orders.find((o) => o.orderType === "precommande");
+    expect(commande).toMatchObject({
+      status: "paid",
+      stripeSessionId: "cs_test_mixte_1",
+      stripePaymentIntentId: "pi_test_mixte_1",
+      shippingCostTTC: 5.5, // le tarif d'UN envoi, identique pour les deux commandes
+      totalTTC: 35.5, // 2×15 + 5,50
+      lines: [{ book: 12, titleSnapshot: "Le Capital", isbnSnapshot: "978-1", quantity: 2, unitPriceTTC: 15 }],
+    });
+    expect(precommande).toMatchObject({
+      status: "paid",
+      stripeSessionId: "cs_test_mixte_1",
+      stripePaymentIntentId: "pi_test_mixte_1",
+      shippingCostTTC: 5.5,
+      totalTTC: 15.5, // 10 + 5,50
+      lines: [{ book: 13, titleSnapshot: "À paraître", isbnSnapshot: "978-2", quantity: 1, unitPriceTTC: 10 }],
+    });
+
+    // Numéros distincts (ids Postgres distincts → `formatOrderNumber` distinct en amont, hors périmètre du mock ici).
+    expect(commande!.id).not.toBe(precommande!.id);
+
+    expect(stockUpdates).toEqual(
+      expect.arrayContaining([
+        { id: 12, stock: 3 }, // 5 - 2
+        { id: 13, stock: 2 }, // 3 - 1
+      ]),
+    );
+    expect(sendOrderConfirmation).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejeu (même session) → ne recrée AUCUNE des deux commandes, ne décrémente rien deux fois", async () => {
+    const request = () =>
+      signedEventRequest({ id: "evt_mixte_1", type: "checkout.session.completed", object: mixedCheckoutSession() });
+
+    expect((await POST(request())).status).toBe(200);
+    expect((await POST(request())).status).toBe(200);
+
+    expect(orders).toHaveLength(2);
+    expect(stockUpdates).toHaveLength(2);
+    expect(sendOrderConfirmation).toHaveBeenCalledTimes(2);
+  });
+
+  it("issue #64 sur panier scindé — crash après création de la commande normale (avant son décrément) : le rejeu reprend l'effet manquant ET crée la précommande jamais atteinte au premier passage", async () => {
+    failNextDecrement = true; // consommé par le PREMIER decrementBookStock rencontré (partie « commande », traitée en premier)
+    const request = () =>
+      signedEventRequest({ id: "evt_mixte_partial", type: "checkout.session.completed", object: mixedCheckoutSession() });
+
+    const first = await POST(request());
+    expect(first.status).toBe(500); // le décrément de la partie « commande » a jeté
+    expect(Sentry.captureException).toHaveBeenCalled();
+    // La commande normale a été créée (avant l'échec du décrément) ; la
+    // précommande n'a JAMAIS été atteinte (l'exception a interrompu la
+    // fonction avant son propre appel) — aucune commande orpheline créée.
+    expect(orders).toHaveLength(1);
+    expect(orders[0].orderType).toBe("commande");
+    expect(orders[0].stockDecremented).toBe(false);
+    expect(stockUpdates).toEqual([]);
+
+    const second = await POST(request());
+    expect(second.status).toBe(200);
+    expect(orders).toHaveLength(2); // la précommande, créée pour la première fois au rejeu
+    const commande = orders.find((o) => o.orderType === "commande")!;
+    const precommande = orders.find((o) => o.orderType === "precommande")!;
+    expect(commande.stockDecremented).toBe(true);
+    expect(commande.confirmationSent).toBe(true);
+    expect(precommande.stockDecremented).toBe(true);
+    expect(precommande.confirmationSent).toBe(true);
+    expect(stockUpdates).toEqual(
+      expect.arrayContaining([
+        { id: 12, stock: 3 },
+        { id: 13, stock: 2 },
+      ]),
+    );
+    expect(stockUpdates).toHaveLength(2); // chaque livre décrémenté UNE seule fois au total
+    expect(sendOrderConfirmation).toHaveBeenCalledTimes(2);
+  });
+
+  it("charge.refunded sur un paiement scindé → LES DEUX commandes passent à refunded (même intention de paiement)", async () => {
+    orders.push(
+      {
+        id: 1,
+        stripeSessionId: "cs_test_mixte_1",
+        stripePaymentIntentId: "pi_test_mixte_1",
+        orderType: "commande",
+        status: "paid",
+        email: "client@exemple.fr",
+        stockDecremented: true,
+        confirmationSent: true,
+      },
+      {
+        id: 2,
+        stripeSessionId: "cs_test_mixte_1",
+        stripePaymentIntentId: "pi_test_mixte_1",
+        orderType: "precommande",
+        status: "paid",
+        email: "client@exemple.fr",
+        stockDecremented: true,
+        confirmationSent: true,
+      },
+    );
+
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_mixte_refund",
+        type: "charge.refunded",
+        object: {
+          id: "ch_test_mixte",
+          object: "charge",
+          payment_intent: "pi_test_mixte_1",
+          metadata: { kind: "order" },
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders.find((o) => o.orderType === "commande")?.status).toBe("refunded");
+    expect(orders.find((o) => o.orderType === "precommande")?.status).toBe("refunded");
+  });
+
+  it("panier HOMOGÈNE précommande (aucune ligne normale) → une seule commande, orderType « precommande », amount_total lui appartient ENTIÈREMENT", async () => {
+    const session = mixedCheckoutSession({
+      id: "cs_test_precommande_seule",
+      amount_total: 1550,
+      metadata: { ...MIXED_METADATA, lines: "", preorderLines: "13:1:1000" },
+    });
+    const res = await POST(
+      signedEventRequest({ id: "evt_precommande_seule", type: "checkout.session.completed", object: session }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ orderType: "precommande", totalTTC: 15.5 });
+  });
+
+  it("anomalie : total scindé recomposé ≠ amount_total Stripe → signalé à Sentry, SANS bloquer la création (l'argent est déjà encaissé)", async () => {
+    const session = mixedCheckoutSession({ amount_total: 999 }); // ne correspond à rien de réel
+    const res = await POST(
+      signedEventRequest({ id: "evt_mixte_anomalie", type: "checkout.session.completed", object: session }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(2); // les deux commandes créées quand même
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "Webhook Stripe : total scindé (commande + précommande) ne reconstitue pas amount_total",
+      expect.objectContaining({ level: "warning" }),
+    );
   });
 });

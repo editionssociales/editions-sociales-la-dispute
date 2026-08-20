@@ -3,6 +3,7 @@ import {
   decodeCheckoutLines,
   encodeCheckoutLines,
   parseCheckoutRequest,
+  splitValidatedLines,
   validateCheckoutLine,
   validateCheckoutLines,
   type CheckoutBookLookup,
@@ -20,6 +21,7 @@ function book(overrides: Partial<CheckoutBookLookup> = {}): CheckoutBookLookup {
     sellable: true,
     stock: 10,
     reducedShippingFlag: false,
+    preorderEnabled: false,
     ...overrides,
   };
 }
@@ -92,6 +94,7 @@ describe("validateCheckoutLine", () => {
         unitPriceCents: 1500,
         lineTotalCents: 3000,
         reducedShippingFlag: false,
+        isPreorder: false,
       },
     });
   });
@@ -118,6 +121,15 @@ describe("validateCheckoutLine", () => {
     );
     expect(result.ok).toBe(false);
     expect(!result.ok && result.refusal.reason).toBe("not-sellable");
+  });
+
+  it("parution future → message corrigé « n'est pas encore paru » (2026-08-20, la précommande rend ce cas visible)", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ sellable: true, stock: 100, publishedAt: "2099-01-01" }),
+      NOW,
+    );
+    expect(!result.ok && result.refusal.message).toBe("« Le Capital » n'est pas encore paru.");
   });
 
   it("stock insuffisant (qty demandée > stock) → refusé", () => {
@@ -178,6 +190,7 @@ describe("validateCheckoutLines", () => {
           unitPriceCents: 1000,
           lineTotalCents: 2000,
           reducedShippingFlag: true,
+          isPreorder: false,
         },
         {
           id: 2,
@@ -187,6 +200,7 @@ describe("validateCheckoutLines", () => {
           unitPriceCents: 2000,
           lineTotalCents: 2000,
           reducedShippingFlag: true,
+          isPreorder: false,
         },
       ],
       subtotalCents: 4000,
@@ -234,6 +248,98 @@ describe("validateCheckoutLines", () => {
     const result = validateCheckoutLines([{ id: 1, qty: 1 }, { id: 2, qty: 1 }], books, NOW);
     expect(result.ok).toBe(false);
     expect(!result.ok && result.refusals.map((r) => r.id)).toEqual([1, 2]);
+  });
+});
+
+describe("validateCheckoutLine — précommande (client 2026-08-20)", () => {
+  it("à paraître + preorderEnabled + sellable + stock ok → accepté, isPreorder=true", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 2 },
+      book({ publishedAt: "2099-01-01", preorderEnabled: true, priceEuros: 18 }),
+      NOW,
+    );
+    expect(result).toEqual({
+      ok: true,
+      line: {
+        id: 1,
+        qty: 2,
+        titleSnapshot: "Le Capital",
+        isbnSnapshot: "9780000000000",
+        unitPriceCents: 1800,
+        lineTotalCents: 3600,
+        reducedShippingFlag: false,
+        isPreorder: true,
+      },
+    });
+  });
+
+  it("à paraître + preorderEnabled MAIS épuisé → refusé (insufficient-stock), une précommande peut être en rupture", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ publishedAt: "2099-01-01", preorderEnabled: true, stock: 0 }),
+      NOW,
+    );
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.refusal.reason).toBe("insufficient-stock");
+  });
+
+  it("à paraître + preorderEnabled MAIS non vendable → refusé, message « n'est plus disponible »", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ publishedAt: "2099-01-01", preorderEnabled: true, sellable: false }),
+      NOW,
+    );
+    expect(!result.ok && result.refusal.message).toBe("« Le Capital » n'est plus disponible à la vente.");
+  });
+
+  it("livre déjà paru : isPreorder toujours false, quel que soit preorderEnabled", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ publishedAt: "2020-01-01", preorderEnabled: true }),
+      NOW,
+    );
+    expect(result.ok && result.line.isPreorder).toBe(false);
+  });
+});
+
+describe("splitValidatedLines — scission commande / précommande", () => {
+  it("panier homogène « paru » → tout dans `normal`, `preorder` vide", () => {
+    const parue = validateCheckoutLine({ id: 1, qty: 1 }, book({ priceEuros: 10 }), NOW);
+    if (!parue.ok) throw new Error("fixture invalide");
+    const split = splitValidatedLines([parue.line]);
+    expect(split.normal.lines).toHaveLength(1);
+    expect(split.normal.subtotalCents).toBe(1000);
+    expect(split.preorder.lines).toEqual([]);
+    expect(split.preorder.subtotalCents).toBe(0);
+  });
+
+  it("panier homogène « précommande » → tout dans `preorder`, `normal` vide", () => {
+    const precommande = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ publishedAt: "2099-01-01", preorderEnabled: true, priceEuros: 10 }),
+      NOW,
+    );
+    if (!precommande.ok) throw new Error("fixture invalide");
+    const split = splitValidatedLines([precommande.line]);
+    expect(split.normal.lines).toEqual([]);
+    expect(split.normal.subtotalCents).toBe(0);
+    expect(split.preorder.lines).toHaveLength(1);
+    expect(split.preorder.subtotalCents).toBe(1000);
+  });
+
+  it("panier mixte → réparti dans les deux groupes, sous-totaux distincts", () => {
+    const parue = validateCheckoutLine({ id: 1, qty: 1 }, book({ priceEuros: 10 }), NOW);
+    const precommande = validateCheckoutLine(
+      { id: 2, qty: 3 },
+      book({ publishedAt: "2099-01-01", preorderEnabled: true, priceEuros: 8 }),
+      NOW,
+    );
+    if (!parue.ok || !precommande.ok) throw new Error("fixture invalide");
+    const split = splitValidatedLines([parue.line, precommande.line]);
+    expect(split.normal.lines.map((l) => l.id)).toEqual([1]);
+    expect(split.normal.subtotalCents).toBe(1000);
+    expect(split.preorder.lines.map((l) => l.id)).toEqual([2]);
+    expect(split.preorder.subtotalCents).toBe(2400);
   });
 });
 

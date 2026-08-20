@@ -22,6 +22,7 @@ interface FakeBookDoc {
     sellable?: boolean | null;
     stock?: number | null;
     reducedShippingFlag?: boolean | null;
+    preorder?: boolean | null;
   } | null;
 }
 
@@ -97,7 +98,7 @@ describe("getCommerceBookRecords", () => {
         isbn: "978-1",
         prix: 15,
         dateParution: "2020-01-01T00:00:00.000Z",
-        commerce: { sellable: true, stock: 3, reducedShippingFlag: true },
+        commerce: { sellable: true, stock: 3, reducedShippingFlag: true, preorder: true },
       },
     ];
     const records = await getCommerceBookRecords([1]);
@@ -109,6 +110,7 @@ describe("getCommerceBookRecords", () => {
       sellable: true,
       stock: 3,
       reducedShippingFlag: true,
+      preorderEnabled: true,
     });
   });
 
@@ -123,6 +125,7 @@ describe("getCommerceBookRecords", () => {
       sellable: false,
       stock: null,
       reducedShippingFlag: false,
+      preorderEnabled: false,
     });
   });
 });

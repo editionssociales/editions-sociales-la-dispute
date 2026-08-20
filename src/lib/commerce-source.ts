@@ -57,6 +57,7 @@ export async function getCommerceBookRecords(
         sellable: Boolean(doc.commerce?.sellable),
         stock: doc.commerce?.stock ?? null,
         reducedShippingFlag: Boolean(doc.commerce?.reducedShippingFlag),
+        preorderEnabled: Boolean(doc.commerce?.preorder),
       } satisfies CheckoutBookLookup,
     ]),
   );

@@ -15,6 +15,9 @@ import { centsToEuros } from "./money";
 /** Ventes restreintes FR/BE/CH (`Orders.ts:shippingAddress.country`, même contrainte que `shipping_address_collection`). */
 export type OrderCountry = "FR" | "BE" | "CH";
 
+/** Type de commande (`Orders.ts:orderType`, client 2026-08-20) — un panier mixte produit UNE commande de chaque type, même session/paiement Stripe. */
+export type OrderKind = "commande" | "precommande";
+
 export interface OrderAddressFacts {
   fullName: string;
   addressLine1: string;
@@ -42,13 +45,29 @@ export interface OrderSessionFacts {
   email: string | null;
   shippingAddress: OrderAddressFacts | null;
   lines: OrderLineFacts[];
+  /** Commande normale ou précommande — cette partie DE la scission (client 2026-08-20), jamais les deux à la fois (`buildOrderCreateData` assemble UNE commande par appel). */
+  orderType: OrderKind;
   shippingMethod: OrderShippingMethod;
-  /** Centimes. */
+  /**
+   * Centimes — le tarif d'UN SEUL envoi (`cart-quote.ts`, `metadata.shippingCostCents`
+   * posée par le checkout), appliqué TEL QUEL à cette commande : la
+   * multiplication par le nombre d'envois est un fait du PANIER combiné
+   * (une commande ne connaît que SON propre envoi), jamais rejouée ici.
+   */
   shippingCostCents: number;
-  /** Centimes. */
+  /** Centimes — part de la remise combinée déjà allouée à CETTE partie (`cart-quote.ts`), jamais recalculée ici. */
   discountCents: number;
   promoCodeId: number | null;
-  /** Centimes — `amount_total` Stripe : la vérité du montant réellement encaissé, jamais recalculé ici. */
+  /**
+   * Centimes — pour une session à commande UNIQUE (comportement historique),
+   * `amount_total` Stripe fait foi (vérité du montant réellement encaissé).
+   * Pour une session SCINDÉE, Stripe n'expose qu'un montant total combiné :
+   * `totalCents` de CETTE partie est alors une composition arithmétique pure
+   * de faits déjà validés au checkout (lignes/port/remise déjà crédités,
+   * jamais un prix ou une règle de vendabilité redérivés) — cf.
+   * `computePartTotalCents`, appelée par l'appelant (`order-handler.ts`)
+   * quand la session porte plus d'une partie.
+   */
   totalCents: number;
   paidAtISO: string;
 }
@@ -59,6 +78,7 @@ export interface OrderAssemblyError {
 
 export interface OrderCreateData {
   status: "paid" | "failed";
+  orderType: OrderKind;
   email: string;
   shippingAddress: OrderAddressFacts;
   billingAddress: OrderAddressFacts;
@@ -111,6 +131,7 @@ export function buildOrderCreateData(
 
   return {
     status,
+    orderType: facts.orderType,
     email: facts.email,
     shippingAddress: facts.shippingAddress,
     // Dupliquée depuis la livraison : le checkout ne collecte pas d'adresse
@@ -146,4 +167,28 @@ export function buildOrderCreateData(
 export function computeStockAfterDecrement(currentStock: number | null, qty: number): number | null {
   if (currentStock == null) return null;
   return Math.max(0, currentStock - qty);
+}
+
+/**
+ * Total TTC d'UNE partie de commande scindée, en centimes — composition
+ * ARITHMÉTIQUE PURE de faits déjà validés/alloués au checkout (prix unitaire
+ * re-validé, port au tarif d'un envoi, remise déjà répartie par partie,
+ * `cart-quote.ts`) : jamais une règle de vendabilité ou un prix redérivés.
+ * Nécessaire UNIQUEMENT pour une session scindée — Stripe n'expose
+ * `amount_total` que pour la session ENTIÈRE (un seul paiement), pas par
+ * partie ; une session à commande unique continue de faire foi sur
+ * `amount_total` (cf. `OrderSessionFacts.totalCents`, appelant).
+ *
+ * `Math.max(0, …)` avant d'ajouter le port : même garde que
+ * `computeCartTotals` (`cart-core.ts`) — la remise allouée à cette partie ne
+ * peut normalement pas dépasser son sous-total (`cart-quote.ts` le garantit
+ * par construction), ce plancher n'est qu'un filet défensif supplémentaire.
+ */
+export function computePartTotalCents(
+  lines: OrderLineFacts[],
+  shippingCostCents: number,
+  discountCents: number,
+): number {
+  const subtotalCents = lines.reduce((sum, l) => sum + l.unitPriceCents * l.quantity, 0);
+  return Math.max(0, subtotalCents - discountCents) + shippingCostCents;
 }

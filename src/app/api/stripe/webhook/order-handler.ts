@@ -1,18 +1,21 @@
+import * as Sentry from "@sentry/nextjs";
 import type Stripe from "stripe";
 import type { Order } from "@/payload-types";
-import { decodeCheckoutLines, type DecodedCheckoutLine } from "@/lib/checkout-core";
+import { decodeCheckoutLines, type CheckoutBookLookup, type DecodedCheckoutLine } from "@/lib/checkout-core";
 import { getCommerceBookRecords } from "@/lib/commerce-source";
 import {
   createOrder,
   decrementBookStock,
-  findOrderByPaymentIntent,
   findOrderBySessionId,
+  findOrdersByPaymentIntent,
   updateOrder,
 } from "@/lib/order-source";
 import {
   buildOrderCreateData,
+  computePartTotalCents,
   type OrderAddressFacts,
   type OrderCountry,
+  type OrderKind,
   type OrderLineFacts,
   type OrderSessionFacts,
   type OrderShippingMethod,
@@ -20,14 +23,24 @@ import {
 import { selectOrderMailer } from "@/lib/order-mail";
 
 /**
- * Orchestration I/O du webhook côté `kind: "order"` (plan §4 étape 9) —
- * cœur pur de l'assemblage dans `order-webhook-core.ts`, décodage des lignes
- * dans `checkout-core.ts` (déjà testés séparément) ; ce module ne fait que la
- * composition Payload/Stripe, même découpage que `stock-import.ts` vis-à-vis
- * de `stock-import-core.ts`.
+ * Orchestration I/O du webhook côté `kind: "order"` (plan §4 étape 9, scission
+ * précommande client 2026-08-20) — cœur pur de l'assemblage dans
+ * `order-webhook-core.ts`, décodage des lignes dans `checkout-core.ts` (déjà
+ * testés séparément) ; ce module ne fait que la composition Payload/Stripe,
+ * même découpage que `stock-import.ts` vis-à-vis de `stock-import-core.ts`.
  *
  * Étend le webhook de la phase 1 SANS changer son comportement `kind:
  * "donation"` (`route.ts` ne route ici que si `metadata.kind === "order"`).
+ *
+ * SCISSION : le checkout (`/api/checkout`) pose DEUX groupes de metadata
+ * (`lines` pour la commande normale, `preorderLines` pour la précommande) —
+ * ce module ne fait QU'UNE lecture fidèle de ces deux groupes pour
+ * reconstruire la scission, JAMAIS un nouveau tri par date de parution/flag
+ * précommande (qui pourrait diverger de la décision prise au paiement si une
+ * fiche change entre-temps — contrat explicite du client : « pas de
+ * re-calcul divergent possible entre checkout et webhook »). Chaque partie
+ * non vide devient une commande indépendante, avec sa PROPRE idempotence
+ * (`stripeSessionId` + `orderType`, cf. `Orders.ts`/`order-source.ts`).
  */
 
 const ORDER_COUNTRIES: readonly OrderCountry[] = ["FR", "BE", "CH"];
@@ -43,6 +56,13 @@ function toOrderCountry(country: string | null): OrderCountry {
 function metadataCents(value: string | undefined): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** Parse l'id de code promo posé en `metadata` — `null` si absent/non fini. */
+function metadataPromoCodeId(value: string | undefined): number | null {
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 /** Adresse Stripe (`collected_information.shipping_details`) → faits `Orders` — `null` si absente (anomalie sur une session complétée). */
@@ -66,51 +86,76 @@ function paymentIntentId(session: Stripe.Checkout.Session | Stripe.Charge): stri
   return typeof pi === "string" ? pi : pi.id;
 }
 
-/**
- * Joint les lignes décodées des `metadata` au titre/ISBN/stock relus
- * fraîchement (`commerce-source.ts`, le même seam que le checkout — le
- * stock y est nécessaire pour le décrément, pas seulement pour le snapshot).
- * Un id introuvable (livre supprimé entre le checkout et le webhook) est
- * omis — snapshot honnête plutôt qu'un titre inventé.
- */
-async function resolveOrderLines(session: Stripe.Checkout.Session) {
-  const decoded = decodeCheckoutLines(session.metadata?.lines);
-  const books = await getCommerceBookRecords(decoded.map((l) => l.id));
-  const lines: OrderLineFacts[] = decoded.flatMap((l) => {
-    const book = books.get(l.id);
-    if (!book) return [];
-    return [
-      {
-        bookId: l.id,
-        titleSnapshot: book.title,
-        isbnSnapshot: book.isbn,
-        quantity: l.qty,
-        unitPriceCents: l.unitPriceCents,
-      },
-    ];
-  });
-  return { decoded, books, lines };
+/** Une des deux parties de la scission — lignes brutes décodées + jointes au titre/ISBN relus fraîchement. */
+interface ResolvedPart {
+  decoded: DecodedCheckoutLine[];
+  lines: OrderLineFacts[];
 }
 
-/** Assemble les faits `Orders` communs aux deux issues (payée/échouée) — seul le statut final diffère à l'appel de `buildOrderCreateData`. */
-function sessionFacts(
+/**
+ * Décode les DEUX groupes de metadata (`lines`/`preorderLines`) et les joint
+ * au titre/ISBN/stock relus fraîchement (`commerce-source.ts`, le même seam
+ * que le checkout — le stock y est nécessaire pour le décrément, pas
+ * seulement pour le snapshot). Une seule lecture Payload pour les ids des
+ * DEUX parties combinées. Un id introuvable (livre supprimé entre le
+ * checkout et le webhook) est omis de `lines` — snapshot honnête plutôt qu'un
+ * titre inventé ; `decoded` (non filtré) reste la source de vérité de
+ * « cette partie avait-elle des lignes au checkout ? » (cf. `createPaidOrderPart`).
+ */
+async function resolveOrderParts(
   session: Stripe.Checkout.Session,
+): Promise<{ books: Map<number, CheckoutBookLookup>; normal: ResolvedPart; preorder: ResolvedPart }> {
+  const normalDecoded = decodeCheckoutLines(session.metadata?.lines);
+  const preorderDecoded = decodeCheckoutLines(session.metadata?.preorderLines);
+  const books = await getCommerceBookRecords([...normalDecoded, ...preorderDecoded].map((l) => l.id));
+
+  function toLineFacts(decoded: DecodedCheckoutLine[]): OrderLineFacts[] {
+    return decoded.flatMap((l) => {
+      const book = books.get(l.id);
+      if (!book) return [];
+      return [
+        {
+          bookId: l.id,
+          titleSnapshot: book.title,
+          isbnSnapshot: book.isbn,
+          quantity: l.qty,
+          unitPriceCents: l.unitPriceCents,
+        },
+      ];
+    });
+  }
+
+  return {
+    books,
+    normal: { decoded: normalDecoded, lines: toLineFacts(normalDecoded) },
+    preorder: { decoded: preorderDecoded, lines: toLineFacts(preorderDecoded) },
+  };
+}
+
+/** Assemble les faits `Orders` d'UNE partie — seul le statut final (`buildOrderCreateData`) et `totalCents` (fourni par l'appelant, cf. docstring `createPaidOrder`) diffèrent entre les deux issues (payée/échouée) ou entre les deux parties. */
+function partSessionFacts(
+  session: Stripe.Checkout.Session,
+  orderType: OrderKind,
   lines: OrderLineFacts[],
+  discountCents: number,
+  shippingCostCents: number,
+  totalCents: number,
+  promoCodeId: number | null,
   createdAtEpoch: number,
 ): OrderSessionFacts {
   const metadata = session.metadata ?? {};
-  const promoCodeId = metadata.promoCodeId ? Number(metadata.promoCodeId) : null;
   return {
     stripeSessionId: session.id,
     stripePaymentIntentId: paymentIntentId(session),
     email: session.customer_details?.email ?? null,
     shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
     lines,
+    orderType,
     shippingMethod: (metadata.shippingMethod as OrderShippingMethod) ?? "standard",
-    shippingCostCents: metadataCents(metadata.shippingCostCents),
-    discountCents: metadataCents(metadata.discountCents),
-    promoCodeId: promoCodeId && Number.isFinite(promoCodeId) ? promoCodeId : null,
-    totalCents: session.amount_total ?? 0,
+    shippingCostCents,
+    discountCents,
+    promoCodeId,
+    totalCents,
     paidAtISO: new Date(createdAtEpoch * 1000).toISOString(),
   };
 }
@@ -124,7 +169,7 @@ function sessionFacts(
  */
 async function decrementStock(
   decoded: DecodedCheckoutLine[],
-  books: Awaited<ReturnType<typeof getCommerceBookRecords>>,
+  books: Map<number, CheckoutBookLookup>,
 ): Promise<void> {
   for (const line of decoded) {
     if (!books.has(line.id)) continue; // livre disparu — snapshot honnête, rien à décrémenter
@@ -133,37 +178,48 @@ async function decrementStock(
 }
 
 /**
- * `checkout.session.completed` / `checkout.session.async_payment_succeeded`
- * — crée la commande UNIQUEMENT quand le paiement est effectivement confirmé
- * (`payment_status === "paid"`) : pour un moyen de paiement différé,
- * `checkout.session.completed` peut se présenter en attente
- * (`payment_status !== "paid"`), auquel cas rien n'est créé ici — l'event
- * `async_payment_succeeded` (même fonction) confirmera plus tard.
+ * Crée/complète UNE commande (une des deux parties de la scission) —
+ * idempotence PAR EFFET (issue #64, étendue à la clé `(stripeSessionId,
+ * orderType)`) : un rejeu Stripe après un échec partiel (process mort après
+ * `createOrder`, avant le décrément ou l'e-mail) ne doit PAS ressortir
+ * immédiatement — chaque effet non encore marqué s'exécute, quel que soit le
+ * nombre de rejeux, jusqu'à ce que les trois étapes (création, décrément,
+ * e-mail) soient posées.
  *
- * Idempotence PAR EFFET (issue #64), plus à l'entrée : un rejeu Stripe après
- * un échec partiel (process mort après `createOrder`, avant le décrément ou
- * l'e-mail) ne doit PAS ressortir immédiatement — chaque effet non encore
- * marqué (`stockDecremented`, `confirmationSent`, `Orders.ts`) s'exécute, quel
- * que soit le nombre de rejeux, jusqu'à ce que les trois étapes (création,
- * décrément, e-mail) soient posées. `resolveOrderLines` (snapshot + lecture
- * fraîche du stock) n'est appelée qu'une fois, mémoïsée le temps de l'appel :
- * inutile de relire `commerce-source` si l'effet correspondant est déjà
- * marqué fait (cas courant du rejeu totalement terminé).
+ * `part.decoded.length === 0` : cette partie était ABSENTE du panier au
+ * checkout (panier homogène, ou l'autre type de ligne uniquement) — rien à
+ * faire, cas normal, silencieux. `part.decoded.length > 0` MAIS
+ * `part.lines.length === 0` (tous les livres de cette partie ont disparu
+ * entre le checkout et le webhook) → `buildOrderCreateData` refuse
+ * explicitement (comportement inchangé, remonté en erreur par l'appelant).
  */
-async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
-  if (session.payment_status !== "paid") return;
+async function createPaidOrderPart(
+  session: Stripe.Checkout.Session,
+  createdAtEpoch: number,
+  orderType: OrderKind,
+  part: ResolvedPart,
+  books: Map<number, CheckoutBookLookup>,
+  discountCents: number,
+  shippingCostCents: number,
+  totalCents: number,
+  promoCodeId: number | null,
+): Promise<void> {
+  if (part.decoded.length === 0) return;
 
-  let order: Order | null = await findOrderBySessionId(session.id);
-
-  let resolved: Awaited<ReturnType<typeof resolveOrderLines>> | undefined;
-  async function resolveOnce() {
-    resolved ??= await resolveOrderLines(session);
-    return resolved;
-  }
+  let order: Order | null = await findOrderBySessionId(session.id, orderType);
 
   if (!order) {
-    const { lines } = await resolveOnce();
-    const orderData = buildOrderCreateData(sessionFacts(session, lines, createdAtEpoch), "paid");
+    const facts = partSessionFacts(
+      session,
+      orderType,
+      part.lines,
+      discountCents,
+      shippingCostCents,
+      totalCents,
+      promoCodeId,
+      createdAtEpoch,
+    );
+    const orderData = buildOrderCreateData(facts, "paid");
     if ("error" in orderData) {
       throw new Error(orderData.error);
     }
@@ -171,14 +227,14 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
   }
 
   if (!order.stockDecremented) {
-    const { decoded, books } = await resolveOnce();
-    await decrementStock(decoded, books);
+    await decrementStock(part.decoded, books);
     order = await updateOrder(order.id, { stockDecremented: true });
   }
 
   if (!order.confirmationSent) {
     await selectOrderMailer().sendOrderConfirmation({
       orderNumber: order.number ?? order.stripeSessionId,
+      orderType,
       email: order.email,
       lines: (order.lines ?? []).map((l) => ({
         titleSnapshot: l.titleSnapshot,
@@ -194,42 +250,178 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
 }
 
 /**
- * `checkout.session.async_payment_failed` — un moyen de paiement différé a
- * finalement échoué. Crée une commande de traçabilité `status: "failed"`
- * (idempotente par `stripeSessionId`) — SANS jamais décrémenter le stock
- * (aucune vente n'a eu lieu). Si une commande existe déjà pour cette session
- * (ordre d'arrivée des events), ne la ré-écrase pas.
+ * `checkout.session.completed` / `checkout.session.async_payment_succeeded`
+ * — crée la ou les commande(s) UNIQUEMENT quand le paiement est effectivement
+ * confirmé (`payment_status === "paid"`) : pour un moyen de paiement différé,
+ * `checkout.session.completed` peut se présenter en attente
+ * (`payment_status !== "paid"`), auquel cas rien n'est créé ici — l'event
+ * `async_payment_succeeded` (même fonction) confirmera plus tard.
+ *
+ * `totalCents` par partie : pour une session à UN SEUL envoi (panier
+ * homogène, comportement historique), `session.amount_total` fait foi (le
+ * montant réellement encaissé pour cette commande unique) — inchangé depuis
+ * avant la scission. Pour une session SCINDÉE (`shipments === 2`), Stripe
+ * n'expose qu'un montant COMBINÉ : chaque partie utilise alors
+ * `computePartTotalCents` (composition arithmétique pure de faits déjà
+ * validés/alloués au checkout, jamais un prix ou une règle de vendabilité
+ * redérivés) — un écart entre la somme des deux parties et `amount_total`
+ * (anomalie théorique, ex. metadata tronquée) est signalé à Sentry SANS
+ * bloquer la création : l'argent est de toute façon déjà encaissé par
+ * Stripe, mieux vaut deux commandes imparfaitement ventilées qu'aucune.
  */
-async function recordFailedOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
-  if (await findOrderBySessionId(session.id)) return;
+async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
+  if (session.payment_status !== "paid") return;
 
-  const { lines } = await resolveOrderLines(session);
-  const orderData = buildOrderCreateData(sessionFacts(session, lines, createdAtEpoch), "failed");
-  if ("error" in orderData) {
-    throw new Error(orderData.error);
+  const { books, normal, preorder } = await resolveOrderParts(session);
+  const metadata = session.metadata ?? {};
+  const shippingCostCents = metadataCents(metadata.shippingCostCents);
+  const discountNormal = metadataCents(metadata.discountCents);
+  const discountPreorder = metadataCents(metadata.preorderDiscountCents);
+  const promoCodeId = metadataPromoCodeId(metadata.promoCodeId);
+
+  const shipments = (normal.decoded.length > 0 ? 1 : 0) + (preorder.decoded.length > 0 ? 1 : 0);
+
+  if (shipments > 1) {
+    const normalTotal = computePartTotalCents(normal.lines, shippingCostCents, discountNormal);
+    const preorderTotal = computePartTotalCents(preorder.lines, shippingCostCents, discountPreorder);
+    if (session.amount_total != null && normalTotal + preorderTotal !== session.amount_total) {
+      Sentry.captureMessage(
+        "Webhook Stripe : total scindé (commande + précommande) ne reconstitue pas amount_total",
+        {
+          level: "warning",
+          extra: {
+            sessionId: session.id,
+            normalTotal,
+            preorderTotal,
+            combined: normalTotal + preorderTotal,
+            amountTotal: session.amount_total,
+          },
+        },
+      );
+    }
+    await createPaidOrderPart(
+      session,
+      createdAtEpoch,
+      "commande",
+      normal,
+      books,
+      discountNormal,
+      shippingCostCents,
+      normalTotal,
+      promoCodeId,
+    );
+    await createPaidOrderPart(
+      session,
+      createdAtEpoch,
+      "precommande",
+      preorder,
+      books,
+      discountPreorder,
+      shippingCostCents,
+      preorderTotal,
+      promoCodeId,
+    );
+    return;
   }
 
-  await createOrder(orderData);
+  // Panier homogène (un seul envoi, ou aucune ligne décodée du tout —
+  // anomalie couverte par `createPaidOrderPart`/`buildOrderCreateData`) :
+  // `amount_total` appartient ENTIÈREMENT à la partie non vide — l'autre
+  // appel est un no-op (`part.decoded.length === 0`).
+  const wholeSessionTotal = session.amount_total ?? 0;
+  await createPaidOrderPart(
+    session,
+    createdAtEpoch,
+    "commande",
+    normal,
+    books,
+    discountNormal,
+    shippingCostCents,
+    wholeSessionTotal,
+    promoCodeId,
+  );
+  await createPaidOrderPart(
+    session,
+    createdAtEpoch,
+    "precommande",
+    preorder,
+    books,
+    discountPreorder,
+    shippingCostCents,
+    wholeSessionTotal,
+    promoCodeId,
+  );
 }
 
 /**
- * `charge.refunded` — retrouve la commande par `stripePaymentIntentId` (la
- * Charge ne porte pas l'id de session) et passe son statut à `refunded`.
- * PAS de re-crédit de stock automatique (décision volontairement
- * conservatrice, plan §4 étape 9 — le stock est recalé par le routeur
- * mensuel). Une charge remboursée sans commande retrouvée (event orphelin,
- * ordre d'arrivée improbable) ne jette pas : capturée par l'appelant si
- * besoin, ce module se contente de ne rien faire de plus qu'un no-op sûr.
+ * `checkout.session.async_payment_failed` — un moyen de paiement différé a
+ * finalement échoué. Crée UNE commande de traçabilité `status: "failed"` PAR
+ * PARTIE non vide (idempotente par `(stripeSessionId, orderType)`) — SANS
+ * jamais décrémenter le stock (aucune vente n'a eu lieu). Si une commande
+ * existe déjà pour cette session/ce type (ordre d'arrivée des events), ne la
+ * ré-écrase pas.
+ */
+async function recordFailedOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
+  const { normal, preorder } = await resolveOrderParts(session);
+  const metadata = session.metadata ?? {};
+  const shippingCostCents = metadataCents(metadata.shippingCostCents);
+  const discountNormal = metadataCents(metadata.discountCents);
+  const discountPreorder = metadataCents(metadata.preorderDiscountCents);
+  const promoCodeId = metadataPromoCodeId(metadata.promoCodeId);
+  const shipments = (normal.decoded.length > 0 ? 1 : 0) + (preorder.decoded.length > 0 ? 1 : 0);
+  const wholeSessionTotal = session.amount_total ?? 0;
+
+  async function recordPart(orderType: OrderKind, part: ResolvedPart, discountCents: number): Promise<void> {
+    if (part.decoded.length === 0) return;
+    if (await findOrderBySessionId(session.id, orderType)) return;
+
+    const totalCents =
+      shipments > 1 ? computePartTotalCents(part.lines, shippingCostCents, discountCents) : wholeSessionTotal;
+    const facts = partSessionFacts(
+      session,
+      orderType,
+      part.lines,
+      discountCents,
+      shippingCostCents,
+      totalCents,
+      promoCodeId,
+      createdAtEpoch,
+    );
+    const orderData = buildOrderCreateData(facts, "failed");
+    if ("error" in orderData) {
+      throw new Error(orderData.error);
+    }
+    await createOrder(orderData);
+  }
+
+  await recordPart("commande", normal, discountNormal);
+  await recordPart("precommande", preorder, discountPreorder);
+}
+
+/**
+ * `charge.refunded` — retrouve TOUTES les commandes de l'intention de
+ * paiement (`stripePaymentIntentId`, la Charge ne porte pas l'id de session)
+ * et passe leur statut à `refunded`. PLURIEL depuis 2026-08-20 : un panier
+ * mixte scindé partage la MÊME intention de paiement entre ses deux
+ * commandes (un seul paiement Stripe) — un remboursement les concerne donc
+ * TOUTES les deux, jamais une seule au hasard de l'ordre de tri. PAS de
+ * re-crédit de stock automatique (décision volontairement conservatrice,
+ * plan §4 étape 9 — le stock est recalé par le routeur mensuel). Une charge
+ * remboursée sans commande retrouvée (event orphelin, ordre d'arrivée
+ * improbable) ne jette pas : capturée par l'appelant si besoin, ce module se
+ * contente de ne rien faire de plus qu'un no-op sûr.
  */
 async function markOrderRefunded(charge: Stripe.Charge): Promise<{ found: boolean }> {
   const piId = paymentIntentId(charge);
   if (!piId) return { found: false };
 
-  const order = await findOrderByPaymentIntent(piId);
-  if (!order) return { found: false };
+  const orders = await findOrdersByPaymentIntent(piId);
+  if (orders.length === 0) return { found: false };
 
-  if (order.status !== "refunded") {
-    await updateOrder(order.id, { status: "refunded" });
+  for (const order of orders) {
+    if (order.status !== "refunded") {
+      await updateOrder(order.id, { status: "refunded" });
+    }
   }
   return { found: true };
 }
@@ -260,4 +452,3 @@ export async function handleOrderWebhookEvent(event: Stripe.Event): Promise<Orde
       return { handled: false };
   }
 }
-

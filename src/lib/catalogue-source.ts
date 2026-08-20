@@ -70,6 +70,13 @@ export interface CommerceInfo {
   sellable: boolean;
   /** `null` = non suivi = disponible (jamais un plancher qui bloque la vente) ; sinon 0 = épuisé. */
   stock: number | null;
+  /**
+   * Coché = « Ouvert à la précommande » (`Books.ts:commerce.preorder`,
+   * client 2026-08-20) — lève le refus `upcoming` de `assessSellability`
+   * pour cette fiche. Optionnel : absent (fixtures existantes, adaptateur pg
+   * avant migration) = `false`, comportement historique inchangé.
+   */
+  preorder?: boolean;
 }
 
 /* -------- Where « books lisibles publiquement » (pg) --------

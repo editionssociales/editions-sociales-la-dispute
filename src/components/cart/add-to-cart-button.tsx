@@ -35,10 +35,20 @@ export function AddToCartButton({
   id,
   variant = "button",
   className,
+  label = "Ajouter au panier",
 }: {
   id: number;
   variant?: "button" | "chip";
   className?: string;
+  /**
+   * Texte du bouton au repos (variant `"button"` uniquement — le chip reste
+   * un glyphe `+`/`✓`, jamais du texte). Défaut « Ajouter au panier » ;
+   * `buy-links.tsx` pose « Précommander » sur une fiche `preorder` (client
+   * 2026-08-20) — le retour « Ajouté au panier » après clic reste IDENTIQUE
+   * dans les deux cas (l'article est bien dans le même panier natif, la
+   * scission n'a lieu qu'à l'encaissement).
+   */
+  label?: string;
 }) {
   const { addToCart } = useCart();
   const { fly, flights } = useFlyToCart();
@@ -106,10 +116,12 @@ export function AddToCartButton({
         // `confirm` pendant le retour (#82c prolongé) : le libellé seul était
         // le retour le plus discret du site sur son action la plus importante —
         // même bascule de couleur que la puce (`CHIP_ADDED`), cf. `button.tsx`.
+        // `label` (précommande 2026-08-20) : « Précommander » sur un
+        // à-paraître ouvert, sans changer le retour « Ajouté au panier ».
         variant={justAdded ? "confirm" : "solid"}
         className={`px-5 py-2.5 text-sm tracking-[.03em] ${className ?? ""}`}
       >
-        {justAdded ? "Ajouté au panier" : "Ajouter au panier"}
+        {justAdded ? "Ajouté au panier" : label}
       </Button>
       {flights}
     </>

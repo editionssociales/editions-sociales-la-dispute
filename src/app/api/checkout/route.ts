@@ -2,7 +2,12 @@ import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-source";
-import { encodeCheckoutLines, parseCheckoutRequest, validateCheckoutLines } from "@/lib/checkout-core";
+import {
+  encodeCheckoutLines,
+  parseCheckoutRequest,
+  splitValidatedLines,
+  validateCheckoutLines,
+} from "@/lib/checkout-core";
 import { computeCartQuote } from "@/lib/cart-quote";
 import { evaluatePromoCode } from "@/lib/promo-core";
 
@@ -15,6 +20,17 @@ import { evaluatePromoCode } from "@/lib/promo-core";
  * (`checkout-core.ts`, `promo-core.ts`, `cart-quote.ts` pour le devis
  * port/remise/total) — cette route ne fait que la composition + l'appel
  * Stripe, même découpage que `souscription/actions.ts` (E1/phase dons).
+ *
+ * SCISSION précommande (client 2026-08-20) : un panier mixte (articles parus
+ * + articles à paraître en précommande) reste UN SEUL paiement Stripe, mais
+ * pose DEUX groupes de lignes en `metadata` (`lines` pour la commande
+ * normale, `preorderLines` pour la précommande — même encodage compact que
+ * `lines` avant cette date, la clé porte la distinction) ainsi que la remise
+ * DÉJÀ allouée par partie (`discountCents`/`preorderDiscountCents`,
+ * `cart-quote.ts:computeCartQuote`) — le webhook (étape 9) ne fait plus
+ * QU'UNE lecture fidèle de ces metadata pour reconstruire la scission,
+ * JAMAIS un nouveau calcul qui pourrait diverger si une fiche change de
+ * statut entre le paiement et l'arrivée de l'event.
  *
  * Garde Stripe en PREMIER, avant même de lire le corps de la requête :
  * sans clé (`stripeEnabled()`), aucun encaissement possible — 503 propre
@@ -57,14 +73,22 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const { shipping, totals, shippingMethod } = computeCartQuote({
-    subtotalCents: validation.subtotalCents,
+  // Scission pure (`checkout-core.ts:splitValidatedLines`) — regroupe les
+  // lignes DÉJÀ validées par `isPreorder`, aucune règle de vendabilité
+  // rejouée ici.
+  const { normal, preorder } = splitValidatedLines(validation.lines);
+
+  const quote = computeCartQuote({
+    normalSubtotalCents: normal.subtotalCents,
+    preorderSubtotalCents: preorder.subtotalCents,
+    hasNormalLines: normal.lines.length > 0,
+    hasPreorderLines: preorder.lines.length > 0,
     zone: parsed.zone,
     manifestOnly: validation.manifestOnly,
     promoEval,
   });
-  if (!shipping.ok) {
-    return Response.json({ error: shipping.message, reason: "shipping" }, { status: 422 });
+  if (!quote.shipping.ok) {
+    return Response.json({ error: quote.shipping.message, reason: "shipping" }, { status: 422 });
   }
 
   const origin =
@@ -73,14 +97,20 @@ export async function POST(req: Request): Promise<Response> {
   // `metadata` dupliquée sur la session ET `payment_intent_data` — même
   // raison que `souscription/actions.ts` : c'est la Charge (le PaymentIntent
   // y copie ses metadata) que le webhook (étape 9) lit pour `charge.refunded`.
+  // `shippingCostCents` reste le tarif d'UN SEUL envoi (le webhook l'applique
+  // tel quel à chaque commande créée, jamais divisé/multiplié une seconde
+  // fois) ; `discountCents`/`preorderDiscountCents` sont la remise DÉJÀ
+  // répartie par partie (jamais recalculée côté webhook).
   const metadata: Record<string, string> = {
     kind: "order",
     zone: parsed.zone,
-    shippingMethod,
-    shippingCostCents: String(shipping.costCents),
-    discountCents: String(totals.discountCents),
+    shippingMethod: quote.shippingMethod,
+    shippingCostCents: String(quote.shipping.costCents),
+    discountCents: String(quote.normal.discountCents),
+    preorderDiscountCents: String(quote.preorder.discountCents),
     promoCodeId: promo ? String(promo.id) : "",
-    lines: encodeCheckoutLines(validation.lines),
+    lines: encodeCheckoutLines(normal.lines),
+    preorderLines: encodeCheckoutLines(preorder.lines),
   };
 
   // Hissés hors du try : le catch doit pouvoir supprimer (best-effort) un
@@ -92,12 +122,15 @@ export async function POST(req: Request): Promise<Response> {
     // Remise = un coupon Stripe créé à la volée (montant fixe, jamais un %) —
     // seul mécanisme Checkout pour une remise en euros arbitraire sur le
     // total de la session (plan §4 étape 8, point ouvert « création du
-    // discount Stripe » tranché ainsi). Absent si aucune remise (livraison
-    // offerte seule n'a pas besoin de coupon : elle se lit déjà dans le prix
-    // de la ligne de port, à 0).
-    if (totals.discountCents > 0) {
+    // discount Stripe » tranché ainsi). Un SEUL coupon pour le total combiné
+    // (Stripe le répartit lui-même entre les lignes de la session ; la
+    // répartition PAR PARTIE ci-dessus ne sert qu'à la ventilation
+    // comptable des deux commandes, indépendante du mécanisme Stripe).
+    // Absent si aucune remise (livraison offerte seule n'a pas besoin de
+    // coupon : elle se lit déjà dans le prix de la/les ligne(s) de port, à 0).
+    if (quote.totals.discountCents > 0) {
       const coupon = await stripe.coupons.create({
-        amount_off: totals.discountCents,
+        amount_off: quote.totals.discountCents,
         currency: "eur",
         duration: "once",
         name: `Code ${parsed.promoCode}`,
@@ -105,11 +138,21 @@ export async function POST(req: Request): Promise<Response> {
       couponId = coupon.id;
     }
 
+    // Libellé de port — « clair pour le payeur » (client 2026-08-20) : identique
+    // au comportement historique tant qu'il n'y a qu'un seul envoi (`split`
+    // faux, aucun suffixe) ; annonce l'envoi concerné dès qu'il y en a deux.
+    const shippingLineName = (label?: string): string => {
+      const suffix = label ? ` — ${label}` : "";
+      return quote.shipping.ok && quote.shipping.costCents === 0
+        ? `Livraison${suffix} (offerte)`
+        : `Livraison${suffix}`;
+    };
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       locale: "fr",
       line_items: [
-        ...validation.lines.map((line) => ({
+        ...normal.lines.map((line) => ({
           quantity: line.qty,
           price_data: {
             currency: "eur",
@@ -117,14 +160,38 @@ export async function POST(req: Request): Promise<Response> {
             product_data: { name: line.titleSnapshot },
           },
         })),
-        {
-          quantity: 1,
+        ...preorder.lines.map((line) => ({
+          quantity: line.qty,
           price_data: {
             currency: "eur",
-            unit_amount: shipping.costCents,
-            product_data: { name: shipping.costCents === 0 ? "Livraison (offerte)" : "Livraison" },
+            unit_amount: line.unitPriceCents,
+            product_data: { name: `${line.titleSnapshot} (précommande)` },
           },
-        },
+        })),
+        ...(normal.lines.length > 0
+          ? [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: "eur",
+                  unit_amount: quote.shipping.costCents,
+                  product_data: { name: shippingLineName(quote.split ? "commande" : undefined) },
+                },
+              },
+            ]
+          : []),
+        ...(preorder.lines.length > 0
+          ? [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: "eur",
+                  unit_amount: quote.shipping.costCents,
+                  product_data: { name: shippingLineName(quote.split ? "précommande" : undefined) },
+                },
+              },
+            ]
+          : []),
       ],
       ...(couponId && { discounts: [{ coupon: couponId }] }),
       // Achat en invité uniquement (plan §4, objectif point 7) : pas de

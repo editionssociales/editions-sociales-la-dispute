@@ -39,13 +39,19 @@ export interface BuyLinks {
   lalibrairie: string | null;
 }
 
-/** Statut d'achat résolu d'un livre. */
-export type PurchaseStatus = "available" | "external" | "upcoming" | "unavailable";
+/**
+ * Statut d'achat résolu d'un livre. `preorder` (client 2026-08-20) : à
+ * paraître MAIS ouvert à la précommande (`commerce.preorder` coché) — panier
+ * natif comme `available`, distingué pour l'UI (CTA « Précommander »,
+ * microcopie de date, scission de commande) et pour la sellability
+ * (`sellability.ts:assessSellability`, seul endroit qui décide).
+ */
+export type PurchaseStatus = "available" | "preorder" | "external" | "upcoming" | "unavailable";
 
 /**
  * Comment le bouton d'achat principal doit se comporter : `cart` (panier
- * natif — `status === "available"`) ou `legacy-link` (lien externe — librairie
- * tierce type Paris Librairies / La Librairie).
+ * natif — `status === "available"` OU `"preorder"`) ou `legacy-link` (lien
+ * externe — librairie tierce type Paris Librairies / La Librairie).
  */
 export type PurchaseMode = "cart" | "legacy-link";
 

@@ -104,10 +104,12 @@ export const Orders: CollectionConfig = {
   admin: {
     group: 'Quotidien',
     useAsTitle: 'number',
-    defaultColumns: ['number', 'status', 'email', 'totalTTC', 'createdAt'],
+    defaultColumns: ['number', 'orderType', 'status', 'email', 'totalTTC', 'createdAt'],
     description:
       'Commandes du commerce natif — créées par le webhook Stripe, suivies ' +
-      'ici (statut de préparation/expédition uniquement).',
+      'ici (statut de préparation/expédition uniquement). Un panier mixte ' +
+      '(articles parus + précommande) scinde en DEUX commandes distinctes ' +
+      '(même session Stripe, même paiement) — cf. « Type ».',
     // Export CSV (mission « exports compta + livraison de la PR », plan §4
     // étape 10) — panneau au-dessus du tableau, cf. `OrderExportPanel.tsx`.
     components: {
@@ -125,6 +127,14 @@ export const Orders: CollectionConfig = {
   hooks: {
     afterChange: [assignOrderNumber],
   },
+  // Idempotence du webhook (issue #64, étendue 2026-08-20 pour la scission
+  // précommande) : une session Stripe peut désormais produire DEUX Orders
+  // (commande + précommande, même paiement) — `stripeSessionId` seul n'est
+  // donc plus unique, la clé d'idempotence devient le COUPLE
+  // `(stripeSessionId, orderType)`. `stripeSessionId` garde un index simple
+  // (champ ci-dessous, `index: true`) pour les lectures par session
+  // (`findOrderBySessionId`/`findOrdersByPaymentIntent` du support/export).
+  indexes: [{ fields: ['stripeSessionId', 'orderType'], unique: true }],
   // `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`
   // — deux profils d'export CSV (authentifié admin/éditeur, cf.
   // `order-export-handler.ts` pour le détail : filtrage, formatage,
@@ -152,6 +162,28 @@ export const Orders: CollectionConfig = {
         description: "Généré automatiquement à la création (préfixe CMD- + id) — ne se modifie pas.",
       },
       access: lockedAfterCreate,
+    },
+    {
+      name: 'orderType',
+      type: 'select',
+      required: true,
+      defaultValue: 'commande',
+      index: true,
+      label: 'Type',
+      options: [
+        { value: 'commande', label: 'Commande' },
+        { value: 'precommande', label: 'Précommande' },
+      ],
+      access: lockedAfterCreate,
+      admin: {
+        description:
+          'Commande normale (articles parus) ou précommande (articles à ' +
+          'paraître avec « Ouvert à la précommande » coché) — posé par le ' +
+          'webhook selon la scission du panier au paiement (client ' +
+          '2026-08-20). Un panier mixte produit UNE commande de chaque ' +
+          "type, même session/paiement Stripe, chacune avec SES lignes et " +
+          'SES frais de port.',
+      },
     },
     {
       name: 'status',
@@ -301,11 +333,15 @@ export const Orders: CollectionConfig = {
       name: 'stripeSessionId',
       type: 'text',
       required: true,
-      unique: true,
+      index: true,
       label: 'Session Stripe',
       access: lockedAfterCreate,
       admin: {
-        description: "Clé d'idempotence du webhook (étape 9) — une session ne crée jamais deux commandes.",
+        description:
+          "Clé d'idempotence du webhook avec « Type » (étape 9, étendue " +
+          "2026-08-20) — une même session ne crée jamais deux commandes du " +
+          'MÊME type, mais peut légitimement porter DEUX commandes (une ' +
+          '« Commande » + une « Précommande ») pour un panier mixte.',
       },
     },
     {

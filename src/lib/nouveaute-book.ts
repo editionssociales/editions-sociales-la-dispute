@@ -36,7 +36,10 @@ export function toNouveauteBooks(books: Book[]): NouveauteBook[] {
     coverUrl: book.cover.url,
     coverW: book.cover.width,
     coverH: book.cover.height,
-    upcoming: book.status === "upcoming",
+    // `preorder` reste « à paraître » du point de vue de ce carrousel — la
+    // parution n'a pas changé, seul l'achat est devenu possible (client
+    // 2026-08-20, même arbitrage que le filtre `upcoming` de `catalogue-core.ts`).
+    upcoming: book.status === "upcoming" || book.status === "preorder",
     publishedAt: book.publishedAt,
     imprint: EDITIONS[book.edition].shortName,
   }));

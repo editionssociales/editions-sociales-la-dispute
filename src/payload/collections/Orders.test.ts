@@ -98,3 +98,38 @@ describe('Orders.fields — marqueurs techniques `stockDecremented`/`confirmatio
     })
   }
 })
+
+describe('Orders.fields — `orderType` (scission commande/précommande, client 2026-08-20)', () => {
+  function findField(name: string): (Field & { name?: string }) | undefined {
+    return (Orders.fields as (Field & { name?: string })[]).find((field) => field.name === name)
+  }
+
+  it('existe, verrouillé après création (marqueur posé UNE fois par le webhook, jamais retouché)', () => {
+    const field = findField('orderType')
+    expect(field).toBeDefined()
+    const shape = field as {
+      type?: string
+      defaultValue?: unknown
+      access?: { update?: Access }
+      options?: { value: string }[]
+    }
+    expect(shape.type).toBe('select')
+    expect(shape.defaultValue).toBe('commande')
+    expect(shape.options?.map((o) => o.value)).toEqual(['commande', 'precommande'])
+    expect(shape.access?.update).toBeTypeOf('function')
+    expect(shape.access!.update!(adminUser)).toBe(false)
+  })
+})
+
+describe('Orders.indexes — idempotence webhook sur `(stripeSessionId, orderType)`', () => {
+  it('index composite unique déclaré — une session peut porter DEUX commandes (une par type), jamais deux du même type', () => {
+    expect(Orders.indexes).toEqual([{ fields: ['stripeSessionId', 'orderType'], unique: true }])
+  })
+
+  it('`stripeSessionId` n\'est plus unique seul (le couple avec `orderType` l\'est)', () => {
+    const field = (Orders.fields as (Field & { name?: string })[]).find(
+      (f) => f.name === 'stripeSessionId',
+    ) as { unique?: boolean } | undefined
+    expect(field?.unique).toBeFalsy()
+  })
+})

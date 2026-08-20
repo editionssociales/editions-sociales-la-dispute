@@ -86,7 +86,9 @@ export default async function BoutiqueBookPage({
   if (!book) notFound();
 
   const descriptionLd = cmsExcerpt(book.presentation, 300) || undefined;
-  const canOffer = book.price != null && (book.status === "available" || book.status === "external");
+  const canOffer =
+    book.price != null &&
+    (book.status === "available" || book.status === "external" || book.status === "preorder");
   const productJsonLd: ProductJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -108,7 +110,10 @@ export default async function BoutiqueBookPage({
             "@type": "Offer",
             price: String(book.price),
             priceCurrency: "EUR",
-            availability: "https://schema.org/InStock",
+            // Précommande (client 2026-08-20) : rien n'est en stock avant la
+            // parution — n'annonce jamais `InStock` pour un livre `preorder`.
+            availability:
+              book.status === "preorder" ? "https://schema.org/PreOrder" : "https://schema.org/InStock",
             ...(book.permalink ? { url: book.permalink } : {}),
           } satisfies OfferLd,
         }

@@ -279,6 +279,84 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
     );
     expect(resolved.status).toBe("unavailable");
   });
+
+  describe("précommande (`commerce.preorder`, client 2026-08-20)", () => {
+    const preorderable = (stock: number | null): CommerceInfo => ({
+      sellable: true,
+      stock,
+      preorder: true,
+    });
+
+    it("à paraître + preorder coché + vendable + stock ok → statut `preorder`, panier natif", () => {
+      const book = rawBook({ id: 8, slug: "a-paraitre-precoco", title: "À paraître", publishedAt: "2999-01-01" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        preorderable(5),
+        "/catalogue/editions-sociales/a-paraitre-precoco",
+      );
+      expect(resolved).toEqual({
+        status: "preorder",
+        permalink: "/catalogue/editions-sociales/a-paraitre-precoco",
+        purchaseMode: "cart",
+      });
+    });
+
+    it("à paraître + preorder coché MAIS non vendable → refus comme n'importe quelle fiche (pas de contournement)", () => {
+      const book = rawBook({ id: 9, slug: "precoco-decochee", title: "Précommande décochée", publishedAt: "2999-01-01" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        { sellable: false, stock: 5, preorder: true },
+        "/catalogue/editions-sociales/precoco-decochee",
+      );
+      expect(resolved.status).toBe("unavailable");
+    });
+
+    it("à paraître + preorder coché MAIS épuisé → `unavailable`, jamais `preorder`", () => {
+      const book = rawBook({ id: 10, slug: "precoco-epuisee", title: "Précommande épuisée", publishedAt: "2999-01-01" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        preorderable(0),
+        "/catalogue/editions-sociales/precoco-epuisee",
+      );
+      expect(resolved.status).toBe("unavailable");
+    });
+
+    it("à paraître SANS preorder coché → `upcoming` inchangé (comportement historique)", () => {
+      const book = rawBook({ id: 11, slug: "a-paraitre-simple", title: "À paraître simple", publishedAt: "2999-01-01" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        sellable(5),
+        "/catalogue/editions-sociales/a-paraitre-simple",
+      );
+      expect(resolved.status).toBe("upcoming");
+    });
+
+    it("parution PASSÉE + preorder coché → `available` (le drapeau n'a d'effet que sur une fiche à paraître)", () => {
+      const book = rawBook({ id: 12, slug: "deja-paru", title: "Déjà paru" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        preorderable(5),
+        "/catalogue/editions-sociales/deja-paru",
+      );
+      expect(resolved.status).toBe("available");
+    });
+  });
+});
+
+describe("queryBooks — filtre « à paraître » inclut les précommandes ouvertes", () => {
+  it("un livre `preorder` reste dans la vue « à paraître » (découverte par date, pas par achat)", () => {
+    const preorderRaw = rawBook({
+      id: 50,
+      slug: "precommande-visible",
+      title: "Précommande visible",
+      publishedAt: "2999-01-01",
+      commerce: { sellable: true, stock: 5, preorder: true },
+    });
+    const catalogue = buildNativeCatalogue({ "editions-sociales": [...ES_BOOKS, preorderRaw] });
+    const upcomingOnly = queryBooks(catalogue, { upcoming: true }).map((b) => b.slug);
+    expect(upcomingOnly).toContain("avenir"); // upcoming classique
+    expect(upcomingOnly).toContain("precommande-visible"); // preorder — toujours « à paraître »
+  });
 });
 
 describe("buildNativeCatalogue — assemblage des fonds + boutique-seuls", () => {

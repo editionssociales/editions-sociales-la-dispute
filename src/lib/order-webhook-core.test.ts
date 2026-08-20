@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildOrderCreateData,
+  computePartTotalCents,
   computeStockAfterDecrement,
   type OrderAddressFacts,
+  type OrderLineFacts,
   type OrderSessionFacts,
 } from "./order-webhook-core";
 
@@ -24,6 +26,7 @@ function facts(overrides: Partial<OrderSessionFacts> = {}): OrderSessionFacts {
     lines: [
       { bookId: 12, titleSnapshot: "Le Capital", isbnSnapshot: "978-1", quantity: 2, unitPriceCents: 1500 },
     ],
+    orderType: "commande",
     shippingMethod: "standard",
     shippingCostCents: 650,
     discountCents: 0,
@@ -39,6 +42,7 @@ describe("buildOrderCreateData", () => {
     const result = buildOrderCreateData(facts());
     expect(result).toEqual({
       status: "paid",
+      orderType: "commande",
       email: "client@exemple.fr",
       shippingAddress: ADDRESS,
       billingAddress: ADDRESS,
@@ -101,6 +105,38 @@ describe("buildOrderCreateData", () => {
     expect(buildOrderCreateData(facts({ lines: [] }))).toEqual({
       error: "Session Stripe cs_test_1 : aucune ligne décodée depuis les metadata.",
     });
+  });
+
+  it("orderType « precommande » reporté fidèlement (scission, client 2026-08-20)", () => {
+    const result = buildOrderCreateData(facts({ orderType: "precommande" }));
+    expect(result).not.toHaveProperty("error");
+    if (!("error" in result)) {
+      expect(result.orderType).toBe("precommande");
+    }
+  });
+});
+
+describe("computePartTotalCents", () => {
+  const LINES: OrderLineFacts[] = [
+    { bookId: 1, titleSnapshot: "A", isbnSnapshot: null, quantity: 2, unitPriceCents: 1000 },
+    { bookId: 2, titleSnapshot: "B", isbnSnapshot: null, quantity: 1, unitPriceCents: 500 },
+  ];
+
+  it("sous-total des lignes + port de l'envoi - remise déjà allouée", () => {
+    // Sous-total 2500 - remise 300 + port 550 = 2750.
+    expect(computePartTotalCents(LINES, 550, 300)).toBe(2750);
+  });
+
+  it("sans remise ni port (défensif)", () => {
+    expect(computePartTotalCents(LINES, 0, 0)).toBe(2500);
+  });
+
+  it("plancher à 0 si la remise dépasse le sous-total (filet défensif, ne devrait pas arriver — cart-quote.ts garantit déjà l'allocation)", () => {
+    expect(computePartTotalCents(LINES, 0, 999_999)).toBe(0);
+  });
+
+  it("liste de lignes vide → seul le port compte", () => {
+    expect(computePartTotalCents([], 250, 0)).toBe(250);
   });
 });
 

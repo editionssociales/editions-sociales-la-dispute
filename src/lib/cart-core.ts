@@ -133,13 +133,17 @@ export function serializeCartState(state: CartState): string {
 /* --------------------------- éligibilité au panier --------------------------- */
 
 /**
- * Un livre affiche-t-il « Ajouter au panier » (`buy-links.tsx`, `book-card.tsx`) ?
- * Reflet exact de la décision de `resolveNativePurchase` (`catalogue-core.ts`) :
- * seul `purchaseMode === "cart"` (disponible à la vente native) ouvre le
+ * Un livre affiche-t-il « Ajouter au panier » / « Précommander »
+ * (`buy-links.tsx`, `book-card.tsx`) ? Reflet exact de la décision de
+ * `resolveNativePurchase` (`catalogue-core.ts`) : `purchaseMode === "cart"`
+ * (disponible à la vente native, `available` OU `preorder` — même panier,
+ * la scission commande/précommande n'a lieu qu'à l'encaissement) ouvre le
  * bouton — `external`/`upcoming`/`unavailable` restent des liens/mentions.
  */
 export function canAddToCart(book: Pick<Book, "status" | "purchaseMode">): boolean {
-  return book.status === "available" && book.purchaseMode === "cart";
+  return (
+    (book.status === "available" || book.status === "preorder") && book.purchaseMode === "cart"
+  );
 }
 
 /* ------------------------------ lignes résolues ------------------------------ */
@@ -163,6 +167,12 @@ export interface CartLineView {
   purchasable: boolean;
   /** Port réduit « manifeste » (`commerce.reducedShippingFlag`, fourni séparément par l'appelant). */
   reducedShippingFlag: boolean;
+  /**
+   * `true` ssi `book.status === "preorder"` (client 2026-08-20) — reflet
+   * direct du statut résolu, jamais une seconde règle : cette ligne ira dans
+   * la commande « précommande » à l'encaissement (scission `cart-quote.ts`).
+   */
+  isPreorder: boolean;
 }
 
 export interface CartSummary {
@@ -220,6 +230,7 @@ export function resolveCartSummary(
       lineTotalCents: purchasable && unitPriceCents != null ? unitPriceCents * line.qty : 0,
       purchasable,
       reducedShippingFlag: reducedShippingFlags.get(line.id) ?? false,
+      isPreorder: book.status === "preorder",
     });
   }
 
