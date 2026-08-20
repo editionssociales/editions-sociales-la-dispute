@@ -7,6 +7,7 @@ import { Container } from "@/components/container";
 import { LibelleTag } from "@/components/libelle-tag";
 import { BuyLinksList } from "@/components/buy-links";
 import { BookTabs, type BookTab } from "@/components/book-tabs";
+import { NewTabMark } from "@/components/new-tab-mark";
 import { FramedGrid } from "@/components/framed-grid";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
@@ -252,6 +253,7 @@ export default async function BookPage({
                       className={`font-serif italic text-ink underline decoration-1 underline-offset-2 hover:decoration-2 ${FOCUS_RING_LIGHT}`}
                     >
                       «&nbsp;{q.quote}&nbsp;»
+                      <NewTabMark />
                     </a>
                   ) : (
                     <span className="font-serif italic text-ink">
@@ -354,6 +356,7 @@ export default async function BookPage({
                   className={`${PDF_LINK_CLASS} ${FOCUS_RING_LIGHT}`}
                 >
                   Table des matières (PDF)
+                  <NewTabMark />
                 </a>
               )}
               {book.excerptUrl && (
@@ -364,6 +367,7 @@ export default async function BookPage({
                   className={`${PDF_LINK_CLASS} ${FOCUS_RING_LIGHT}`}
                 >
                   Extrait choisi (PDF)
+                  <NewTabMark />
                 </a>
               )}
             </FramedGrid>

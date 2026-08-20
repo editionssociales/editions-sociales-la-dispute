@@ -4,6 +4,7 @@ import { getBoutiqueBook } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { BuyLinksList } from "@/components/buy-links";
+import { NewTabMark } from "@/components/new-tab-mark";
 import { FramedGrid } from "@/components/framed-grid";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
@@ -175,6 +176,7 @@ export default async function BoutiqueBookPage({
                   className={`${PDF_LINK_CLASS} ${FOCUS_RING_LIGHT}`}
                 >
                   Table des matières (PDF)
+                  <NewTabMark />
                 </a>
               )}
               {book.excerptUrl && (
@@ -185,6 +187,7 @@ export default async function BoutiqueBookPage({
                   className={`${PDF_LINK_CLASS} ${FOCUS_RING_LIGHT}`}
                 >
                   Extrait choisi (PDF)
+                  <NewTabMark />
                 </a>
               )}
             </FramedGrid>

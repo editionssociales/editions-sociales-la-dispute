@@ -4,6 +4,7 @@ import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
+import { NewTabMark } from "@/components/new-tab-mark";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
 import type { EditionSlug } from "@/lib/types";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
@@ -172,6 +173,7 @@ export default async function EditionPage({
                         className={`inline-flex min-h-11 items-center border-2 border-ink px-4 py-2 font-sans text-xs font-bold uppercase tracking-[.05em] text-ink transition-colors motion-reduce:transition-none hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT_OUTER}`}
                       >
                         {r.label}
+                        <NewTabMark />
                       </a>
                     </li>
                   ))}

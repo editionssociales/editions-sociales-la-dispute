@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { NewTabMark } from "@/components/new-tab-mark";
 import { NAV_HOUSES, NAV_SECTIONS } from "@/lib/nav";
 import {
   buildMailto,
@@ -212,6 +213,7 @@ function ReseauxCell({
             <li key={r.url}>
               <a href={r.url} target="_blank" rel="noreferrer" className={LINK_CLASS}>
                 {r.label}
+                <NewTabMark />
               </a>
             </li>
           ))}

@@ -3,6 +3,7 @@ import { canAddToCart } from "@/lib/cart-core";
 import { formatDateFr, formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { Button } from "./button";
+import { NewTabMark } from "./new-tab-mark";
 
 /**
  * Boîte d'achat unifiée (chantier 2.2) — les 4 statuts (`available`+panier,
@@ -50,6 +51,7 @@ export function BuyLinksList({ book }: { book: Book }) {
           className="px-4 py-2 text-xs tracking-[.03em]"
         >
           {s.label}
+          <NewTabMark />
         </Button>
       ))}
     </div>
@@ -109,6 +111,7 @@ export function BuyLinksList({ book }: { book: Book }) {
           className="mt-3 w-full px-5 py-3 text-sm tracking-[.03em]"
         >
           {book.status === "available" ? "Acheter" : "Voir en librairie"}
+          <NewTabMark />
         </Button>
       )}
       <p className={MICROCOPY_CLASS}>
