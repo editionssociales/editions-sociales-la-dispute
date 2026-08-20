@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FramedGrid } from "@/components/framed-grid";
+import { LinkPendingHint } from "@/components/link-pending-hint";
 import {
   FOCUS_RING_DARK,
   FOCUS_RING_HOVER_DARK,
@@ -19,7 +20,10 @@ interface Props {
  *  le `hover:bg-ink` de la même branche (R5) — désactivée, il n'y a ni survol
  *  ni focus (la flèche n'est alors qu'un `<span>`). */
 function arrowClass(disabled: boolean): string {
-  return `flex h-11 items-center gap-1.5 bg-paper px-4 text-sm font-bold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
+  // `relative` : ancre du témoin de navigation (`LinkPendingHint`, coin
+  // haut-droit) — la vue de destination est dynamique, sans lui le clic
+  // resterait muet jusqu'au swap de contenu.
+  return `relative flex h-11 items-center gap-1.5 bg-paper px-4 text-sm font-bold uppercase tracking-[.03em] text-ink transition-colors motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${
     disabled
       ? "pointer-events-none text-ink/30"
       : `hover:bg-ink hover:text-paper ${FOCUS_RING_HOVER_DARK}`
@@ -44,6 +48,7 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
       ) : (
         <Link href={hrefFor(page - 1)} className={arrowClass(false)}>
           ← Précédent
+          <LinkPendingHint />
         </Link>
       )}
 
@@ -61,9 +66,12 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
             <Link
               href={hrefFor(p)}
               aria-current={p === page ? "page" : undefined}
-              className={`flex h-11 w-11 items-center justify-center text-sm font-bold transition-colors motion-reduce:transition-none ${p === page ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(p === page)}`}
+              // `relative` : ancre du témoin (cf. `arrowClass`) — en absolu
+              // dans le coin, il ne déforme jamais la case carrée de 44px.
+              className={`relative flex h-11 w-11 items-center justify-center text-sm font-bold transition-colors motion-reduce:transition-none ${p === page ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(p === page)}`}
             >
               {p}
+              <LinkPendingHint />
             </Link>
           </span>
         ))}
@@ -74,6 +82,7 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
       ) : (
         <Link href={hrefFor(page + 1)} className={arrowClass(false)}>
           Suivant →
+          <LinkPendingHint />
         </Link>
       )}
     </FramedGrid>

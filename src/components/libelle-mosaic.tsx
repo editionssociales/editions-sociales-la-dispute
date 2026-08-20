@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { FramedGrid } from "./framed-grid";
+import { LinkPendingHint } from "./link-pending-hint";
 import { MosaicDisclosure } from "./mosaic-disclosure";
 import { labelSpan, tierMetrics, tierRows, truncateWords } from "./libelle-mosaic-core";
 import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
@@ -89,6 +90,10 @@ function TierCell({
       <span className="sr-only">
         , {count} titre{count > 1 ? "s" : ""}
       </span>
+      {/* Témoin de navigation (vue de destination dynamique) — la case est
+          déjà `relative`, le coin haut-droit reste libre (le compte vit en
+          bas-droit). */}
+      <LinkPendingHint />
     </Link>
   );
 }

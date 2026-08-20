@@ -129,6 +129,37 @@ h1, h2, h3, h4 {
   }
 }
 
+/* Témoin « navigation en cours » d'un lien (`link-pending-hint.tsx`,
+   pagination + mosaïque des libellés). Toujours rendu, invisible au repos ;
+   en attente, apparition différée de 100 ms (une navigation préchargée ou
+   rapide ne le fait jamais clignoter — recette de la doc `useLinkStatus`)
+   puis pulsation lente le temps que la vue arrive. */
+@keyframes nav-hint-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nav-hint-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.nav-hint {
+  opacity: 0;
+}
+.nav-hint-pending {
+  animation:
+    nav-hint-in 200ms ease 100ms forwards,
+    nav-hint-pulse 1s ease-in-out 300ms infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Le témoin est une INFORMATION (le clic est pris en compte) : il apparaît
+     toujours — seule la pulsation, décorative, est coupée. */
+  .nav-hint-pending {
+    animation: nav-hint-in 0ms linear 100ms forwards;
+  }
+}
+
 /* Liseré de collecte fixé au viewport (/souscription) — cf.
    `souscription/_components/collecte-ticker.tsx`.
    PASSATION : le HTML serveur peint le niveau RÉEL de la collecte (état
