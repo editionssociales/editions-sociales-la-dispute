@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { PageHero } from "@/components/page-hero";
-import { GoodiesCheckout } from "@/components/cart/goodies-checkout";
 import { getBoutiqueBooks } from "@/lib/catalogue";
 import { canAddToCart } from "@/lib/cart-core";
 import { CartView } from "./cart-view";
@@ -18,9 +17,11 @@ export const revalidate = 3600; // fenêtre ISR des suggestions goodies (Payload
 
 /**
  * `/panier` — le panier natif (`CartView`, îlot client, plan §4 étape 6) +
- * les goodies au checkout (retour client 2026-07-23) : l'ex-page
- * « La boutique » est supprimée, ses quelques articles vendables (souvent un
- * seul actif) sont suggérés ici, sous le panier.
+ * les goodies au checkout (retour client 2026-07-23, ligne fantôme
+ * 2026-08-20) : l'ex-page « La boutique » est supprimée, ses quelques
+ * articles vendables (souvent un seul actif) sont suggérés directement sous
+ * la dernière ligne du panier (`CartView`, prop `goodies`) — plus de section
+ * séparée en pied de page.
  */
 export default async function PanierPage() {
   const goodies = (await getBoutiqueBooks())
@@ -39,10 +40,8 @@ export default async function PanierPage() {
       <PageHero title="Votre panier" className="max-w-2xl" />
 
       <div className="mt-6 sm:mt-7">
-        <CartView />
+        <CartView goodies={goodies} />
       </div>
-
-      <GoodiesCheckout goodies={goodies} />
     </Container>
   );
 }

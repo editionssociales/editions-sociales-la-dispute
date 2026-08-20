@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCart } from "@/components/cart/cart-context";
+import { GoodieSuggestionRow, type GoodieSuggestion } from "@/components/cart/goodie-suggestion-row";
 import { ShelfSpines } from "@/components/cart/shelf-spines";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
@@ -60,6 +61,30 @@ function EmptyCart() {
         </p>
       </div>
       <Button href="/catalogue">Parcourir le catalogue</Button>
+    </div>
+  );
+}
+
+/**
+ * Ligne(s) fantôme(s) — même bloc rendu juste sous les lignes réelles
+ * (panier non vide) ET sous l'état vide (`EmptyCart`, seule surface de
+ * découverte des goodies qui reste depuis la suppression de « La boutique »).
+ * Empilées quand `goodies.length > 1` (cas rare, cap 4 déjà posé par
+ * `page.tsx`) — même format pour chaque ligne, juste répété. `goodies` déjà
+ * filtré par l'appelant (jamais un article déjà au panier).
+ */
+function GoodieSuggestions({ goodies }: { goodies: GoodieSuggestion[] }) {
+  if (goodies.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <p className="mb-2 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
+        Souvent ajouté au panier
+      </p>
+      <div className="flex flex-col gap-2">
+        {goodies.map((g) => (
+          <GoodieSuggestionRow key={g.id} goodie={g} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -227,10 +252,15 @@ function CartLineRow({
   );
 }
 
-export function CartView() {
+export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
   const { state, ready, setLineQty, removeFromCart } = useCart();
   const ids = useMemo(() => state.lines.map((l) => l.id), [state.lines]);
   const idsKey = ids.join(",");
+  // Filtre « déjà au panier » : un goodie déjà ajouté ne se propose plus.
+  const visibleGoodies = useMemo(
+    () => goodies.filter((g) => !state.lines.some((l) => l.id === g.id)),
+    [goodies, state.lines],
+  );
 
   const [snapshot, setSnapshot] = useState<CartSnapshot>({ books: [], reducedShippingFlags: [] });
   const [snapshotReady, setSnapshotReady] = useState(false);
@@ -380,7 +410,12 @@ export function CartView() {
     return <p className="py-16 text-center font-sans text-sm text-muted">Chargement du panier…</p>;
   }
   if (state.lines.length === 0) {
-    return <EmptyCart />;
+    return (
+      <>
+        <EmptyCart />
+        <GoodieSuggestions goodies={visibleGoodies} />
+      </>
+    );
   }
   // Échec AU PREMIER chargement (aucun instantané précédent) : état dédié,
   // jamais la grille sous le bandeau habituel — cf. `CartUnavailable`.
@@ -417,6 +452,8 @@ export function CartView() {
           />
         ))}
       </FramedGrid>
+
+      <GoodieSuggestions goodies={visibleGoodies} />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
