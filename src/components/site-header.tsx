@@ -142,9 +142,12 @@ const ICON_SQUARE =
   "aspect-square h-full min-h-11 w-auto shrink-0 self-stretch";
 
 // transition-all : la couleur (survol/actif) ET la taille (padding/police, au
-// compactage) s'animent sur la même durée.
+// compactage) s'animent sur la même durée. `active:brightness-90` : la recette
+// de pression de `BASE` (`button.tsx`), étendue aux cellules du header — tous
+// les usages de cette constante sont interactifs (liens/bascule), aucun
+// n'est `disabled` ; la cellule panier (`cart-badge.tsx`) porte la même.
 const CELL_TRANSITION =
-  "transition-all duration-200 ease-out motion-reduce:transition-none";
+  "transition-all duration-200 ease-out motion-reduce:transition-none active:brightness-90";
 
 // Fondu/échelle des deux calques du CTA « Nous soutenir » (cf. SoutenirCell) :
 // on anime opacité + transform (compositables, continus) et JAMAIS la police

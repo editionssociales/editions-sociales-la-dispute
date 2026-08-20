@@ -20,7 +20,8 @@ import { useCart } from "./cart-context";
  * une pastille superposée pour ne pas élargir le carré ; nom accessible via
  * l'`aria-label`.
  */
-const CELL_TRANSITION = "transition-all duration-200 ease-out motion-reduce:transition-none";
+const CELL_TRANSITION =
+  "transition-all duration-200 ease-out motion-reduce:transition-none active:brightness-90";
 
 function CartGlyph() {
   return (

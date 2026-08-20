@@ -165,7 +165,7 @@ function QuantityStepper({
         onClick={() => onChange(qty - 1)}
         disabled={disabled || qty <= 1}
         aria-label="Retirer un exemplaire"
-        className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
+        className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper active:brightness-90 disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink disabled:active:brightness-100 ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
       >
         −
       </button>
@@ -177,7 +177,7 @@ function QuantityStepper({
         onClick={() => onChange(qty + 1)}
         disabled={disabled || qty >= MAX_LINE_QTY}
         aria-label="Ajouter un exemplaire"
-        className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
+        className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper active:brightness-90 disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink disabled:active:brightness-100 ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
       >
         +
       </button>
@@ -581,7 +581,7 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
               ? "cursor-wait"
               : checkoutBlocked
                 ? "cursor-not-allowed opacity-40"
-                : `hover:bg-paper hover:text-ink ${FOCUS_RING_HOVER_LIGHT}`
+                : `hover:bg-paper hover:text-ink active:brightness-90 ${FOCUS_RING_HOVER_LIGHT}`
           }`}
         >
           {checkoutPending && (
