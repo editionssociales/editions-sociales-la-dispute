@@ -30,6 +30,13 @@ interface CheckoutErrorBody {
 }
 
 /**
+ * Ce que la zone « code promo » affiche : le verdict serveur, OU l'échec de
+ * l'appel lui-même (réseau). `PromoEvalResult` reste un verdict métier — le
+ * réseau n'y a pas sa place, d'où ce type d'affichage local.
+ */
+type PromoFeedback = PromoEvalResult | { ok: false; message: string };
+
+/**
  * Le vrai panier (plan §4 étape 6) — rendu par `page.tsx`. Le panier lui-même (ids +
  * quantités) vit dans `<CartProvider>` (`localStorage`) ; ce composant se
  * contente de le confronter à une relecture serveur fraîche à chaque
@@ -366,22 +373,38 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
 
   const [zone, setZone] = useState<ShippingZone>("FR");
   const [promoInput, setPromoInput] = useState("");
-  const [promoResult, setPromoResult] = useState<PromoEvalResult | null>(null);
+  const [promoResult, setPromoResult] = useState<PromoFeedback | null>(null);
   const [promoPending, startPromoTransition] = useTransition();
 
   function applyPromoCode() {
     const code = promoInput.trim();
     if (!code) return;
     startPromoTransition(async () => {
-      setPromoResult(await validatePromoCode(code, summary.subtotalCents));
+      // Symétrie avec `load()` et `handleCheckout` : sans ce try/catch, un
+      // échec réseau de la server action laissait le clic sans AUCUN retour —
+      // le seul appel serveur du fichier qui pouvait encore échouer muet.
+      try {
+        setPromoResult(await validatePromoCode(code, summary.subtotalCents));
+      } catch {
+        setPromoResult({
+          ok: false,
+          message: "Vérification du code impossible pour le moment, réessayez.",
+        });
+      }
     });
   }
+
+  // Le repli réseau S'AFFICHE mais ne pilote jamais le devis : un code
+  // peut-être valide ne doit pas être décompté comme refusé — le devis reste
+  // simplement sans promo le temps d'un nouvel essai.
+  const promoEval: PromoEvalResult | null =
+    promoResult == null ? null : promoResult.ok || "reason" in promoResult ? promoResult : null;
 
   const { shipping, totals, freeShippingCoupon } = computeCartQuote({
     subtotalCents: summary.subtotalCents,
     zone,
     manifestOnly: summary.manifestOnly,
-    promoEval: promoResult,
+    promoEval,
   });
 
   const [checkoutPending, startCheckoutTransition] = useTransition();
