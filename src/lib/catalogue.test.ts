@@ -57,7 +57,8 @@ vi.mock("./catalogue-pg", () => ({
       : null,
 }));
 
-const { getAllBooks, getBook, getBoutiqueBook } = await import("./catalogue");
+const { getAllBooks, getBook, getBoutiqueBook, getBooks, getFacets, getNewReleases } =
+  await import("./catalogue");
 
 describe("getAllBooks — assemblage pg (deux fonds + boutique-seuls)", () => {
   it("compose les deux fonds et les articles boutique-seuls en un catalogue", async () => {
@@ -67,6 +68,30 @@ describe("getAllBooks — assemblage pg (deux fonds + boutique-seuls)", () => {
     expect(toteBag.origin).toBe("boutique");
     expect(toteBag.edition).toBeNull();
     expect(books.find((b) => b.id === 1)?.status).toBe("available");
+  });
+});
+
+describe("goodies hors catalogue — règle client 2026-08-20", () => {
+  it("getBooks (sans filtre) omet les articles boutique-seuls", async () => {
+    const books = await getBooks();
+    expect(books).toHaveLength(3);
+    expect(books.some((b) => b.origin === "boutique")).toBe(false);
+    expect(books.some((b) => b.slug === "tote-bag")).toBe(false);
+  });
+
+  it("getFacets n'inclut pas les boutique-seuls dans le total", async () => {
+    const facets = await getFacets();
+    expect(facets.total).toBe(3);
+  });
+
+  it("getNewReleases (nouveautés) n'inclut jamais un goodie", async () => {
+    const releases = await getNewReleases(10);
+    expect(releases.some((b) => b.origin === "boutique")).toBe(false);
+  });
+
+  it("getAllBooks reste inchangé (panier/checkout doivent voir les goodies)", async () => {
+    const all = await getAllBooks();
+    expect(all.some((b) => b.slug === "tote-bag")).toBe(true);
   });
 });
 
