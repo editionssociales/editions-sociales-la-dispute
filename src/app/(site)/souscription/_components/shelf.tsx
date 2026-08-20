@@ -4,7 +4,11 @@ import Link from "next/link";
 import { ShelfLock } from "@/components/shelf-lock";
 import { ShelfCover } from "@/components/shelf-cover";
 import { BookCover, coverAspectRatio } from "@/lib/cover";
-import { ACCENTS, ACCENT_BG as BG } from "@/lib/accents";
+// LES COULEURS DU SITE pour les dos dessinés (retour client 2026-08-20) — les
+// accents de couverture navy/bottle/ocher/brick ont quitté /souscription le
+// 2026-08-07, ces dos étaient leur dernier reliquat sur la page. Cycle dans
+// l'ordre canonique de la palette (`POP_ORDER`).
+import { POP_BG, POP_ORDER } from "@/components/pop-palette";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 /**
@@ -74,7 +78,7 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
               <div
                 key={i}
                 aria-hidden="true"
-                className={`shrink-0 ${BG[ACCENTS[i % 4]]} animate-[spine-rise_0.7s_ease-out_both]`}
+                className={`shrink-0 ${POP_BG[POP_ORDER[i % 4]]} animate-[spine-rise_0.7s_ease-out_both]`}
                 style={{ width: s.w, height: s.h, animationDelay: `${i * 70}ms` }}
               />
             );
@@ -105,7 +109,7 @@ export function HeroShelf({ books, trailing }: { books: Book[]; trailing?: React
                   } as React.CSSProperties
                 }
               >
-                <div className={`book3d-spine ${BG[ACCENTS[i % 4]]}`} />
+                <div className={`book3d-spine ${POP_BG[POP_ORDER[i % 4]]}`} />
                 {/* La face couverture adopte le format exact de l'image : ratio
                     DB au rendu serveur, ratio réel dès le chargement. */}
                 <ShelfCover url={book.cover.url} ratio={coverAspectRatio(book.cover)} />
@@ -153,7 +157,7 @@ export function MobileShelf({ books }: { books: Book[] }) {
             <div
               key={i}
               aria-hidden="true"
-              className={`aspect-[2/3] ${BG[ACCENTS[i % 4]]}`}
+              className={`aspect-[2/3] ${POP_BG[POP_ORDER[i % 4]]}`}
             />
           ))
         : items.map((book) => (
