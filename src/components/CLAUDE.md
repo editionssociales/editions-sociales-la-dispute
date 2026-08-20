@@ -30,4 +30,4 @@ données ni le routage.
 
 ## Decisions
 
-- Les primitives partagées ne fixent que recette visuelle ; padding/taille/disposition restent affaire de l'appelant via `className`. **Exceptions `Container.width` et `Button.display`** : Tailwind v4 reordonne utilitaires par valeur (pas ordre HTML), coupant les overrides naïfs — props à valeurs fermées plutôt que merge. Verrouillé par tests (`button-display.test.tsx`, `getComputedStyle`).
+- Les primitives partagées ne fixent que recette visuelle ; padding/taille/disposition restent affaire de l'appelant via `className`. **Exceptions `Container.width` et `Button.display`** : Tailwind v4 reordonne utilitaires par valeur (pas ordre HTML), coupant les overrides naïfs — props à valeurs fermées plutôt que merge. Verrouillé par tests (`button-display.test.tsx`, `getComputedStyle`). **Exception `FramedGrid` flux flex** : `w-fit` d'office — le fond ink n'est que le mortier des filets entre cellules, jamais un remplissage ; pleine largeur, un groupe de quelques puces (filtres actifs, pagination) laissait le reste de la rangée en aplat noir.

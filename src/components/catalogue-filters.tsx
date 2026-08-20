@@ -277,12 +277,12 @@ export function CatalogueFilters({
         // Petit groupe distinct, AVANT la mosaïque de thèmes : le filtre de
         // maison est d'une autre nature que les libellés (identité de
         // collection), il ne doit pas se noyer en fin du rail de puces.
-        // `w-fit` : reste un petit groupe compact, pas un rail plein largeur.
+        // Compact d'office : le flux flex de `FramedGrid` est `w-fit`.
         <FramedGrid
           flow="flex"
           role="group"
           aria-label="Filtrer par maison"
-          className="w-fit items-stretch"
+          className="items-stretch"
         >
           {EDITION_LIST.map((e) => (
             <HouseTag
