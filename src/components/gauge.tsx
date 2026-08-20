@@ -17,11 +17,9 @@ import { useImpactFrame } from "@/components/impact-frame";
 type Marker = { value: number; label: string; reached: boolean };
 
 /**
- * La barre s'étend 20 % au-delà de l'objectif (demi-droite). Exporté avec
- * `MASK_STYLE` : le liseré de collecte fixé au viewport
- * (`souscription/_components/collecte-ticker.tsx`) rejoue EXACTEMENT le même
- * empan et la même queue — deux recettes séparées dériveraient au premier
- * changement d'objectif.
+ * La barre s'étend 20 % au-delà de l'objectif (demi-droite). Exporté : les
+ * consommateurs de la jauge partagent le même empan — deux recettes séparées
+ * dériveraient au premier changement d'objectif.
  */
 export const OVERSHOOT = 1.2;
 
@@ -85,19 +83,14 @@ const cssPct = (n: number) => `${Number(n.toFixed(4))}%`;
 const DASH_TAIL =
   "linear-gradient(90deg,#000 0 22%,transparent 22% 34%,rgba(0,0,0,.68) 34% 52%,transparent 52% 64%,rgba(0,0,0,.4) 64% 78%,transparent 78% 88%,rgba(0,0,0,.18) 88% 96%,transparent 96%)";
 
-const MASK = `linear-gradient(#000,#000) left top / ${cssPct(SOLID_END_PCT)} 100% no-repeat, ${DASH_TAIL} right top / ${cssPct(100 - SOLID_PCT)} 100% no-repeat`;
-
-/** Le masque s'applique à l'élément ENTIER, box-shadow comprise : l'ombre dure
- *  est donc peinte par un calque jumeau décalé, jamais par `box-shadow` (elle
- *  serait rognée hors de la boîte, donc invisible).
- *
- *  Version SANS coupures : c'est celle du liseré de viewport, qui ne porte plus
- *  aucune marque de palier (retour Youri 26/07). La jauge, elle, construit son
- *  masque à partir de ses `markers` — cf. `buildCutMask`. */
-export const MASK_STYLE = { mask: MASK, WebkitMask: MASK } as const;
+/* Le masque s'applique à l'élément ENTIER, box-shadow comprise : l'ombre dure
+   est donc peinte par un calque jumeau décalé, jamais par `box-shadow` (elle
+   serait rognée hors de la boîte, donc invisible). La version SANS coupures
+   (`MASK_STYLE`) est partie avec le liseré de viewport (2026-08-20) — la
+   jauge construit son masque depuis ses `markers`, cf. `buildCutMask`. */
 
 /**
- * Masque de la JAUGE = celui du liseré, plus les COUPURES DE PALIERS (retour
+ * Masque de la JAUGE = aplat continu, plus les COUPURES DE PALIERS (retour
  * Youri 26/07 : « fais des vraies démarcations de paliers […] des coupures
  * nettes, avec visibilité sur l'ombre »). Chaque abscisse de palier ouvre une
  * fente TRANSPARENTE de 8px dans l'aplat : la barre devient quatre morceaux
@@ -108,7 +101,7 @@ export const MASK_STYLE = { mask: MASK, WebkitMask: MASK } as const;
  * il fallait en retirer.
  *
  * L'aplat est ici un dégradé étalé sur la boîte ENTIÈRE de la barre
- * (`100% 100%`, là où `MASK` le dimensionne à `SOLID_END_PCT`) : ses arrêts en
+ * (`100% 100%`, plutôt qu'un `mask-size` à `SOLID_END_PCT`) : ses arrêts en
  * pourcentage se lisent alors directement sur la largeur de barre — mêmes
  * abscisses que les paliers et que les montants de contour, aucune conversion
  * de repère. La fin de l'aplat, chevauchement compris, passe donc du

@@ -9,7 +9,6 @@ import {
   RAIL_CONTENT_WIDTH_CLASS,
   RAIL_MAX_HEIGHT_CLASS,
   RAIL_PULSE_CLASS,
-  TICKER_INSET_CLASS,
 } from "@/components/rail-inset";
 import { type DonationTierId, FREE_AMOUNT } from "@/lib/donation-tiers";
 import type { PageSouscriptionContent } from "@/lib/site-content-core";
@@ -184,13 +183,12 @@ function FreeAmountForm({ enabled }: { enabled: boolean }) {
  * 25/07 — priorité maximale aux contreparties) : la navbar se resserre à
  * gauche et lui cède la colonne (cf. `site-header.tsx`, `railInset`), l'aside
  * remonte de la hauteur du header compact (`lg:-mt-24`, même constante 6rem
- * que `scroll-mt-24`) et colle au viewport SOUS le liseré de collecte
- * (`TICKER_INSET_CLASS`, hauteur du bandeau fixe — `collecte-ticker.tsx` ;
- * sans ce décalage, la première ligne du rail passerait dessous une fois
- * collée), sur la hauteur restante. `TICKER_INSET_CLASS`/`RAIL_MAX_HEIGHT_CLASS`
- * viennent de `@/components/rail-inset` — source unique partagée avec
- * `site-header.tsx` (`railInset`) et `souscription/page.tsx` (grille) pour
- * que 380px/10px ne se désynchronisent plus entre les trois arbres.
+ * que `scroll-mt-24`) et colle au haut du viewport (`lg:top-0` — le liseré de
+ * collecte qui imposait un décalage de 10px a été retiré le 2026-08-20), sur
+ * la hauteur du viewport. `RAIL_MAX_HEIGHT_CLASS` vient de
+ * `@/components/rail-inset` — source unique partagée avec `site-header.tsx`
+ * (`railInset`) et `souscription/page.tsx` (grille) pour que les 380px ne se
+ * désynchronisent plus entre les trois arbres.
  * Les 9 cartes sont uniformes ; la carte « montant libre » clôt la liste.
  * Sur mobile, le rail suit toute la colonne principale (l'ancre `#paliers` y
  * mène — `scroll-mt-24` à tous les breakpoints, le header mobile fait ~96px).
@@ -214,7 +212,7 @@ export function TiersRail({
     <aside
       id="paliers"
       aria-label="Contreparties"
-      className={`border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky ${TICKER_INSET_CLASS} lg:-mt-24 ${RAIL_CONTENT_WIDTH_CLASS} ${RAIL_MAX_HEIGHT_CLASS} lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 ${RAIL_PULSE_CLASS}`}
+      className={`border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky lg:top-0 lg:-mt-24 ${RAIL_CONTENT_WIDTH_CLASS} ${RAIL_MAX_HEIGHT_CLASS} lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 ${RAIL_PULSE_CLASS}`}
     >
       {/* `lg:pt-14` : réserve du bouton de fermeture du tiroir, fixé au coin
           haut-droit du panneau (`tiers-drawer.tsx`) — sans elle, il couvrirait

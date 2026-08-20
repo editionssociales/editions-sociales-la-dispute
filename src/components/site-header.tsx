@@ -18,11 +18,7 @@ import {
   FOCUS_RING_LIGHT,
 } from "@/lib/ui";
 import { NAV_ACCENT_BG } from "./nav-accent";
-import {
-  HEADER_TICKER_RESERVE_CLASS,
-  RAIL_INSET_TRANSITION_CLASS,
-  RAIL_WIDTH_CLASS,
-} from "./rail-inset";
+import { RAIL_INSET_TRANSITION_CLASS, RAIL_WIDTH_CLASS } from "./rail-inset";
 import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
 import { useCart } from "./cart/cart-context";
 import { cartFlyTarget } from "./cart/fly-to-cart";
@@ -57,16 +53,11 @@ import { cartFlyTarget } from "./cart/fly-to-cart";
  * consommateurs de cette largeur bougent ensemble, sinon la navbar sauterait
  * d'un bloc pendant que la colonne glisse.
  *
- * Cette même route porte le LISERÉ DE COLLECTE fixé en haut du viewport
- * (z-60 — `souscription/_components/collecte-ticker.tsx`) : le header lui
- * réserve sa hauteur en `HEADER_TICKER_RESERVE_CLASS`, réserve INTERNE à la
- * boîte sticky, donc valable en haut de page comme une fois collée (un `mt`
- * + `top` laisserait au contraire la page défiler à nu dans cette réserve).
- * Réserve OPAQUE (`bg-paper`) : le bandeau n'est pas rendu en panne Stripe,
- * la bande doit rester pleine sans lui. `HEADER_TICKER_RESERVE_CLASS`,
- * `RAIL_WIDTH_CLASS` et `RAIL_GRID_CLASS` viennent tous de
- * `@/components/rail-inset` (source unique 380px/10px, cf. ce fichier) —
- * une seule ligne à changer le jour où l'une des deux valeurs bouge.
+ * `RAIL_WIDTH_CLASS` et `RAIL_GRID_CLASS` viennent de
+ * `@/components/rail-inset` (source unique 380px, cf. ce fichier) — une
+ * seule ligne à changer le jour où la valeur bouge. (Le liseré de collecte
+ * fixé au viewport, et la réserve de 10px que le header lui gardait ici, ont
+ * été retirés le 2026-08-20 sur retour client.)
  *
  * Desktop (lg+) : 4 colonnes × 2 rangées — maisons | « Nous soutenir » |
  * nav 2×2. Dans le bloc maisons, « Les Éditions sociales » (plus long) fixe
@@ -542,7 +533,7 @@ function SiteHeaderChrome({
     <header
       className={
         railInset
-          ? `sticky top-0 z-50 bg-paper ${HEADER_TICKER_RESERVE_CLASS} ${RAIL_WIDTH_CLASS} ${RAIL_INSET_TRANSITION_CLASS}`
+          ? `sticky top-0 z-50 ${RAIL_WIDTH_CLASS} ${RAIL_INSET_TRANSITION_CLASS}`
           : "sticky top-0 z-50"
       }
     >

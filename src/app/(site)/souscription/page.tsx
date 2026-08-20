@@ -14,7 +14,6 @@ import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
 import { getPageSouscription } from "@/lib/site-content";
-import { CollecteTicker } from "./_components/collecte-ticker";
 import { HeroShelf, MobileShelf } from "./_components/shelf";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
@@ -334,16 +333,6 @@ export default async function SouscriptionPage() {
        casser le geste. */
     <div className={`lg:grid ${RAIL_GRID_CLASS} ${RAIL_GRID_TRANSITION_CLASS} lg:items-start`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
-      {/* Liseré de collecte fixé en haut du viewport (10px, prototype validé
-          client — variante V2 « lecture = lutte ») : le remplissage progresse
-          avec le scroll, rescalé pour que le bas de page coïncide avec le
-          niveau réel de la collecte. Il double la jauge du héros à l'échelle de
-          la page entière ; le header lui réserve sa hauteur (`railInset`,
-          `site-header.tsx`). Jamais monté en panne Stripe — pas de total
-          honnête à afficher. */}
-      {!outage && (
-        <CollecteTicker value={liveCampaign.gauge.value} max={liveCampaign.gauge.max} />
-      )}
       {/* Colonne principale (jauge, corps de texte, CTA final) — le rail des
           contreparties vit en frère de DOM, sur la droite de la page entière,
           et monte jusqu'en haut de page en lg+ (`lg:-mt-24` dans TiersRail,

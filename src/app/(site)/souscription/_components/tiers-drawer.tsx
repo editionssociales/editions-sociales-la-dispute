@@ -19,7 +19,6 @@ import {
   RAIL_PULSE_ATTRIBUTE,
   RAIL_PULSE_GROUP_CLASS,
   RAIL_READY_ATTRIBUTE,
-  TICKER_INSET_CLASS,
 } from "@/components/rail-inset";
 
 /**
@@ -357,7 +356,7 @@ export function TiersDrawer({
         inert={!open}
         onClick={() => toggle(false)}
         onKeyDown={onKeyDown}
-        className={`fixed right-0 z-40 hidden h-11 w-11 items-center justify-center border-2 border-r-0 border-ink bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange lg:flex ${TICKER_INSET_CLASS} ${FOCUS_RING_INVERTING} ${RAIL_EDGE_TRANSITION_CLASS} ${
+        className={`fixed right-0 z-40 hidden h-11 w-11 items-center justify-center border-2 border-r-0 border-ink bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange lg:flex lg:top-0 ${FOCUS_RING_INVERTING} ${RAIL_EDGE_TRANSITION_CLASS} ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

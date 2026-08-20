@@ -64,20 +64,13 @@ export const RAIL_INSET_TRANSITION_CLASS =
 export const RAIL_EDGE_TRANSITION_CLASS =
   "lg:transition-transform lg:duration-[540ms] lg:ease-[cubic-bezier(0.65,0,0.35,1)]";
 
-/** Hauteur du liseré de collecte fixé en haut du viewport — `collecte-ticker.tsx`. */
-export const TICKER_HEIGHT_CLASS = "h-[10px]";
-
 /**
- * Réserve interne du header pour le liseré (boîte sticky, `site-header.tsx`)
- * — même valeur que `TICKER_HEIGHT_CLASS`, exprimée en `pt` plutôt qu'en `h`.
+ * Plafond de hauteur du rail : le viewport entier. (Jusqu'au 2026-08-20, une
+ * réserve de 10px était soustraite pour le liseré de collecte fixé au
+ * viewport — retiré sur retour client, il se lisait comme une barre de
+ * progression de lecture ; les constantes `TICKER_*` sont tombées avec lui.)
  */
-export const HEADER_TICKER_RESERVE_CLASS = "pt-[10px]";
-
-/** Ancrage du rail sous le liseré (`tiers-rail.tsx`, `lg:sticky`) — même valeur que `TICKER_HEIGHT_CLASS`. */
-export const TICKER_INSET_CLASS = "lg:top-[10px]";
-
-/** Plafond de hauteur du rail : le viewport moins la même réserve que ci-dessus. */
-export const RAIL_MAX_HEIGHT_CLASS = "lg:max-h-[calc(100vh_-_10px)]";
+export const RAIL_MAX_HEIGHT_CLASS = "lg:max-h-[100vh]";
 
 /**
  * INDICE D'APPEL — « léger indice visuel supplémentaire pour avoir une

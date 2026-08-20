@@ -196,23 +196,6 @@ h1, h2, h3, h4 {
   }
 }
 
-/* Liseré de collecte fixé au viewport (/souscription) — cf.
-   `souscription/_components/collecte-ticker.tsx`.
-   PASSATION : le HTML serveur peint le niveau RÉEL de la collecte (état
-   honnête sans JS) ; à l'hydratation, le pilotage par le scroll reprend la
-   barre. Une seule course douce couvre l'écart entre les deux — même
-   easeOutCubic que `gauge-sweep` —, puis la classe est retirée : le suivi du
-   scroll, lui, doit rester immédiat. Portée par le remplissage ET par le
-   curseur voyageur, qui la perdent au même instant. */
-.rail-handoff {
-  transition: transform 700ms cubic-bezier(0.33, 1, 0.68, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  /* Sous ce réglage le liseré n'est de toute façon pas piloté : garde de
-     principe, la passation ne doit pas pouvoir démarrer. */
-  .rail-handoff { transition: none; }
-}
-
 /* Animations de la page de souscription (étagère du héro). */
 /*
  * Étagère du héro (page souscription) : sortie de rayon 3D au survol/focus
