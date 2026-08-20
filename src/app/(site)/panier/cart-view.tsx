@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useCart } from "@/components/cart/cart-context";
 import { GoodieSuggestionRow, type GoodieSuggestion } from "@/components/cart/goodie-suggestion-row";
 import { ShelfSpines } from "@/components/cart/shelf-spines";
@@ -111,6 +112,30 @@ function CartUnavailable({ onRetry }: { onRetry: () => void }) {
       <Button onClick={onRetry} className="px-5 py-2.5 text-sm tracking-[.03em]">
         Réessayer
       </Button>
+    </div>
+  );
+}
+
+/**
+ * Bandeau « revenu de Stripe sans payer » (`cancel_url` →
+ * `/panier?paiement=annule`, cf. `api/checkout/route.ts`) : ton NEUTRE
+ * (border-ink, jamais brick) — rien n'a échoué, l'utilisateur est juste
+ * revenu, et la seule chose à dire est que le panier est intact. Avant ce
+ * bandeau, ce retour était indiscernable d'une visite normale de `/panier`.
+ * `useSearchParams` isolé dans son propre composant sous `<Suspense>` : le
+ * hook exige une frontière au prérendu, et la page reste statique.
+ */
+function PaymentCancelledNotice() {
+  const cancelled = useSearchParams().get("paiement") === "annule";
+  if (!cancelled) return null;
+  return (
+    <div className="mb-4 border-2 border-ink bg-paper-2 px-4 py-3" role="status">
+      <p className="font-sans text-xs font-extrabold uppercase tracking-[.06em] text-ink">
+        Paiement annulé
+      </p>
+      <p className="mt-2 font-sans text-sm font-bold text-ink">
+        Votre panier est intact — reprenez la commande quand vous voulez.
+      </p>
     </div>
   );
 }
@@ -430,6 +455,9 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
 
   return (
     <div className={`transition-opacity motion-reduce:transition-none ${snapshotReady ? "" : "opacity-70"}`}>
+      <Suspense fallback={null}>
+        <PaymentCancelledNotice />
+      </Suspense>
       {snapshotError && (
         <div className="mb-4 border-2 border-brick bg-paper-2 px-4 py-3" role="alert">
           <p className="font-sans text-xs font-extrabold uppercase tracking-[.06em] text-brick">

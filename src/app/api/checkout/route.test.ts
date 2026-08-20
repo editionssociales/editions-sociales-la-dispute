@@ -312,7 +312,11 @@ describe("POST /api/checkout — session Stripe (cas nominal)", () => {
     expect(lastSessionBody?.get("success_url")).toBe(
       "https://www.exemple.test/merci?session_id={CHECKOUT_SESSION_ID}",
     );
-    expect(lastSessionBody?.get("cancel_url")).toBe("https://www.exemple.test/panier");
+    // `?paiement=annule` : déclenche le bandeau « panier intact » au retour
+    // de Stripe sans payer (`PaymentCancelledNotice`, `cart-view.tsx`).
+    expect(lastSessionBody?.get("cancel_url")).toBe(
+      "https://www.exemple.test/panier?paiement=annule",
+    );
   });
 
   it("panier « manifeste » (tous les livres à port réduit) → shippingMethod=reduit, 2,50€", async () => {

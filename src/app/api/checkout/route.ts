@@ -139,7 +139,11 @@ export async function POST(req: Request): Promise<Response> {
       metadata,
       payment_intent_data: { metadata },
       success_url: `${origin}/merci?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/panier`,
+      // `?paiement=annule` : sans lui, revenir de Stripe sans payer était
+      // indiscernable d'une visite normale de `/panier` — le paramètre
+      // déclenche le bandeau « panier intact » (`PaymentCancelledNotice`,
+      // `cart-view.tsx`).
+      cancel_url: `${origin}/panier?paiement=annule`,
     });
 
     if (!session.url) {
