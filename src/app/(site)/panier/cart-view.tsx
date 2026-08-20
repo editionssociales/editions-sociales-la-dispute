@@ -495,7 +495,13 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
   }
 
   return (
-    <div className={`transition-opacity motion-reduce:transition-none ${snapshotReady ? "" : "opacity-70"}`}>
+    // `starting:opacity-0` (@starting-style) : le swap squelette → grille
+    // réelle se fond au lieu de claquer — même famille de retour que
+    // l'`opacity-70` des relectures, appliquée au premier montage du contenu.
+    // Navigateur sans @starting-style : apparition immédiate, comme avant.
+    <div
+      className={`transition-opacity motion-reduce:transition-none starting:opacity-0 ${snapshotReady ? "" : "opacity-70"}`}
+    >
       <Suspense fallback={null}>
         <PaymentCancelledNotice />
       </Suspense>
