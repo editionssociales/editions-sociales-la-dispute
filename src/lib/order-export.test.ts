@@ -23,6 +23,7 @@ function address(overrides: Partial<OrderExportRow["shippingAddress"]> = {}) {
 function order(overrides: Partial<OrderExportRow> = {}): OrderExportRow {
   return {
     number: "CMD-000042",
+    orderType: "commande",
     createdAt: "2026-07-10T14:32:00.000Z",
     status: "paid",
     email: "jeanne@example.org",
@@ -35,6 +36,7 @@ function order(overrides: Partial<OrderExportRow> = {}): OrderExportRow {
     shippingCostTTC: 4.5,
     discountTTC: 0,
     couponCode: null,
+    stripeSessionId: "cs_123",
     stripePaymentIntentId: "pi_123",
     ...overrides,
   };
@@ -66,11 +68,11 @@ describe("formatPreparationCsv", () => {
   it("émet l'en-tête exact du profil AOE décalqué", () => {
     const csv = formatPreparationCsv([]);
     expect(csv).toBe(
-      "E-mail du client;Article #;UGS(ISBN);Nom;Quantité;Prix du produit;Code de coupon;Réduction\r\n",
+      "E-mail du client;Type;Article #;UGS(ISBN);Nom;Quantité;Prix du produit;Code de coupon;Réduction\r\n",
     );
   });
 
-  it("une ligne par ligne de commande, coupon/remise répétés sur chaque ligne", () => {
+  it("une ligne par ligne de commande, type/coupon/remise répétés sur chaque ligne", () => {
     const csv = formatPreparationCsv([
       order({
         email: "jeanne@example.org",
@@ -85,9 +87,22 @@ describe("formatPreparationCsv", () => {
     const lines = csv.trim().split("\r\n");
     expect(lines).toHaveLength(3); // en-tête + 2 lignes d'article
     expect(lines[1]).toBe(
-      "jeanne@example.org;101;9782360830001;Le Capital, livre 1;2;12,50;SOLIDAIRE10;2,50",
+      "jeanne@example.org;Commande;101;9782360830001;Le Capital, livre 1;2;12,50;SOLIDAIRE10;2,50",
     );
-    expect(lines[2]).toBe("jeanne@example.org;202;;Sans ISBN;1;8,00;SOLIDAIRE10;2,50");
+    expect(lines[2]).toBe("jeanne@example.org;Commande;202;;Sans ISBN;1;8,00;SOLIDAIRE10;2,50");
+  });
+
+  it("libellé « Précommande » quand orderType = precommande", () => {
+    const csv = formatPreparationCsv([
+      order({
+        orderType: "precommande",
+        lines: [
+          { bookId: 5, isbn: "9782000000005", title: "Livre à paraître", quantity: 1, unitPriceTTC: 20 },
+        ],
+      }),
+    ]);
+    const lines = csv.trim().split("\r\n");
+    expect(lines[1]).toBe("jeanne@example.org;Précommande;5;9782000000005;Livre à paraître;1;20,00;;0,00");
   });
 
   it("échappe un titre contenant le séparateur (RFC 4180)", () => {
@@ -113,6 +128,7 @@ describe("formatComptaCsv", () => {
     expect(csv.split("\r\n")[0]).toBe(
       [
         "N° commande",
+        "Type",
         "Date",
         "Statut",
         "Email",
@@ -133,20 +149,23 @@ describe("formatComptaCsv", () => {
         "Remise TTC",
         "Part TVA 5,5 % (calculée)",
         "Moyen de paiement",
+        "Session Stripe",
         "Référence Stripe (PaymentIntent)",
       ].join(";"),
     );
   });
 
-  it("une ligne par commande (pas par article), statut en libellé FR, TVA ventilée, moyen de paiement figé à Stripe", () => {
+  it("une ligne par commande (pas par article), type/statut en libellé FR, TVA ventilée, moyen de paiement figé à Stripe", () => {
     const csv = formatComptaCsv([
       order({
         number: "CMD-000042",
+        orderType: "precommande",
         createdAt: "2026-07-10T14:32:00.000Z",
         status: "shipped",
         totalTTC: 29.5,
         shippingCostTTC: 4.5,
         discountTTC: 0,
+        stripeSessionId: "cs_123",
         stripePaymentIntentId: "pi_abc",
         lines: [
           { bookId: 1, isbn: "9780000000001", title: "A", quantity: 1, unitPriceTTC: 25 },
@@ -158,12 +177,14 @@ describe("formatComptaCsv", () => {
     expect(lines).toHaveLength(2); // en-tête + 1 commande, quel que soit le nombre de lignes d'article
     const cells = lines[1].split(";");
     expect(cells[0]).toBe("CMD-000042");
-    expect(cells[1]).toBe("2026-07-10");
-    expect(cells[2]).toBe("Expédiée");
-    expect(cells.at(-2)).toBe("Stripe");
+    expect(cells[1]).toBe("Précommande");
+    expect(cells[2]).toBe("2026-07-10");
+    expect(cells[3]).toBe("Expédiée");
+    expect(cells.at(-3)).toBe("Stripe");
+    expect(cells.at(-2)).toBe("cs_123");
     expect(cells.at(-1)).toBe("pi_abc");
-    expect(cells[16]).toBe("29,50"); // Total TTC
-    expect(cells[19]).toBe(formatVatCell(29.5)); // Part TVA calculée
+    expect(cells[17]).toBe("29,50"); // Total TTC
+    expect(cells[20]).toBe(formatVatCell(29.5)); // Part TVA calculée
   });
 
   it("adresses de facturation distinctes de la livraison quand elles diffèrent", () => {
@@ -174,16 +195,28 @@ describe("formatComptaCsv", () => {
       }),
     ]);
     const cells = csv.trim().split("\r\n")[1].split(";");
-    // Colonnes livraison : index 4..9 ; facturation : 10..15 (cf. en-tête).
-    expect(cells[8]).toBe("Paris");
-    expect(cells[14]).toBe("Lyon");
-    expect(cells[10]).toBe("Autre Nom");
+    // Colonnes livraison : index 5..10 ; facturation : 11..16 (cf. en-tête).
+    expect(cells[9]).toBe("Paris");
+    expect(cells[15]).toBe("Lyon");
+    expect(cells[11]).toBe("Autre Nom");
   });
 
   it("statut inconnu retombe sur la valeur brute (jamais un libellé inventé)", () => {
     const csv = formatComptaCsv([order({ status: "on-hold-legacy" })]);
     const cells = csv.trim().split("\r\n")[1].split(";");
-    expect(cells[2]).toBe("on-hold-legacy");
+    expect(cells[3]).toBe("on-hold-legacy");
+  });
+
+  it("type inconnu retombe sur la valeur brute (jamais un libellé inventé)", () => {
+    const csv = formatComptaCsv([order({ orderType: "on-hold-legacy" })]);
+    const cells = csv.trim().split("\r\n")[1].split(";");
+    expect(cells[1]).toBe("on-hold-legacy");
+  });
+
+  it("stripeSessionId absent (null) → cellule vide, jamais une valeur inventée", () => {
+    const csv = formatComptaCsv([order({ stripeSessionId: null })]);
+    const cells = csv.trim().split("\r\n")[1].split(";");
+    expect(cells.at(-2)).toBe("");
   });
 });
 
