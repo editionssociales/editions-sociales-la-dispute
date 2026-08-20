@@ -9,6 +9,11 @@
  * Séparateur `;` et décimale `,` : convention CSV française — Excel/
  * LibreOffice en locale fr_FR ouvrent ce fichier directement (double-clic,
  * sans assistant d'import) sans ambiguïté avec le séparateur décimal.
+ *
+ * Scission précommande (client 2026-08-20, `Orders.ts`) : un panier mixte
+ * produit DEUX `Orders` pour un même paiement Stripe (une par `orderType`,
+ * même `stripeSessionId`) — `orderType` distingue les deux dans les deux
+ * profils, `stripeSessionId` (compta seule) permet de rapprocher la paire.
  */
 
 /** Même six statuts que `Orders.ts:status` — dupliqué ici en type large (string) pour ne pas coupler ce module pur aux types générés Payload. */
@@ -26,6 +31,19 @@ const STATUS_LABELS: Record<OrderExportStatus, string> = {
 
 function statusLabel(status: string): string {
   return STATUS_LABELS[status as OrderExportStatus] ?? status;
+}
+
+/** Mêmes deux valeurs que `Orders.ts:orderType` — dupliqué ici en type large (string) pour ne pas coupler ce module pur aux types générés Payload. */
+export type OrderExportOrderType = "commande" | "precommande";
+
+/** Libellés FR affichés au back-office (`Orders.ts`, options du champ `orderType`) — tenus manuellement en phase, comme `STATUS_LABELS`. */
+const ORDER_TYPE_LABELS: Record<OrderExportOrderType, string> = {
+  commande: "Commande",
+  precommande: "Précommande",
+};
+
+function orderTypeLabel(orderType: string): string {
+  return ORDER_TYPE_LABELS[orderType as OrderExportOrderType] ?? orderType;
 }
 
 /**
@@ -58,6 +76,8 @@ export interface OrderExportLine {
 
 export interface OrderExportRow {
   number: string;
+  /** `commande` | `precommande` (`Orders.ts:orderType`) — un panier mixte scinde un même paiement Stripe en deux `Orders`, une par type (client 2026-08-20). */
+  orderType: string;
   /** ISO 8601 — date de création (= date de paiement, la commande n'existe qu'une fois payée). */
   createdAt: string;
   status: string;
@@ -72,6 +92,8 @@ export interface OrderExportRow {
   /** Euros TTC. */
   discountTTC: number;
   couponCode: string | null;
+  /** Rapproche les deux commandes d'un même paiement scindé (panier mixte, client 2026-08-20) — module pur, donc nullable indépendamment de ce que garantit le schéma Payload actuel (`required: true`, `Orders.ts`). */
+  stripeSessionId: string | null;
   stripePaymentIntentId: string | null;
 }
 
@@ -117,6 +139,7 @@ function toCsv(header: readonly string[], rows: readonly (readonly string[])[]):
 
 const PREPARATION_HEADER = [
   "E-mail du client",
+  "Type",
   "Article #",
   "UGS(ISBN)",
   "Nom",
@@ -127,16 +150,20 @@ const PREPARATION_HEADER = [
 ] as const;
 
 /**
- * Profil « préparation » — décalque exact des colonnes du profil Advanced
- * Order Export réellement utilisé (plan §étape 10). Une ligne par ligne de
- * commande (le coupon et la remise, faits au niveau de la commande, sont
- * répétés sur chaque ligne — même aplatissement qu'AOE). L'appelant filtre en
- * amont sur `PREPARATION_ORDER_STATUSES` : ce module ne re-filtre pas.
+ * Profil « préparation » — décalque des colonnes du profil Advanced Order
+ * Export réellement utilisé (plan §étape 10), augmenté d'une colonne « Type »
+ * (commande/précommande, client 2026-08-20 — une précommande n'expédie pas au
+ * même rythme qu'une commande d'articles déjà parus, l'équipe préparation
+ * doit distinguer les deux piles). Une ligne par ligne de commande (le
+ * coupon, la remise ET le type, faits au niveau de la commande, sont répétés
+ * sur chaque ligne — même aplatissement qu'AOE). L'appelant filtre en amont
+ * sur `PREPARATION_ORDER_STATUSES` : ce module ne re-filtre pas.
  */
 export function formatPreparationCsv(orders: readonly OrderExportRow[]): string {
   const rows = orders.flatMap((order) =>
     order.lines.map((line) => [
       order.email,
+      orderTypeLabel(order.orderType),
       String(line.bookId),
       line.isbn ?? "",
       line.title,
@@ -151,6 +178,7 @@ export function formatPreparationCsv(orders: readonly OrderExportRow[]): string 
 
 const COMPTA_HEADER = [
   "N° commande",
+  "Type",
   "Date",
   "Statut",
   "Email",
@@ -171,6 +199,7 @@ const COMPTA_HEADER = [
   "Remise TTC",
   "Part TVA 5,5 % (calculée)",
   "Moyen de paiement",
+  "Session Stripe",
   "Référence Stripe (PaymentIntent)",
 ] as const;
 
@@ -183,10 +212,14 @@ function addressCells(address: OrderExportAddress): string[] {
  * bornes de dates appliquées en amont par l'appelant (`from`/`to`). Le moyen
  * de paiement est toujours « Stripe » : le checkout unifié (lot 2, étape 8)
  * n'a pas d'autre passerelle — pas un champ stocké, une constante du module.
+ * `Session Stripe` (colonne compta seule, absente en préparation) : un panier
+ * mixte scinde UN paiement en DEUX commandes de même `stripeSessionId`
+ * (client 2026-08-20) — permet à la compta de rapprocher la paire.
  */
 export function formatComptaCsv(orders: readonly OrderExportRow[]): string {
   const rows = orders.map((order) => [
     order.number,
+    orderTypeLabel(order.orderType),
     order.createdAt.slice(0, 10),
     statusLabel(order.status),
     order.email,
@@ -197,6 +230,7 @@ export function formatComptaCsv(orders: readonly OrderExportRow[]): string {
     formatAmount(order.discountTTC),
     formatAmount(computeVatPart(order.totalTTC)),
     "Stripe",
+    order.stripeSessionId ?? "",
     order.stripePaymentIntentId ?? "",
   ]);
   return toCsv(COMPTA_HEADER, rows);

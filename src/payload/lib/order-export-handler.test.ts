@@ -19,6 +19,7 @@ import { exportComptaHandler, exportPreparationHandler } from './order-export-ha
 interface FakeOrder {
   id: number
   number: string | null
+  orderType: string
   createdAt: string
   status: string
   email: string
@@ -35,6 +36,7 @@ interface FakeOrder {
   shippingCostTTC: number
   discountTTC: number | null
   promoCode: number | null
+  stripeSessionId: string | null
   stripePaymentIntentId: string | null
 }
 
@@ -42,6 +44,7 @@ function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
   return {
     id: 1,
     number: 'CMD-000001',
+    orderType: 'commande',
     createdAt: '2026-07-10T12:00:00.000Z',
     status: 'paid',
     email: 'client@exemple.test',
@@ -72,6 +75,7 @@ function order(overrides: Partial<FakeOrder> = {}): FakeOrder {
     shippingCostTTC: 0,
     discountTTC: 0,
     promoCode: null,
+    stripeSessionId: 'cs_test_1',
     stripePaymentIntentId: 'pi_test_1',
     ...overrides,
   }
@@ -252,5 +256,39 @@ describe('exportPreparationHandler / exportComptaHandler — réponse CSV', () =
     const { payload, findCalls } = fakePayload({ orders: [order({ promoCode: null })] })
     await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload }))
     expect(findCalls.some((c) => c.collection === 'promo-codes')).toBe(false)
+  })
+})
+
+describe('exportPreparationHandler / exportComptaHandler — mapping orderType/stripeSessionId (scission précommande)', () => {
+  it('mappe orderType en libellé FR dans le CSV préparation', async () => {
+    const { payload } = fakePayload({ orders: [order({ orderType: 'precommande' })] })
+    const res = await exportPreparationHandler(req(URL_PREP, { user: { role: 'admin' }, payload }))
+    const csv = await res.text()
+    expect(csv).toContain('Précommande')
+  })
+
+  it("n'expose PAS stripeSessionId dans le CSV préparation (colonne compta uniquement, rapprochement)", async () => {
+    const { payload } = fakePayload({ orders: [order({ stripeSessionId: 'cs_should_not_leak' })] })
+    const res = await exportPreparationHandler(req(URL_PREP, { user: { role: 'admin' }, payload }))
+    const csv = await res.text()
+    expect(csv).not.toContain('cs_should_not_leak')
+  })
+
+  it('mappe orderType (libellé FR) et stripeSessionId dans le CSV compta', async () => {
+    const { payload } = fakePayload({
+      orders: [order({ orderType: 'precommande', stripeSessionId: 'cs_split_1' })],
+    })
+    const res = await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload }))
+    const csv = await res.text()
+    expect(csv).toContain('Précommande')
+    expect(csv).toContain('cs_split_1')
+  })
+
+  it('stripeSessionId absent (null) → cellule vide dans le CSV compta, jamais "null"/"undefined"', async () => {
+    const { payload } = fakePayload({ orders: [order({ stripeSessionId: null })] })
+    const res = await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload }))
+    const csv = await res.text()
+    expect(csv).not.toContain('null')
+    expect(csv).not.toContain('undefined')
   })
 })

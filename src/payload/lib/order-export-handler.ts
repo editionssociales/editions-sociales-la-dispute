@@ -95,6 +95,7 @@ async function fetchOrdersForExport(payload: Payload, opts: FetchOrdersOptions):
 
   return docs.map((order) => ({
     number: order.number ?? `#${order.id}`,
+    orderType: order.orderType,
     createdAt: order.createdAt,
     status: order.status,
     email: order.email,
@@ -111,6 +112,7 @@ async function fetchOrdersForExport(payload: Payload, opts: FetchOrdersOptions):
     shippingCostTTC: order.shippingCostTTC,
     discountTTC: order.discountTTC ?? 0,
     couponCode: typeof order.promoCode === 'number' ? (codeById.get(order.promoCode) ?? null) : null,
+    stripeSessionId: order.stripeSessionId,
     stripePaymentIntentId: order.stripePaymentIntentId ?? null,
   }))
 }
