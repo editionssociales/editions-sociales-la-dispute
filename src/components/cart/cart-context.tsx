@@ -138,11 +138,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     },
     [mutate, announce],
   );
+  // Annonces symétriques d'`addToCart` : sans elles, le stepper et le bouton
+  // « Retirer » de `cart-view.tsx` mutaient le panier en silence pour les
+  // technologies d'assistance, alors que la région live existait juste à côté.
   const setLineQty = useCallback(
-    (id: number, qty: number) => mutate((s) => setLineQtyCore(s, id, qty)),
-    [mutate],
+    (id: number, qty: number) => {
+      mutate((s) => setLineQtyCore(s, id, qty));
+      announce("Quantité mise à jour.");
+    },
+    [mutate, announce],
   );
-  const removeFromCart = useCallback((id: number) => mutate((s) => removeFromCartCore(s, id)), [mutate]);
+  const removeFromCart = useCallback(
+    (id: number) => {
+      mutate((s) => removeFromCartCore(s, id));
+      announce("Article retiré du panier.");
+    },
+    [mutate, announce],
+  );
   const clearCart = useCallback(() => mutate(() => clearCartCore()), [mutate]);
 
   const value: CartContextValue = {
