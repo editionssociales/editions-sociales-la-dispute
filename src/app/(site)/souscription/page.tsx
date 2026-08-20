@@ -9,7 +9,7 @@ import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { RAIL_GRID_CLASS, RAIL_GRID_TRANSITION_CLASS } from "@/components/rail-inset";
-import { POP_BG, POP_ORDER } from "@/components/pop-palette";
+import { POP_BG } from "@/components/pop-palette";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getNewReleases } from "@/lib/catalogue";
@@ -91,31 +91,6 @@ import { TiersDrawer } from "./_components/tiers-drawer";
  * dérivés de `DONATION_TIERS` (la table qui pilote Stripe) : la présentation
  * est éditable, jamais le paiement.
  */
-
-/**
- * Liseré multicolore qui clôt le bloc de collecte : les quatre couleurs du
- * site dans leur ordre canonique (`POP_ORDER`, `pop-palette.ts`) — depuis le
- * retour Clara du 2026-08-07, cette palette n'est plus l'exception de la page
- * mais SA palette (bandeaux du récit, escalier des objectifs, cartes du rail,
- * jauge et liseré de collecte) : les accents de couverture navy/bottle/ocher/
- * brick ont quitté /souscription.
- *
- * Ses coupes ne sont plus quatre parts égales mais les ABSCISSES DE LA JAUGE,
- * sur l'empan total de la demi-droite (120 k€ = objectif × 1,2) : 0-50 k
- * (41,666 %), 50-80 k (25 %), 80-100 k (16,667 %), puis le dépassement
- * 100-120 k (16,667 %) — d'où `POP_COLS`, mêmes nombres en `fr`. Rime
- * STRUCTURELLE : le liseré répète la géométrie de la barre, jamais sa donnée
- * vivante (il reste décoratif — R2, aria-hidden — et ne bouge pas d'un pixel
- * avec la collecte). En `fr` plutôt qu'en pourcentages : la grille répartit
- * l'arrondi elle-même, quatre largeurs en % laisseraient un jour sous-pixel
- * au bout du liseré.
- *
- * La queue en pointillés de la jauge n'a PAS d'écho ici : elle ne commence
- * qu'à 105 k€ (87,5 % de l'empan), pas au palier — un dernier segment tireté
- * copierait une coupe qui n'existe pas.
- */
-const POP_LISERE = POP_ORDER.map((c) => POP_BG[c]);
-const POP_COLS = "grid-cols-[41.666fr_25fr_16.667fr_16.667fr]";
 
 /**
  * Vidéo de présentation — ouvre le corps de texte (retour client
@@ -478,16 +453,6 @@ export default async function SouscriptionPage() {
               </ImpactFrame>
             </Reveal>
           </Container>
-          {/* Liseré des quatre couleurs du site en pied de bloc, posé sur la
-              couture avec la section suivante (vidéo sur ink quand elle est
-              livrée, ask sur paper sinon). Décoratif pur (aria-hidden). Coupé
-              aux abscisses des paliers (cf. POP_COLS) : le pied du bloc rime
-              avec la barre qui le surmonte. */}
-          <div className={`grid ${POP_COLS}`} aria-hidden="true">
-            {POP_LISERE.map((c) => (
-              <div key={c} className={`h-1.5 ${c}`} />
-            ))}
-          </div>
         </section>
 
         {/* 2 ▪ Vidéo de présentation — OUVRE le corps de texte quand une
