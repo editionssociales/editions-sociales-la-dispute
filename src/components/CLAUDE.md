@@ -15,18 +15,18 @@ données ni le routage.
 
 ## Local Contracts
 
-- **Serveur par défaut** : seulement Navigation, Carrousels, Métriques, Formulaires, Étagères 3D, Feuille mobile, Mosaïque et Panier portent `"use client"` — exceptions documentées en code. `nav-accent.ts`/`rail-inset.ts`/`pop-palette.ts` restent plats, importables des deux arbres.
+- **Serveur par défaut** : seulement Navigation, Carrousels, Métriques, Formulaires, Étagères 3D, Feuille mobile, Mosaïque, Panier et Témoins de transition (`catalogue-transition.tsx` — estompage compteur+grille pendant un filtre ; `link-pending-hint.tsx` — témoin `useLinkStatus` de pagination/mosaïque) portent `"use client"` — exceptions documentées en code. `nav-accent.ts`/`rail-inset.ts`/`pop-palette.ts` restent plats, importables des deux arbres.
 - **Repli e-mail** : l'adresse publique (`src/lib/contact-address`) reste visible en permanence ; Brevo absent ⇒ `mailto:` seul ; `contact-form` renvoie le fallback dans son état.
 - **Déroulés** (header mobile, mosaïque) : bouton `aria-expanded` porte l'état, chevron tourne, repli par `inert` jamais `visibility`, focus suit la bascule. Verrouillé par tests (`mosaic-disclosure.test.tsx`).
-- **Header** : layout unique sous `lg` avec panier+menu en case de droite ; sur /souscription le rail compact force la marge du header — source unique `rail-inset.ts` pour header/grille/rail (380px + 10px liseré).
-- **Fenêtre glissante (mobile+desktop)** : `BottomSheet` (sous `lg`, bandeau 56px auto-repliable, glissé doigt) et `TiersDrawer` (à `lg+`, colonne 380px/0, mêmes transitions 540ms) — un geste, deux régimes. Commentaires détaillés en code (`bottom-sheet.tsx`, `tiers-drawer.tsx`, `rail-inset.ts`). `--rail-open` publié sur `documentElement`, fail-open à 1.
-- **Panier** : puce ajout cellule voisine du lien (jamais enfant), une région live unique pour annonce, retour visuel + aria couplés.
+- **Header** : layout unique sous `lg` avec panier+menu en case de droite ; sur /souscription le rail compact force la marge du header — source unique `rail-inset.ts` pour header/grille/rail (380px).
+- **Fenêtre glissante (mobile+desktop)** : `BottomSheet` (sous `lg`, bandeau 80px auto-repliable, glissé doigt) et `TiersDrawer` (à `lg+`, colonne 380px/0, mêmes transitions 540ms) — un geste, deux régimes. Commentaires détaillés en code (`bottom-sheet.tsx`, `tiers-drawer.tsx`, `rail-inset.ts`). `--rail-open` publié sur `documentElement`, fail-open à 1.
+- **Panier** : puce ajout cellule voisine du lien (jamais enfant), une région live unique pour annonce, retour visuel + aria couplés. L'ajout lance un vol vers la cible panier VISIBLE du header (`cart/fly-to-cart.tsx` — cibles marquées `cartFlyTarget`, repli sur la bascule du menu mobile fermé) ; décoratif, donc coupé sous reduced-motion, contrairement à `LAYER_MORPH`.
 - **Métriques** (reveal, count-up, gauge) : fail-open serveur visible, masquage+animation post-hydratation seulement. `ImpactFrame` optionnel pour synchronisation frame.
 - **Constitution graphique** (R1-R8) : ink/paper seul, quatre pops claires, traits orange/orange-text, anneaux focus LIGHT/DARK composables, typo fermée. Commentaires détaillés en code.
 
 ## Ubiquitous Language
 
-- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid`, `Button`, `PageHero` (titre + chapeau seuls), `LibelleMosaic` (UNIQUE vue des libellés pour /catalogue, étages triés par rang, arithmétique en `libelle-mosaic-core.ts`, cf. code pour détails).
+- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid`, `Button`, `PageHero` (titre + chapeau seuls), `LibelleMosaic` (UNIQUE vue des libellés pour /catalogue, étages triés par rang, arithmétique en `libelle-mosaic-core.ts`, cf. code pour détails), `BookPageFallback` (squelette partagé des `loading.tsx` de fiche livre/boutique), `NewTabMark` (glyphe ↗ + `sr-only` de tout lien `target="_blank"`).
 
 ## Decisions
 
