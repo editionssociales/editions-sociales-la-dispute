@@ -37,16 +37,18 @@ import { FOCUS_RING_INVERTING } from "@/lib/ui";
  */
 
 /**
- * Hauteur du bandeau, seule partie visible replié — FIXE, 3.5rem (`h-14`,
- * cible R7 ≥ 44px). La classe de repli, la réserve posée sur `body` et la
- * course de glissé partagent cette valeur et DOIVENT rester en phase.
+ * Hauteur du bandeau, seule partie visible replié — FIXE, 5rem (`h-20`,
+ * cible R7 ≥ 44px ; 3.5rem à l'origine, montée le 2026-08-20 sur retour
+ * client : les paliers restaient trop peu visibles sur téléphone). La classe
+ * de repli (`translate-y-[calc(100%-5rem)]`), la réserve posée sur `body` et
+ * la course de glissé partagent cette valeur et DOIVENT rester en phase.
  *
  * Ne JAMAIS y remettre `env(safe-area-inset-bottom)` (essayé le 26/07, retiré
  * le jour même sur constat client) : iOS Safari renvoie 0 barre d'outils
  * déployée et ~34px une fois qu'elle s'escamote au défilement — le bandeau
  * changeait donc de taille selon l'état « plein écran » du navigateur.
  */
-const HANDLE_PX = 56;
+const HANDLE_PX = 80;
 
 /** Sous le point de rupture `lg` de Tailwind (1024px) exclusivement. */
 const MOBILE_QUERY = "(max-width: 1023.98px)";
@@ -285,7 +287,7 @@ export function BottomSheet({
             "transition-transform duration-[540ms] ease-[cubic-bezier(0.65,0,0.35,1)]"
       } ${
         !dragging && !open
-          ? "translate-y-[calc(100%-3.5rem)]"
+          ? "translate-y-[calc(100%-5rem)]"
           : ""
       }`}
       // Position PENDANT le geste : le doigt mène, aucune transition ne s'interpose.
@@ -302,7 +304,7 @@ export function BottomSheet({
         onPointerCancel={endGesture}
         // touch-none : le navigateur ne doit pas voler le geste vertical pour
         // défiler la page pendant qu'on tire la feuille.
-        className={`flex h-14 w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange ${FOCUS_RING_INVERTING} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
+        className={`flex h-20 w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1.5 bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange ${FOCUS_RING_INVERTING} cursor-grab transition-colors duration-200 ease-out active:cursor-grabbing motion-reduce:transition-none`}
       >
         {/* Poignée (grip) — barre pleine aux angles droits (R8), à la couleur
             du texte pour survivre à l'inversion au survol. */}
