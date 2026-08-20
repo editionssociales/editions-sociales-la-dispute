@@ -82,9 +82,24 @@ export const getAllBooks = cache(async (): Promise<Book[]> => {
   return buildNativeCatalogue(rawByEdition, boutiqueOnly);
 });
 
+/**
+ * Jeu de fiches pour les vues catalogue (grille, facettes, nouveautés,
+ * à-paraître) : exclut les articles boutique-seuls — règle client
+ * 2026-08-20, les goodies (`origin: "boutique"`) ne doivent JAMAIS apparaître
+ * dans ces vues, uniquement sur leurs surfaces propres (fiche
+ * `/boutique/[slug]`, suggestions « Nos goodies » du panier, sitemap).
+ * Seul point d'entrée de `getBooks`/`getFacets` (donc de `getNewReleases` et
+ * `catalogueView`, dérivés des deux) — `getAllBooks` reste inchangé pour le
+ * panier/checkout, qui doivent valider des lignes goodies.
+ */
+async function getCatalogueBooks(): Promise<Book[]> {
+  const all = await getAllBooks();
+  return all.filter((b) => b.origin === "catalogue");
+}
+
 /** Applique filtres + tri (pagination gérée par l'appelant). */
 export async function getBooks(filters: BookFilters = {}): Promise<Book[]> {
-  return queryBooks(await getAllBooks(), filters);
+  return queryBooks(await getCatalogueBooks(), filters);
 }
 
 export async function getNewReleases(limit = 8): Promise<Book[]> {
@@ -94,7 +109,7 @@ export async function getNewReleases(limit = 8): Promise<Book[]> {
 export async function getFacets(
   filters: BookFilters = {},
 ): Promise<{ libelles: Facet[]; authors: Facet[]; total: number }> {
-  return computeFacets(await getAllBooks(), filters);
+  return computeFacets(await getCatalogueBooks(), filters);
 }
 
 /** Vue catalogue complète (livres paginés + facettes) pour une page donnée. */
