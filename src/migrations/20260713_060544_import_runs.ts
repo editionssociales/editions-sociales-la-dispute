@@ -19,11 +19,13 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+  // Détache `payload_locked_documents_rels` AVANT le DROP TABLE : le CASCADE
+  // emporte la FK, un DROP CONSTRAINT explicite placé après échoue sur une
+  // contrainte déjà disparue (même ordre que `20260722_223000_rencontres.ts`).
   await db.execute(sql`
-   ALTER TABLE "payload"."import_runs" DISABLE ROW LEVEL SECURITY;
-  DROP TABLE "payload"."import_runs" CASCADE;
-  ALTER TABLE "payload"."payload_locked_documents_rels" DROP CONSTRAINT "payload_locked_documents_rels_import_runs_fk";
-  
+   ALTER TABLE "payload"."payload_locked_documents_rels" DROP CONSTRAINT "payload_locked_documents_rels_import_runs_fk";
   DROP INDEX "payload"."payload_locked_documents_rels_import_runs_id_idx";
-  ALTER TABLE "payload"."payload_locked_documents_rels" DROP COLUMN "import_runs_id";`)
+  ALTER TABLE "payload"."payload_locked_documents_rels" DROP COLUMN "import_runs_id";
+  ALTER TABLE "payload"."import_runs" DISABLE ROW LEVEL SECURITY;
+  DROP TABLE "payload"."import_runs" CASCADE;`)
 }
