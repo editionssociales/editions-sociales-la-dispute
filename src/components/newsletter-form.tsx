@@ -70,7 +70,10 @@ export function NewsletterForm() {
           placeholder="vous@exemple.fr"
           aria-invalid={emailInvalid ? true : undefined}
           aria-describedby={emailInvalid ? `${emailId}-status` : undefined}
-          className={`min-w-0 flex-1 bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 ${FOCUS_RING_LIGHT}`}
+          // Bordure transparente PERMANENTE (aucun saut de boîte à l'erreur),
+          // révélée en brick par `aria-invalid:` — même signal que les champs
+          // de `contact-form.tsx`, dans la couleur d'erreur établie.
+          className={`min-w-0 flex-1 border-2 border-transparent bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 aria-invalid:border-brick ${FOCUS_RING_LIGHT}`}
         />
 
         {/* Honeypot — champ additif, masqué visuellement ET des lecteurs d'écran ; un bot qui remplit tous les champs qu'il trouve s'y fait piéger. Doit rester vide. */}

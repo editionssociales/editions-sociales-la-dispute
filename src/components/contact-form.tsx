@@ -21,8 +21,11 @@ import { CONTACT_INITIAL_STATE } from "@/app/(site)/contact/state";
  * best-effort côté client) et même mention RGPD.
  */
 
+// `aria-invalid:border-brick` : le champ fautif porte déjà `aria-invalid`
+// (posé plus bas) — la même donnée pilote enfin un signal VISIBLE, dans le
+// brick déjà établi comme couleur d'erreur (régions d'état `border-brick`).
 const FIELD_CLASS =
-  "border-2 border-ink bg-paper px-3 py-2 font-sans text-sm text-ink placeholder:text-ink/40 outline-none " +
+  "border-2 border-ink bg-paper px-3 py-2 font-sans text-sm text-ink placeholder:text-ink/40 outline-none aria-invalid:border-brick " +
   FOCUS_RING_LIGHT;
 const LABEL_CLASS = "font-sans text-xs font-bold uppercase tracking-[.06em] text-ink";
 
@@ -54,6 +57,18 @@ export function ContactForm() {
       setRenderedAt(Date.now());
     }
     resetFormOnSuccess();
+  }, [state]);
+
+  useEffect(() => {
+    // Erreur de champ → focus du champ fautif : il porte déjà `aria-invalid`
+    // et `aria-describedby` vers la région d'état, le clavier repart d'où
+    // corriger au lieu de chercher dans un formulaire long. Les erreurs sans
+    // champ (`too-fast`, échec d'envoi) ne déplacent pas le focus.
+    function focusErroredField() {
+      if (state.status !== "error" || !state.field) return;
+      document.getElementById(`contact-${state.field}`)?.focus();
+    }
+    focusErroredField();
   }, [state]);
 
   const erroredField = state.status === "error" ? state.field : undefined;
