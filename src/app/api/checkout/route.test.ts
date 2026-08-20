@@ -96,6 +96,7 @@ function book(overrides: Partial<FakeBook> = {}): FakeBook {
     sellable: true,
     stock: 10,
     reducedShippingFlag: false,
+    preorderEnabled: false,
     ...overrides,
   };
 }
@@ -341,5 +342,111 @@ describe("POST /api/checkout — session Stripe (cas nominal)", () => {
     );
     const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
     expect(res.status).toBe(502);
+  });
+});
+
+describe("POST /api/checkout — précommande et scission (client 2026-08-20)", () => {
+  it("livre à paraître SANS preorderEnabled → 422, message « n'est pas encore paru » (refus corrigé)", async () => {
+    books = { 12: book({ publishedAt: "2099-01-01" }) };
+    const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
+    expect(res.status).toBe(422);
+    const body = await json(res);
+    expect(body.refusals).toEqual([
+      { id: 12, reason: "not-sellable", message: "« Le Capital » n'est pas encore paru." },
+    ]);
+  });
+
+  it("panier HOMOGÈNE précommande (livre à paraître + preorderEnabled) → session créée, `metadata[lines]` vide, `preorderLines` peuplée", async () => {
+    books = { 12: book({ publishedAt: "2099-01-01", preorderEnabled: true }) };
+    const res = await POST(request({ lines: [{ id: 12, qty: 2 }], zone: "FR" }));
+    expect(res.status).toBe(200);
+    expect(lastSessionBody?.get("metadata[lines]")).toBe("");
+    expect(lastSessionBody?.get("metadata[preorderLines]")).toBe("12:2:1500");
+    expect(lastSessionBody?.get("line_items[0][price_data][product_data][name]")).toBe(
+      "Le Capital (précommande)",
+    );
+    // Un seul envoi (panier homogène) — pas de suffixe « — précommande » sur le libellé de port.
+    expect(lastSessionBody?.get("line_items[1][price_data][product_data][name]")).toBe("Livraison");
+  });
+
+  it("panier MIXTE (une ligne parue + une ligne précommande) → DEUX lignes de port au MÊME tarif, metadata scindées", async () => {
+    books = {
+      12: book({ priceEuros: 20 }), // paru
+      13: book({ title: "À paraître", priceEuros: 10, publishedAt: "2099-01-01", preorderEnabled: true }),
+    };
+    const res = await POST(
+      request({
+        lines: [
+          { id: 12, qty: 1 },
+          { id: 13, qty: 1 },
+        ],
+        zone: "FR",
+      }),
+    );
+    expect(res.status).toBe(200);
+    // Combiné 30€ → tranche 25-49€ → 5,50€ par envoi (barème résolu sur le panier ENTIER).
+    expect(lastSessionBody?.get("metadata[shippingCostCents]")).toBe("550");
+    expect(lastSessionBody?.get("metadata[lines]")).toBe("12:1:2000");
+    expect(lastSessionBody?.get("metadata[preorderLines]")).toBe("13:1:1000");
+
+    // 1 ligne normale + 1 ligne précommande + 2 lignes de port = 4 lignes.
+    expect(lastSessionBody?.get("line_items[0][price_data][product_data][name]")).toBe("Le Capital");
+    expect(lastSessionBody?.get("line_items[1][price_data][product_data][name]")).toBe(
+      "À paraître (précommande)",
+    );
+    expect(lastSessionBody?.get("line_items[2][price_data][product_data][name]")).toBe(
+      "Livraison — commande",
+    );
+    expect(lastSessionBody?.get("line_items[2][price_data][unit_amount]")).toBe("550");
+    expect(lastSessionBody?.get("line_items[3][price_data][product_data][name]")).toBe(
+      "Livraison — précommande",
+    );
+    expect(lastSessionBody?.get("line_items[3][price_data][unit_amount]")).toBe("550");
+    expect(lastSessionBody?.get("line_items[4]")).toBeNull();
+
+    // Le client paie donc 2× le tarif du palier « total » (règle 3, client 2026-08-20).
+    // amount_total simulé par msw (200) n'est pas vérifié ici — cette route ne
+    // fait pas confiance à son propre calcul pour l'affichage, seule la
+    // composition de la requête Stripe est vérifiée (contrat de ce fichier).
+  });
+
+  it("panier mixte + code promo fixed_cart → remise répartie entre `discountCents` (normal) et `preorderDiscountCents`", async () => {
+    books = {
+      12: book({ priceEuros: 20 }),
+      13: book({ title: "À paraître", priceEuros: 10, publishedAt: "2099-01-01", preorderEnabled: true }),
+    };
+    promoCodes.AGREG2027 = {
+      id: 3,
+      code: "AGREG2027",
+      type: "fixed_cart",
+      amount: 9,
+      minCart: null,
+      expiresAt: null,
+      active: true,
+    };
+    const res = await POST(
+      request({
+        lines: [
+          { id: 12, qty: 1 },
+          { id: 13, qty: 1 },
+        ],
+        zone: "FR",
+        promoCode: "AGREG2027",
+      }),
+    );
+    expect(res.status).toBe(200);
+    // normal 2000 / preorder 1000, combiné 3000, remise 900 → prorata 600/300.
+    expect(lastSessionBody?.get("metadata[discountCents]")).toBe("600");
+    expect(lastSessionBody?.get("metadata[preorderDiscountCents]")).toBe("300");
+    // Un seul coupon Stripe, sur le montant COMBINÉ.
+    expect(couponCalls).toBe(1);
+    expect(lastCouponBody?.get("amount_off")).toBe("900");
+  });
+
+  it("précommande épuisée (stock 0) → 422, refusée comme n'importe quelle ligne", async () => {
+    books = { 12: book({ publishedAt: "2099-01-01", preorderEnabled: true, stock: 0 }) };
+    const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
+    expect(res.status).toBe(422);
+    expect(sessionCalls).toBe(0);
   });
 });

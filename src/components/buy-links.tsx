@@ -67,6 +67,24 @@ export function BuyLinksList({ book }: { book: Book }) {
     );
   }
 
+  // Précommande (client 2026-08-20) : à paraître MAIS « Ouvert à la
+  // précommande » coché — même bouton panier natif qu'`available`
+  // (`canAddToCart`, `cart-core.ts`), microcopie de date au lieu de « en
+  // stock » (rien n'est en stock avant la parution) ; la scission
+  // commande/précommande n'a lieu qu'à l'encaissement (`cart-quote.ts`).
+  if (book.status === "preorder") {
+    return (
+      <div>
+        {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
+        <AddToCartButton id={book.id} className="mt-3 w-full" label="Précommander" />
+        <p className={MICROCOPY_CLASS}>
+          Expédié à parution
+          {book.publishedAt ? ` — le ${formatDateFr(book.publishedAt)}` : ""}
+        </p>
+      </div>
+    );
+  }
+
   if (book.status === "unavailable") {
     return (
       <div>

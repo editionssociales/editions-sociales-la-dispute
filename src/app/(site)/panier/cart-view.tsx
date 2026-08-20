@@ -219,6 +219,14 @@ function CartLineRow({
         >
           {line.title}
         </Link>
+        {/* Micro-label précommande (client 2026-08-20) — même DA que les
+            badges de statut du catalogue (`book-card.tsx`), signale AVANT le
+            checkout qu'une ligne ira dans une commande séparée. */}
+        {line.purchasable && line.isPreorder && (
+          <span className="inline-flex w-fit flex-none border-b-2 border-r-2 border-ink bg-pop-orange px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
+            Précommande
+          </span>
+        )}
         {!line.purchasable && (
           <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-brick">
             Indisponible — exclu du calcul, retirez-le si besoin.
@@ -352,8 +360,28 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
     });
   }
 
-  const { shipping, totals, freeShippingCoupon } = computeCartQuote({
-    subtotalCents: summary.subtotalCents,
+  // Scission commande/précommande (client 2026-08-20) : sous-totaux par
+  // partie dérivés des lignes `purchasable` (reflet exact de ce que
+  // `/api/checkout` scindera à l'encaissement, cf. `checkout-core.ts:
+  // splitValidatedLines`) — même filtre `purchasable` que `summary.subtotalCents`,
+  // jamais une ligne indisponible comptée dans un total.
+  const { normalSubtotalCents, preorderSubtotalCents, hasNormalLines, hasPreorderLines } = useMemo(() => {
+    const purchasable = summary.lines.filter((l) => l.purchasable);
+    const normal = purchasable.filter((l) => !l.isPreorder);
+    const preorder = purchasable.filter((l) => l.isPreorder);
+    return {
+      normalSubtotalCents: normal.reduce((sum, l) => sum + l.lineTotalCents, 0),
+      preorderSubtotalCents: preorder.reduce((sum, l) => sum + l.lineTotalCents, 0),
+      hasNormalLines: normal.length > 0,
+      hasPreorderLines: preorder.length > 0,
+    };
+  }, [summary.lines]);
+
+  const { shipping, totals, freeShippingCoupon, split } = computeCartQuote({
+    normalSubtotalCents,
+    preorderSubtotalCents,
+    hasNormalLines,
+    hasPreorderLines,
     zone,
     manifestOnly: summary.manifestOnly,
     promoEval: promoResult,
@@ -549,11 +577,23 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
           )}
 
           <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
-            Port ({zone})
+            Port ({zone}){split && shipping.ok ? " — 2 envois" : ""}
           </dt>
           <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
-            {shipping.ok ? euros(shipping.costCents) : "—"}
+            {shipping.ok ? euros(totals.shippingCents ?? 0) : "—"}
           </dd>
+
+          {/* Panier mixte (client 2026-08-20) : le total de port ci-dessus
+              cumule DEUX envois au même tarif — annoncé ici en toutes
+              lettres pour que le montant ne semble jamais doublé par erreur. */}
+          {split && shipping.ok && (
+            <div className="col-span-2 bg-paper px-3.5 pb-2.5">
+              <p className="font-sans text-xs text-muted">
+                2 envois — frais d’expédition par envoi ({euros(shipping.costCents)} chacun) : un
+                colis pour les articles parus, un colis pour la précommande.
+              </p>
+            </div>
+          )}
 
           <dt className="bg-paper px-3.5 py-2.5 font-sans text-sm font-black uppercase tracking-[.04em] text-ink">
             Total TTC

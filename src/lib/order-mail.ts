@@ -43,6 +43,13 @@ export interface OrderMailPayload {
   discountTTC: number;
   /** Euros TTC. */
   totalTTC: number;
+  /**
+   * `"precommande"` → sujet/en-tête/bandeau dédiés (scission panier, client
+   * 2026-08-20) : « Précommande — expédiée à parution » plutôt que le texte
+   * de préparation habituel. Absent ou `"commande"` = gabarit historique
+   * inchangé (rétrocompatible avec tout appelant qui ne le pose pas).
+   */
+  orderType?: "commande" | "precommande";
 }
 
 export interface OrderMailer {
@@ -121,10 +128,13 @@ const DISCOUNT_LABEL = "Remise";
 const TOTAL_LABEL = "Total TTC (TVA 5,5 % incluse)";
 const SHIPPING_NOTE =
   "Votre commande est en cours de préparation ; nous vous informerons dès son expédition.";
-const introSentence = (orderNumberMarkup: string) =>
-  `Nous avons bien reçu votre commande ${orderNumberMarkup}. Merci de votre confiance.`;
-const contactSentence = (emailMarkup: string) =>
-  `Une question sur votre commande ? Écrivez-nous à ${emailMarkup} — nous vous répondrons avec plaisir.`;
+/** Précommande (scission panier, client 2026-08-20) : ne promet pas un délai de préparation qui n'a pas commencé — l'expédition suit la parution, pas la commande. */
+const PREORDER_NOTE = "Précommande — expédiée à parution ; nous vous informerons dès son expédition.";
+const isPreorderPayload = (payload: OrderMailPayload) => payload.orderType === "precommande";
+const introSentence = (orderNumberMarkup: string, preorder: boolean) =>
+  `Nous avons bien reçu votre ${preorder ? "précommande" : "commande"} ${orderNumberMarkup}. Merci de votre confiance.`;
+const contactSentence = (emailMarkup: string, preorder: boolean) =>
+  `Une question sur votre ${preorder ? "précommande" : "commande"} ? Écrivez-nous à ${emailMarkup} — nous vous répondrons avec plaisir.`;
 
 /**
  * Rendu texte brut (multipart, `textContent`) — mêmes phrases que le HTML
@@ -133,19 +143,20 @@ const contactSentence = (emailMarkup: string) =>
  * accessibilité.
  */
 function renderOrderConfirmationText(payload: OrderMailPayload): string {
+  const preorder = isPreorderPayload(payload);
   const lines = payload.lines
     .map((l) => `- ${l.titleSnapshot} ×${l.quantity} — ${euros(l.unitPriceTTC)}`)
     .join("\n");
   return [
     "Bonjour,",
-    introSentence(payload.orderNumber),
+    introSentence(payload.orderNumber, preorder),
     "RÉCAPITULATIF\n" +
       lines +
       `\n${SHIPPING_LABEL} : ${euros(payload.shippingCostTTC)}` +
       (payload.discountTTC > 0 ? `\n${DISCOUNT_LABEL} : -${euros(payload.discountTTC)}` : "") +
       `\n${TOTAL_LABEL} : ${euros(payload.totalTTC)}`,
-    SHIPPING_NOTE,
-    contactSentence(CONTACT_EMAIL),
+    preorder ? PREORDER_NOTE : SHIPPING_NOTE,
+    contactSentence(CONTACT_EMAIL, preorder),
     `Consulter le site : ${SITE_URL}`,
     "Les Éditions sociales × La Dispute",
   ].join("\n\n");
@@ -156,6 +167,7 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
   html: string;
   text: string;
 } {
+  const preorder = isPreorderPayload(payload);
   const orderNumber = escapeHtml(payload.orderNumber);
   const rows = payload.lines.map(lineRow).join("");
   const totals =
@@ -170,7 +182,7 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     // Corps.
     `<tr><td style="padding-bottom:20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${INK};">` +
     `Bonjour,<br />` +
-    `Nous avons bien reçu votre commande <strong>${orderNumber}</strong>. Merci de votre confiance.` +
+    `Nous avons bien reçu votre ${preorder ? "précommande" : "commande"} <strong>${orderNumber}</strong>. Merci de votre confiance.` +
     `</td></tr>` +
     // Encadré récapitulatif — bordure 2px ink.
     `<tr><td style="border:2px solid ${INK};padding:16px;">` +
@@ -189,13 +201,15 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     totals +
     `</table>` +
     `</td></tr>` +
-    // Expédition — texte prudent, aucun délai promis.
+    // Expédition — texte prudent, aucun délai promis. Précommande (client
+    // 2026-08-20) : bandeau dédié, jamais le texte de préparation habituel
+    // (rien n'est « en préparation » avant la parution).
     `<tr><td style="padding:20px 0 20px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${INK};">` +
-    `Votre commande est en cours de préparation ; nous vous informerons dès son expédition.` +
+    (preorder ? PREORDER_NOTE : SHIPPING_NOTE) +
     `</td></tr>` +
     // Contact.
     `<tr><td style="padding-bottom:24px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${MUTED};">` +
-    `Une question sur votre commande ? Écrivez-nous à ` +
+    `Une question sur votre ${preorder ? "précommande" : "commande"} ? Écrivez-nous à ` +
     `<a href="mailto:${CONTACT_EMAIL}" style="color:${INK};">${CONTACT_EMAIL}</a> — nous vous répondrons avec plaisir.` +
     `</td></tr>` +
     // CTA — même recette que « Nous soutenir » (`site-header.tsx` : fond ink, texte paper, extrabold italique majuscule).
@@ -215,14 +229,18 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     `</td></tr>`;
 
   const html = renderMailShell({
-    documentTitle: "Confirmation de commande",
-    preheader: `Votre commande ${orderNumber} est confirmée.`,
-    heading: "COMMANDE CONFIRMÉE",
+    documentTitle: preorder ? "Confirmation de précommande" : "Confirmation de commande",
+    preheader: preorder
+      ? `Votre précommande ${orderNumber} est confirmée.`
+      : `Votre commande ${orderNumber} est confirmée.`,
+    heading: preorder ? "PRÉCOMMANDE CONFIRMÉE" : "COMMANDE CONFIRMÉE",
     bodyHtml,
   });
 
   return {
-    subject: `Confirmation de votre commande ${payload.orderNumber}`,
+    subject: preorder
+      ? `Confirmation de votre précommande ${payload.orderNumber}`
+      : `Confirmation de votre commande ${payload.orderNumber}`,
     html,
     text: renderOrderConfirmationText(payload),
   };

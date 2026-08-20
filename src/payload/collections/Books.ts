@@ -576,6 +576,16 @@ export const Books: CollectionConfig = {
                   ],
                 },
                 {
+                  name: 'preorder',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  label: 'Ouvert à la précommande',
+                  admin: {
+                    description:
+                      "Un livre « à paraître » (parution future) devient achetable en précommande dans le panier natif dès que cette case est cochée — expédié à la parution. Sans effet sur une fiche déjà parue. Sans cette case, un livre à paraître reste refusé à la vente comme aujourd'hui.",
+                  },
+                },
+                {
                   type: 'row',
                   fields: [
                     {

@@ -34,10 +34,20 @@ export function AddToCartButton({
   id,
   variant = "button",
   className,
+  label = "Ajouter au panier",
 }: {
   id: number;
   variant?: "button" | "chip";
   className?: string;
+  /**
+   * Texte du bouton au repos (variant `"button"` uniquement — le chip reste
+   * un glyphe `+`/`✓`, jamais du texte). Défaut « Ajouter au panier » ;
+   * `buy-links.tsx` pose « Précommander » sur une fiche `preorder` (client
+   * 2026-08-20) — le retour « Ajouté au panier » après clic reste IDENTIQUE
+   * dans les deux cas (l'article est bien dans le même panier natif, la
+   * scission n'a lieu qu'à l'encaissement).
+   */
+  label?: string;
 }) {
   const { addToCart } = useCart();
   const [justAdded, setJustAdded] = useState(false);
@@ -95,7 +105,7 @@ export function AddToCartButton({
       onClick={handleClick}
       className={`px-5 py-2.5 text-sm tracking-[.03em] ${className ?? ""}`}
     >
-      {justAdded ? "Ajouté au panier" : "Ajouter au panier"}
+      {justAdded ? "Ajouté au panier" : label}
     </Button>
   );
 }

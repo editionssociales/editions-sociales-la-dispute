@@ -70,3 +70,80 @@ describe("assessSellability", () => {
     expect(assessSellability({ ...SELLABLE, stock: 1 }, undefined, NOW)).toEqual({ ok: true });
   });
 });
+
+/**
+ * Précommande (client 2026-08-20) : `preorderEnabled` lève UNIQUEMENT le
+ * refus `upcoming` — jamais les règles stock/vendable, qui s'appliquent
+ * ensuite exactement comme pour une fiche déjà parue.
+ */
+describe("assessSellability — précommande (`preorderEnabled`)", () => {
+  it("à paraître + preorderEnabled + vendable + stock ok → ok (précommande ouverte)", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: 5, publishedAt: "2026-07-19", preorderEnabled: true },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it("à paraître + preorderEnabled + stock non suivi → ok, quelle que soit la quantité", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: null, publishedAt: "2026-07-19", preorderEnabled: true },
+        15,
+        NOW,
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it("à paraître SANS preorderEnabled → refus upcoming inchangé (comportement historique)", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: 5, publishedAt: "2026-07-19", preorderEnabled: false },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: false, reason: "upcoming" });
+  });
+
+  it("à paraître + preorderEnabled MAIS non vendable (case décochée) → not-sellable, jamais un contournement total", () => {
+    expect(
+      assessSellability(
+        { sellable: false, stock: 5, publishedAt: "2026-07-19", preorderEnabled: true },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: false, reason: "not-sellable" });
+  });
+
+  it("à paraître + preorderEnabled MAIS stock épuisé → out-of-stock (une précommande peut être en rupture)", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: 0, publishedAt: "2026-07-19", preorderEnabled: true },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: false, reason: "out-of-stock" });
+  });
+
+  it("à paraître + preorderEnabled MAIS stock insuffisant pour la quantité demandée → insufficient-stock", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: 2, publishedAt: "2026-07-19", preorderEnabled: true },
+        3,
+        NOW,
+      ),
+    ).toEqual({ ok: false, reason: "insufficient-stock" });
+  });
+
+  it("preorderEnabled sur une fiche DÉJÀ parue → sans effet (pas à paraître, rien à lever)", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: 5, publishedAt: "2020-01-01", preorderEnabled: true },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: true });
+  });
+});

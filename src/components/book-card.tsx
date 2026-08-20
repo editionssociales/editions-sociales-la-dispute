@@ -45,6 +45,15 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
       À paraître
     </span>
   );
+  // Précommande (client 2026-08-20) : même recette que le badge « À paraître »
+  // (même famille visuelle — à paraître avec une porte ouverte) — un livre
+  // `preorder` a AUSSI le chip panier (`canAddToCart` l'accepte désormais),
+  // le badge annonce donc juste que c'est une précommande, pas un blocage.
+  const preorderBadge = book.status === "preorder" && (
+    <span className="inline-flex flex-none border-b-2 border-r-2 border-ink bg-pop-orange px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
+      Précommande
+    </span>
+  );
   const externalBadge = book.status === "external" && (
     <span className="inline-flex flex-none border-b-2 border-r-2 border-ink bg-paper px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[.05em] text-muted">
       Autre libraire
@@ -55,7 +64,7 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
       Indisponible
     </span>
   );
-  const statusBadge = upcomingBadge || externalBadge || unavailableBadge;
+  const statusBadge = preorderBadge || upcomingBadge || externalBadge || unavailableBadge;
 
   // Panier natif (plan §4 étape 6) : petit chip, en plus du lien vers la
   // fiche — seulement si le livre est disponible au panier. Sorti du cadre

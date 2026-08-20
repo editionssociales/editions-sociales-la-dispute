@@ -281,6 +281,10 @@ export interface Book {
      */
     reducedShippingFlag?: boolean | null;
     /**
+     * Un livre « à paraître » (parution future) devient achetable en précommande dans le panier natif dès que cette case est cochée — expédié à la parution. Sans effet sur une fiche déjà parue. Sans cette case, un livre à paraître reste refusé à la vente comme aujourd'hui.
+     */
+    preorder?: boolean | null;
+    /**
      * Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.
      */
     stock?: number | null;
@@ -383,7 +387,7 @@ export interface Media {
   focalY?: number | null;
 }
 /**
- * Commandes du commerce natif — créées par le webhook Stripe, suivies ici (statut de préparation/expédition uniquement).
+ * Commandes du commerce natif — créées par le webhook Stripe, suivies ici (statut de préparation/expédition uniquement). Un panier mixte (articles parus + précommande) scinde en DEUX commandes distinctes (même session Stripe, même paiement) — cf. « Type ».
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "orders".
@@ -394,6 +398,10 @@ export interface Order {
    * Généré automatiquement à la création (préfixe CMD- + id) — ne se modifie pas.
    */
   number?: string | null;
+  /**
+   * Commande normale (articles parus) ou précommande (articles à paraître avec « Ouvert à la précommande » coché) — posé par le webhook selon la scission du panier au paiement (client 2026-08-20). Un panier mixte produit UNE commande de chaque type, même session/paiement Stripe, chacune avec SES lignes et SES frais de port.
+   */
+  orderType: 'commande' | 'precommande';
   /**
    * Seul champ modifiable au back-office — suivi de préparation (paid → prepared → shipped) ; annulation/remboursement au besoin. « Échec du paiement » : posé par le webhook (checkout.session.async_payment_failed) pour un moyen de paiement différé (ex. virement/prélèvement) dont la confirmation échoue APRÈS que checkout.session.completed s'est déjà présenté en attente — trace l'essai sans jamais décrémenter le stock (webhook route, lot 2 étape 9).
    */
@@ -443,7 +451,7 @@ export interface Order {
   discountTTC?: number | null;
   totalTTC: number;
   /**
-   * Clé d'idempotence du webhook (étape 9) — une session ne crée jamais deux commandes.
+   * Clé d'idempotence du webhook avec « Type » (étape 9, étendue 2026-08-20) — une même session ne crée jamais deux commandes du MÊME type, mais peut légitimement porter DEUX commandes (une « Commande » + une « Précommande ») pour un panier mixte.
    */
   stripeSessionId: string;
   stripePaymentIntentId?: string | null;
@@ -761,6 +769,7 @@ export interface BooksSelect<T extends boolean = true> {
     | {
         sellable?: T;
         reducedShippingFlag?: T;
+        preorder?: T;
         stock?: T;
         stockSuivi?: T;
         stockUpdatedAt?: T;
@@ -788,6 +797,7 @@ export interface BooksSelect<T extends boolean = true> {
  */
 export interface OrdersSelect<T extends boolean = true> {
   number?: T;
+  orderType?: T;
   status?: T;
   email?: T;
   shippingAddress?:

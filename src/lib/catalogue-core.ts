@@ -1,5 +1,5 @@
 import { sanitizeCms } from "./cms-html";
-import { assessSellability } from "./sellability";
+import { assessSellability, isUpcoming } from "./sellability";
 import { frenchTypo } from "./typo-fr";
 import { type CommerceInfo, type RawBook } from "./catalogue-source";
 import type {
@@ -75,17 +75,22 @@ export function toBook(
 const NO_COMMERCE: CommerceInfo = { sellable: false, stock: null };
 
 /**
- * Résout le statut d'achat d'un livre (données Payload `sellable`/`stock`) —
- * ORDRE DE RÈGLES tranché par le client (plan §4 étape 11) :
+ * Résout le statut d'achat d'un livre (données Payload `sellable`/`stock`/
+ * `preorder`) — ORDRE DE RÈGLES tranché par le client (plan §4 étape 11,
+ * complété 2026-08-20 pour la précommande) :
  *
- *  1. Verdict `upcoming` (« à paraître ») → PRIME sur tout le reste — la
- *     règle stock/parution elle-même (non suivi, épuisé, priorité de la
- *     parution) vit dans `sellability.ts:assessSellability`, ce module ne
- *     fait plus que la traduire en statut d'achat.
- *  2. Verdict vendable → disponible, panier natif.
- *  3. Sinon lien(s) externe(s) existant(s) (Paris Librairies / La Librairie)
+ *  1. Verdict `upcoming` (« à paraître », SANS précommande ouverte) → PRIME
+ *     sur tout le reste — la règle stock/parution/précommande elle-même vit
+ *     dans `sellability.ts:assessSellability`, ce module ne fait plus que la
+ *     traduire en statut d'achat.
+ *  2. Verdict vendable ET encore à paraître (précommande ouverte,
+ *     `commerce.preorder`) → `preorder`, panier natif comme `available` —
+ *     `isUpcoming` est le même helper pur qu'`assessSellability` a déjà
+ *     consulté pour ce verdict, jamais une seconde règle de refus.
+ *  3. Verdict vendable (parution passée) → disponible, panier natif.
+ *  4. Sinon lien(s) externe(s) existant(s) (Paris Librairies / La Librairie)
  *     → « en librairie », lien externe inchangé.
- *  4. Sinon indisponible — jamais retiré du catalogue (contrat).
+ *  5. Sinon indisponible — jamais retiré du catalogue (contrat).
  *
  * `internalPermalink` est fourni par l'appelant (route `/catalogue/<edition>/
  * <slug>` ou `/boutique/<slug>`, plan §4 étape 11) : ce module reste pur, il
@@ -100,12 +105,14 @@ export function resolveNativePurchase(
     sellable: commerce.sellable,
     stock: commerce.stock,
     publishedAt: book.publishedAt,
+    preorderEnabled: commerce.preorder,
   });
   if (!verdict.ok && verdict.reason === "upcoming") {
     return { status: "upcoming", permalink: null, purchaseMode: "legacy-link" };
   }
   if (verdict.ok) {
-    return { status: "available", permalink: internalPermalink, purchaseMode: "cart" };
+    const status: PurchaseStatus = isUpcoming(book.publishedAt) ? "preorder" : "available";
+    return { status, permalink: internalPermalink, purchaseMode: "cart" };
   }
   const external = book.buy.parislibrairies || book.buy.lalibrairie;
   if (external) {
@@ -163,8 +170,12 @@ function matches(book: Book, filters: BookFilters, key: FilterKey): boolean {
       );
     }
     case "upcoming":
-      // Le statut est résolu par `resolvePurchase` (boutique + dates) avant tout filtrage.
-      return !filters.upcoming || book.status === "upcoming";
+      // Le statut est résolu par `resolvePurchase` (boutique + dates) avant
+      // tout filtrage. `preorder` reste « à paraître » du point de vue de
+      // cette vue de découverte (parution future) — seul l'achat change,
+      // pas la date : un livre en précommande ne doit pas disparaître de la
+      // vue « à paraître » sous prétexte qu'il est déjà achetable.
+      return !filters.upcoming || book.status === "upcoming" || book.status === "preorder";
   }
 }
 

@@ -102,7 +102,11 @@ function mediaUrl(value: number | Media | null | undefined): string | null {
  */
 function toCommerce(value: PayloadBook["commerce"]): CommerceInfo | null {
   if (!value) return null;
-  return { sellable: Boolean(value.sellable), stock: value.stock ?? null };
+  return {
+    sellable: Boolean(value.sellable),
+    stock: value.stock ?? null,
+    preorder: Boolean(value.preorder),
+  };
 }
 
 /** Document `books` Payload (Local API, `depth:2`) → forme brute neutre du port. */

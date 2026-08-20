@@ -164,7 +164,8 @@ export default async function BookPage({
   }));
   const descriptionLd = cmsExcerpt(book.presentation, 300) || undefined;
   const canOffer =
-    book.price != null && (book.status === "available" || book.status === "external");
+    book.price != null &&
+    (book.status === "available" || book.status === "external" || book.status === "preorder");
 
   // Bouclage éditorial en pied de fiche : jusqu'à 4 autres titres partageant
   // le premier libellé (le livre courant exclu). Aucun résultat → pas de section.
@@ -202,7 +203,10 @@ export default async function BookPage({
             "@type": "Offer",
             price: String(book.price),
             priceCurrency: "EUR",
-            availability: "https://schema.org/InStock",
+            // Précommande (client 2026-08-20) : rien n'est en stock avant la
+            // parution — n'annonce jamais `InStock` pour un livre `preorder`.
+            availability:
+              book.status === "preorder" ? "https://schema.org/PreOrder" : "https://schema.org/InStock",
             ...(book.permalink ? { url: book.permalink } : {}),
           } satisfies OfferLd,
         }

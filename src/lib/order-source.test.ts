@@ -16,6 +16,7 @@ interface FakeOrder {
   id: number;
   stripeSessionId?: string;
   stripePaymentIntentId?: string | null;
+  orderType?: string;
   status?: string;
   updatedAt?: string;
   [key: string]: unknown;
@@ -31,6 +32,7 @@ interface FakeFindArgs {
   where?: {
     stripeSessionId?: { equals?: string };
     stripePaymentIntentId?: { equals?: string };
+    orderType?: { equals?: string };
   };
   sort?: string;
   limit?: number;
@@ -87,10 +89,16 @@ vi.mock("payload", () => ({
         const id = args.where.stripePaymentIntentId.equals;
         docs = docs.filter((o) => o.stripePaymentIntentId === id);
       }
+      if (args.where?.orderType?.equals != null) {
+        const type = args.where.orderType.equals;
+        docs = docs.filter((o) => o.orderType === type);
+      }
       if (args.sort === "-updatedAt") {
         docs = [...docs].sort((a, b) => ((a.updatedAt ?? "") < (b.updatedAt ?? "") ? 1 : -1));
       }
-      return { docs: docs.slice(0, args.limit ?? docs.length) };
+      // `limit: 0` = pas de plafond (convention Payload, cf. `order-source.ts:findOrdersByPaymentIntent`).
+      const limit = args.limit === 0 || args.limit == null ? docs.length : args.limit;
+      return { docs: docs.slice(0, limit) };
     },
     findByID: async (args: FakeFindByIdArgs) => {
       if (args.collection !== "books") {
@@ -146,7 +154,7 @@ const {
   createOrder,
   decrementBookStock,
   findLatestOrderUpdatedAt,
-  findOrderByPaymentIntent,
+  findOrdersByPaymentIntent,
   findOrderBySessionId,
   updateOrder,
 } = await import("./order-source");
@@ -163,6 +171,7 @@ const ADDRESS = {
 function orderCreateData(overrides: Partial<OrderCreateData> = {}): OrderCreateData {
   return {
     status: "paid",
+    orderType: "commande",
     email: "client@exemple.fr",
     shippingAddress: ADDRESS,
     billingAddress: ADDRESS,
@@ -194,40 +203,59 @@ beforeEach(() => {
 });
 
 describe("findOrderBySessionId", () => {
-  it("aucune commande pour cette session → null", async () => {
-    const result = await findOrderBySessionId("cs_absente");
+  it("aucune commande pour cette session/ce type → null", async () => {
+    const result = await findOrderBySessionId("cs_absente", "commande");
     expect(result).toBeNull();
   });
 
-  it("cible la collection orders par stripeSessionId, overrideAccess: true, limit 1", async () => {
-    orders = [{ id: 1, stripeSessionId: "cs_1" }];
-    const result = await findOrderBySessionId("cs_1");
+  it("cible la collection orders par (stripeSessionId, orderType), overrideAccess: true, limit 1", async () => {
+    orders = [{ id: 1, stripeSessionId: "cs_1", orderType: "commande" }];
+    const result = await findOrderBySessionId("cs_1", "commande");
     expect(result).toMatchObject({ id: 1, stripeSessionId: "cs_1" });
     expect(lastFindArgs).toMatchObject({
       collection: "orders",
-      where: { stripeSessionId: { equals: "cs_1" } },
+      where: { stripeSessionId: { equals: "cs_1" }, orderType: { equals: "commande" } },
       limit: 1,
       overrideAccess: true,
     });
+  });
+
+  it("une session scindée (panier mixte) porte DEUX documents — le type distingue lequel est retrouvé", async () => {
+    orders = [
+      { id: 1, stripeSessionId: "cs_mixte", orderType: "commande" },
+      { id: 2, stripeSessionId: "cs_mixte", orderType: "precommande" },
+    ];
+    expect(await findOrderBySessionId("cs_mixte", "commande")).toMatchObject({ id: 1 });
+    expect(await findOrderBySessionId("cs_mixte", "precommande")).toMatchObject({ id: 2 });
   });
 });
 
-describe("findOrderByPaymentIntent", () => {
-  it("aucune commande pour cette intention de paiement → null", async () => {
-    const result = await findOrderByPaymentIntent("pi_absente");
-    expect(result).toBeNull();
+describe("findOrdersByPaymentIntent", () => {
+  it("aucune commande pour cette intention de paiement → tableau vide", async () => {
+    const result = await findOrdersByPaymentIntent("pi_absente");
+    expect(result).toEqual([]);
   });
 
-  it("cible la collection orders par stripePaymentIntentId, overrideAccess: true, limit 1", async () => {
+  it("cible la collection orders par stripePaymentIntentId, overrideAccess: true, sans plafond (limit 0)", async () => {
     orders = [{ id: 1, stripePaymentIntentId: "pi_1" }];
-    const result = await findOrderByPaymentIntent("pi_1");
-    expect(result).toMatchObject({ id: 1, stripePaymentIntentId: "pi_1" });
+    const result = await findOrdersByPaymentIntent("pi_1");
+    expect(result).toMatchObject([{ id: 1, stripePaymentIntentId: "pi_1" }]);
     expect(lastFindArgs).toMatchObject({
       collection: "orders",
       where: { stripePaymentIntentId: { equals: "pi_1" } },
-      limit: 1,
+      limit: 0,
       overrideAccess: true,
     });
+  });
+
+  it("un paiement scindé (panier mixte) retrouve les DEUX commandes — jamais une seule au hasard", async () => {
+    orders = [
+      { id: 1, stripePaymentIntentId: "pi_mixte", orderType: "commande" },
+      { id: 2, stripePaymentIntentId: "pi_mixte", orderType: "precommande" },
+      { id: 3, stripePaymentIntentId: "pi_autre", orderType: "commande" },
+    ];
+    const result = await findOrdersByPaymentIntent("pi_mixte");
+    expect(result.map((o) => o.id)).toEqual([1, 2]);
   });
 });
 

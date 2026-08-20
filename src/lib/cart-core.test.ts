@@ -210,6 +210,14 @@ describe("canAddToCart", () => {
     expect(canAddToCart({ status: "upcoming", purchaseMode: "cart" })).toBe(false);
     expect(canAddToCart({ status: "unavailable", purchaseMode: "cart" })).toBe(false);
   });
+
+  it("vrai pour `preorder` + mode panier (précommande, client 2026-08-20) — même panier natif qu'`available`", () => {
+    expect(canAddToCart({ status: "preorder", purchaseMode: "cart" })).toBe(true);
+  });
+
+  it("faux pour `preorder` hors mode panier (défensif, jamais produit par resolveNativePurchase)", () => {
+    expect(canAddToCart({ status: "preorder", purchaseMode: "legacy-link" })).toBe(false);
+  });
 });
 
 /* ------------------------------ lignes résolues ------------------------------ */
@@ -287,6 +295,25 @@ describe("resolveCartSummary", () => {
     const epuise = book({ id: 3, slug: "epuise", title: "Épuisé", status: "unavailable", purchaseMode: "legacy-link" });
     const state: CartState = { version: CART_VERSION, lines: [{ id: 3, qty: 1 }] };
     expect(resolveCartSummary(state, [epuise], new Map([[3, true]])).manifestOnly).toBe(false);
+  });
+
+  it("isPreorder reflète le statut `preorder` (client 2026-08-20), false pour les autres lignes", () => {
+    const precommande = book({
+      id: 6,
+      slug: "precommande",
+      title: "Précommande",
+      price: 22,
+      status: "preorder",
+      purchaseMode: "cart",
+    });
+    const state: CartState = { version: CART_VERSION, lines: [{ id: 1, qty: 1 }, { id: 6, qty: 1 }] };
+    const summary = resolveCartSummary(state, [capital, precommande], new Map());
+    expect(summary.lines.find((l) => l.id === 1)?.isPreorder).toBe(false);
+    expect(summary.lines.find((l) => l.id === 6)?.isPreorder).toBe(true);
+    // Une ligne précommande reste purchasable et compte dans le sous-total — le
+    // même panier accueille les deux types de ligne, la scission n'a lieu
+    // qu'à l'encaissement (`cart-quote.ts`).
+    expect(summary.lines.find((l) => l.id === 6)?.purchasable).toBe(true);
   });
 
   it("drapeau absent de la carte → false par défaut (non-manifeste)", () => {

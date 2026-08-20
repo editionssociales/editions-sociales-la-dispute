@@ -17,7 +17,7 @@
  */
 import { MAX_LINE_QTY } from "./cart-core";
 import { eurosToCents } from "./money";
-import { assessSellability } from "./sellability";
+import { assessSellability, isUpcoming } from "./sellability";
 import { isManifestOnly } from "./shipping-core";
 
 /* ------------------------------ requête entrante ------------------------------ */
@@ -101,6 +101,8 @@ export interface CheckoutBookLookup {
   /** `null` = stock non suivi (illimité) ; sinon plancher STRICT (`stock >= qty`, pas seulement `> 0`). */
   stock: number | null;
   reducedShippingFlag: boolean;
+  /** « Ouvert à la précommande » (`Books.ts:commerce.preorder`) — lève le refus `upcoming` pour cette ligne, cf. `sellability.ts`. */
+  preorderEnabled: boolean;
 }
 
 export type LineRefusalReason = "not-found" | "not-sellable" | "insufficient-stock" | "no-price";
@@ -119,15 +121,25 @@ export interface ValidatedCheckoutLine {
   unitPriceCents: number;
   lineTotalCents: number;
   reducedShippingFlag: boolean;
+  /**
+   * `true` ssi cette ligne est une précommande (parution future + « Ouvert à
+   * la précommande » coché, verdict `ok` via `preorderEnabled` — client
+   * 2026-08-20) : `isUpcoming(book.publishedAt)` suffit à le retrouver ICI
+   * SANS reréénoncer la règle de refus, puisqu'un verdict `ok` sur une fiche
+   * encore à paraître ne peut avoir été obtenu QUE par ce bypass
+   * (`assessSellability`, seul endroit qui décide). Pilote la scission de
+   * commande à l'encaissement (`cart-quote.ts`, `/api/checkout`, webhook).
+   */
+  isPreorder: boolean;
 }
 
 /**
  * Valide UNE ligne contre le livre fraîchement relu — jamais contre ce que le
  * client prétend. Ordre des règles : introuvable → verdict `assessSellability`
- * (parution future/non vendable → refus `not-sellable` ; épuisé/stock
- * insuffisant → refus `insufficient-stock`) → prix manquant (fiche
- * incomplète, ne devrait jamais arriver pour un livre vendable, filet de
- * sécurité).
+ * (parution future sans précommande ouverte/non vendable → refus
+ * `not-sellable` ; épuisé/stock insuffisant → refus `insufficient-stock`) →
+ * prix manquant (fiche incomplète, ne devrait jamais arriver pour un livre
+ * vendable, filet de sécurité).
  */
 export function validateCheckoutLine(
   input: CheckoutRequestLine,
@@ -141,11 +153,30 @@ export function validateCheckoutLine(
     };
   }
   const verdict = assessSellability(
-    { sellable: book.sellable, stock: book.stock, publishedAt: book.publishedAt },
+    {
+      sellable: book.sellable,
+      stock: book.stock,
+      publishedAt: book.publishedAt,
+      preorderEnabled: book.preorderEnabled,
+    },
     input.qty,
     now,
   );
-  if (!verdict.ok && (verdict.reason === "upcoming" || verdict.reason === "not-sellable")) {
+  if (!verdict.ok && verdict.reason === "upcoming") {
+    // Distinct du refus « non vendable » ci-dessous (même `reason` générique
+    // pour le front, qui n'affiche que `message` — cf. `checkout-core.test.ts`) :
+    // seul le LIBELLÉ change, corrigé 2026-08-20 (n'était plus honnête depuis
+    // que « à paraître » est devenu un cas visible via la précommande).
+    return {
+      ok: false,
+      refusal: {
+        id: input.id,
+        reason: "not-sellable",
+        message: `« ${book.title} » n'est pas encore paru.`,
+      },
+    };
+  }
+  if (!verdict.ok && verdict.reason === "not-sellable") {
     return {
       ok: false,
       refusal: {
@@ -187,6 +218,7 @@ export function validateCheckoutLine(
       unitPriceCents,
       lineTotalCents: unitPriceCents * input.qty,
       reducedShippingFlag: book.reducedShippingFlag,
+      isPreorder: isUpcoming(book.publishedAt, now),
     },
   };
 }
@@ -221,21 +253,62 @@ export function validateCheckoutLines(
   return { ok: true, lines, subtotalCents, manifestOnly };
 }
 
+/* ------------------------------ scission commande / précommande ------------------------------ */
+
+export interface CheckoutLinesPart {
+  lines: ValidatedCheckoutLine[];
+  subtotalCents: number;
+}
+
+export interface SplitCheckoutLines {
+  /** Lignes « parues » — commande normale. */
+  normal: CheckoutLinesPart;
+  /** Lignes précommande (parution future, flag ouvert) — seconde commande si non vide. */
+  preorder: CheckoutLinesPart;
+}
+
+/**
+ * Répartit les lignes déjà validées entre commande normale et précommande
+ * (`ValidatedCheckoutLine.isPreorder`, client 2026-08-20) — pur regroupement
+ * par un drapeau déjà tranché par `validateCheckoutLine`, AUCUNE règle de
+ * vendabilité rejouée ici. Consommé par `/api/checkout` (scission des lignes
+ * Stripe + metadata) ; le webhook ne l'utilise PAS — il reconstruit la
+ * scission depuis les DEUX groupes de metadata déjà posés par le checkout
+ * (`lines`/`preorderLines`), jamais par un nouveau tri qui pourrait diverger
+ * si le flag `preorder` d'une fiche change entre le paiement et le webhook.
+ */
+export function splitValidatedLines(lines: ValidatedCheckoutLine[]): SplitCheckoutLines {
+  const normalLines = lines.filter((l) => !l.isPreorder);
+  const preorderLines = lines.filter((l) => l.isPreorder);
+  const sum = (ls: ValidatedCheckoutLine[]) => ls.reduce((s, l) => s + l.lineTotalCents, 0);
+  return {
+    normal: { lines: normalLines, subtotalCents: sum(normalLines) },
+    preorder: { lines: preorderLines, subtotalCents: sum(preorderLines) },
+  };
+}
+
 /* ------------------------------ encodage compact des lignes (metadata Stripe) ------------------------------ */
 
 const LINE_SEP = ";";
 const FIELD_SEP = ":";
 
+/** Les seuls champs dont l'encodage compact a besoin — accepte une `ValidatedCheckoutLine` complète (champs excédentaires ignorés) ou une forme plus minimale. */
+type EncodableLine = Pick<ValidatedCheckoutLine, "id" | "qty" | "unitPriceCents">;
+
 /**
- * Encode les lignes validées en une chaîne compacte posée en `metadata` de la
- * session Stripe (`id:qty:unitPriceCents;…`) — le webhook (étape 9) la décode
- * pour reconstruire `Orders.lines` sans jamais relire un prix client. Reste
- * sous la limite Stripe de 500 caractères par valeur de metadata pour un
- * panier de taille raisonnable (quelques dizaines de lignes) — un panier
- * anormalement long dépasserait cette borne, hors périmètre d'une boutique de
- * livres (aucune commande réelle observée à ce jour n'en approche).
+ * Encode un groupe de lignes validées en une chaîne compacte posée en
+ * `metadata` de la session Stripe (`id:qty:unitPriceCents;…`) — le webhook
+ * (étape 9) la décode pour reconstruire `Orders.lines` sans jamais relire un
+ * prix client. Appelée UNE FOIS PAR PARTIE côté checkout depuis 2026-08-20
+ * (`metadata.lines` pour la commande normale, `metadata.preorderLines` pour
+ * la précommande — la clé metadata porte déjà la distinction, l'encodage
+ * lui-même reste inchangé et ignore `isPreorder`). Reste sous la limite
+ * Stripe de 500 caractères par valeur de metadata pour un panier de taille
+ * raisonnable (quelques dizaines de lignes) — un panier anormalement long
+ * dépasserait cette borne, hors périmètre d'une boutique de livres (aucune
+ * commande réelle observée à ce jour n'en approche).
  */
-export function encodeCheckoutLines(lines: ValidatedCheckoutLine[]): string {
+export function encodeCheckoutLines(lines: readonly EncodableLine[]): string {
   return lines.map((l) => `${l.id}${FIELD_SEP}${l.qty}${FIELD_SEP}${l.unitPriceCents}`).join(LINE_SEP);
 }
 

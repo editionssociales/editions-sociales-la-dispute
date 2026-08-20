@@ -220,22 +220,27 @@ describe("payloadBookToRawBook — commerce natif (groupe `commerce`)", () => {
     const raw = payloadBookToRawBook(
       book({ commerce: { sellable: true, stock: 5, reducedShippingFlag: false } }),
     );
-    expect(raw.commerce).toEqual({ sellable: true, stock: 5 });
+    expect(raw.commerce).toEqual({ sellable: true, stock: 5, preorder: false });
   });
 
   it("stock absent (non suivi) → null, jamais 0 ni undefined", () => {
     const raw = payloadBookToRawBook(book({ commerce: { sellable: true } }));
-    expect(raw.commerce).toEqual({ sellable: true, stock: null });
+    expect(raw.commerce).toEqual({ sellable: true, stock: null, preorder: false });
   });
 
   it("stock à 0 est préservé (épuisé) — pas confondu avec « non suivi »", () => {
     const raw = payloadBookToRawBook(book({ commerce: { sellable: true, stock: 0 } }));
-    expect(raw.commerce).toEqual({ sellable: true, stock: 0 });
+    expect(raw.commerce).toEqual({ sellable: true, stock: 0, preorder: false });
   });
 
   it("sellable absent → false (jamais vendable par défaut)", () => {
     const raw = payloadBookToRawBook(book({ commerce: { stock: 10 } }));
-    expect(raw.commerce).toEqual({ sellable: false, stock: 10 });
+    expect(raw.commerce).toEqual({ sellable: false, stock: 10, preorder: false });
+  });
+
+  it("preorder coché → reporté tel quel (« Ouvert à la précommande »)", () => {
+    const raw = payloadBookToRawBook(book({ commerce: { sellable: true, stock: 5, preorder: true } }));
+    expect(raw.commerce).toEqual({ sellable: true, stock: 5, preorder: true });
   });
 
   it("groupe `commerce` absent (fiche jamais touchée par la migration commerce) → null", () => {

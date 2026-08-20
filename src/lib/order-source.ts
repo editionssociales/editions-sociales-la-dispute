@@ -2,7 +2,7 @@ import "server-only";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import type { Order } from "@/payload-types";
-import { computeStockAfterDecrement, type OrderCreateData } from "./order-webhook-core";
+import { computeStockAfterDecrement, type OrderCreateData, type OrderKind } from "./order-webhook-core";
 
 /**
  * Seam Payload dédié au cycle de vie `orders` (webhook Stripe, plan §4 étape
@@ -32,28 +32,46 @@ import { computeStockAfterDecrement, type OrderCreateData } from "./order-webhoo
  * `null` = stock non suivi).
  */
 
-/** La commande existe-t-elle déjà pour cette session (idempotence — un event Stripe rejoué ne doit rien recréer) ? */
-export async function findOrderBySessionId(stripeSessionId: string): Promise<Order | null> {
+/**
+ * La commande existe-t-elle déjà pour cette session ET ce type (idempotence,
+ * issue #64, étendue 2026-08-20 pour la scission précommande) — un event
+ * Stripe rejoué ne doit rien recréer. `orderType` fait partie de la clé
+ * d'idempotence depuis que la même session peut légitimement porter DEUX
+ * commandes (une par type, panier mixte) : `stripeSessionId` seul ne
+ * distingue plus une commande d'une précommande de la même session.
+ */
+export async function findOrderBySessionId(
+  stripeSessionId: string,
+  orderType: OrderKind,
+): Promise<Order | null> {
   const payload = await getPayload({ config });
   const { docs } = await payload.find({
     collection: "orders",
-    where: { stripeSessionId: { equals: stripeSessionId } },
+    where: { stripeSessionId: { equals: stripeSessionId }, orderType: { equals: orderType } },
     limit: 1,
     overrideAccess: true,
   });
   return docs[0] ?? null;
 }
 
-/** Retrouve une commande par intention de paiement Stripe — seul identifiant porté par une `Charge` (`charge.refunded`, pas de `stripeSessionId` dessus). */
-export async function findOrderByPaymentIntent(stripePaymentIntentId: string): Promise<Order | null> {
+/**
+ * Retrouve TOUTES les commandes d'une intention de paiement Stripe — seul
+ * identifiant porté par une `Charge` (`charge.refunded`, pas de
+ * `stripeSessionId` dessus). PLURIEL depuis 2026-08-20 : un panier mixte
+ * scindé partage la MÊME `stripePaymentIntentId` entre ses deux commandes
+ * (un seul paiement) — un remboursement de charge doit donc pouvoir
+ * retrouver et faire transiter les DEUX, jamais une seule au hasard de
+ * l'ordre de tri (`markOrderRefunded`, `order-handler.ts`).
+ */
+export async function findOrdersByPaymentIntent(stripePaymentIntentId: string): Promise<Order[]> {
   const payload = await getPayload({ config });
   const { docs } = await payload.find({
     collection: "orders",
     where: { stripePaymentIntentId: { equals: stripePaymentIntentId } },
-    limit: 1,
+    limit: 0,
     overrideAccess: true,
   });
-  return docs[0] ?? null;
+  return docs;
 }
 
 /** Crée une commande (`status: "paid"` ou `"failed"`, cf. `buildOrderCreateData`) — écriture opérationnelle du webhook, ni `contentTouched` ni revalidation Next (contrat CLAUDE.md). */

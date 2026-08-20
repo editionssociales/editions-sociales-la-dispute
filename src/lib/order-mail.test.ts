@@ -17,8 +17,9 @@ const {
   renderOrderConfirmationEmail,
   selectOrderMailer,
 } = await import("./order-mail");
+type OrderMailPayload = Parameters<typeof renderOrderConfirmationEmail>[0];
 
-const PAYLOAD = {
+const PAYLOAD: OrderMailPayload = {
   orderNumber: "ES-2026-042",
   email: "client@exemple.fr",
   lines: [
@@ -56,6 +57,36 @@ describe("renderOrderConfirmationEmail — pur", () => {
     const { html } = renderOrderConfirmationEmail(PAYLOAD);
     expect(html).toContain("ES-2026-042");
     expect(html).toContain("25,00");
+  });
+});
+
+describe("renderOrderConfirmationEmail — précommande (scission panier, client 2026-08-20)", () => {
+  const PREORDER_PAYLOAD: typeof PAYLOAD = { ...PAYLOAD, orderType: "precommande" };
+
+  it("sujet et titre distincts, jamais le texte de commande normale", () => {
+    const { subject, html } = renderOrderConfirmationEmail(PREORDER_PAYLOAD);
+    expect(subject).toBe("Confirmation de votre précommande ES-2026-042");
+    expect(html).toContain("PRÉCOMMANDE CONFIRMÉE");
+    // « PRÉCOMMANDE CONFIRMÉE » contient la sous-chaîne « COMMANDE CONFIRMÉE » —
+    // on vérifie l'ABSENCE du titre normal isolé, pas une non-inclusion naïve.
+    expect(html).not.toContain(">COMMANDE CONFIRMÉE<");
+    expect(html).not.toContain("Nous avons bien reçu votre commande <strong>");
+  });
+
+  it("bandeau « Précommande — expédiée à parution », jamais le texte de préparation habituel", () => {
+    const { html, text } = renderOrderConfirmationEmail(PREORDER_PAYLOAD);
+    expect(html).toContain("Précommande — expédiée à parution");
+    expect(html).not.toContain("Votre commande est en cours de préparation");
+    expect(text).toContain("Précommande — expédiée à parution");
+  });
+
+  it("orderType absent ou « commande » → gabarit historique inchangé", () => {
+    const withoutType = renderOrderConfirmationEmail(PAYLOAD);
+    const explicitCommande = renderOrderConfirmationEmail({ ...PAYLOAD, orderType: "commande" });
+    expect(withoutType.subject).toBe("Confirmation de votre commande ES-2026-042");
+    expect(explicitCommande.subject).toBe("Confirmation de votre commande ES-2026-042");
+    expect(withoutType.html).toContain("COMMANDE CONFIRMÉE");
+    expect(withoutType.html).toContain("Votre commande est en cours de préparation");
   });
 });
 

@@ -28,6 +28,16 @@ export interface SellabilityFacts {
   stock: number | null;
   /** Parution ISO `YYYY-MM-DD` — future = refus `upcoming`, quel que soit le reste. */
   publishedAt: string | null;
+  /**
+   * Coché sur la fiche (`Books.ts:commerce.preorder`, décision client
+   * 2026-08-20) — lève le refus `upcoming` pour CETTE fiche : un livre « à
+   * paraître » avec ce drapeau devient achetable en précommande, mais les
+   * règles stock/vendable s'appliquent ENSUITE normalement (une précommande
+   * peut donc être refusée pour rupture ou fiche décochée, comme n'importe
+   * quelle autre ligne). Optionnel — absent/`false` = comportement
+   * historique inchangé (`upcoming` refuse toujours).
+   */
+  preorderEnabled?: boolean;
 }
 
 export type SellabilityRefusal =
@@ -41,15 +51,26 @@ export type SellabilityVerdict = { ok: true } | { ok: false; reason: Sellability
 /**
  * Verdict de vendabilité pour `qty` exemplaires (1 par défaut — la question
  * « ce livre est-il achetable ? » du catalogue). Ordre des règles, fixé une
- * fois pour tous les appelants : à paraître → non vendable → épuisé
- * (`stock ≤ 0`) → stock insuffisant (`stock < qty`) → vendable.
+ * fois pour tous les appelants : à paraître (SAUF précommande ouverte) → non
+ * vendable → épuisé (`stock ≤ 0`) → stock insuffisant (`stock < qty`) →
+ * vendable.
+ *
+ * `preorderEnabled` ne fait QUE lever le premier refus — une fiche « à
+ * paraître » avec le drapeau coché retombe ensuite dans les mêmes règles
+ * stock/vendable que n'importe quelle autre fiche (une précommande décochée
+ * ou épuisée reste refusée). L'appelant (catalogue, checkout) distingue un
+ * verdict `{ok:true}` obtenu ainsi d'un verdict « normal » en relisant
+ * `isUpcoming(facts.publishedAt, now)` lui-même — helper pur exporté ici,
+ * jamais une seconde règle de refus.
  */
 export function assessSellability(
   facts: SellabilityFacts,
   qty = 1,
   now: Date = new Date(),
 ): SellabilityVerdict {
-  if (isUpcoming(facts.publishedAt, now)) return { ok: false, reason: "upcoming" };
+  if (isUpcoming(facts.publishedAt, now) && !facts.preorderEnabled) {
+    return { ok: false, reason: "upcoming" };
+  }
   if (!facts.sellable) return { ok: false, reason: "not-sellable" };
   if (facts.stock != null) {
     if (facts.stock <= 0) return { ok: false, reason: "out-of-stock" };

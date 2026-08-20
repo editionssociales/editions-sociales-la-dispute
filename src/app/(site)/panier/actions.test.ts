@@ -47,6 +47,7 @@ function record(overrides: Partial<CheckoutBookLookup> = {}): CheckoutBookLookup
     sellable: true,
     stock: null,
     reducedShippingFlag: false,
+    preorderEnabled: false,
     ...overrides,
   };
 }
