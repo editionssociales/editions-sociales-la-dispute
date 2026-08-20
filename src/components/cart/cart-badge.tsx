@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
 import { useCart } from "./cart-context";
+import { cartFlyTarget } from "./fly-to-cart";
 
 /**
  * Cellule « Panier » de `site-header.tsx` (îlot badge, plan §4 étape 6) — la
@@ -73,6 +74,10 @@ export function CartNavCell({
     <Link
       href="/panier"
       aria-label={ariaLabel}
+      // Cible du vol « ajout au panier » quand elle est visible à l'écran
+      // (cf. `fly-to-cart.tsx` — menu mobile fermé, c'est la bascule du menu
+      // qui prend le relais).
+      {...cartFlyTarget("panier")}
       className={`relative flex min-h-11 items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${placement}`}
     >
       <CartGlyph />

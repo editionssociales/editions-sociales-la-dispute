@@ -160,6 +160,42 @@ h1, h2, h3, h4 {
   }
 }
 
+/* Vol « ajout au panier » (`cart/fly-to-cart.tsx`) : un carré jaune part du
+   bouton cliqué vers la cible panier visible du header. Trajet propre à
+   chaque clic, donc porté par `--fly-x`/`--fly-y` en style inline (même
+   recette que la `--tx` de `gauge-sweep`) ; le `translate(-50%, -50%)` centre
+   le carré sur ses coordonnées de départ ET d'arrivée. Ligne droite assumée
+   (R8 — pas de courbe), départ plein cadre puis rétraction en approche ;
+   l'opacité ne tombe qu'en toute fin de course, l'atterrissage étant repris
+   par la pulsation de la cible (WAAPI, cf. `fly-to-cart.tsx`). */
+@keyframes cart-fly {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--fly-x)), calc(-50% + var(--fly-y)))
+      scale(0.25);
+    opacity: 0;
+  }
+}
+.cart-fly {
+  /* easeOutCubic maison (gauge-sweep) : part sec du bouton,
+     décélère en arrivant — c'est l'arrivée qui doit se lire. 600 ms : DOIT
+     rester égal à `FLY_MS` (`fly-to-cart.tsx`), qui retire le carré du DOM. */
+  animation: cart-fly 600ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Garde de principe : sous ce réglage le vol n'est pas même lancé
+     (test `matchMedia` avant création, `fly-to-cart.tsx`). */
+  .cart-fly {
+    animation: none;
+  }
+}
+
 /* Liseré de collecte fixé au viewport (/souscription) — cf.
    `souscription/_components/collecte-ticker.tsx`.
    PASSATION : le HTML serveur peint le niveau RÉEL de la collecte (état

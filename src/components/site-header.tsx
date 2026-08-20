@@ -25,6 +25,7 @@ import {
 } from "./rail-inset";
 import { CartCountBadge, CartNavCell } from "./cart/cart-badge";
 import { useCart } from "./cart/cart-context";
+import { cartFlyTarget } from "./cart/fly-to-cart";
 
 /**
  * Navbar brutaliste — quadrillage noir 2px (conteneur `grid gap-[2px]
@@ -323,6 +324,10 @@ function MobileMenuToggle({
       aria-expanded={open}
       aria-controls={panelId}
       aria-label={label}
+      // Cible de REPLI du vol « ajout au panier » (`fly-to-cart.tsx`) : menu
+      // fermé, la case panier est masquée (calque `inert`) et c'est cette
+      // bascule qui porte le compteur — le vol atterrit donc ici.
+      {...cartFlyTarget("menu")}
       // La largeur vient de l'emplacement : carré `w-14` de la rangée haute
       // (porté par la pile de calques) ou barre pleine largeur du menu.
       // Paper au repos, pop-yellow au survol : deux fonds CLAIRS, l'anneau

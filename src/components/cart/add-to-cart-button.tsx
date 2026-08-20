@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Button } from "@/components/button";
 import { FOCUS_RING_DARK, FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { useCart } from "./cart-context";
+import { useFlyToCart } from "./fly-to-cart";
 
 /**
  * Bouton « Ajouter au panier » — rendu par `buy-links.tsx` (fiche, pleine
@@ -40,6 +41,7 @@ export function AddToCartButton({
   className?: string;
 }) {
   const { addToCart } = useCart();
+  const { fly, flights } = useFlyToCart();
   const [justAdded, setJustAdded] = useState(false);
   const resetTimeout = useRef<number | null>(null);
 
@@ -70,23 +72,30 @@ export function AddToCartButton({
     setJustAdded(true);
     if (resetTimeout.current != null) window.clearTimeout(resetTimeout.current);
     resetTimeout.current = window.setTimeout(() => setJustAdded(false), 1500);
+    // En plus du retour LOCAL ci-dessus, le vol mène l'œil jusqu'au compteur
+    // du header — qui change au même instant sans que rien n'y conduise
+    // (cf. `fly-to-cart.tsx`).
+    fly(e.currentTarget);
   }
 
   if (variant === "chip") {
     return (
-      <button
-        type="button"
-        onClick={handleClick}
-        // `aria-label` STABLE malgré la bascule visuelle : il remplace déjà le
-        // contenu du bouton pour les technologies d'assistance (le glyphe
-        // n'est donc jamais lu), et le faire changer sous un bouton qui a le
-        // focus provoquerait une seconde annonce en plus de celle de la
-        // région live du provider.
-        aria-label="Ajouter au panier"
-        className={`${justAdded ? CHIP_ADDED : CHIP_IDLE} ${className ?? ""}`}
-      >
-        {justAdded ? "✓" : "+"}
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={handleClick}
+          // `aria-label` STABLE malgré la bascule visuelle : il remplace déjà le
+          // contenu du bouton pour les technologies d'assistance (le glyphe
+          // n'est donc jamais lu), et le faire changer sous un bouton qui a le
+          // focus provoquerait une seconde annonce en plus de celle de la
+          // région live du provider.
+          aria-label="Ajouter au panier"
+          className={`${justAdded ? CHIP_ADDED : CHIP_IDLE} ${className ?? ""}`}
+        >
+          {justAdded ? "✓" : "+"}
+        </button>
+        {flights}
+      </>
     );
   }
 
