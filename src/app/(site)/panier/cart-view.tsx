@@ -26,7 +26,10 @@ import type { CartSnapshot } from "./snapshot";
 
 interface CheckoutErrorBody {
   error?: string;
-  refusals?: { message: string }[];
+  // `id` relie chaque refus à SA ligne du panier (`LineRefusal`,
+  // `checkout-core.ts`) — il arrivait déjà du serveur mais était jeté ici,
+  // laissant le lecteur chercher quel article était en cause.
+  refusals?: { id?: number; message: string }[];
 }
 
 /**
@@ -219,17 +222,21 @@ function QuantityStepper({
 
 function CartLineRow({
   line,
+  refused,
   onSetQty,
   onRemove,
 }: {
   line: CartLineView;
+  /** Ligne visée par un refus de checkout (`refusedIds`) — même lecture d'un coup d'œil qu'une ligne non `purchasable`, le détail du refus restant sous « Commander ». */
+  refused: boolean;
   onSetQty: (qty: number) => void;
   onRemove: () => void;
 }) {
-  // Ligne non `purchasable` : grisée ENTIÈREMENT (les 4 cellules, pas
-  // seulement titre/quantité) — un article exclu du calcul doit se lire
-  // d'un coup d'œil, pas seulement au milieu de la ligne.
-  const dim = line.purchasable ? "" : "opacity-50";
+  // Ligne non `purchasable` OU refusée au paiement : grisée ENTIÈREMENT (les
+  // 4 cellules, pas seulement titre/quantité) — un article exclu du calcul ou
+  // en cause dans un refus doit se lire d'un coup d'œil, pas seulement au
+  // milieu de la ligne.
+  const dim = line.purchasable && !refused ? "" : "opacity-50";
   return (
     <Fragment>
       <div className={`flex items-center justify-center bg-paper p-2 ${dim}`}>
@@ -254,6 +261,11 @@ function CartLineRow({
         {!line.purchasable && (
           <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-brick">
             Indisponible — exclu du calcul, retirez-le si besoin.
+          </p>
+        )}
+        {refused && line.purchasable && (
+          <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-brick">
+            En cause dans le refus de paiement — détail sous « Commander ».
           </p>
         )}
         {/* Résumé qty × prix unitaire = total — visible uniquement sous `sm`,
@@ -408,8 +420,14 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
   });
 
   const [checkoutPending, startCheckoutTransition] = useTransition();
-  /** Un item par refus (`checkout-core.ts` en rédige un par article en défaut) — jamais fusionnés en un seul paragraphe (cf. `<ul>` ci-dessous). */
-  const [checkoutError, setCheckoutError] = useState<string[] | null>(null);
+  /** Un item par refus (`checkout-core.ts` en rédige un par article en défaut) — jamais fusionnés en un seul paragraphe (cf. `<ul>` ci-dessous) ; l'`id`, quand il existe, marque la ligne en cause dans la grille. */
+  const [checkoutError, setCheckoutError] = useState<{ id?: number; message: string }[] | null>(
+    null,
+  );
+  const refusedIds = useMemo(
+    () => new Set((checkoutError ?? []).flatMap((e) => (e.id != null ? [e.id] : []))),
+    [checkoutError],
+  );
   const hasPurchasableLine = summary.lines.some((line) => line.purchasable);
 
   /**
@@ -440,11 +458,11 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
         }
         setCheckoutError(
           data.refusals && data.refusals.length > 0
-            ? data.refusals.map((r) => r.message)
-            : [data.error ?? "Le paiement est momentanément indisponible, réessayez."],
+            ? data.refusals.map((r) => ({ id: r.id, message: r.message }))
+            : [{ message: data.error ?? "Le paiement est momentanément indisponible, réessayez." }],
         );
       } catch {
-        setCheckoutError(["Le paiement est momentanément indisponible, réessayez."]);
+        setCheckoutError([{ message: "Le paiement est momentanément indisponible, réessayez." }]);
       }
     });
   }
@@ -498,8 +516,19 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
           <CartLineRow
             key={line.id}
             line={line}
-            onSetQty={(qty) => setLineQty(line.id, qty)}
-            onRemove={() => removeFromCart(line.id)}
+            refused={refusedIds.has(line.id)}
+            // Toute mutation d'une ligne périme le refus affiché (l'utilisateur
+            // est justement en train de corriger) : on repart d'un état neutre
+            // plutôt que de laisser un marquage qui ne correspond peut-être
+            // plus à rien jusqu'au prochain essai.
+            onSetQty={(qty) => {
+              setCheckoutError(null);
+              setLineQty(line.id, qty);
+            }}
+            onRemove={() => {
+              setCheckoutError(null);
+              removeFromCart(line.id);
+            }}
           />
         ))}
       </FramedGrid>
@@ -649,12 +678,12 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
               Paiement impossible
             </p>
             <ul className="mt-2 flex flex-col gap-1">
-              {checkoutError.map((message, i) => (
+              {checkoutError.map((refusal, i) => (
                 <li key={i} className="flex gap-2 font-sans text-sm font-bold text-ink">
                   <span aria-hidden="true" className="text-brick">
                     ▸
                   </span>
-                  <span>{message}</span>
+                  <span>{refusal.message}</span>
                 </li>
               ))}
             </ul>
