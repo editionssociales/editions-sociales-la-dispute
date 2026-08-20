@@ -80,8 +80,22 @@ const HOUSE: Record<"navy" | "brick", string> = {
  */
 const ALARM = `border-ink bg-pop-orange text-ink hover:bg-ink hover:text-pop-orange disabled:hover:bg-pop-orange disabled:hover:text-ink ${FOCUS_RING_INVERTING}`;
 
+/**
+ * Variante « confirmation » (retour d'ajout au panier, `AddToCartButton`) :
+ * l'écho EXACT de `CHIP_ADDED` (`add-to-cart-button.tsx`) — aplat ink, texte
+ * pop-yellow — appliqué au bouton pleine taille de la fiche, dont le retour ne
+ * tenait auparavant qu'au changement de libellé. État transitoire (1,5 s), pas
+ * un contrôle qui invite au clic : comme la puce « ajoutée », il ne s'INVERSE
+ * PAS au survol (exception R4 assumée, la même que `CHIP_ADDED`) — anneau
+ * sombre seul (R5), le fond ne bouge plus. Prop à valeurs fermées plutôt qu'un
+ * merge de `className` : Tailwind v4 réordonne les utilitaires par valeur, un
+ * `text-pop-yellow` passé par l'appelant ne l'emporterait pas sur le
+ * `text-paper` de SOLID (cf. Decisions, `src/components/CLAUDE.md`).
+ */
+const CONFIRM = `border-ink bg-ink text-pop-yellow disabled:hover:bg-ink disabled:hover:text-pop-yellow ${FOCUS_RING_DARK}`;
+
 type ButtonCommonProps = {
-  variant?: "solid" | "outline" | "house" | "invert" | "alarm";
+  variant?: "solid" | "outline" | "house" | "invert" | "alarm" | "confirm";
   /** Couleur de la maison ciblée — requis quand `variant="house"`. */
   tone?: "navy" | "brick";
   className?: string;
@@ -120,7 +134,9 @@ export function Button({ variant = "solid", tone, className, children, ...domPro
           ? INVERT
           : variant === "alarm"
             ? ALARM
-            : SOLID;
+            : variant === "confirm"
+              ? CONFIRM
+              : SOLID;
   const classes = [BASE, variantClass, className].filter(Boolean).join(" ");
 
   // `domProps` (props communes retirées) reste un type-union discriminé sur

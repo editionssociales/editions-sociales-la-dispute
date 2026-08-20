@@ -100,11 +100,18 @@ export function AddToCartButton({
   }
 
   return (
-    <Button
-      onClick={handleClick}
-      className={`px-5 py-2.5 text-sm tracking-[.03em] ${className ?? ""}`}
-    >
-      {justAdded ? "Ajouté au panier" : "Ajouter au panier"}
-    </Button>
+    <>
+      <Button
+        onClick={handleClick}
+        // `confirm` pendant le retour (#82c prolongé) : le libellé seul était
+        // le retour le plus discret du site sur son action la plus importante —
+        // même bascule de couleur que la puce (`CHIP_ADDED`), cf. `button.tsx`.
+        variant={justAdded ? "confirm" : "solid"}
+        className={`px-5 py-2.5 text-sm tracking-[.03em] ${className ?? ""}`}
+      >
+        {justAdded ? "Ajouté au panier" : "Ajouter au panier"}
+      </Button>
+      {flights}
+    </>
   );
 }
