@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCatalogueTransition } from "@/components/catalogue-transition";
 import { BOOK_SORTS, type BookFilters, type BookSort, type Facet } from "@/lib/types";
 import { EDITION_LIST } from "@/lib/editions";
 import { serializeBookFilters } from "@/lib/parse-filters";
@@ -171,7 +172,11 @@ export function CatalogueFilters({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  // Transition PARTAGÉE (`catalogue-transition.tsx`) et non plus un
+  // `useTransition` local : le même `pending` estompe ce bandeau ET la zone
+  // de résultats que la page enveloppe d'une `CatalogueTransitionZone` — le
+  // retour de chargement vit là où le contenu change, pas seulement ici.
+  const { pending: isPending, start: startTransition } = useCatalogueTransition();
 
   const filters = readFilters(params);
 
@@ -214,7 +219,9 @@ export function CatalogueFilters({
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
       });
     },
-    [pathname, router],
+    // `startTransition` vient du contexte (`useCatalogueTransition`), plus du
+    // tuple stable de `useTransition` : il entre dans les deps.
+    [pathname, router, startTransition],
   );
 
   const setFilter = (field: FilterField, value: string) => pushFilters(withFilter(filters, field, value));

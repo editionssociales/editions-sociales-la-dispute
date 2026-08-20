@@ -4,6 +4,10 @@ import { Suspense } from "react";
 import { catalogueView } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
+import {
+  CatalogueTransitionProvider,
+  CatalogueTransitionZone,
+} from "@/components/catalogue-transition";
 import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
@@ -76,39 +80,45 @@ async function EditionCatalogueBody({
           rôle visuellement. */}
       <h1 className="sr-only">{info.name}</h1>
 
-      <LibelleMosaic
-        items={libelleItems}
-        activeLibelle={filters.libelle}
-        hrefFor={(slug) =>
-          catalogueHref(
-            { ...filters, edition: undefined, libelle: slug ?? undefined, page: undefined },
-            basePath,
-          )
-        }
-        ariaLabel={`Libellés du catalogue ${info.name}`}
-        className="mt-6 sm:mt-7"
-      />
-
-      <div className="mt-6">
-        <CatalogueFilters
-          libelles={facets.libelles}
-          authors={facets.authors}
-          lockedEdition={edition}
-          hideLibelles
+      {/* Provider de transition partagé — même montage que `catalogue/page.tsx`
+          (cf. `catalogue-transition.tsx`). */}
+      <CatalogueTransitionProvider>
+        <LibelleMosaic
+          items={libelleItems}
+          activeLibelle={filters.libelle}
+          hrefFor={(slug) =>
+            catalogueHref(
+              { ...filters, edition: undefined, libelle: slug ?? undefined, page: undefined },
+              basePath,
+            )
+          }
+          ariaLabel={`Libellés du catalogue ${info.name}`}
+          className="mt-6 sm:mt-7"
         />
-      </div>
 
-      <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
-        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
-          {total} {isUpcoming ? "titres à paraître" : "résultats"}
-        </span>
-      </div>
+        <div className="mt-6">
+          <CatalogueFilters
+            libelles={facets.libelles}
+            authors={facets.authors}
+            lockedEdition={edition}
+            hideLibelles
+          />
+        </div>
 
-      <div className="mt-4">
-        <BookGrid books={books} resetHref={resetHref} />
-      </div>
+        <CatalogueTransitionZone>
+          <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
+            <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
+              {total} {isUpcoming ? "titres à paraître" : "résultats"}
+            </span>
+          </div>
 
-      <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
+          <div className="mt-4">
+            <BookGrid books={books} resetHref={resetHref} />
+          </div>
+
+          <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
+        </CatalogueTransitionZone>
+      </CatalogueTransitionProvider>
     </Container>
   );
 }

@@ -3,6 +3,10 @@ import { Suspense } from "react";
 import { catalogueView, getBooks } from "@/lib/catalogue";
 import { BookGrid } from "@/components/book-grid";
 import { CatalogueFilters } from "@/components/catalogue-filters";
+import {
+  CatalogueTransitionProvider,
+  CatalogueTransitionZone,
+} from "@/components/catalogue-transition";
 import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
@@ -100,45 +104,53 @@ async function CatalogueBody({
           vue unique depuis l'arbitrage client 25/07) ; les étiquettes de
           libellés des filtres ci-dessous sont masquées, cette vue couvre
           déjà ce rôle. */}
-      <LibelleMosaic
-        items={[
-          { name: "Tous les livres", slug: null, count: facets.total },
-          ...facets.libelles,
-        ]}
-        activeLibelle={filters.libelle}
-        hrefFor={(slug) =>
-          catalogueHref({ ...filters, libelle: slug ?? undefined, page: undefined })
-        }
-        ariaLabel="Libellés du catalogue"
-      />
-
-      <div className="mt-6">
-        <CatalogueFilters
-          libelles={facets.libelles}
-          authors={facets.authors}
-          hideLibelles
+      {/* Provider de transition partagé (`catalogue-transition.tsx`) : les
+          filtres y démarrent leurs navigations, la zone ci-dessous — compteur
+          + grille + pagination, LES sous-arbres qui changent — s'estompe
+          pendant qu'elles sont en vol. Enfants serveur passés en children. */}
+      <CatalogueTransitionProvider>
+        <LibelleMosaic
+          items={[
+            { name: "Tous les livres", slug: null, count: facets.total },
+            ...facets.libelles,
+          ]}
+          activeLibelle={filters.libelle}
+          hrefFor={(slug) =>
+            catalogueHref({ ...filters, libelle: slug ?? undefined, page: undefined })
+          }
+          ariaLabel="Libellés du catalogue"
         />
-      </div>
 
-      {/* Live region (issue #86b) : le fallback de chargement (`CatalogueFallback`)
-          annonce déjà « Chargement du catalogue… » côté AT — mais jamais le
-          RÉSULTAT du filtrage une fois la vue rendue. `aria-live="polite"`
-          fait lire le total à chaque changement de filtre/page (navigation
-          interne, pas de rechargement complet). */}
-      <div
-        className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]"
-        aria-live="polite"
-      >
-        <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
-          {total} résultats
-        </span>
-      </div>
+        <div className="mt-6">
+          <CatalogueFilters
+            libelles={facets.libelles}
+            authors={facets.authors}
+            hideLibelles
+          />
+        </div>
 
-      <div className="mt-4">
-        <BookGrid books={books} resetHref={resetHref} />
-      </div>
+        <CatalogueTransitionZone>
+          {/* Live region (issue #86b) : le fallback de chargement (`CatalogueFallback`)
+              annonce déjà « Chargement du catalogue… » côté AT — mais jamais le
+              RÉSULTAT du filtrage une fois la vue rendue. `aria-live="polite"`
+              fait lire le total à chaque changement de filtre/page (navigation
+              interne, pas de rechargement complet). */}
+          <div
+            className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]"
+            aria-live="polite"
+          >
+            <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
+              {total} résultats
+            </span>
+          </div>
 
-      <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
+          <div className="mt-4">
+            <BookGrid books={books} resetHref={resetHref} />
+          </div>
+
+          <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
+        </CatalogueTransitionZone>
+      </CatalogueTransitionProvider>
     </Container>
   );
 }
