@@ -28,8 +28,14 @@ export const PromoCodes: CollectionConfig = {
   admin: {
     group: 'Boutique',
     useAsTitle: 'code',
-    defaultColumns: ['code', 'type', 'amount', 'active', 'expiresAt'],
+    // « État » (calculée) remplace la colonne `active` brute — audit UX,
+    // manque n°1 : aucune colonne ne disait « en cours en ce moment »
+    // (croise active + expiresAt, cf. le champ `etat` plus bas).
+    defaultColumns: ['code', 'etat', 'type', 'amount', 'expiresAt'],
   },
+  // Remonte les codes actifs récemment édités en tête de liste — pas de
+  // meilleur candidat (pas de champ « dernière utilisation »).
+  defaultSort: '-updatedAt',
   access: {
     // Pas de lecture publique : un code promo listé via l'API serait
     // énumérable. Le futur endpoint de checkout le valide côté serveur via
@@ -51,6 +57,21 @@ export const PromoCodes: CollectionConfig = {
       label: 'Code',
       admin: {
         description: 'Normalisé en majuscules à la sauvegarde (insensible à la casse au checkout).',
+      },
+    },
+    {
+      // Champ `ui` purement présentationnel — colonne de liste calculée
+      // uniquement, aucun effet sur le schéma de données. Invisible en fiche
+      // (pas de composant `Field`), rendu en liste par `PromoStatusCell`
+      // (`src/payload/admin/cells/`), qui croise `active`/`expiresAt` via
+      // `isPromoExpired` (`src/lib/promo-core.ts`).
+      type: 'ui',
+      name: 'etat',
+      label: 'État',
+      admin: {
+        components: {
+          Cell: '/payload/admin/cells/PromoStatusCell.tsx#PromoStatusCell',
+        },
       },
     },
     {

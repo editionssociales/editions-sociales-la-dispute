@@ -27,7 +27,9 @@ export const Rencontres: CollectionConfig = {
   admin: {
     group: 'Site',
     useAsTitle: 'titre',
-    defaultColumns: ['titre', 'date', 'ville'],
+    // `lieu` manquait à côté de `ville` — colonnes utiles au quotidien,
+    // ordre/tri (`defaultSort: '-date'` ci-dessus) inchangés.
+    defaultColumns: ['titre', 'date', 'lieu', 'ville'],
     description: 'Agenda public des rencontres (page /rencontres) — une entrée par événement.',
     // Chips de filtre À venir/Passées/Toutes — au-dessus du tableau, même
     // slot et même pattern que `BooksFilterChipsPanel.tsx`/`Books.ts`.

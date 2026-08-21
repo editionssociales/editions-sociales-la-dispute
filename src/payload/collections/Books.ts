@@ -171,8 +171,19 @@ export const Books: CollectionConfig = {
   admin: {
     group: 'Quotidien',
     useAsTitle: 'title',
-    // Colonnes légères — pas de richText/legacy dans la liste (payload volumineux).
-    defaultColumns: ['title', 'edition', 'libelles', 'cover', 'dateParution', '_status'],
+    // Colonnes légères — pas de richText/legacy dans la liste (payload
+    // volumineux). `cover` (vignette peu informative en liste) remplacée par
+    // le stock — chemin imbriqué du group `commerce` (accessor
+    // `commerce.stock`, hoisté par `flattenTopLevelFields`, testé en dev
+    // avant merge — premier usage de ce motif dans le repo). Un résumé
+    // « Vente » (sellable/à paraître/précommande) a été envisagé mais
+    // écarté : `aParaitre` est un champ purement informatif (cf. son
+    // `admin.description` plus bas), pas le signal réel de vendabilité
+    // (`assessSellability`/`sellability.ts`, qui compare la date de parution
+    // à aujourd'hui) — un résumé bâti sur les seules cases à cocher
+    // afficherait un état parfois faux. `_status` (natif Payload) reste donc
+    // la colonne d'état de vente.
+    defaultColumns: ['title', 'edition', 'dateParution', 'commerce.stock', 'libelles', '_status'],
     listSearchableFields: ['title', 'isbn', 'slug'],
     // Chips de filtre État/Maison + bouton « Nouveau livre » (issue #26) —
     // au-dessus du tableau, cf. `BooksFilterChipsPanel.tsx` (même slot que
