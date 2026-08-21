@@ -43,7 +43,7 @@ const DAY_MS = 86_400_000
 
 /** Espaces insécables (fine ou pleine) → espace simple : les assertions ne dépendent pas de la version d'ICU. */
 function plain(s: string): string {
-  return s.replace(/[  ]/g, ' ')
+  return s.replace(/[  ]/g, ' ')
 }
 
 /* ────────────────────────── worstState ────────────────────────── */

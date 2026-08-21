@@ -414,7 +414,10 @@ export async function Dashboard({ payload }: ServerProps) {
                       <span className={styles.kpiMeta}>{fmtDateFr(book.dateParution)}</span>
                       {book.preorder && <span className={styles.tag}>précommande ouverte</span>}
                       {precommandesPayees > 0 && (
-                        <span className={styles.kpiMeta}>{precommandesPayees} précommandes payées</span>
+                        <span className={styles.kpiMeta}>
+                          {precommandesPayees} précommande{precommandesPayees > 1 ? 's' : ''} payée
+                          {precommandesPayees > 1 ? 's' : ''}
+                        </span>
                       )}
                     </div>
                   )
