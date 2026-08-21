@@ -81,7 +81,8 @@ h1, h2, h3, h4 {
   color: var(--color-paper);
 }
 
-/* Montée des dos de livres dessinés (404, étagère du panier). */
+/* Montée des dos de livres dessinés (404, étagère du panier, étagère du héro
+   de /souscription). */
 @keyframes spine-rise {
   from { opacity: 0; transform: translateY(28px); }
   to { opacity: 1; transform: translateY(0); }
@@ -192,6 +193,130 @@ h1, h2, h3, h4 {
      (test `matchMedia` avant création, `fly-to-cart.tsx`). */
   .cart-fly {
     animation: none;
+  }
+}
+
+/* Animations de la page de souscription (étagère du héro). */
+/*
+ * Étagère du héro (page souscription) : sortie de rayon 3D au survol/focus
+ * du lien. Le livre pivote sur l'arête de sa reliure (bord droit du dos) pour
+ * présenter sa couverture. Au repos, dos et couverture ont la hauteur du dos
+ * (--h) : la couverture, vue par la tranche, se cache derrière le dos (aucun
+ * sliver). Au survol, le livre grandit vers une hauteur uniforme (--bh) ancrée
+ * en bas, pour que les petits dos ne donnent pas des livres minuscules.
+ * Dimensions par livre en variables CSS inline --w/--h/--bh/--car ; réglages
+ * (angle, sortie, easing) repris du prototype de design.
+ */
+.book3d {
+  perspective: 1000px;
+}
+.book3d-inner {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--w);
+  height: var(--h);
+  transform-style: preserve-3d;
+  transform-origin: 100% 100%;
+  transform: translateX(0) translateY(0) translateZ(0) rotateY(0deg);
+  transition:
+    transform 440ms cubic-bezier(0.34, 1.28, 0.5, 1),
+    height 440ms cubic-bezier(0.34, 1.28, 0.5, 1);
+  will-change: transform, height;
+}
+/* Sortie du rayon — déclenchée par la classe `is-open` (pilotée par ShelfLock :
+   un seul livre animé à la fois, cf. shelf-lock.tsx) ou par le focus clavier. */
+.book3d.is-open .book3d-inner,
+.book3d:focus-visible .book3d-inner {
+  height: var(--bh);
+  transform: translateX(-30px) translateY(-60px) translateZ(52px) rotateY(-78deg);
+}
+/* Dos proches du bord gauche de l'étagère : sortie latérale réduite pour ne
+   pas déborder de la page (écart assumé au prototype, X_SHIFT 30 → 20). */
+.book3d--edge.is-open .book3d-inner,
+.book3d--edge:focus-visible .book3d-inner {
+  height: var(--bh);
+  transform: translateX(-20px) translateY(-60px) translateZ(52px) rotateY(-78deg);
+}
+.book3d-spine {
+  position: absolute;
+  inset: 0;
+  /* Angle droit strict (R8, brutalisme) : plus de border-radius. */
+  /* Au repos : dos plat, simple ombrage latéral discret (aucun reflet). */
+  background-image: linear-gradient(90deg, rgb(0 0 0 / 0), rgb(0 0 0 / 0.16));
+  backface-visibility: hidden;
+  /* Épaissit le dos quand le livre s'incline (sinon trop mince, comme un
+     artefact, vu l'angle de rotation) : élargissement vers la gauche, l'arête
+     de reliure (bord droit) reste collée à la couverture. */
+  transform-origin: 100% 50%;
+  transition: transform 440ms cubic-bezier(0.34, 1.28, 0.5, 1);
+}
+/* Reflet doux « dos rond » révélé en fondu UNIQUEMENT pendant que le livre
+   s'incline : donne du volume au dos, sans aucun reflet au repos. Intensité
+   volontairement très basse (retour client 25/07 : l'éclat à 0.34 brillait
+   trop). */
+.book3d-spine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0) 34%,
+    rgb(255 255 255 / 0.1) 64%,
+    rgb(255 255 255 / 0.03) 80%,
+    rgb(255 255 255 / 0) 100%
+  );
+  opacity: 0;
+  transition: opacity 440ms ease;
+  pointer-events: none;
+}
+.book3d.is-open .book3d-spine,
+.book3d:focus-visible .book3d-spine {
+  transform: scaleX(1.9);
+}
+.book3d.is-open .book3d-spine::after,
+.book3d:focus-visible .book3d-spine::after {
+  opacity: 1;
+}
+.book3d-cover {
+  position: absolute;
+  bottom: 0;
+  /* Chevauche de 5px l'arête de reliure pour supprimer tout liseré/décalage
+     entre le dos et la couverture (le dos, dessous, comble le joint —
+     2px laissaient encore un jour visible, constat 25/07). */
+  left: calc(var(--w) - 5px);
+  height: 100%; /* suit la hauteur de --inner : --h au repos, --bh au survol */
+  /* Largeur déduite de la hauteur au FORMAT EXACT de la couverture (ratio DB) :
+     l'objet grandit proportionnellement pendant tout le dépliage, et
+     `object-cover` remplit sans jamais recadrer (boîte au ratio de l'image). */
+  aspect-ratio: var(--car);
+  transform-origin: 0% 100%;
+  transform: rotateY(90deg);
+  overflow: hidden;
+  backface-visibility: hidden;
+  /* Bordure franche (R8, brutalisme), zéro border-radius. L'ombre floue,
+     nulle au repos, n'apparaît que pendant la sortie 3D (demande client
+     25/07) — entorse R8 limitée à l'animation, jamais à l'état posé. */
+  border: 2px solid var(--color-ink);
+  box-shadow: 0 0 0 rgb(0 0 0 / 0);
+  transition: box-shadow 440ms ease;
+}
+/* Léger ombrage derrière le livre déplié : ancre le volume sur le fond paper. */
+.book3d.is-open .book3d-cover,
+.book3d:focus-visible .book3d-cover {
+  box-shadow: -14px 18px 30px rgb(0 0 0 / 0.25);
+}
+/* Livre ouvert : passe au-dessus de ses voisins. */
+.book3d.is-open {
+  z-index: 30;
+}
+@media (prefers-reduced-motion: reduce) {
+  .book3d-inner,
+  .book3d-spine,
+  .book3d-spine::after,
+  .book3d-cover {
+    transition: none;
   }
 }
 

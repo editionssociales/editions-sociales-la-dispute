@@ -10,12 +10,14 @@ import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { RAIL_GRID_CLASS, RAIL_GRID_TRANSITION_CLASS } from "@/components/rail-inset";
-import { POP_BG, POP_ORDER } from "@/components/pop-palette";
+import { POP_BG } from "@/components/pop-palette";
 import type { SafeHtml } from "@/lib/cms-html";
 import { getCampaign2026 } from "@/lib/donations";
 import { getPageSouscription } from "@/lib/site-content";
+import { getNewReleases } from "@/lib/catalogue";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
+import { HeroShelf, MobileShelf } from "./_components/shelf";
 import { TiersDrawer } from "./_components/tiers-drawer";
 
 /**
@@ -31,18 +33,15 @@ import { TiersDrawer } from "./_components/tiers-drawer";
  * Ordre du DOM, inchangé dans son principe (retour client 2026-07-24, la
  * colonne principale garde jauge → récit → objectifs → CTA, le rail des
  * contreparties reste hors du corps de texte) : héros de collecte en direct
- * (INCHANGÉ À L'OCTET, cf. plus bas) → titre de l'ask (« 100 ans », motif
- * décoratif, demande) → quatre sections narratives (UN SEUL pattern répété :
+ * (INCHANGÉ À L'OCTET, cf. plus bas) → titre de l'ask (« 100 ans » +
+ * étagère 3D à sa droite, demande alignée à droite) → quatre sections narratives (UN SEUL pattern répété :
  * bandeau de titre à l'accent de la section + corps en prose sobre — gras et
  * surlignage inline pour toute emphase, aucun autre effet) → trois cartes de
  * paliers de jauge (remplacent l'escalier typographique) → CTA final →
  * rail sticky des contreparties (`#paliers`, hors du corps de texte, cf.
  * `_components/tiers-rail.tsx`/`tiers-drawer.tsx`, INCHANGÉS).
  *
- * Ce qui disparaît avec la refonte : l'étagère 3D des dernières parutions
- * (`_components/shelf.tsx`, `components/shelf-lock.tsx`/`shelf-cover.tsx` —
- * supprimés, plus aucun autre appelant) et son motif CSS `.book3d*`
- * (`globals.css`) ; la section vidéo conditionnelle (`CAMPAIGN_VIDEO_URL`
+ * Ce qui disparaît avec la refonte : la section vidéo conditionnelle (`CAMPAIGN_VIDEO_URL`
  * n'a jamais cessé d'être `null` — `src/lib/video.ts` reste en place,
  * toujours utilisé par la fiche livre) ; la bande hazard, le tampon penché
  * « 100 ans », le crescendo du bandeau d'appel (dont le « ! » ajouté en
@@ -85,15 +84,16 @@ const RECIT_CORPS_CLASS =
 
 /**
  * Surlignage inline (verbatim maquette) — UNIQUE effet d'emphase avec le gras
- * (consigne client : « juste à la rigueur avec des trucs surlignés »).
+ * (consigne client : « juste à la rigueur avec des trucs surlignés »), et
+ * TOUJOURS gras lui-même (retour client 2026-08-21 soir).
  * `box-decoration-clone` évite un rectangle en escalier quand le surlignage
  * franchit un retour à la ligne. Une classe littérale par couleur de section
  * (contrat JIT — jamais `bg-pop-${couleur}` assemblée dynamiquement).
  */
-const HL_ORANGE = "box-decoration-clone bg-pop-orange px-1";
-const HL_TEAL = "box-decoration-clone bg-pop-teal px-1";
-const HL_YELLOW = "box-decoration-clone bg-pop-yellow px-1";
-const HL_PINK = "box-decoration-clone bg-pop-pink px-1";
+const HL_ORANGE = "box-decoration-clone bg-pop-orange px-1 font-bold";
+const HL_TEAL = "box-decoration-clone bg-pop-teal px-1 font-bold";
+const HL_YELLOW = "box-decoration-clone bg-pop-yellow px-1 font-bold";
+const HL_PINK = "box-decoration-clone bg-pop-pink px-1 font-bold";
 
 /**
  * Une section du récit — UN SEUL pattern répété (consigne client) : bandeau
@@ -149,14 +149,6 @@ function RecitSection({
   );
 }
 
-/**
- * Motif décoratif « équaliseur » du titre de l'ask (maquette) — hauteurs en
- * px, aucune image (divs littéraux). `aria-hidden` : purement ornemental, la
- * demande qu'il précède est déjà portée par le h1 (`sr-only`) et son rendu
- * visible juste après.
- */
-const EQUALIZER_BARS = [18, 34, 48, 26, 56, 30, 44, 22, 38, 28, 46] as const;
-
 export const metadata: Metadata = {
   title: "Souscription",
   // ≤ 160 caractères (Google tronque au-delà) : crise + appel + fourchette.
@@ -201,10 +193,15 @@ export default async function SouscriptionPage() {
   // `getCampaign2026()` ne fait aucun appel réseau tant que `stripeEnabled()`
   // est faux (elle jette avant tout fetch, absorbée en `null` — `lib/donations.ts`) :
   // gratuit à appeler inconditionnellement.
-  const [campaign2026, content] = await Promise.all([
+  const [campaign2026, content, releases] = await Promise.all([
     getCampaign2026(),
     getPageSouscription(),
+    // Étagère de l'ask : panne catalogue absorbée en étagère vide (les deux
+    // composants ont leur fail-open de dos dessinés), jamais une page morte.
+    getNewReleases(18).catch(() => []),
   ]);
+  // Les deux étagères exigent couverture + fiche interne (garde locale en plus).
+  const shelfBooks = releases.filter((b) => b.cover && b.edition);
   // Jauge 2026 TOUJOURS visible (point le plus urgent du site) : avant
   // l'ouverture des dons (pas de clé Stripe → `null`), ou juste après le
   // lancement (0 collecté), la jauge affiche honnêtement une campagne à 0
@@ -305,7 +302,7 @@ export default async function SouscriptionPage() {
             net + contributeurs). Fenêtre de fraîcheur ~1–3 min, voir
             `src/app/CLAUDE.md`. */}
         <section className="bg-paper text-ink">
-          <Container className="py-12 sm:py-16">
+          <Container className="pt-12 pb-5 sm:pt-16 sm:pb-6">
             <Reveal>
               {/* Frame d'impact : compteur et jauge courent 1600 ms sur le
                   même easeOutCubic — encore faut-il qu'ils PARTENT ensemble.
@@ -435,47 +432,55 @@ export default async function SouscriptionPage() {
           </Container>
         </section>
 
-        {/* 2 ▪ Titre de l'ask — « 100 ans » en très grand (apaisé : une seule
-            échelle géante au lieu du crescendo à trois échelles de l'ancienne
-            maquette), qualification en capitales, motif décoratif
-            « équaliseur » (aucune image) puis la demande. Le h1 reste UN SEUL
-            <h1> portant tout le slogan verbatim dans l'ordre : la demande y
-            vit en sr-only, son rendu visible sous le motif est aria-hidden —
-            une seule lecture SR, zéro duplication dans l'arbre a11y. Plus
-            d'étagère 3D sous le titre (supprimée avec la refonte, cf. doc de
-            module) : le formulaire montant libre reste au rail, seule l'ancre
-            y mène. */}
-        <section className="bg-paper pt-16 sm:pt-20">
+        {/* 2 ▪ Titre de l'ask — « 100 ans » / « d'édition marxiste : » sur
+            deux lignes, l'étagère 3D des dernières parutions posée À SA
+            DROITE (retour client 2026-08-21 soir — elle remplace le motif
+            « équaliseur » de la maquette, réintégrée après sa suppression du
+            matin). `flex-wrap` : quand la colonne se resserre (rail ouvert à
+            `lg`), l'étagère retombe SOUS le titre au lieu de déborder. Sous
+            `lg`, repli 2×4 de vraies couvertures (R7 — l'étagère ne peut pas
+            disparaître pour le trafic mobile de campagne). Ni `Reveal` ni
+            `overflow-hidden` au-dessus de l'étagère : le transform créerait
+            un containing block qui casse le pop-out 3D (constat 25/07).
+            Le h1 reste UN SEUL <h1> portant tout le slogan verbatim dans
+            l'ordre : la demande y vit en sr-only ; son rendu visible est la
+            ligne du dessous — italique NON grasse, alignée à droite,
+            aria-hidden (une seule lecture SR). Écart avec le bloc de collecte
+            fortement réduit (même retour client). */}
+        <section className="bg-paper pt-3 sm:pt-4">
           <Container>
-            <h1 className="font-sans font-black text-ink">
-              <span className="block italic text-[clamp(56px,12vw,120px)] leading-[0.85] tracking-[-0.02em]">
-                {content.titre.titre}
-              </span>
-              <span className="mt-2 block text-[clamp(24px,5vw,44px)] uppercase leading-[0.95] tracking-[-0.01em]">
-                {content.titre.sousTitre}
-              </span>
-              <span className="sr-only">{content.titre.demande}</span>
-            </h1>
-            {/* Motif + demande visible : dupliquent le sr-only du h1, donc
-                entièrement aria-hidden. Barres cyclées dans l'ordre canonique
-                de la palette (`POP_ORDER`). */}
-            <div aria-hidden="true" className="mt-6 flex flex-wrap items-end gap-4 sm:gap-6">
-              <div className="flex items-end gap-[3px]">
-                {EQUALIZER_BARS.map((h, i) => (
-                  <span
-                    key={i}
-                    className={`block w-2 sm:w-2.5 ${POP_BG[POP_ORDER[i % 4]]}`}
-                    style={{ height: h }}
-                  />
-                ))}
+            <div className="flex flex-wrap items-end gap-x-10 gap-y-8">
+              <h1 className="shrink-0 font-sans font-black text-ink">
+                <span className="block italic text-[clamp(56px,12vw,120px)] leading-[0.85] tracking-[-0.02em]">
+                  {content.titre.titre}
+                </span>
+                <span className="mt-2 block text-[clamp(24px,5vw,44px)] uppercase leading-[0.95] tracking-[-0.01em]">
+                  {content.titre.sousTitre}
+                </span>
+                <span className="sr-only">{content.titre.demande}</span>
+              </h1>
+              {/* lg+ : l'étagère occupe le flanc droit du titre, son rayon
+                  (le filet ink de `HeroShelf`) court sur toute la largeur
+                  restante — la place des prochains livres. */}
+              <div
+                className="hidden min-w-0 flex-1 lg:block"
+                role="group"
+                aria-label="Dernières parutions"
+              >
+                <HeroShelf books={shelfBooks} />
               </div>
-              <span className="pb-1 font-sans text-2xl font-black leading-none text-ink/40">
-                ···
-              </span>
-              <p className="min-w-0 flex-1 font-sans text-[clamp(22px,4vw,40px)] font-black italic leading-[0.95] text-ink">
-                {content.titre.demande}
-              </p>
             </div>
+            {/* Sous lg : le repli grille de l'étagère, entre le titre et la
+                demande. */}
+            <div className="mt-6 lg:hidden" role="group" aria-label="Dernières parutions">
+              <MobileShelf books={shelfBooks} />
+            </div>
+            <p
+              aria-hidden="true"
+              className="mt-5 text-right font-sans text-[clamp(18px,2.6vw,28px)] font-medium italic leading-snug text-ink sm:mt-6"
+            >
+              …&nbsp;{content.titre.demande}
+            </p>
           </Container>
         </section>
 
