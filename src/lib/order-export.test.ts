@@ -105,6 +105,19 @@ describe("formatPreparationCsv", () => {
     expect(lines[1]).toBe("jeanne@example.org;Précommande;5;9782000000005;Livre à paraître;1;20,00;;0,00");
   });
 
+  it("libellé « Don » quand orderType = don — apparaît normalement (l'export préparation ne change pas)", () => {
+    const csv = formatPreparationCsv([
+      order({
+        orderType: "don",
+        lines: [
+          { bookId: 9, isbn: null, title: "Contrepartie tote bag", quantity: 1, unitPriceTTC: 50 },
+        ],
+      }),
+    ]);
+    const lines = csv.trim().split("\r\n");
+    expect(lines[1]).toBe("jeanne@example.org;Don;9;;Contrepartie tote bag;1;50,00;;0,00");
+  });
+
   it("échappe un titre contenant le séparateur (RFC 4180)", () => {
     const csv = formatPreparationCsv([
       order({
@@ -217,6 +230,19 @@ describe("formatComptaCsv", () => {
     const csv = formatComptaCsv([order({ stripeSessionId: null })]);
     const cells = csv.trim().split("\r\n")[1].split(";");
     expect(cells.at(-2)).toBe("");
+  });
+
+  it("don : libellé Type « Don », part TVA vide (pas une vente), total TTC affiché tel quel", () => {
+    const csv = formatComptaCsv([
+      order({
+        orderType: "don",
+        totalTTC: 50,
+      }),
+    ]);
+    const cells = csv.trim().split("\r\n")[1].split(";");
+    expect(cells[1]).toBe("Don");
+    expect(cells[17]).toBe("50,00"); // Total TTC — affiché tel quel, non recalculé
+    expect(cells[20]).toBe(""); // Part TVA — vide, un don n'est pas une vente
   });
 });
 

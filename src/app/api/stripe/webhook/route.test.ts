@@ -71,14 +71,16 @@ vi.mock("@/lib/order-source", () => ({
     if (order) Object.assign(order, data);
     return order;
   },
-  decrementBookStock: async (id: number, qty: number) => {
+  decrementBookStock: async (id: number, qty: number, opts?: { allowNegative?: boolean }) => {
     if (failNextDecrement) {
       failNextDecrement = false;
       throw new Error("crash simulé après création, avant décrément (issue #64)");
     }
     const record = bookRecords[id];
     if (!record || record.stock == null) return; // stock non suivi — rien à décrémenter
-    record.stock = Math.max(0, record.stock - qty);
+    // `allowNegative` (don avec contrepartie, client 2026-08-21) : même
+    // comportement que le vrai `order-source.ts`, cf. `route.test.ts` § dons.
+    record.stock = opts?.allowNegative ? record.stock - qty : Math.max(0, record.stock - qty);
     stockUpdates.push({ id, stock: record.stock });
   },
 }));
@@ -89,6 +91,19 @@ vi.mock("@/lib/commerce-source", () => ({
     for (const id of ids) {
       const record = bookRecords[id];
       if (record) map.set(id, record);
+    }
+    return map;
+  },
+}));
+
+// Le chemin don lit via `contreparties.ts` (brouillons inclus) — même fixture
+// `bookRecords`, resservie sous la forme `ContrepartieBook` (id/title/isbn).
+vi.mock("@/lib/contreparties", () => ({
+  getContrepartieBooksByIds: async (ids: number[]) => {
+    const map = new Map<number, { id: number; title: string; isbn: string | null }>();
+    for (const id of ids) {
+      const record = bookRecords[id];
+      if (record) map.set(id, { id, title: record.title, isbn: record.isbn });
     }
     return map;
   },
@@ -711,5 +726,216 @@ describe("POST /api/stripe/webhook — scission commande/précommande (client 20
       "Webhook Stripe : total scindé (commande + précommande) ne reconstitue pas amount_total",
       expect.objectContaining({ level: "warning" }),
     );
+  });
+});
+
+describe("POST /api/stripe/webhook — don avec contrepartie (client 2026-08-21)", () => {
+  const DON_METADATA = {
+    kind: "donation",
+    campaign: "souscription-2026",
+    tier: "palier-50",
+    donLines: "21:1:0;22:1:0",
+  };
+
+  function donSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "cs_test_don_1",
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 5000,
+      payment_intent: "pi_test_don_1",
+      customer_details: { email: "donatrice@exemple.fr" },
+      collected_information: {
+        shipping_details: {
+          name: "Jean Dupont",
+          address: {
+            line1: "1 rue Paul Lafargue",
+            line2: null,
+            city: "Paris",
+            postal_code: "75001",
+            country: "FR",
+          },
+        },
+      },
+      metadata: DON_METADATA,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    bookRecords = {
+      21: { title: "Tote bag", isbn: null, stock: 0 },
+      22: { title: "Planche de stickers", isbn: null, stock: 5 },
+    };
+  });
+
+  it("checkout.session.completed payé avec donLines → crée la commande orderType don, décrémente le stock (négatif autorisé), envoie le récap, jamais le mailer simple ni la confirmation boutique", async () => {
+    const res = await POST(
+      signedEventRequest({ id: "evt_don_1", type: "checkout.session.completed", object: donSession() }),
+    );
+    expect(res.status).toBe(200);
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({
+      orderType: "don",
+      status: "paid",
+      email: "donatrice@exemple.fr",
+      stripeSessionId: "cs_test_don_1",
+      stripePaymentIntentId: "pi_test_don_1",
+      shippingMethod: "offert",
+      shippingCostTTC: 0,
+      discountTTC: 0,
+      totalTTC: 50,
+      promoCode: null,
+      lines: [
+        { book: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+        { book: 22, titleSnapshot: "Planche de stickers", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+      ],
+    });
+    expect(orders[0].shippingAddress).toMatchObject({ fullName: "Jean Dupont", city: "Paris", country: "FR" });
+
+    // Tote bag : stock 0 → -1 (négatif autorisé, la contrepartie est toujours servie).
+    expect(stockUpdates).toEqual(
+      expect.arrayContaining([
+        { id: 21, stock: -1 },
+        { id: 22, stock: 4 },
+      ]),
+    );
+
+    expect(sendDonationThanks).toHaveBeenCalledTimes(1);
+    expect(sendDonationThanks).toHaveBeenCalledWith({
+      email: "donatrice@exemple.fr",
+      recap: {
+        tierTitle: "Camarade de lecture",
+        amountEuros: 50,
+        lines: [
+          { title: "Tote bag", quantity: 1 },
+          { title: "Planche de stickers", quantity: 1 },
+        ],
+        shippingAddress: expect.objectContaining({ fullName: "Jean Dupont", city: "Paris" }),
+      },
+    });
+
+    // Jamais le mailer boutique pour un don.
+    expect(sendOrderConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("rejoué (même session) → ne recrée pas la commande, ne décrémente pas deux fois, ne renvoie pas le mail", async () => {
+    const request = () =>
+      signedEventRequest({ id: "evt_don_1", type: "checkout.session.completed", object: donSession() });
+
+    const first = await POST(request());
+    expect(first.status).toBe(200);
+    const second = await POST(request());
+    expect(second.status).toBe(200);
+
+    expect(orders).toHaveLength(1);
+    expect(stockUpdates).toHaveLength(2); // chaque livre décrémenté une seule fois au total
+    expect(sendDonationThanks).toHaveBeenCalledTimes(1);
+  });
+
+  it("livre de contrepartie introuvable → ligne conservée avec un titre de repli, Sentry warning, jamais une ligne perdue", async () => {
+    bookRecords = { 22: { title: "Planche de stickers", isbn: null, stock: 5 } }; // le livre 21 n'existe plus
+
+    const res = await POST(
+      signedEventRequest({ id: "evt_don_missing_book", type: "checkout.session.completed", object: donSession() }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(1);
+    expect(orders[0].lines).toEqual([
+      { book: 21, titleSnapshot: "Article #21", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+      { book: 22, titleSnapshot: "Planche de stickers", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+    ]);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "Webhook Stripe (don) : article de contrepartie introuvable — titre de repli",
+      expect.objectContaining({ level: "warning" }),
+    );
+  });
+
+  it("checkout.session.async_payment_succeeded avec donLines → confirme la commande don différée", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_don_async",
+        type: "checkout.session.async_payment_succeeded",
+        object: donSession(),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(1);
+    expect(orders[0].orderType).toBe("don");
+    expect(sendDonationThanks).toHaveBeenCalledTimes(1);
+  });
+
+  it("payment_status non « paid » → aucune commande créée, aucun mail", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_don_pending",
+        type: "checkout.session.completed",
+        object: donSession({ payment_status: "unpaid" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(0);
+    expect(sendDonationThanks).not.toHaveBeenCalled();
+  });
+
+  it("charge.refunded sur un don avec contrepartie → la commande don passe à refunded (chemin partagé avec le commerce)", async () => {
+    orders.push({
+      id: 1,
+      stripeSessionId: "cs_test_don_1",
+      stripePaymentIntentId: "pi_test_don_1",
+      orderType: "don",
+      status: "paid",
+      email: "donatrice@exemple.fr",
+      stockDecremented: true,
+      confirmationSent: true,
+    });
+
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_don_refund",
+        type: "charge.refunded",
+        object: {
+          id: "ch_test_don",
+          object: "charge",
+          payment_intent: "pi_test_don_1",
+          metadata: { kind: "donation" },
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders[0].status).toBe("refunded");
+    expect(revalidateTag).toHaveBeenCalledWith("donations", "max");
+  });
+
+  it("charge.refunded sans commande associée (don sans contrepartie) → no-op silencieux, aucun warning Sentry", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_don_refund_orphan",
+        type: "charge.refunded",
+        object: {
+          id: "ch_test_don_orphan",
+          object: "charge",
+          payment_intent: "pi_test_don_inconnu",
+          metadata: { kind: "donation" },
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it("don à montant libre (sans donLines) → reste le mailer simple, aucune commande créée", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_don_libre",
+        type: "checkout.session.completed",
+        object: donSession({ metadata: { kind: "donation", campaign: "souscription-2026", tier: "libre" } }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(0);
+    expect(sendDonationThanks).toHaveBeenCalledTimes(1);
+    expect(sendDonationThanks).toHaveBeenCalledWith({ email: "donatrice@exemple.fr" });
   });
 });

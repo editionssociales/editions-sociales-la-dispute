@@ -18,8 +18,10 @@ import * as migration_20260724_141654_souscription_2026 from './20260724_141654_
 import * as migration_20260726_150000_commande_marqueurs_effets from './20260726_150000_commande_marqueurs_effets';
 import * as migration_20260817_120000_footer_sans_texte_diffusion from './20260817_120000_footer_sans_texte_diffusion';
 import * as migration_20260820_140000_precommande from './20260820_140000_precommande';
+import * as migration_20260821_090000_don_ordertype from './20260821_090000_don_ordertype';
 import * as migration_20260821_150000_souscription_recit_sobre from './20260821_150000_souscription_recit_sobre';
 import * as migration_20260821_150000_editorial_pages from './20260821_150000_editorial_pages';
+import * as migration_20260821_160000_produits_contreparties from './20260821_160000_produits_contreparties';
 
 export const migrations = [
   {
@@ -123,6 +125,11 @@ export const migrations = [
     name: '20260820_140000_precommande',
   },
   {
+    up: migration_20260821_090000_don_ordertype.up,
+    down: migration_20260821_090000_don_ordertype.down,
+    name: '20260821_090000_don_ordertype',
+  },
+  {
     up: migration_20260821_150000_souscription_recit_sobre.up,
     down: migration_20260821_150000_souscription_recit_sobre.down,
     name: '20260821_150000_souscription_recit_sobre',
@@ -131,5 +138,10 @@ export const migrations = [
     up: migration_20260821_150000_editorial_pages.up,
     down: migration_20260821_150000_editorial_pages.down,
     name: '20260821_150000_editorial_pages',
+  },
+  {
+    up: migration_20260821_160000_produits_contreparties.up,
+    down: migration_20260821_160000_produits_contreparties.down,
+    name: '20260821_160000_produits_contreparties',
   },
 ];

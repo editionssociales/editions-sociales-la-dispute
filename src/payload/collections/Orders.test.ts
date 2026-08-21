@@ -115,7 +115,7 @@ describe('Orders.fields — `orderType` (scission commande/précommande, client 
     }
     expect(shape.type).toBe('select')
     expect(shape.defaultValue).toBe('commande')
-    expect(shape.options?.map((o) => o.value)).toEqual(['commande', 'precommande'])
+    expect(shape.options?.map((o) => o.value)).toEqual(['commande', 'precommande', 'don'])
     expect(shape.access?.update).toBeTypeOf('function')
     expect(shape.access!.update!(adminUser)).toBe(false)
   })

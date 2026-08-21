@@ -3,6 +3,9 @@ import type Stripe from "stripe";
 import type { Order } from "@/payload-types";
 import { decodeCheckoutLines, type CheckoutBookLookup, type DecodedCheckoutLine } from "@/lib/checkout-core";
 import { getCommerceBookRecords } from "@/lib/commerce-source";
+import { getContrepartieBooksByIds, type ContrepartieBook } from "@/lib/contreparties";
+import { selectDonationMailer, type DonationMailRecap } from "@/lib/donation-mail";
+import { DONATION_TIERS } from "@/lib/donation-tiers";
 import {
   createOrder,
   decrementBookStock,
@@ -29,8 +32,18 @@ import { selectOrderMailer } from "@/lib/order-mail";
  * testés séparément) ; ce module ne fait que la composition Payload/Stripe,
  * même découpage que `stock-import.ts` vis-à-vis de `stock-import-core.ts`.
  *
- * Étend le webhook de la phase 1 SANS changer son comportement `kind:
- * "donation"` (`route.ts` ne route ici que si `metadata.kind === "order"`).
+ * `handleOrderWebhookEvent` (le point d'entrée `kind: "order"`) étend le
+ * webhook de la phase 1 SANS changer son comportement `kind: "donation"`
+ * (`route.ts` ne route à `handleOrderWebhookEvent` que si `metadata.kind ===
+ * "order"`). Depuis 2026-08-21 (contreparties), ce module héberge AUSSI
+ * `handleDonationSessionCompleted` — un point d'entrée SÉPARÉ, appelé par
+ * `route.ts` côté `kind: "donation"` quand `metadata.donLines` est posée
+ * (don avec contrepartie) : même moteur d'assemblage (`order-webhook-core.ts`,
+ * `orderType: "don"`) et mêmes seams I/O (`order-source.ts`), mais son propre
+ * chemin d'idempotence (`stripeSessionId` + `"don"`) et son propre mailer
+ * (`donation-mail.ts`, jamais `order-mail.ts`). `markOrderRefunded` est
+ * exportée pour la même raison : `route.ts` la réutilise côté dons pour
+ * `charge.refunded`, la fonction étant déjà agnostique du type de commande.
  *
  * SCISSION : le checkout (`/api/checkout`) pose DEUX groupes de metadata
  * (`lines` pour la commande normale, `preorderLines` pour la précommande) —
@@ -196,7 +209,9 @@ async function decrementStock(
 async function createPaidOrderPart(
   session: Stripe.Checkout.Session,
   createdAtEpoch: number,
-  orderType: OrderKind,
+  // Jamais "don" : un don passe par `handleDonationSessionCompleted` (mailer
+  // don, pas de confirmation boutique) — le type le garantit à la compilation.
+  orderType: Exclude<OrderKind, "don">,
   part: ResolvedPart,
   books: Map<number, CheckoutBookLookup>,
   discountCents: number,
@@ -410,8 +425,16 @@ async function recordFailedOrder(session: Stripe.Checkout.Session, createdAtEpoc
  * remboursée sans commande retrouvée (event orphelin, ordre d'arrivée
  * improbable) ne jette pas : capturée par l'appelant si besoin, ce module se
  * contente de ne rien faire de plus qu'un no-op sûr.
+ *
+ * Exportée (client 2026-08-21, contreparties) : `route.ts` l'appelle
+ * directement pour `charge.refunded` côté `kind !== "order"` (dons) — un don
+ * AVEC contrepartie partage la MÊME `stripePaymentIntentId` que sa commande
+ * `orderType: "don"`, retrouvée ici sans aucune distinction de type (la
+ * fonction est déjà agnostique du type de commande). Un don SANS commande
+ * (montant libre, ou antérieur à la feature) reste le no-op silencieux
+ * décrit ci-dessus.
  */
-async function markOrderRefunded(charge: Stripe.Charge): Promise<{ found: boolean }> {
+export async function markOrderRefunded(charge: Stripe.Charge): Promise<{ found: boolean }> {
   const piId = paymentIntentId(charge);
   if (!piId) return { found: false };
 
@@ -424,6 +447,161 @@ async function markOrderRefunded(charge: Stripe.Charge): Promise<{ found: boolea
     }
   }
   return { found: true };
+}
+
+/* ------------------------------ dons avec contrepartie (client 2026-08-21) ------------------------------ */
+
+/**
+ * Joint les lignes de contrepartie décodées (`donLines`) au titre/ISBN relus
+ * fraîchement — même esprit que `resolveOrderParts`, MAIS un id introuvable
+ * (fiche supprimée entre le checkout et le webhook) n'est JAMAIS omis ici :
+ * contrairement au commerce, la contrepartie a été PROMISE au donateur au
+ * paiement — la commande doit toujours refléter ce qui est dû, avec un
+ * titre de repli plutôt qu'une ligne disparue. Signalé à Sentry (warning)
+ * pour investigation, sans jamais bloquer la création de la commande.
+ */
+function resolveDonationLines(
+  sessionId: string,
+  decoded: DecodedCheckoutLine[],
+  books: Map<number, ContrepartieBook>,
+): OrderLineFacts[] {
+  return decoded.map((l) => {
+    const book = books.get(l.id);
+    if (!book) {
+      Sentry.captureMessage("Webhook Stripe (don) : article de contrepartie introuvable — titre de repli", {
+        level: "warning",
+        extra: { sessionId, bookId: l.id },
+      });
+    }
+    return {
+      bookId: l.id,
+      titleSnapshot: book?.title ?? `Article #${l.id}`,
+      isbnSnapshot: book?.isbn ?? null,
+      quantity: l.qty,
+      unitPriceCents: l.unitPriceCents, // toujours 0 — contrat partagé avec la server action de don
+    };
+  });
+}
+
+/** `Order.shippingAddress`/`billingAddress` (déjà posées, identiques) → adresse du récap mail — `undefined` seulement si la commande n'en porte aucune (anomalie, ne devrait jamais arriver pour un don : tous les paliers 2026 collectent une adresse). */
+function recapAddressFromOrder(order: Order): DonationMailRecap["shippingAddress"] {
+  const a = order.shippingAddress;
+  if (!a) return undefined;
+  return {
+    fullName: a.fullName,
+    addressLine1: a.addressLine1,
+    addressLine2: a.addressLine2 ?? undefined,
+    postalCode: a.postalCode,
+    city: a.city,
+    country: a.country,
+  };
+}
+
+/**
+ * `checkout.session.completed` / `checkout.session.async_payment_succeeded`
+ * pour un don AVEC contrepartie (`session.metadata.donLines`, posée par la
+ * server action de don — contrat partagé `encodeCheckoutLines`/
+ * `decodeCheckoutLines`, `checkout-core.ts`) : crée la commande `orderType:
+ * "don"` d'expédition, décrémente le stock (négatif autorisé — la
+ * contrepartie est TOUJOURS servie, même après réassort) et envoie le
+ * remerciement enrichi d'un récap (palier, composition, adresse). Ne fait
+ * RIEN si le paiement n'est pas confirmé ou si la session ne porte pas de
+ * lignes de contrepartie (don à montant libre — reste sur le chemin
+ * `sendDonationThanks` simple de `route.ts`, jamais ici).
+ *
+ * Idempotente PAR EFFET, même patron que `createPaidOrderPart` (marqueurs
+ * `stockDecremented`/`confirmationSent`) : un rejeu Stripe reprend l'effet
+ * manquant sans jamais recréer la commande ni renvoyer un effet déjà posé.
+ * JAMAIS `sendOrderConfirmation` (mail boutique) pour un don — uniquement
+ * `selectDonationMailer().sendDonationThanks`.
+ *
+ * `opts` — réservé au backfill (`scripts/backfill-dons-contreparties.ts`) ;
+ * `route.ts` ne les passe jamais, le webhook garde son comportement
+ * inchangé (défauts `undefined`/`new Date()`) :
+ * - `skipThanksMail` : pose `confirmationSent: true` SANS envoyer, pour les
+ *   dons dont le donateur a déjà reçu le remerciement simple avant que
+ *   cette commande n'existe ;
+ * - `paidAtISOOverride` : remplace l'approximation « instant de traitement »
+ *   (`new Date()`, valide pour le webhook temps réel — quelques secondes
+ *   après le paiement) par une date exacte — le backfill tourne parfois des
+ *   jours après le don réel, `paidAt`/`createdAt` doivent rester la date du
+ *   don, pas celle du run.
+ */
+export async function handleDonationSessionCompleted(
+  session: Stripe.Checkout.Session,
+  opts?: { skipThanksMail?: boolean; paidAtISOOverride?: string },
+): Promise<void> {
+  if (session.payment_status !== "paid") return;
+  const decoded = decodeCheckoutLines(session.metadata?.donLines);
+  if (decoded.length === 0) return;
+
+  // Lecture brouillons INCLUS (contrairement au parcours boutique) : une
+  // contrepartie peut référencer une fiche minimale non publiée — cf.
+  // `src/lib/contreparties.ts`, même lecteur que la page merci.
+  const books = await getContrepartieBooksByIds(decoded.map((l) => l.id));
+
+  let order: Order | null = await findOrderBySessionId(session.id, "don");
+
+  if (!order) {
+    // `resolveDonationLines` (et son éventuel warning Sentry) UNIQUEMENT à la
+    // création — un rejeu (`order` déjà trouvé) ne reconstruit pas les lignes,
+    // évitant un warning en double pour la même anomalie.
+    const facts: OrderSessionFacts = {
+      stripeSessionId: session.id,
+      stripePaymentIntentId: paymentIntentId(session),
+      email: session.customer_details?.email ?? null,
+      shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
+      lines: resolveDonationLines(session.id, decoded, books),
+      orderType: "don",
+      shippingMethod: "offert",
+      shippingCostCents: 0,
+      discountCents: 0,
+      promoCodeId: null,
+      totalCents: session.amount_total ?? 0,
+      // Pas de `createdAtEpoch` transmis par `route.ts` (signature volontairement
+      // réduite à la session, symétrique de la server action de don) — l'instant
+      // de traitement du webhook est une approximation suffisante de « payée le »,
+      // même esprit que `event.created` côté commerce (jamais un instant inventé).
+      // `paidAtISOOverride` (backfill) remplace cette approximation par la date
+      // réelle du don quand le run a lieu longtemps après le paiement.
+      paidAtISO: opts?.paidAtISOOverride ?? new Date().toISOString(),
+    };
+    const orderData = buildOrderCreateData(facts, "paid");
+    if ("error" in orderData) {
+      throw new Error(orderData.error);
+    }
+    order = await createOrder(orderData);
+  }
+
+  if (!order.stockDecremented) {
+    for (const l of decoded) {
+      if (!books.has(l.id)) continue; // livre disparu — snapshot honnête, rien à décrémenter physiquement
+      await decrementBookStock(l.id, l.qty, { allowNegative: true });
+    }
+    order = await updateOrder(order.id, { stockDecremented: true });
+  }
+
+  if (!order.confirmationSent) {
+    if (opts?.skipThanksMail) {
+      // Backfill (cf. docstring) : marqueur posé SANS envoi, aucun mail.
+      await updateOrder(order.id, { confirmationSent: true });
+    } else {
+      const tierId = session.metadata?.tier;
+      const tier = tierId ? DONATION_TIERS.find((t) => t.id === tierId) : undefined;
+      await selectDonationMailer().sendDonationThanks({
+        email: order.email,
+        recap: {
+          // Repli sur le brut `tierId` si le palier a disparu de la table
+          // (retrait ultérieur) — jamais un intitulé vide dans le mail.
+          tierTitle: tier?.title ?? tierId ?? "Contrepartie",
+          amountEuros: order.totalTTC,
+          lines: (order.lines ?? []).map((l) => ({ title: l.titleSnapshot, quantity: l.quantity })),
+          shippingAddress: recapAddressFromOrder(order),
+        },
+      });
+      await updateOrder(order.id, { confirmationSent: true });
+    }
+  }
 }
 
 export interface OrderWebhookResult {
