@@ -14,6 +14,11 @@
  * produit DEUX `Orders` pour un même paiement Stripe (une par `orderType`,
  * même `stripeSessionId`) — `orderType` distingue les deux dans les deux
  * profils, `stripeSessionId` (compta seule) permet de rapprocher la paire.
+ *
+ * Dons avec contrepartie (client 2026-08-21) : troisième `orderType` `don`,
+ * étanche des deux autres au niveau comptable — `formatComptaCsv` laisse sa
+ * colonne de TVA vide pour ces lignes (un don n'est pas une vente) ;
+ * `formatPreparationCsv` ne change pas, un don y apparaît normalement.
  */
 
 /** Même six statuts que `Orders.ts:status` — dupliqué ici en type large (string) pour ne pas coupler ce module pur aux types générés Payload. */
@@ -33,13 +38,14 @@ function statusLabel(status: string): string {
   return STATUS_LABELS[status as OrderExportStatus] ?? status;
 }
 
-/** Mêmes deux valeurs que `Orders.ts:orderType` — dupliqué ici en type large (string) pour ne pas coupler ce module pur aux types générés Payload. */
-export type OrderExportOrderType = "commande" | "precommande";
+/** Mêmes trois valeurs que `Orders.ts:orderType` — dupliqué ici en type large (string) pour ne pas coupler ce module pur aux types générés Payload. */
+export type OrderExportOrderType = "commande" | "precommande" | "don";
 
 /** Libellés FR affichés au back-office (`Orders.ts`, options du champ `orderType`) — tenus manuellement en phase, comme `STATUS_LABELS`. */
 const ORDER_TYPE_LABELS: Record<OrderExportOrderType, string> = {
   commande: "Commande",
   precommande: "Précommande",
+  don: "Don",
 };
 
 function orderTypeLabel(orderType: string): string {
@@ -76,7 +82,7 @@ export interface OrderExportLine {
 
 export interface OrderExportRow {
   number: string;
-  /** `commande` | `precommande` (`Orders.ts:orderType`) — un panier mixte scinde un même paiement Stripe en deux `Orders`, une par type (client 2026-08-20). */
+  /** `commande` | `precommande` | `don` (`Orders.ts:orderType`) — un panier mixte scinde un même paiement Stripe en deux `Orders`, une par type (client 2026-08-20). */
   orderType: string;
   /** ISO 8601 — date de création (= date de paiement, la commande n'existe qu'une fois payée). */
   createdAt: string;
@@ -215,6 +221,13 @@ function addressCells(address: OrderExportAddress): string[] {
  * `Session Stripe` (colonne compta seule, absente en préparation) : un panier
  * mixte scinde UN paiement en DEUX commandes de même `stripeSessionId`
  * (client 2026-08-20) — permet à la compta de rapprocher la paire.
+ *
+ * Étanchéité comptable dons (client 2026-08-21, exigence dure) : un don n'est
+ * pas une vente — la colonne « Part TVA 5,5 % (calculée) » reste VIDE pour
+ * `orderType: "don"` (rien à ventiler, aucune TVA sur un don), le total TTC
+ * restant affiché tel quel. Cette colonne est la SEULE différence de
+ * traitement ici ; l'export préparation, lui, ne change pas — un don y
+ * apparaît normalement (il s'expédie comme une commande).
  */
 export function formatComptaCsv(orders: readonly OrderExportRow[]): string {
   const rows = orders.map((order) => [
@@ -228,7 +241,7 @@ export function formatComptaCsv(orders: readonly OrderExportRow[]): string {
     formatAmount(order.totalTTC),
     formatAmount(order.shippingCostTTC),
     formatAmount(order.discountTTC),
-    formatAmount(computeVatPart(order.totalTTC)),
+    order.orderType === "don" ? "" : formatAmount(computeVatPart(order.totalTTC)),
     "Stripe",
     order.stripeSessionId ?? "",
     order.stripePaymentIntentId ?? "",

@@ -173,6 +173,7 @@ export const Orders: CollectionConfig = {
       options: [
         { value: 'commande', label: 'Commande' },
         { value: 'precommande', label: 'Précommande' },
+        { value: 'don', label: 'Don' },
       ],
       access: lockedAfterCreate,
       admin: {
@@ -182,7 +183,10 @@ export const Orders: CollectionConfig = {
           'webhook selon la scission du panier au paiement (client ' +
           '2026-08-20). Un panier mixte produit UNE commande de chaque ' +
           "type, même session/paiement Stripe, chacune avec SES lignes et " +
-          'SES frais de port.',
+          "SES frais de port. « Don » (contreparties) : étanche des deux " +
+          'autres types — exclu de tout agrégat de CA/TVA (export compta, ' +
+          '« Ventes du mois » du dashboard), mais visible en préparation/' +
+          'expédition comme une commande normale.',
       },
     },
     {
