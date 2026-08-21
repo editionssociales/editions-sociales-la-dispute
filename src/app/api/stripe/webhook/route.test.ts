@@ -96,6 +96,19 @@ vi.mock("@/lib/commerce-source", () => ({
   },
 }));
 
+// Le chemin don lit via `contreparties.ts` (brouillons inclus) — même fixture
+// `bookRecords`, resservie sous la forme `ContrepartieBook` (id/title/isbn).
+vi.mock("@/lib/contreparties", () => ({
+  getContrepartieBooksByIds: async (ids: number[]) => {
+    const map = new Map<number, { id: number; title: string; isbn: string | null }>();
+    for (const id of ids) {
+      const record = bookRecords[id];
+      if (record) map.set(id, { id, title: record.title, isbn: record.isbn });
+    }
+    return map;
+  },
+}));
+
 const sendOrderConfirmation = vi.fn(async () => {});
 vi.mock("@/lib/order-mail", () => ({
   logOrderMailer: { sendOrderConfirmation },

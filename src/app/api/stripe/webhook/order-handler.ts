@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import type { Order } from "@/payload-types";
 import { decodeCheckoutLines, type CheckoutBookLookup, type DecodedCheckoutLine } from "@/lib/checkout-core";
 import { getCommerceBookRecords } from "@/lib/commerce-source";
+import { getContrepartieBooksByIds, type ContrepartieBook } from "@/lib/contreparties";
 import { selectDonationMailer, type DonationMailRecap } from "@/lib/donation-mail";
 import { DONATION_TIERS } from "@/lib/donation-tiers";
 import {
@@ -462,7 +463,7 @@ export async function markOrderRefunded(charge: Stripe.Charge): Promise<{ found:
 function resolveDonationLines(
   sessionId: string,
   decoded: DecodedCheckoutLine[],
-  books: Map<number, CheckoutBookLookup>,
+  books: Map<number, ContrepartieBook>,
 ): OrderLineFacts[] {
   return decoded.map((l) => {
     const book = books.get(l.id);
@@ -519,7 +520,10 @@ export async function handleDonationSessionCompleted(session: Stripe.Checkout.Se
   const decoded = decodeCheckoutLines(session.metadata?.donLines);
   if (decoded.length === 0) return;
 
-  const books = await getCommerceBookRecords(decoded.map((l) => l.id));
+  // Lecture brouillons INCLUS (contrairement au parcours boutique) : une
+  // contrepartie peut référencer une fiche minimale non publiée — cf.
+  // `src/lib/contreparties.ts`, même lecteur que la page merci.
+  const books = await getContrepartieBooksByIds(decoded.map((l) => l.id));
 
   let order: Order | null = await findOrderBySessionId(session.id, "don");
 

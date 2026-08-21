@@ -29,6 +29,8 @@ export interface ContrepartieBook {
   coverUrl?: string;
   /** Maison — distingue deux fiches homonymes (unicité composite `(edition, slug)`, `Books.ts`). */
   edition?: string;
+  /** Snapshot de ligne de commande don (webhook) — null sur les fiches brouillon sans ISBN. */
+  isbn: string | null;
 }
 
 /** Un champ relation Payload est-il peuplé (objet) plutôt que renvoyé comme simple id ? Même garde que `catalogue-pg-map.ts`. */
@@ -78,6 +80,7 @@ export async function getContrepartieBooksBySlugs(
       title: doc.title,
       coverUrl: isPopulated<Media>(doc.cover) ? (doc.cover.url ?? undefined) : undefined,
       edition: doc.edition ?? undefined,
+      isbn: doc.isbn ?? null,
     });
   }
   return bySlug;
@@ -109,6 +112,7 @@ export async function getContrepartieBooksByIds(ids: number[]): Promise<Map<numb
       title: doc.title,
       coverUrl: isPopulated<Media>(doc.cover) ? (doc.cover.url ?? undefined) : undefined,
       edition: doc.edition ?? undefined,
+      isbn: doc.isbn ?? null,
     });
   }
   return byId;
