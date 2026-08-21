@@ -6,6 +6,7 @@ import type { Accent } from "./format";
 import type { EditionSlug } from "./types";
 import type {
   PageAPropos,
+  PageContact,
   PageSouscription,
   PagesLegales,
 } from "@/payload-types";
@@ -138,13 +139,15 @@ export function mergeReglagesSite(
 }
 
 /* ------------------------------------------------------------------ */
-/* Page À propos (lot 3)                                               */
+/* Pages des maisons (ex-lot 3 « Page À propos »)                       */
 /* ------------------------------------------------------------------ */
 
 /**
  * Une maison de la section « Deux maisons » : textes surchargés champ par
  * champ depuis le global, tout le reste (slug, lien « Découvrir »,
- * couleur d'accent) vient d'`EDITION_LIST` — jamais éditable.
+ * couleur d'accent) vient d'`EDITION_LIST` — jamais éditable. `bureau` :
+ * liste des membres du bureau éditorial DE CETTE MAISON, dans l'ordre —
+ * jamais vide (retombe sur `BUREAU_DEFAUT[slug]`, jamais un tableau vide).
  */
 export interface MaisonAPropos {
   slug: EditionSlug;
@@ -153,33 +156,73 @@ export interface MaisonAPropos {
   tagline: string;
   description: string;
   accent: Accent;
+  bureau: string[];
 }
 
-/** Section libre {titre, richText} — `html` null = section titre seul. */
-export interface SectionAPropos {
-  titre: string;
+/**
+ * Bloc « Dépôt de manuscrit » — identique sur les deux pages maisons (le
+ * JSX de `editions/[slug]/page.tsx` ne l'indexe par aucun slug). `html` non
+ * nul REMPLACE tout le texte par défaut, `email` y compris ; `html` nul =
+ * les deux paragraphes par défaut, avec `email` inséré dans la phrase
+ * d'accroche (mailto inline).
+ */
+export interface DepotManuscritContent {
+  email: string;
   html: SafeHtml | null;
 }
 
 export interface PageAProposContent {
-  herosTitre: string;
-  herosIntro: string;
-  citation: string;
-  citationAttribution: string;
+  /** Noms de l'équipe permanente — identique sur les deux pages maisons. */
+  equipePermanente: string;
   maisons: MaisonAPropos[];
-  /** `null` = aucune section saisie : la page rend sa section « Le catalogue » en dur. */
-  sections: SectionAPropos[] | null;
+  depotManuscrit: DepotManuscritContent;
 }
 
-/** Textes actuels de `a-propos/page.tsx`, extraits verbatim (iso-rendu). */
-const A_PROPOS_DEFAUT = {
-  herosTitre: "La maison de la pensée critique et des sciences sociales",
-  herosIntro:
-    "Une maison d'édition de la pensée critique et des sciences sociales, portée par deux fonds historiques — sans rien perdre de ce qui fait leur singularité.",
-  citation:
-    "« Renforcer la puissance de penser et d'agir de celles et ceux qui veulent transformer le monde et changer la vie. »",
-  citationAttribution: "Campagne 2024, « Sauvez les Éditions sociales et La Dispute »",
+/**
+ * Textes actuels d'`editions/[slug]/page.tsx`, extraits verbatim (iso-rendu).
+ * ⚠️ Attribution des bureaux éditoriaux : les 2 variantes du PDF maquette
+ * répètent la même phrase d'intro avec des listes différentes — source non
+ * fiable pour trancher qui est qui. La répartition ci-dessous (antérieure à
+ * la maquette) est conservée telle quelle ; à confirmer avec le client avant
+ * tout changement (même réserve que l'ex-constante `BUREAUX` du JSX).
+ */
+const EQUIPE_PERMANENTE_DEFAUT =
+  "Noémie Brun, Clara Laspalas, Marina Simonin et Nicolas Vieillescazes";
+
+const BUREAU_DEFAUT: Record<EditionSlug, string[]> = {
+  "la-dispute": [
+    "Noémie Brun",
+    "Alexis Cukier",
+    "Jérôme Deauvieau",
+    "Pauline Delage",
+    "Étienne Douat",
+    "Amélie Jeammet",
+    "Danièle Kergoat",
+    "Aurore Koechlin",
+    "Richard Lagache",
+    "Clara Laspalas",
+    "Jacqueline Martinez",
+    "Marina Simonin",
+    "Hélène Stevens",
+  ],
+  "editions-sociales": [
+    "Alexia Blin",
+    "Yohann Douet",
+    "Isabelle Garo",
+    "Marion Leclair",
+    "Alix Bouffard",
+    "Alexandre Feron",
+    "Vincent Heimendinger",
+    "Antony Burlaud",
+    "Guillaume Fondu",
+    "Richard Lagache",
+    "Jean Quétier",
+    "Alexis Cukier",
+    "Quentin Fondu",
+  ],
 };
+
+const MANUSCRITS_EMAIL_DEFAUT = "manuscritsldes@gmail.com";
 
 /** Fusion du global `page-a-propos` — champ par champ, vide = défaut dur. */
 export function mergePageAPropos(
@@ -190,6 +233,10 @@ export function mergePageAPropos(
     // entrées : réordonner le tableau dans /admin ne peut pas intervertir
     // les textes des deux maisons.
     const surcharge = global?.maisons?.find((m) => m.maison === edition.slug);
+    const bureauSaisi = (surcharge?.bureau ?? []).flatMap((ligne) => {
+      const nom = ligne.nom?.trim();
+      return nom ? [nom] : [];
+    });
     return {
       slug: edition.slug,
       shortName: edition.shortName,
@@ -197,25 +244,17 @@ export function mergePageAPropos(
       name: texteOuDefaut(surcharge?.nom, edition.name),
       tagline: texteOuDefaut(surcharge?.tagline, edition.tagline),
       description: texteOuDefaut(surcharge?.description, edition.description),
+      bureau: bureauSaisi.length > 0 ? bureauSaisi : BUREAU_DEFAUT[edition.slug],
     };
   });
 
-  const sections = (global?.sections ?? []).flatMap((section) => {
-    const titre = section.titre?.trim();
-    if (!titre) return [];
-    return [{ titre, html: richTextToSafeHtml(section.contenu) }];
-  });
-
   return {
-    herosTitre: texteOuDefaut(global?.heros?.titre, A_PROPOS_DEFAUT.herosTitre),
-    herosIntro: texteOuDefaut(global?.heros?.intro, A_PROPOS_DEFAUT.herosIntro),
-    citation: texteOuDefaut(global?.citation?.texte, A_PROPOS_DEFAUT.citation),
-    citationAttribution: texteOuDefaut(
-      global?.citation?.attribution,
-      A_PROPOS_DEFAUT.citationAttribution,
-    ),
+    equipePermanente: texteOuDefaut(global?.equipe?.permanente, EQUIPE_PERMANENTE_DEFAUT),
     maisons,
-    sections: sections.length > 0 ? sections : null,
+    depotManuscrit: {
+      email: texteOuDefaut(global?.depotManuscrit?.email, MANUSCRITS_EMAIL_DEFAUT),
+      html: richTextToSafeHtml(global?.depotManuscrit?.texte),
+    },
   };
 }
 
@@ -534,5 +573,31 @@ export function mergePageSouscription(
     },
     contreparties:
       contreparties.length > 0 ? contreparties : SOUSCRIPTION_DEFAUT.contreparties,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Page Contact                                                        */
+/* ------------------------------------------------------------------ */
+
+export interface PageContactContent {
+  titre: string;
+  intro: string;
+}
+
+/** Textes actuels de `contact/page.tsx` (`PageHero`), extraits verbatim. */
+const CONTACT_DEFAUT: PageContactContent = {
+  titre: "Contact",
+  intro:
+    "Une question sur un livre, une commande, une proposition éditoriale ? Écrivez-nous, nous vous répondrons dès que possible.",
+};
+
+/** Fusion du global `page-contact` — champ par champ, vide = défaut dur. */
+export function mergePageContact(
+  global: PageContact | null | undefined,
+): PageContactContent {
+  return {
+    titre: texteOuDefaut(global?.titre, CONTACT_DEFAUT.titre),
+    intro: texteOuDefaut(global?.intro, CONTACT_DEFAUT.intro),
   };
 }

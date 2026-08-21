@@ -19,6 +19,7 @@ import * as migration_20260726_150000_commande_marqueurs_effets from './20260726
 import * as migration_20260817_120000_footer_sans_texte_diffusion from './20260817_120000_footer_sans_texte_diffusion';
 import * as migration_20260820_140000_precommande from './20260820_140000_precommande';
 import * as migration_20260821_150000_souscription_recit_sobre from './20260821_150000_souscription_recit_sobre';
+import * as migration_20260821_150000_editorial_pages from './20260821_150000_editorial_pages';
 
 export const migrations = [
   {
@@ -125,5 +126,10 @@ export const migrations = [
     up: migration_20260821_150000_souscription_recit_sobre.up,
     down: migration_20260821_150000_souscription_recit_sobre.down,
     name: '20260821_150000_souscription_recit_sobre',
+  },
+  {
+    up: migration_20260821_150000_editorial_pages.up,
+    down: migration_20260821_150000_editorial_pages.down,
+    name: '20260821_150000_editorial_pages',
   },
 ];
