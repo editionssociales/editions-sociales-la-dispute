@@ -6,7 +6,7 @@ Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : 
 
 ## Ownership
 
-- **Owns** : la config des collections/globals, les policies d'accès (`access.ts` : `admin`|`editor`), les composants admin custom (`Dashboard.tsx`, `StockPage.tsx`, `HealthPage.tsx`, chips livres, chips rencontres, chips commandes, champ slug), les endpoints custom et leurs cœurs purs dans `lib/`.
+- **Owns** : la config des collections/globals, les policies d'accès (`access.ts` : `admin`|`editor`), les composants admin custom (`Dashboard.tsx`, `StockPage.tsx`, `HealthPage.tsx`, chips livres/rencontres/commandes, cellules de liste (`admin/cells/`, `admin/orders/`), champ slug), les endpoints custom et leurs cœurs purs dans `lib/`.
 - **Does NOT own** : le modèle de domaine ni les seams de lecture du front (`src/lib`), les pages (`src/app`), la présentation (`src/components`).
 
 ## Local Contracts

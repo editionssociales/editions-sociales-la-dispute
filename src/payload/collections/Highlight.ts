@@ -26,7 +26,10 @@ export const Highlight: CollectionConfig = {
   admin: {
     group: 'Site',
     useAsTitle: 'titre',
-    defaultColumns: ['titre', 'actif', 'dateDebut', 'dateFin'],
+    // « Live » (calculée, cf. le champ `live` plus bas) remplace `actif` brut
+    // en tête — dit si la bannière serait affichée AUJOURD'HUI, pas
+    // seulement si la case est cochée (l'audit UX demandait ce croisement).
+    defaultColumns: ['titre', 'live', 'dateDebut', 'dateFin', 'actif'],
     description: 'Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).',
   },
   access: {
@@ -48,6 +51,20 @@ export const Highlight: CollectionConfig = {
       type: 'text',
       required: true,
       label: 'Titre',
+    },
+    {
+      // Champ `ui` purement présentationnel — colonne de liste calculée
+      // uniquement, aucun effet sur le schéma de données. Invisible en fiche
+      // (pas de composant `Field`), rendu en liste par `HighlightLiveCell`
+      // (`src/payload/admin/cells/`).
+      type: 'ui',
+      name: 'live',
+      label: 'Live',
+      admin: {
+        components: {
+          Cell: '/payload/admin/cells/HighlightLiveCell.tsx#HighlightLiveCell',
+        },
+      },
     },
     {
       name: 'texte',
