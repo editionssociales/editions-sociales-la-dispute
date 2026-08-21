@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import type { Media } from "@/payload-types";
+import type { Cover } from "./types";
 import type { ContrepartieComposition, ContrepartieItemRef } from "./contreparties-core";
 
 /**
@@ -26,7 +27,8 @@ import type { ContrepartieComposition, ContrepartieItemRef } from "./contreparti
 export interface ContrepartieBook {
   id: number;
   title: string;
-  coverUrl?: string;
+  /** Couverture AVEC dimensions (client 2026-08-21) : l'étape de choix rend au ratio réel, la recette des grilles (`lib/cover.tsx`) — jamais une URL nue. */
+  cover?: Cover;
   /** Maison — distingue deux fiches homonymes (unicité composite `(edition, slug)`, `Books.ts`). */
   edition?: string;
   /** Snapshot de ligne de commande don (webhook) — null sur les fiches brouillon sans ISBN. */
@@ -78,7 +80,10 @@ export async function getContrepartieBooksBySlugs(
     bySlug.set(doc.slug, {
       id: doc.id,
       title: doc.title,
-      coverUrl: isPopulated<Media>(doc.cover) ? (doc.cover.url ?? undefined) : undefined,
+      cover:
+        isPopulated<Media>(doc.cover) && doc.cover.url
+          ? { url: doc.cover.url, width: doc.cover.width ?? 0, height: doc.cover.height ?? 0 }
+          : undefined,
       edition: doc.edition ?? undefined,
       isbn: doc.isbn ?? null,
     });
@@ -110,7 +115,10 @@ export async function getContrepartieBooksByIds(ids: number[]): Promise<Map<numb
     byId.set(doc.id, {
       id: doc.id,
       title: doc.title,
-      coverUrl: isPopulated<Media>(doc.cover) ? (doc.cover.url ?? undefined) : undefined,
+      cover:
+        isPopulated<Media>(doc.cover) && doc.cover.url
+          ? { url: doc.cover.url, width: doc.cover.width ?? 0, height: doc.cover.height ?? 0 }
+          : undefined,
       edition: doc.edition ?? undefined,
       isbn: doc.isbn ?? null,
     });
@@ -142,7 +150,8 @@ export interface ContrepartieDisplayItem {
   slug: string;
   qty: number;
   title: string;
-  coverUrl?: string;
+  /** Cf. `ContrepartieBook.cover` — dimensions incluses, rendu au ratio réel. */
+  cover?: Cover;
 }
 
 /** Composition d'un palier, sections dans le MÊME ordre que `contreparties-core.ts`, prêtes à afficher. */
@@ -169,7 +178,7 @@ export async function getContrepartieDisplay(
   const books = await getContrepartieBooksBySlugs(compositionSlugs(composition));
   const toDisplayItem = (item: ContrepartieItemRef): ContrepartieDisplayItem => {
     const book = books.get(item.slug);
-    return { slug: item.slug, qty: item.qty, title: book?.title ?? item.slug, coverUrl: book?.coverUrl };
+    return { slug: item.slug, qty: item.qty, title: book?.title ?? item.slug, cover: book?.cover };
   };
   return composition.sections.map((section) =>
     section.kind === "inclus"
