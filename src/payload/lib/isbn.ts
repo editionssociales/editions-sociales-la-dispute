@@ -38,6 +38,23 @@ function isValidIsbn10(compact: string): boolean {
 }
 
 /**
+ * EAN-13 depuis un ISBN saisi (autofill des liens libraires,
+ * `buy-links-core.ts` — ParisLibrairies/LaLibrairie n'indexent que l'EAN-13).
+ * ISBN-13 valide → renvoyé tel quel (compacté) ; ISBN-10 valide → converti
+ * (préfixe `978` + clé de contrôle recalculée) ; tout le reste (invalide,
+ * vide, absent) → `null`, aucun cas d'erreur remonté ici.
+ */
+export function isbn13FromIsbn(value: string): string | null {
+  const compact = compactIsbn(trimIsbn(value))
+  if (isValidIsbn13(compact)) return compact
+  if (isValidIsbn10(compact)) {
+    const body12 = `978${compact.slice(0, 9)}`
+    return body12 + isbn13CheckDigit(body12)
+  }
+  return null
+}
+
+/**
  * Champ optionnel : vide = OK. Sinon ISBN-13 (préféré) ou ISBN-10,
  * tirets/espaces admis, clé de contrôle vérifiée.
  */

@@ -16,6 +16,8 @@ import {
   revalidateCatalogueTagAfterChange,
   revalidateCatalogueTagAfterDelete,
 } from '../hooks/revalidate-catalogue.ts'
+import { makeAutofillBuyLinks } from '../lib/buy-links-autofill.ts'
+import { resolveBuyLinks } from '../lib/buy-links-resolve.ts'
 import {
   authorIdsFromDoc,
   buildBookMediaAlt,
@@ -33,8 +35,13 @@ import { importStockHandler } from '../lib/stock-import.ts'
  *
  * Neutralisé pendant l'import (`req.context.migration`) — sans quoi chaque
  * run de migration basculerait les 295 fiches en rendu Lexical.
+ *
+ * Exporté (comme `autofillBuyLinks` plus bas — les seuls deux hooks de ce
+ * fichier) pour être verrouillé par référence dans `hook-order.test.ts` :
+ * l'ordre `[setContentTouched, autofillBuyLinks]` de `hooks.beforeChange`
+ * ci-dessous doit rester stable.
  */
-const setContentTouched: CollectionBeforeChangeHook = ({ data, req, operation }) => {
+export const setContentTouched: CollectionBeforeChangeHook = ({ data, req, operation }) => {
   if (req.context?.migration) {
     return data
   }
@@ -43,6 +50,16 @@ const setContentTouched: CollectionBeforeChangeHook = ({ data, req, operation })
   }
   return data
 }
+
+/**
+ * Remplit `buy.parislibrairies`/`buy.lalibrairie` depuis l'ISBN quand ils
+ * sont vides (ou obsolètes après changement d'ISBN) — cœur pur
+ * (`buy-links-core.ts`) + résolution réseau injectée (`buy-links-resolve.ts`,
+ * fail-open : jamais de throw, jamais un lien non vérifié écrit). Détail
+ * complet du contrat dans `buy-links-autofill.ts` ; testé avec un résolveur
+ * factice dans `buy-links-autofill.test.ts`.
+ */
+export const autofillBuyLinks = makeAutofillBuyLinks(resolveBuyLinks)
 
 /**
  * Couverture requise pour toute fiche créée/modifiée par un humain — mais
@@ -180,7 +197,7 @@ export const Books: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [trimIsbnField],
-    beforeChange: [setContentTouched],
+    beforeChange: [setContentTouched, autofillBuyLinks],
     // Tag AVANT purge de routes : expiration bloquante du data-cache d'abord,
     // pour que le premier re-rendu post-purge parte de Postgres (cf.
     // revalidate-catalogue.ts, constat live 2026-07-19).
@@ -528,13 +545,21 @@ export const Books: CollectionConfig = {
                       name: 'parislibrairies',
                       type: 'text',
                       label: 'Paris Librairies',
-                      admin: { width: '33%' },
+                      admin: {
+                        width: '33%',
+                        description:
+                          'Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.',
+                      },
                     },
                     {
                       name: 'lalibrairie',
                       type: 'text',
                       label: 'La Librairie',
-                      admin: { width: '33%' },
+                      admin: {
+                        width: '33%',
+                        description:
+                          'Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.',
+                      },
                     },
                   ],
                 },

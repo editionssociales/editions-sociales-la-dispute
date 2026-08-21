@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { compactIsbn, trimIsbn, validateIsbnValue } from './isbn.ts'
+import { compactIsbn, isbn13FromIsbn, trimIsbn, validateIsbnValue } from './isbn.ts'
 
 describe('trimIsbn', () => {
   it('retire les espaces de bord', () => {
@@ -45,5 +45,33 @@ describe('validateIsbnValue', () => {
 
   it('refuse une longueur incorrecte', () => {
     expect(validateIsbnValue('978-2')).toMatch(/^ISBN invalide/)
+  })
+})
+
+describe('isbn13FromIsbn', () => {
+  it('renvoie un ISBN-13 tel quel (compacté)', () => {
+    expect(isbn13FromIsbn('9782843033452')).toBe('9782843033452')
+  })
+
+  it('accepte un ISBN-13 avec tirets/espaces', () => {
+    expect(isbn13FromIsbn('978-2-35367-036-9')).toBe('9782353670369')
+    expect(isbn13FromIsbn('978 2 35367 036 9')).toBe('9782353670369')
+  })
+
+  it('convertit un ISBN-10 valide en ISBN-13 (préfixe 978, clé recalculée)', () => {
+    expect(isbn13FromIsbn('0-306-40615-2')).toBe('9780306406157')
+  })
+
+  it('convertit un ISBN-10 se terminant par X', () => {
+    expect(isbn13FromIsbn('0-9752298-0-X')).toBe('9780975229804')
+  })
+
+  it('renvoie null pour un ISBN invalide (clé de contrôle fausse)', () => {
+    expect(isbn13FromIsbn('978-2-35367-036-0')).toBeNull()
+  })
+
+  it('renvoie null pour une chaîne vide', () => {
+    expect(isbn13FromIsbn('')).toBeNull()
+    expect(isbn13FromIsbn('   ')).toBeNull()
   })
 })
