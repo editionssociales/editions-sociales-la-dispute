@@ -23,7 +23,7 @@
     "seed:users": "payload run scripts/seed-users.ts",
     "build:product-redirects": "payload run scripts/build-product-redirects.ts",
     "backfill:buy-links": "payload run scripts/backfill-buy-links.ts",
-    "backfill:dons": "payload run scripts/backfill-dons-contreparties.ts"
+    "backfill:dons": "NODE_OPTIONS=--conditions=react-server payload run scripts/backfill-dons-contreparties.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.79.1",

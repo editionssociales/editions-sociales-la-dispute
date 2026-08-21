@@ -179,8 +179,8 @@ describe("decideDonationAction", () => {
     expect(decision.kind).toBe("resolu");
     if (decision.kind === "resolu") {
       expect(decision.items).toEqual([
-        { slug: "gaza-genocide-annonce", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "gaza-un-genocide-annonce-un-tournant-dans-lhistoire-mondiale", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ]);
     }
