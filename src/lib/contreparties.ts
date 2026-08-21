@@ -2,9 +2,18 @@ import "server-only";
 import * as Sentry from "@sentry/nextjs";
 import config from "@payload-config";
 import { getPayload } from "payload";
-import type { Media } from "@/payload-types";
+import type { Author, Book as PayloadBook, Libelle, Media } from "@/payload-types";
+import {
+  BOOK_HOVER_EXCERPT_MAX,
+  type BookHoverCardData,
+  isUsefulBookHoverCardData,
+} from "./book-hover-card-data";
+import { renderHtml } from "./catalogue-pg-map";
+import { cmsExcerpt, sanitizeCms } from "./cms-html";
 import type { Cover } from "./types";
 import type { ContrepartieComposition, ContrepartieItemRef } from "./contreparties-core";
+import { EDITIONS, isEditionSlug } from "./editions";
+import { formatPrice } from "./format";
 
 /**
  * Lecture Payload dédiée à la résolution des contreparties de don (composition
@@ -23,7 +32,14 @@ import type { ContrepartieComposition, ContrepartieItemRef } from "./contreparti
  * `commerce-source.ts:getPromoCodeRecord`.
  */
 
-/** Fiche minimale d'un livre référencé par une contrepartie — juste de quoi l'afficher et l'encoder en ligne de commande. */
+/**
+ * Fiche minimale d'un livre référencé par une contrepartie — de quoi
+ * l'afficher, l'encoder en ligne de commande, ET construire sa mini fiche au
+ * survol (`fiche`, `ContrepartieDisplayItem`, client 2026-08-21). Les champs
+ * ajoutés pour la fiche (`price`/`authors`/`libelles`/`excerpt`) tolèrent
+ * tous l'absence : produits boutique (totebag, planche de stickers, packs)
+ * souvent sans auteurs ni présentation détaillée.
+ */
 export interface ContrepartieBook {
   id: number;
   title: string;
@@ -33,11 +49,81 @@ export interface ContrepartieBook {
   edition?: string;
   /** Snapshot de ligne de commande don (webhook) — null sur les fiches brouillon sans ISBN. */
   isbn: string | null;
+  /** Prix TTC en EUROS (champ Payload `prix`) — jamais `centsToEuros`/`eurosToCents` (`money.ts`), ce prix n'entre dans aucun calcul de centimes ici. */
+  price: number | null;
+  /** Noms joints (« A, B ») — même recette que `book-card.tsx`. Vide → `null`. */
+  authors: string | null;
+  /** Noms des libellés. */
+  libelles: string[];
+  /** Extrait de présentation (parachute `renderHtml` → `sanitizeCms` → `cmsExcerpt`) — `null` si la fiche n'a aucune présentation. */
+  excerpt: string | null;
 }
 
 /** Un champ relation Payload est-il peuplé (objet) plutôt que renvoyé comme simple id ? Même garde que `catalogue-pg-map.ts`. */
 function isPopulated<T extends { id: number }>(value: number | T | null | undefined): value is T {
   return typeof value === "object" && value !== null;
+}
+
+/** Noms d'auteurs joints (« A, B ») depuis une relation `authors` peuplée — `null` si aucun auteur peuplé. */
+function toAuthorNames(value: PayloadBook["authors"]): string | null {
+  const names = (value ?? []).flatMap((a) => (isPopulated<Author>(a) ? [a.name] : []));
+  return names.length > 0 ? names.join(", ") : null;
+}
+
+/** Noms de libellés depuis une relation `libelles` peuplée. */
+function toLibelleNames(value: PayloadBook["libelles"]): string[] {
+  return (value ?? []).flatMap((l) => (isPopulated<Libelle>(l) ? [l.name] : []));
+}
+
+/**
+ * Extrait de présentation d'un doc `books` brut — MÊME parachute legacy/
+ * Lexical que le pipeline catalogue (`renderHtml`, `catalogue-pg-map.ts`,
+ * exporté pour cette réutilisation), jamais réécrit à côté : `contreparties.ts`
+ * lit directement Payload (hors `RawBook`), donc n'a jamais de `presentation`
+ * déjà résolue/sanitisée à disposition comme `BookDetail` l'offre à
+ * `toBookHoverCardData` (`book-hover-card-data.ts`).
+ */
+function toExcerpt(doc: PayloadBook): string | null {
+  const html = renderHtml(doc.presentationLegacyHtml, doc.presentation, doc.contentTouched);
+  if (!html) return null;
+  return cmsExcerpt(sanitizeCms(html), BOOK_HOVER_EXCERPT_MAX) || null;
+}
+
+/** Doc `books` Payload (depth:1) → `ContrepartieBook` — fabricant UNIQUE, partagé par la lecture par slugs ET par ids. */
+function toContrepartieBook(doc: PayloadBook): ContrepartieBook {
+  return {
+    id: doc.id,
+    title: doc.title,
+    cover:
+      isPopulated<Media>(doc.cover) && doc.cover.url
+        ? { url: doc.cover.url, width: doc.cover.width ?? 0, height: doc.cover.height ?? 0 }
+        : undefined,
+    edition: doc.edition ?? undefined,
+    isbn: doc.isbn ?? null,
+    price: doc.prix ?? null,
+    authors: toAuthorNames(doc.authors),
+    libelles: toLibelleNames(doc.libelles),
+    excerpt: toExcerpt(doc),
+  };
+}
+
+/**
+ * `ContrepartieBook` → mini fiche au survol (`BookHoverCardData`) — `null` si
+ * la fiche n'a rien d'utile à montrer au-delà du titre nu (ni prix, ni
+ * extrait, ni auteurs) : l'appelant rend alors le titre nu comme aujourd'hui,
+ * jamais une carte vide.
+ */
+function toFiche(book: ContrepartieBook): BookHoverCardData | null {
+  const data: BookHoverCardData = {
+    title: book.title,
+    authors: book.authors,
+    editionLabel: book.edition && isEditionSlug(book.edition) ? EDITIONS[book.edition].name : null,
+    libelles: book.libelles,
+    priceLabel: formatPrice(book.price),
+    excerpt: book.excerpt,
+    coverUrl: book.cover?.url ?? null,
+  };
+  return isUsefulBookHoverCardData(data) ? data : null;
 }
 
 /**
@@ -60,8 +146,9 @@ export async function getContrepartieBooksBySlugs(
     where: { slug: { in: slugs } },
     draft: true,
     overrideAccess: true,
-    // Profondeur 1 : suffit à peupler `cover` (relation directe vers `media`) —
-    // ni auteurs ni libellés ne sont lus ici.
+    // Profondeur 1 : peuple `cover` (relation directe vers `media`) ET
+    // `authors`/`libelles` (relations directes elles aussi) — la mini fiche
+    // au survol (`fiche`, `ContrepartieDisplayItem`) en a besoin.
     depth: 1,
     limit: 0,
   });
@@ -77,16 +164,7 @@ export async function getContrepartieBooksBySlugs(
       );
       continue;
     }
-    bySlug.set(doc.slug, {
-      id: doc.id,
-      title: doc.title,
-      cover:
-        isPopulated<Media>(doc.cover) && doc.cover.url
-          ? { url: doc.cover.url, width: doc.cover.width ?? 0, height: doc.cover.height ?? 0 }
-          : undefined,
-      edition: doc.edition ?? undefined,
-      isbn: doc.isbn ?? null,
-    });
+    bySlug.set(doc.slug, toContrepartieBook(doc));
   }
   return bySlug;
 }
@@ -112,16 +190,7 @@ export async function getContrepartieBooksByIds(ids: number[]): Promise<Map<numb
   });
   const byId = new Map<number, ContrepartieBook>();
   for (const doc of docs) {
-    byId.set(doc.id, {
-      id: doc.id,
-      title: doc.title,
-      cover:
-        isPopulated<Media>(doc.cover) && doc.cover.url
-          ? { url: doc.cover.url, width: doc.cover.width ?? 0, height: doc.cover.height ?? 0 }
-          : undefined,
-      edition: doc.edition ?? undefined,
-      isbn: doc.isbn ?? null,
-    });
+    byId.set(doc.id, toContrepartieBook(doc));
   }
   return byId;
 }
@@ -152,6 +221,8 @@ export interface ContrepartieDisplayItem {
   title: string;
   /** Cf. `ContrepartieBook.cover` — dimensions incluses, rendu au ratio réel. */
   cover?: Cover;
+  /** Mini fiche au survol (`BookHoverCard`) — `null` si le slug est introuvable OU si la fiche n'a rien d'utile à montrer (`toFiche`) : l'appelant rend alors le titre nu. */
+  fiche: BookHoverCardData | null;
 }
 
 /** Composition d'un palier, sections dans le MÊME ordre que `contreparties-core.ts`, prêtes à afficher. */
@@ -178,7 +249,13 @@ export async function getContrepartieDisplay(
   const books = await getContrepartieBooksBySlugs(compositionSlugs(composition));
   const toDisplayItem = (item: ContrepartieItemRef): ContrepartieDisplayItem => {
     const book = books.get(item.slug);
-    return { slug: item.slug, qty: item.qty, title: book?.title ?? item.slug, cover: book?.cover };
+    return {
+      slug: item.slug,
+      qty: item.qty,
+      title: book?.title ?? item.slug,
+      cover: book?.cover,
+      fiche: book ? toFiche(book) : null,
+    };
   };
   return composition.sections.map((section) =>
     section.kind === "inclus"

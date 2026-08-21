@@ -44,8 +44,14 @@ export function lexicalToHtml(data: unknown): string {
  * une fiche migrée — 0 contenu vide, R2 §1.1 — mais reste possible sur une
  * fiche neuve dont l'éditeur n'a pas encore saisi de texte), on rend l'autre
  * source plutôt que de silencieusement perdre du contenu.
+ *
+ * Exportée (client 2026-08-21) : `contreparties.ts` la réutilise telle quelle
+ * pour fabriquer l'extrait de la mini fiche au survol (`BookHoverCard`) depuis
+ * SA propre lecture Payload brute (`presentationLegacyHtml`/`presentation`/
+ * `contentTouched` du doc `books`, hors du pipeline `RawBook`) — même parachute,
+ * jamais réécrit à côté.
  */
-function renderHtml(
+export function renderHtml(
   legacyHtml: string | null | undefined,
   lexicalData: unknown,
   contentTouched: boolean | null | undefined,
