@@ -354,3 +354,107 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
     ]);
   });
 });
+
+describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-08-21)", () => {
+  it("global absent → titre, quatre sections et objectifs en textes par défaut, verbatim", () => {
+    const merged = mergePageSouscription(null);
+    expect(merged.titre).toEqual({
+      titre: "100 ans",
+      sousTitre: "d’édition marxiste :",
+      demande: "aidez-nous à poursuivre l’histoire.",
+    });
+    expect(merged.recit.danger).toEqual({
+      titre: "Édition indépendante et critique :",
+      titreItalique: "Danger maximal",
+      corps: null,
+    });
+    expect(merged.recit.guerre).toEqual({
+      titre: "La guerre culturelle est aussi",
+      titreItalique: "une guerre matérielle",
+      corps: null,
+    });
+    // Sections sans 2ᵉ ligne (une seule ligne dans le bandeau) : `titreItalique` reste `null`.
+    expect(merged.recit.maisons).toEqual({
+      titre: "Les éditions sociales et La Dispute",
+      titreItalique: null,
+      corps: null,
+    });
+    expect(merged.recit.appel).toEqual({
+      titre: "Nous avons besoin de vous",
+      titreItalique: null,
+      corps: null,
+    });
+    expect(merged.objectifs).toEqual({
+      descriptif50:
+        "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+      descriptif80:
+        "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
+      descriptif100:
+        "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+    });
+  });
+
+  it("global absent ou jamais rempli → même rendu (titre/récit/objectifs)", () => {
+    expect(mergePageSouscription(undefined).titre).toEqual(mergePageSouscription(null).titre);
+    expect(mergePageSouscription({ id: 1 }).recit).toEqual(mergePageSouscription(null).recit);
+    expect(mergePageSouscription({ id: 1 }).objectifs).toEqual(
+      mergePageSouscription(null).objectifs,
+    );
+  });
+
+  it("surcharge du titre : champ par champ, les deux autres restent au défaut", () => {
+    const merged = mergePageSouscription({ id: 1, titre: "80 ans" });
+    expect(merged.titre.titre).toBe("80 ans");
+    expect(merged.titre.sousTitre).toBe("d’édition marxiste :");
+    expect(merged.titre.demande).toBe("aidez-nous à poursuivre l’histoire.");
+  });
+
+  it("surcharge d'une section : titre/2ᵉ ligne/corps indépendants, les trois autres sections intactes", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      danger: {
+        titre: "Nouveau titre",
+        titreItalique: "Nouvelle 2ᵉ ligne",
+        corps: lexicalDoc("Nouveau corps."),
+      },
+    });
+    expect(merged.recit.danger.titre).toBe("Nouveau titre");
+    expect(merged.recit.danger.titreItalique).toBe("Nouvelle 2ᵉ ligne");
+    expect(merged.recit.danger.corps).not.toBeNull();
+    expect(merged.recit.danger.corps).toContain("Nouveau corps.");
+    // Les trois autres sections n'ont pas bougé.
+    expect(merged.recit.guerre).toEqual({
+      titre: "La guerre culturelle est aussi",
+      titreItalique: "une guerre matérielle",
+      corps: null,
+    });
+  });
+
+  it("une section sans 2ᵉ ligne par défaut (maisons/appel) peut en recevoir une par saisie", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      maisons: { titreItalique: "Ajoutée en admin" },
+    });
+    expect(merged.recit.maisons.titre).toBe("Les éditions sociales et La Dispute");
+    expect(merged.recit.maisons.titreItalique).toBe("Ajoutée en admin");
+  });
+
+  it("corps vide (éditeur ouvert puis laissé vide) → null, comme un corps jamais saisi", () => {
+    const merged = mergePageSouscription({ id: 1, appel: { corps: lexicalVide() } });
+    expect(merged.recit.appel.corps).toBeNull();
+  });
+
+  it("surcharge d'une seule description d'objectif : les deux autres restent au défaut", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      objectifs: { descriptif80: "Nouveau texte pour 80 000 €." },
+    });
+    expect(merged.objectifs.descriptif50).toBe(
+      "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+    );
+    expect(merged.objectifs.descriptif80).toBe("Nouveau texte pour 80 000 €.");
+    expect(merged.objectifs.descriptif100).toBe(
+      "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+    );
+  });
+});

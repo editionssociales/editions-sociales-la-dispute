@@ -258,13 +258,60 @@ export interface ContrepartieSouscription {
 }
 
 /**
- * Contenu éditable de `/souscription` : uniquement les 9 cartes de
- * contreparties. Le récit (ask, sections, objectifs, CTA final) est
- * éditorial figé dans `souscription/page.tsx` — livraison client 2026-07-24,
- * pas de CMS pour ces textes-là (consigne : rien qui ne soit un extrait des
- * documents fournis).
+ * Une section du récit (refonte sobre, maquette client 2026-08-21) :
+ * `titreItalique` est la 2ᵉ ligne optionnelle du bandeau (`null` = une seule
+ * ligne) ; `corps` est `null` quand le champ CMS est vide — la page rend
+ * alors SES PROPRES paragraphes JSX verbatim (même contrat que
+ * `PagesLegales`/`LegalCmsBody`, pas celui de `PageAPropos.sections` où
+ * `null` signifierait « rien à afficher » : ici il y a TOUJOURS un corps par
+ * défaut, chaque section a une identité fixe).
+ *
+ * Soulignement Lexical → surlignage couleur : ÉTUDIÉ et ABANDONNÉ.
+ * `convertLexicalToHTML` (`catalogue-pg-map.ts:lexicalToHtml`) rend le
+ * soulignement en `<span style="text-decoration: underline;">…</span>`, or
+ * `sanitizeCms` n'admet AUCUN attribut sur `<span>` (`ALLOWED_ATTRIBUTES`,
+ * `cms-html.ts`) : le style est repris NU (constat empirique, `sanitize-html`
+ * direct) — le signal « souligné » est perdu avant même d'atteindre le
+ * rendu, aucun marqueur ne survit sur lequel accrocher une classe de
+ * surlignage. Le remapper proprement demanderait de modifier `sanitizeCms`
+ * (fabricant PARTAGÉ de `SafeHtml`, utilisé par les fiches livre et les
+ * pages légales) pour une sortie de bibliothèque tierce non contractuelle —
+ * hors budget et hors périmètre de cette page. Seul le gras (`<strong>`,
+ * préservé tel quel) reste disponible côté CMS ; documenté pour l'équipe
+ * dans `docs/BACK-OFFICE.md`.
+ */
+export interface RecitSectionContent {
+  titre: string;
+  titreItalique: string | null;
+  corps: SafeHtml | null;
+}
+
+/** Les trois descriptions des paliers de jauge — montants/intitulés dérivés de `CAMPAIGN_2026_PALIERS`, jamais du CMS. */
+export interface ObjectifsSouscriptionContent {
+  descriptif50: string;
+  descriptif80: string;
+  descriptif100: string;
+}
+
+/**
+ * Contenu éditable de `/souscription` (refonte sobre, 2026-08-21) : titre de
+ * l'ask, quatre sections du récit (`danger`/`guerre`/`maisons`/`appel` —
+ * couleurs et ordre figés par le design, PAS un tableau), descriptions des
+ * paliers de jauge, et les neuf cartes de contreparties (inchangées).
  */
 export interface PageSouscriptionContent {
+  titre: {
+    titre: string;
+    sousTitre: string;
+    demande: string;
+  };
+  recit: {
+    danger: RecitSectionContent;
+    guerre: RecitSectionContent;
+    maisons: RecitSectionContent;
+    appel: RecitSectionContent;
+  };
+  objectifs: ObjectifsSouscriptionContent;
   contreparties: ContrepartieSouscription[];
 }
 
@@ -281,9 +328,11 @@ function tierObligatoire(id: string): DonationTier {
  * Contreparties définitives de la campagne 2026 (PDF client « contreparties
  * dans l'ordre », livraison Clara du 2026-07-24), extraites **verbatim** —
  * une ligne par bande du PDF, les alternatives portées par la règle « ou ».
- * Les tests verrouillent ces valeurs (iso-rendu).
+ * Les tests verrouillent ces valeurs (iso-rendu). Type réduit au SEUL champ
+ * qu'elle couvre (`Pick`) : le récit (titre/sections/objectifs) a son propre
+ * bloc de défauts ci-dessous, concerns distincts.
  */
-const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
+const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
   contreparties: [
     {
       tier: tierObligatoire("palier-15"),
@@ -369,9 +418,86 @@ const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
 };
 
 /**
- * Fusion du global `page-souscription` — bloc unique (contreparties) : un
- * array vide (ou dont toutes les entrées sont invalides) retombe sur les 9
- * cartes par défaut, un array rempli les remplace entièrement.
+ * Titre de l'ask — texte actuel de `souscription/page.tsx` (refonte sobre,
+ * maquette client 2026-08-21), extrait verbatim.
+ */
+const TITRE_DEFAUT = {
+  titre: "100 ans",
+  sousTitre: "d’édition marxiste :",
+  demande: "aidez-nous à poursuivre l’histoire.",
+};
+
+/**
+ * Titre (+ 2ᵉ ligne italique optionnelle) des quatre sections du récit —
+ * texte actuel, verbatim. Le CORPS par défaut (paragraphes, gras, surlignage)
+ * reste en JSX dans `souscription/page.tsx` (pas de JSX dans ce module `.ts`
+ * pur) : `corps: null` y déclenche le rendu de CE JSX, exactement comme
+ * `PagesLegales`/`LegalCmsBody` retombe sur ses `<LegalSection>` en dur.
+ */
+const RECIT_DEFAUT: Record<
+  keyof PageSouscriptionContent["recit"],
+  { titre: string; titreItalique: string | null }
+> = {
+  danger: {
+    titre: "Édition indépendante et critique :",
+    titreItalique: "Danger maximal",
+  },
+  guerre: {
+    titre: "La guerre culturelle est aussi",
+    titreItalique: "une guerre matérielle",
+  },
+  maisons: {
+    titre: "Les éditions sociales et La Dispute",
+    titreItalique: null,
+  },
+  appel: {
+    titre: "Nous avons besoin de vous",
+    titreItalique: null,
+  },
+};
+
+/** Descriptions actuelles des trois paliers de jauge — texte actuel, verbatim. */
+const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = {
+  descriptif50:
+    "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+  descriptif80:
+    "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
+  // TODO(contenu) : phrase possiblement tronquée dans le docx/la maquette (le
+  // point final manque, cf. PDF client) — conservée telle quelle.
+  descriptif100:
+    "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+};
+
+/** Chaîne saisie si non vide (espaces exclus), sinon `null` (pas de 2ᵉ ligne / pas de section). */
+function texteOuDefautNullable(
+  saisi: string | null | undefined,
+  defaut: string | null,
+): string | null {
+  const propre = saisi?.trim();
+  return propre ? propre : defaut;
+}
+
+/** Fusion d'une section du récit — champ par champ, vide = défaut dur (titre/2ᵉ ligne) ou `null` (corps, cf. `RecitSectionContent`). */
+function mergeRecitSection(
+  groupe:
+    | { titre?: string | null; titreItalique?: string | null; corps?: unknown }
+    | null
+    | undefined,
+  defaut: { titre: string; titreItalique: string | null },
+): RecitSectionContent {
+  return {
+    titre: texteOuDefaut(groupe?.titre, defaut.titre),
+    titreItalique: texteOuDefautNullable(groupe?.titreItalique, defaut.titreItalique),
+    corps: richTextToSafeHtml(groupe?.corps),
+  };
+}
+
+/**
+ * Fusion du global `page-souscription` (refonte sobre, 2026-08-21) — champ
+ * par champ pour le titre/récit/objectifs (vide = défaut dur ci-dessus) ;
+ * `contreparties` garde sa règle propre : un array vide (ou dont toutes les
+ * entrées sont invalides) retombe sur les 9 cartes par défaut, un array
+ * rempli les remplace entièrement (inchangé).
  */
 export function mergePageSouscription(
   global: PageSouscription | null | undefined,
@@ -387,6 +513,25 @@ export function mergePageSouscription(
   });
 
   return {
+    titre: {
+      titre: texteOuDefaut(global?.titre, TITRE_DEFAUT.titre),
+      sousTitre: texteOuDefaut(global?.sousTitre, TITRE_DEFAUT.sousTitre),
+      demande: texteOuDefaut(global?.demande, TITRE_DEFAUT.demande),
+    },
+    recit: {
+      danger: mergeRecitSection(global?.danger, RECIT_DEFAUT.danger),
+      guerre: mergeRecitSection(global?.guerre, RECIT_DEFAUT.guerre),
+      maisons: mergeRecitSection(global?.maisons, RECIT_DEFAUT.maisons),
+      appel: mergeRecitSection(global?.appel, RECIT_DEFAUT.appel),
+    },
+    objectifs: {
+      descriptif50: texteOuDefaut(global?.objectifs?.descriptif50, OBJECTIFS_DEFAUT.descriptif50),
+      descriptif80: texteOuDefaut(global?.objectifs?.descriptif80, OBJECTIFS_DEFAUT.descriptif80),
+      descriptif100: texteOuDefaut(
+        global?.objectifs?.descriptif100,
+        OBJECTIFS_DEFAUT.descriptif100,
+      ),
+    },
     contreparties:
       contreparties.length > 0 ? contreparties : SOUSCRIPTION_DEFAUT.contreparties,
   };

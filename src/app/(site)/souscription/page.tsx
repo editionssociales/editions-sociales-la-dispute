@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Container } from "@/components/container";
 import { Button } from "@/components/button";
 import { CountUp } from "@/components/count-up";
@@ -9,174 +10,149 @@ import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers";
 import { RAIL_GRID_CLASS, RAIL_GRID_TRANSITION_CLASS } from "@/components/rail-inset";
-import { POP_BG } from "@/components/pop-palette";
-import { youTubeEmbedUrl } from "@/lib/video";
+import { POP_BG, POP_ORDER } from "@/components/pop-palette";
+import type { SafeHtml } from "@/lib/cms-html";
 import { getCampaign2026 } from "@/lib/donations";
-import { getNewReleases } from "@/lib/catalogue";
 import { getPageSouscription } from "@/lib/site-content";
-import { HeroShelf, MobileShelf } from "./_components/shelf";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
 import { TiersDrawer } from "./_components/tiers-drawer";
 
 /**
- * Page /souscription — livraison définitive de la campagne 2026 (Clara,
- * 2026-07-24) : docx « Souscription - texte » (récit, slogan), xlsx +
- * PDF « contreparties dans l'ordre » (9 paliers, visuels), objectifs de
- * jauge. Consigne client explicite : ne garder AUCUNE section qui ne soit
- * pas un extrait de ces documents, rendu le plus épuré possible — zéro
- * métadonnée visible (pas d'eyebrow, pas de titre de section générique type
- * « Contreparties »/« FAQ », pas de mot-clé de navigation). Seuls les
- * intertitres du document client et la microcopie fonctionnelle (boutons,
- * mention d'ouverture) sont affichés.
+ * Page /souscription — refonte SOBRE (maquette client PDF, 2026-08-21,
+ * retouche le docx de juillet — la maquette fait foi). Retour client
+ * verbatim : « Faut qu'on simplifie la page souscription. […] que le texte
+ * apparaisse de façon plus sobre, pas avec plein de polices et de style de
+ * titre, juste à la rigueur avec des trucs surlignés. Là je pense ça se lit
+ * mal. » Remplace la refonte « Placard » du 2026-07-25 (displays clamp()
+ * multiples, étagère 3D, bande hazard, tampon penché, crescendo
+ * typographique, escalier des objectifs) — supprimée en bloc.
  *
- * Refonte « Placard » (2026-07-25, maquette gagnante du panel de design —
- * affiche militante) : la COLONNE PRINCIPALE est recomposée en affiche,
- * texte client inchangé à l'octet. Compteur monumental sur bloc paper
- * d'ouverture (l'aplat ink a glissé sur le bloc vidéo qui suit, retour Youri
- * 26/07 — l'affiche s'ouvre clair et bascule au noir sur la vidéo), ask
- * éclaté en trois échelles (le h1 reste UN SEUL <h1>, spans stylés), récit en quatre sections-bandeaux full-bleed
- * (orange/bleu/jaune/rose — la seule bande hazard de la page coiffe
- * « danger maximal »), objectifs en escalier typographique sous ombre dure
- * (R8) clos par la chute du docx et le CTA final (sur paper, sans bandeau —
- * retour Youri 25/07). Interdits d'arbitrage : aucun texte ajouté (pas de
- * numéros de section, pas de légende), pas de lettres au trait
- * (-webkit-text-stroke), pas de compression scaleX. Les displays géants sont en clamp() (variantes `lg:` : la
- * colonne perd 380px au profit du rail, la pente vw doit se resserrer).
+ * Ordre du DOM, inchangé dans son principe (retour client 2026-07-24, la
+ * colonne principale garde jauge → récit → objectifs → CTA, le rail des
+ * contreparties reste hors du corps de texte) : héros de collecte en direct
+ * (INCHANGÉ À L'OCTET, cf. plus bas) → titre de l'ask (« 100 ans », motif
+ * décoratif, demande) → quatre sections narratives (UN SEUL pattern répété :
+ * bandeau de titre à l'accent de la section + corps en prose sobre — gras et
+ * surlignage inline pour toute emphase, aucun autre effet) → trois cartes de
+ * paliers de jauge (remplacent l'escalier typographique) → CTA final →
+ * rail sticky des contreparties (`#paliers`, hors du corps de texte, cf.
+ * `_components/tiers-rail.tsx`/`tiers-drawer.tsx`, INCHANGÉS).
  *
- * Palette (retour Clara 2026-08-07, « attention à bien utiliser les couleurs
- * du site : le bleu, le rose, le jaune et l'orange ») : TOUTE la page est
- * passée des accents de couverture (navy/bottle/ocher/brick) aux quatre
- * couleurs du site — `pop-palette.ts`. Elles sont claires : rien n'y porte
- * plus `text-paper`, et seul l'orange sert de couleur de texte sur paper (AA
- * large). Restent hors palette, à dessein, les pages d'état du parcours
- * (`/souscription/merci`, `/souscription/erreur`), où bottle/ocher/brick sont
- * la SÉMANTIQUE succès/attente/échec partagée avec le panier (R3).
+ * Ce qui disparaît avec la refonte : l'étagère 3D des dernières parutions
+ * (`_components/shelf.tsx`, `components/shelf-lock.tsx`/`shelf-cover.tsx` —
+ * supprimés, plus aucun autre appelant) et son motif CSS `.book3d*`
+ * (`globals.css`) ; la section vidéo conditionnelle (`CAMPAIGN_VIDEO_URL`
+ * n'a jamais cessé d'être `null` — `src/lib/video.ts` reste en place,
+ * toujours utilisé par la fiche livre) ; la bande hazard, le tampon penché
+ * « 100 ans », le crescendo du bandeau d'appel (dont le « ! » ajouté en
+ * juillet, absent de la maquette), les exergues `text-[1.5em]`/`[1.8em]`, et
+ * la duplication `OBJECTIF_EXTRAS` keyée par montant (avec son invariant de
+ * synchronisation) : les trois cartes de paliers dérivent désormais
+ * UNIQUEMENT de `CAMPAIGN_2026_PALIERS` (montant, intitulé) zippé
+ * POSITIONNELLEMENT à une présentation FIXE (couleur, inversion — cf.
+ * `OBJECTIF_PRESENTATION` plus bas) et aux descriptions éditables
+ * (`content.objectifs`, cf. Payload ci-dessous).
  *
- * Sections de l'ancienne maquette (campagne Ulule 2024) supprimées à
- * dessein, aucune ne correspondant à un extrait des documents livrés :
- * rétrospective 2024 (héros + tuiles de stats + jauge 2024), « Cinq
- * chantiers pour la suite », « Des projets, on en a plein » (perspectives
- * des maisons), FAQ, aperçu catalogue. `lib/campaign.ts` reste intact
- * (`deriveGauge` est le socle commun 2024/2026), seul son usage sur cette
- * page disparaît. L'étagère 3D, elle, N'EST PAS un reliquat 2024 : elle est
- * réintégrée dans l'ask (voir plus bas), avec de vraies parutions 2026.
+ * Palette (INCHANGÉE) : les quatre couleurs du site (`pop-palette.ts`) —
+ * orange = section 1 (crise), bleu = section 2 (bataille politique), jaune =
+ * section 3 (héritage centenaire), rose = section 4 (appel) — même
+ * assignation que l'ancienne maquette, la seule à survivre à la refonte.
+ * Effra (`font-sans`) reste l'unique famille.
  *
- * Ce qui reste, dans l'ordre du DOM (retour client 2026-07-24) : colonne
- * principale — jauge de collecte en direct (TOUJOURS visible, paliers
- * réinscrits sous la barre et gros CTA orange à droite du compteur — retour
- * Youri, soir du 26/07 ; rail et feuille mobile restent les entrées
- * principales vers le paiement), corps de texte ouvert par la vidéo
- * (SEULEMENT une fois livrée — section absente sinon) puis ask — h1, lien
- * d'ancre mobile vers `#paliers`, étagère 3D des dernières parutions
- * (preuve matérielle du slogan, 3D en lg+, repli en grille de couvertures
- * 2×4 sous `lg`) —, quatre sections narratives, objectifs de jauge, CTA
- * final — ; contreparties éditables en rail sticky à droite de la PAGE
- * ENTIÈRE (`#paliers`, hors du corps de texte), clôturé par la carte
- * « montant libre » (le formulaire ne vit plus ni dans l'ask ni dans le CTA
- * final). Sous `lg`, ce même rail devient une FEUILLE DE BAS D'ÉCRAN
- * (`BottomSheet`) : repliée en bandeau « Contribuer », elle se déroule seule
- * 1 s après le chargement et se replie au glissé du doigt ; les CTA d'ancre
- * `#paliers`/`#montant-libre` la redéploient (`anchors`).
- *
- * Découpage (routes fines, `src/app/CLAUDE.md`) : cette page garde la jauge,
- * le récit verbatim, les objectifs et la composition ; l'étagère 3D + son
- * repli mobile vivent dans `_components/shelf.tsx`, le rail des contreparties
- * complet (visuels, formulaires Stripe, état pré-ouverture) dans
- * `_components/tiers-rail.tsx` — modules colocalisés privés (préfixe `_`,
- * hors routing App Router), tous composants serveur. Seul le bloc
- * `contreparties` est éditable dans /admin (global `page-souscription`) :
- * lu via `getPageSouscription`, bloc vide = contenu par défaut de
- * `lib/site-content-core.ts`. Montant et intitulé des paliers restent
- * dérivés de `DONATION_TIERS` (la table qui pilote Stripe) : la présentation
- * est éditable, jamais le paiement.
+ * Récit éditable (Payload, `global page-souscription`) : titre de l'ask et
+ * quatre sections NOMMÉES ET FIXES (`danger`/`guerre`/`maisons`/`appel` — pas
+ * un tableau, couleurs et ordre figés par le design) sont désormais
+ * éditables, en plus des neuf cartes de contreparties (INCHANGÉES). Contrat
+ * inchangé : champ vide = texte actuel du site (`getPageSouscription`,
+ * fusion pure dans `src/lib/site-content-core.ts` — jamais de seed en base).
+ * `corps` (richText) vide fait retomber CHAQUE section sur SES PROPRES
+ * paragraphes JSX verbatim ci-dessous (`RecitSection`, `corps ?? children`) —
+ * pas de fusion partielle paragraphe par paragraphe. Montants et intitulés
+ * des paliers restent dérivés de `DONATION_TIERS`/`CAMPAIGN_2026_PALIERS`
+ * (jamais du CMS) : la présentation est éditable, jamais le paiement.
  */
 
 /**
- * Vidéo de présentation — ouvre le corps de texte (retour client
- * 2026-07-24). Aucune vidéo livrée à ce jour : renseigner ici l'URL YouTube
- * brute à réception (watch, youtu.be, shorts ou déjà embed —
- * `youTubeEmbedUrl` la normalise en youtube-nocookie, règle single-source de
- * `src/lib/video.ts` ; si la vidéo n'est pas YouTube, étendre `video.ts`
- * plutôt que d'inliner). URL absente ou non reconnue : la section vidéo
- * n'est PAS rendue (arbitrage client 2026-08-19 — la vidéo n'arrivera que
- * plusieurs jours après le lancement, le placeholder d'attente est retiré).
+ * Recette du corps de récit (INCHANGÉE depuis la maquette « Placard ») :
+ * texte lisible, un cran plus grand que le corps courant du site — retour
+ * Youri/Clara 25/07 et 07/08, toujours valable pour la refonte sobre.
+ * Partagée par le rendu CMS (richText) et les paragraphes par défaut : les
+ * deux doivent avoir la même densité de lecture.
  */
-const CAMPAIGN_VIDEO_URL: string | null = null;
+const RECIT_CORPS_CLASS =
+  "mt-6 space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-xl sm:leading-[1.55]";
 
 /**
- * Objectifs de la jauge — escalier typographique après le récit. Montants et
- * titres dérivés de `CAMPAIGN_2026_PALIERS` (la table qui pilote la jauge —
- * une révision client d'un palier ne se reporte qu'à un seul endroit) ;
- * seuls les descriptifs (docx client, VERBATIM) et la présentation vivent
- * ici. La progression sauver → résister → construire est portée par le
- * liseré d'accent (orange → jaune → rose, même échelle que les sections du
- * récit) ET par le montant qui grossit d'une marche à l'autre (`display`,
- * classes clamp littérales — contrat JIT) ; la barre du sommet
- * (« On construit », l'objectif plein) est la seule inversée en ink.
+ * Surlignage inline (verbatim maquette) — UNIQUE effet d'emphase avec le gras
+ * (consigne client : « juste à la rigueur avec des trucs surlignés »).
+ * `box-decoration-clone` évite un rectangle en escalier quand le surlignage
+ * franchit un retour à la ligne. Une classe littérale par couleur de section
+ * (contrat JIT — jamais `bg-pop-${couleur}` assemblée dynamiquement).
  */
+const HL_ORANGE = "box-decoration-clone bg-pop-orange px-1";
+const HL_TEAL = "box-decoration-clone bg-pop-teal px-1";
+const HL_YELLOW = "box-decoration-clone bg-pop-yellow px-1";
+const HL_PINK = "box-decoration-clone bg-pop-pink px-1";
+
 /**
- * Union littérale des montants de palier 2026 — dérivée À LA MAIN de
- * `CAMPAIGN_2026_PALIERS` (`src/lib/donation-tiers.ts`, table « docx client,
- * définitifs »), et non automatiquement : cette table y est annotée
- * `Palier[]` (pas `as const`), donc son `value` est déjà `number` au moment
- * où ce module l'importe — aucun littéral ne survit à cette annotation
- * (`src/lib/donation-tiers.ts` n'appartient pas à ce périmètre). Cette union
- * fait au moins refuser au compilateur toute clé INCONNUE ou MANQUANTE dans
- * `OBJECTIF_EXTRAS` ci-dessous ; l'invariant juste après couvre l'autre sens
- * (un montant qui change côté source) en le faisant échouer bruyamment au
- * lieu de fusionner silencieusement des extras `undefined`.
+ * Une section du récit — UN SEUL pattern répété (consigne client) : bandeau
+ * de titre plein à l'accent de la section (2ᵉ ligne italique optionnelle),
+ * corps en prose sobre juste dessous, dans la MÊME colonne `max-w-[52ch]`
+ * (le bandeau n'est plus plein-bleed comme dans l'ancienne maquette — ce
+ * n'est plus un objet d'affiche, juste un intertitre en aplat de couleur).
+ * `corps` (SafeHtml CMS) prime sur `children` (paragraphes JSX par défaut) —
+ * jamais les deux à la fois.
  */
-type PalierAmount = 50_000 | 80_000 | 100_000;
-
-const OBJECTIF_EXTRAS: Record<
-  PalierAmount,
-  { desc: string; accent: string; display: string; sommet?: boolean }
-> = {
-  50_000: {
-    desc: "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
-    accent: POP_BG.orange,
-    display: "text-[clamp(32px,8vw,52px)]",
-  },
-  80_000: {
-    desc: "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
-    accent: POP_BG.yellow,
-    display: "text-[clamp(38px,9.5vw,68px)]",
-  },
-  100_000: {
-    // TODO(contenu) : phrase possiblement tronquée dans le docx (le point
-    // final manque) — conservée telle quelle.
-    desc: "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
-    accent: POP_BG.pink,
-    display: "text-[clamp(44px,11vw,84px)]",
-    sommet: true,
-  },
-};
-
-// Invariant de synchronisation : si `CAMPAIGN_2026_PALIERS` gagne, perd ou
-// modifie un montant sans que `PalierAmount`/`OBJECTIF_EXTRAS` suivent (le
-// cas EN SILENCE visé plus haut), ce module lève au premier rendu/à la
-// génération statique plutôt que de laisser l'escalier des objectifs se
-// composer avec des extras manquants.
-for (const p of CAMPAIGN_2026_PALIERS) {
-  if (!(p.value in OBJECTIF_EXTRAS)) {
-    throw new Error(
-      `souscription/page.tsx : OBJECTIF_EXTRAS ne couvre pas le palier ${p.value} de CAMPAIGN_2026_PALIERS — mettre à jour PalierAmount et OBJECTIF_EXTRAS.`,
-    );
-  }
+function RecitSection({
+  bg,
+  titre,
+  titreItalique,
+  corps,
+  children,
+}: {
+  bg: string;
+  titre: string;
+  titreItalique: string | null;
+  corps: SafeHtml | null;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mt-12 sm:mt-16">
+      <Reveal>
+        <Container>
+          <div className="max-w-[52ch]">
+            <h2
+              className={`w-full ${bg} px-4 py-3 font-sans text-[clamp(20px,4vw,30px)] font-black uppercase leading-[1.05] text-ink sm:px-6`}
+            >
+              <span className="block">{titre}</span>
+              {titreItalique && <span className="mt-1 block italic">{titreItalique}</span>}
+            </h2>
+            {corps ? (
+              <div className={RECIT_CORPS_CLASS} dangerouslySetInnerHTML={{ __html: corps }} />
+            ) : (
+              <div className={RECIT_CORPS_CLASS}>{children}</div>
+            )}
+          </div>
+        </Container>
+      </Reveal>
+    </section>
+  );
 }
 
-const OBJECTIFS = CAMPAIGN_2026_PALIERS.map((p) => ({
-  value: p.value,
-  titre: p.label,
-  ...OBJECTIF_EXTRAS[p.value as PalierAmount],
-}));
+/**
+ * Motif décoratif « équaliseur » du titre de l'ask (maquette) — hauteurs en
+ * px, aucune image (divs littéraux). `aria-hidden` : purement ornemental, la
+ * demande qu'il précède est déjà portée par le h1 (`sr-only`) et son rendu
+ * visible juste après.
+ */
+const EQUALIZER_BARS = [18, 34, 48, 26, 56, 30, 44, 22, 38, 28, 46] as const;
 
 export const metadata: Metadata = {
   title: "Souscription",
   // ≤ 160 caractères (Google tronque au-delà) : crise + appel + fourchette.
   description:
-    "La faillite de notre distributeur menace 100 ans d’édition marxiste indépendante. Soutenez Les Éditions sociales et La Dispute — contreparties de 15 à 1 000 €.",
+    "La faillite de notre distributeur menace 100 ans d’édition marxiste indépendante. Soutenez Les Éditions sociales et La Dispute — contreparties de 15 à 1 000 €.",
   alternates: { canonical: "/souscription" },
   // Issue #87a : `opengraph-image.jpg` colocalisé est un fichier de
   // convention Next DISTINCT de `twitter-image` (aucun des deux ne se
@@ -189,7 +165,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary" },
 };
 
-export const revalidate = 3600; // fenêtre ISR (contreparties lues dans Payload/Postgres)
+export const revalidate = 3600; // fenêtre ISR (contreparties/récit lus dans Payload/Postgres)
 
 /**
  * JSON-LD Organization + DonateAction — aide crawlers (et LLM-crawlers) à
@@ -209,23 +185,6 @@ const JSON_LD = JSON.stringify({
   },
 });
 
-/**
- * Bande hazard ink/orange — la SEULE de la page (arbitrage du panel), au
- * sommet du bandeau « danger maximal ». Hachures en repeating-linear-gradient
- * arbitrary (classe littérale, variables de thème — R1). Noir/orange est le
- * couple de danger canonique : l'ex-brick s'y lisait mal contre l'ink.
- */
-const HAZARD_BG =
-  "bg-[repeating-linear-gradient(-45deg,var(--color-ink)_0_12px,var(--color-pop-orange)_12px_24px)]";
-
-/**
- * Équivalent Container utilisable DANS un h1/h2 : les bandeaux full-bleed
- * sont portés par des <span> de titre (un <div> serait invalide dans un
- * heading), qui reprennent la géométrie de `Container` en classes littérales
- * pour garder tous les fers à gauche alignés.
- */
-const SPAN_CONTAINER = "mx-auto block w-full max-w-6xl px-5 sm:px-8";
-
 export default async function SouscriptionPage() {
   // Interrupteur de la phase dons (E1) : tant que `STRIPE_SECRET_KEY` est
   // absente, la page reste en iso-rendu (CTA honnêtement désactivés, R7).
@@ -233,25 +192,15 @@ export default async function SouscriptionPage() {
   // `getCampaign2026()` ne fait aucun appel réseau tant que `stripeEnabled()`
   // est faux (elle jette avant tout fetch, absorbée en `null` — `lib/donations.ts`) :
   // gratuit à appeler inconditionnellement.
-  const [campaign2026, content, releases] = await Promise.all([
+  const [campaign2026, content] = await Promise.all([
     getCampaign2026(),
     getPageSouscription(),
-    // Fail-open : une panne catalogue dégrade l'étagère de l'ask vers ses dos
-    // placeholder colorés (HeroShelf/MobileShelf sans `book.cover`) — elle ne
-    // fait JAMAIS tomber la page de dons.
-    getNewReleases(18).catch(() => []),
   ]);
-  // L'étagère de l'ask porte de vraies parutions : couverture + fiche interne
-  // requises (les étagères re-vérifient et plafonnent elles-mêmes).
-  const shelfBooks = releases.filter((b) => b.cover && b.edition);
   // Jauge 2026 TOUJOURS visible (point le plus urgent du site) : avant
   // l'ouverture des dons (pas de clé Stripe → `null`), ou juste après le
   // lancement (0 collecté), la jauge affiche honnêtement une campagne à 0
   // plutôt que de disparaître.
   const liveCampaign = campaign2026 ?? deriveCampaign2026({ collected: 0, contributors: 0 });
-  // Embed dérivé de l'URL brute (null si absente OU non reconnue) : jamais
-  // une iframe cassée en prod le jour où l'URL sera collée.
-  const videoEmbed = CAMPAIGN_VIDEO_URL ? youTubeEmbedUrl(CAMPAIGN_VIDEO_URL) : null;
   // Panne Stripe EN campagne (clé posée mais relecture des charges en échec,
   // `getCampaign2026` → null) : ne jamais afficher un faux 0 — le compteur
   // laisse place à une mention neutre et la barre n'est pas rendue
@@ -299,6 +248,31 @@ export default async function SouscriptionPage() {
    */
   const PALIERS_CTA = "#paliers";
 
+  /**
+   * Cartes de paliers — présentation FIGÉE par la maquette (couleur, ordre,
+   * inversion du sommet), zippée POSITIONNELLEMENT avec
+   * `CAMPAIGN_2026_PALIERS` (déjà triée par montant croissant, 3 entrées —
+   * la table qui pilote la jauge, jamais retouchée sans revue de ce zip).
+   * Les descriptions viennent du CMS (`content.objectifs`, vide = défaut
+   * dur) ; montant et intitulé restent dérivés de la table, jamais du CMS.
+   */
+  const OBJECTIF_PRESENTATION = [
+    { border: "border-l-pop-orange", sommet: false },
+    { border: "border-l-pop-yellow", sommet: false },
+    { border: "border-l-pop-pink", sommet: true },
+  ] as const;
+  const objectifDescriptions = [
+    content.objectifs.descriptif50,
+    content.objectifs.descriptif80,
+    content.objectifs.descriptif100,
+  ];
+  const OBJECTIFS = CAMPAIGN_2026_PALIERS.map((p, i) => ({
+    value: p.value,
+    titre: p.label,
+    desc: objectifDescriptions[i],
+    ...OBJECTIF_PRESENTATION[i],
+  }));
+
   return (
     /* La colonne du rail EST le panneau du tiroir (`_components/tiers-drawer.tsx`) :
        elle vaut 380px ouverte, 0 fermée, et sa course vit ICI, sur
@@ -314,15 +288,12 @@ export default async function SouscriptionPage() {
           navbar resserrée à gauche via `railInset` — largeur de colonne 380px
           à garder en phase avec `site-header.tsx`). */}
       <div className="min-w-0">
-        {/* 1 ▪ La collecte en direct OUVRE la page — compteur de lutte
-            monumental sur bloc paper pleine largeur (inversion paper↔ink avec
-            le bloc vidéo, retour Youri 26/07), gros CTA orange sur son flanc
-            droit et jauge 2026 vivante en demi-droite, paliers réinscrits
-            sous la barre (retour Youri, soir du 26/07 — la barre nue et la
-            suppression du CTA du matin sont revenues en arrière ; le module
-            « Objectif », lui, reste supprimé). N'affiche que ce qu'une
-            campagne en cours peut honnêtement montrer (collecté net +
-            contributeurs). Fenêtre de fraîcheur ~1–3 min, voir
+        {/* 1 ▪ La collecte en direct OUVRE la page (INCHANGÉE À L'OCTET,
+            consigne mission) — compteur de lutte monumental sur bloc paper
+            pleine largeur, gros CTA orange sur son flanc droit et jauge 2026
+            vivante en demi-droite, paliers réinscrits sous la barre. N'affiche
+            que ce qu'une campagne en cours peut honnêtement montrer (collecté
+            net + contributeurs). Fenêtre de fraîcheur ~1–3 min, voir
             `src/app/CLAUDE.md`. */}
         <section className="bg-paper text-ink">
           <Container className="py-12 sm:py-16">
@@ -455,456 +426,237 @@ export default async function SouscriptionPage() {
           </Container>
         </section>
 
-        {/* 2 ▪ Vidéo de présentation — OUVRE le corps de texte quand une
-            vidéo existe, et DISPARAÎT entièrement sinon (arbitrage client
-            2026-08-19 : la vidéo n'arrivera que plusieurs jours après le
-            lancement, plus de placeholder qui tient la place). Cadre à ombre
-            dure (R8, recette littérale), INVERSÉ : depuis l'échange des fonds
-            avec le bloc de collecte (retour Youri 26/07) la vidéo est posée
-            sur ink — bordure et ombre passent donc en paper. Le bloc porte sa
-            propre gouttière basse (un aplat de couleur ne peut pas s'appuyer
-            sur le padding de la section suivante, restée sur paper). */}
-        {videoEmbed && (
-          <section className="bg-ink text-paper">
-            <Container className="py-14 sm:py-16">
-              <Reveal>
-                <div className="border-2 border-paper bg-ink shadow-[8px_8px_0_0_var(--color-paper)]">
-                  <iframe
-                    src={videoEmbed}
-                    title="La vidéo de la souscription"
-                    className="aspect-video w-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                  />
-                </div>
-              </Reveal>
-            </Container>
-          </section>
-        )}
-
-        {/* 3 ▪ L'ask 2026 — le slogan en trois échelles (affiche) : « 100
-            ans » en aplat plein très grand, la qualification en capitales,
-            puis l'étagère des dernières parutions SOUS le titre (maquette
-            25/07). En lg+, la demande (« aidez-nous… ») est posée SUR le
-            rayon, dans l'espace vide à droite du dernier dos — la place des
-            prochains livres ; sous lg elle suit la grille de couvertures dans
-            le même conteneur, sur paper. Le h1 reste UN SEUL <h1> portant tout le
-            slogan verbatim dans l'ordre : la demande y vit en sr-only, ses
-            deux rendus visibles (rayon lg / bandeau mobile) sont
-            aria-hidden — une seule lecture SR, zéro duplication dans
-            l'arbre a11y. L'étagère ne vit JAMAIS sous un Reveal (son
-            transform crée un containing block qui casse le pop-out 3D) ni
-            sous un overflow-hidden (clipperait le livre déplié).
-            Le formulaire montant libre n'est plus ici non plus (il clôt la
-            liste des contreparties), seule l'ancre y mène.
-            TODO(contenu) : le docx s'intitule « Slogans » (pluriel) mais
-            n'en livre qu'un — d'autres variantes pourraient arriver. */}
+        {/* 2 ▪ Titre de l'ask — « 100 ans » en très grand (apaisé : une seule
+            échelle géante au lieu du crescendo à trois échelles de l'ancienne
+            maquette), qualification en capitales, motif décoratif
+            « équaliseur » (aucune image) puis la demande. Le h1 reste UN SEUL
+            <h1> portant tout le slogan verbatim dans l'ordre : la demande y
+            vit en sr-only, son rendu visible sous le motif est aria-hidden —
+            une seule lecture SR, zéro duplication dans l'arbre a11y. Plus
+            d'étagère 3D sous le titre (supprimée avec la refonte, cf. doc de
+            module) : le formulaire montant libre reste au rail, seule l'ancre
+            y mène. */}
         <section className="bg-paper pt-16 sm:pt-20">
-          <h1 className="font-sans font-black italic text-ink">
-            <span
-              className={`${SPAN_CONTAINER} text-[clamp(64px,17vw,180px)] leading-[0.8] tracking-[-0.03em] lg:text-[clamp(64px,12vw,180px)]`}
-            >
-              100 ans
-            </span>{" "}
-            <span
-              className={`${SPAN_CONTAINER} mt-3 text-[clamp(24px,6vw,46px)] uppercase leading-[0.9] tracking-[-0.01em]`}
-            >
-              d’édition marxiste :
-            </span>{" "}
-            <span className="sr-only">aidez-nous à poursuivre l’histoire.</span>
-          </h1>
-          {/* lg+ : l'étagère sous le titre, la demande posée sur le rayon. */}
-          <div className="mx-auto mt-10 hidden w-full max-w-6xl px-5 sm:px-8 lg:block">
-            <div role="group" aria-label="Dernières parutions">
-              <HeroShelf
-                books={shelfBooks}
-                trailing={
-                  // Trois points médians AVANT la demande (retour Youri
-                  // 25/07) : les livres à venir, posés sur le rayon — ils
-                  // décalent d'autant le texte vers la droite.
-                  <span aria-hidden="true" className="flex items-end gap-6 pb-2 pl-6">
-                    <span className="block font-sans text-[clamp(30px,3.4vw,46px)] font-black leading-[0.7] tracking-[.12em] text-ink/40">
-                      ···
-                    </span>
-                    <span className="block max-w-[15ch] font-sans text-[clamp(30px,3.4vw,46px)] font-black italic leading-[0.95] text-ink">
-                      aidez-nous à poursuivre l’histoire.
-                    </span>
-                  </span>
-                }
-              />
+          <Container>
+            <h1 className="font-sans font-black text-ink">
+              <span className="block italic text-[clamp(56px,12vw,120px)] leading-[0.85] tracking-[-0.02em]">
+                {content.titre.titre}
+              </span>
+              <span className="mt-2 block text-[clamp(24px,5vw,44px)] uppercase leading-[0.95] tracking-[-0.01em]">
+                {content.titre.sousTitre}
+              </span>
+              <span className="sr-only">{content.titre.demande}</span>
+            </h1>
+            {/* Motif + demande visible : dupliquent le sr-only du h1, donc
+                entièrement aria-hidden. Barres cyclées dans l'ordre canonique
+                de la palette (`POP_ORDER`). */}
+            <div aria-hidden="true" className="mt-6 flex flex-wrap items-end gap-4 sm:gap-6">
+              <div className="flex items-end gap-[3px]">
+                {EQUALIZER_BARS.map((h, i) => (
+                  <span
+                    key={i}
+                    className={`block w-2 sm:w-2.5 ${POP_BG[POP_ORDER[i % 4]]}`}
+                    style={{ height: h }}
+                  />
+                ))}
+              </div>
+              <span className="pb-1 font-sans text-2xl font-black leading-none text-ink/40">
+                ···
+              </span>
+              <p className="min-w-0 flex-1 font-sans text-[clamp(22px,4vw,40px)] font-black italic leading-[0.95] text-ink">
+                {content.titre.demande}
+              </p>
             </div>
-          </div>
-          {/* Sous lg : le repli 2×4 de l'étagère (R7), puis la demande + son
-              CTA sur UNE SEULE ligne, dans le MÊME conteneur que la grille de
-              couvertures (retour Youri 25/07) : la demande est le pendant
-              mobile du texte posé sur le rayon en lg+, elle se lit donc dans
-              la foulée des couvertures — plus de bandeau ink pleine largeur,
-              qui creusait un gap et un changement de fond pour deux lignes.
-              Le bouton « Contribuer » est centré verticalement à DROITE du
-              texte. La demande reste `aria-hidden` (le h1 la porte en
-              sr-only) mais le bouton, lui, doit rester dans l'arbre a11y :
-              d'où l'attribut sur le seul <p>, jamais sur la rangée. */}
-          <div className="mx-auto mt-8 w-full max-w-6xl px-5 sm:px-8 lg:hidden">
-            <MobileShelf books={shelfBooks} />
-            <div className="mt-6 flex items-center gap-4 sm:mt-8 sm:gap-6">
-              <p
-                aria-hidden="true"
-                className="min-w-0 flex-1 font-sans text-[clamp(22px,6vw,54px)] font-black italic leading-[0.95] text-ink"
-              >
-                aidez-nous à poursuivre l’histoire.
-              </p>
-              {/* Bloc `lg:hidden` : ce CTA n'existe qu'en régime feuille. */}
-              <Button
-                href={PALIERS_CTA}
-                aria-label="Contribuer — voir les contreparties"
-                className="shrink-0 px-4 py-3 text-[13px] font-extrabold tracking-[.03em] sm:px-6 sm:py-3.5 sm:text-sm"
-              >
-                Contribuer
-              </Button>
-            </div>
-          </div>
+          </Container>
         </section>
 
-        {/* 4 ▪ Récit — quatre sections-bandeaux (texte du docx VERBATIM,
-            seule la composition varie) : chaque h2 reste UN SEUL <h2> —
-            kicker en corps modéré ET chute en display géant DANS le même
-            bandeau plein full-bleed à l'accent de la section. Les quatre
-            accents sont désormais LES COULEURS DU SITE (retour Clara
-            2026-08-07) : crise = orange (le plus proche du brick d'alerte),
-            bataille politique = bleu, héritage centenaire = jaune, appel =
-            rose en crescendo. Elles sont toutes CLAIRES : le texte des
-            bandeaux est en `ink` (l'ancien `text-paper` des aplats sombres
-            tombe avec eux) et aucune ne sert de couleur de TEXTE sur paper,
-            sauf l'orange (AA large seulement) — cf. `pop-palette.ts`.
-            Les descriptifs partagent tous la MÊME recette de corps de texte
-            (retour Youri 25/07, alignée sur le paragraphe de l'appel), d'un
-            cran plus petite depuis le 2026-08-07 (« les textes sont trop
-            gros ? On doit scroller pas mal » — Clara) : `max-w-[52ch]
-            font-sans text-lg font-medium text-ink sm:text-xl
-            sm:leading-[1.55]`. Le plancher de 18px posé le 25/07 tient — le
-            corps 15-17px reste banni. */}
+        {/* 3 ▪ Récit — quatre sections-bandeaux, UN SEUL pattern répété
+            (`RecitSection`) : bandeau de titre à l'accent de la section
+            (orange/bleu/jaune/rose, dans l'ordre — même assignation que
+            l'ancienne maquette), corps en prose sobre juste dessous. Chaque
+            paragraphe par défaut est le texte VERBATIM de la maquette client
+            (2026-08-21) ; gras (`<strong>`) et surlignage inline
+            (`box-decoration-clone bg-pop-*`) sont les SEULS marqueurs
+            d'emphase — aucune rotation, aucune ombre dure, aucun display
+            géant dans le corps. */}
+        <RecitSection
+          bg={POP_BG.orange}
+          titre={content.recit.danger.titre}
+          titreItalique={content.recit.danger.titreItalique}
+          corps={content.recit.danger.corps}
+        >
+          <p>
+            En cette fin d’été 2026,{" "}
+            <strong className="font-bold">
+              l’édition de critique sociale fait face à l’une des pires crises de son
+              histoire
+            </strong>
+            . Des centaines de maisons indépendantes sont menacées par la faillite de leur
+            ancien distributeur Makassar qui disparaît avec des dettes importantes.
+          </p>
+          <p>
+            Pour Les éditions sociales et La Dispute, c’est plus de{" "}
+            <span className={HL_ORANGE}>130&nbsp;000&nbsp;€</span> de ventes en librairie que
+            nous ne toucherons jamais pour des livres sur lesquels nous avons pourtant payé
+            des frais d’impression et de maquette, ainsi que des avances de droits d’auteur.
+          </p>
+          <p>
+            <strong className="font-bold">
+              Pour nos maisons, c’est le genre de coup qui peut être fatal.
+            </strong>
+          </p>
+        </RecitSection>
 
-        {/* Section 1 — la crise : « danger maximal » crié sur bandeau orange
-            coiffé de la bande hazard, le montant perdu en exergue inline
-            (max 1.8em — jamais un display dans la ligne), la chute (« coup
-            fatal ») en display liseré orange au pied du descriptif, dans la
-            colonne de texte. Marge réduite au minimum
-            (25/07, retour Youri) : seule cette occurrence — juste après
-            l'ask/étagère — perd le rythme mt-16/mt-24 commun aux autres
-            transitions de section. */}
-        <section className="mt-4 sm:mt-6">
-          <Reveal>
-            <h2 className="font-sans font-black italic text-ink">
-              <span className={`block ${POP_BG.orange}`}>
-                <span aria-hidden="true" className={`block h-3 ${HAZARD_BG}`} />
-                <span className={`${SPAN_CONTAINER} py-7 sm:py-9`}>
-                  <span className="block text-xl uppercase leading-tight tracking-[.04em] sm:text-2xl">
-                    Édition indépendante et critique :
-                  </span>{" "}
-                  <span className="mt-4 block text-[clamp(44px,11vw,110px)] uppercase leading-[0.82] tracking-[-0.02em] sm:mt-5 lg:text-[clamp(44px,8vw,110px)]">
-                    <span className="block">danger</span>{" "}
-                    <span className="block">maximal</span>
-                  </span>
-                </span>
-              </span>
-            </h2>
-            <Container className="pt-8 sm:pt-10">
-              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-xl sm:leading-[1.55]">
-                <p>
-                  En cette fin d’été 2026, l’édition de critique sociale fait
-                  face à une des pires crises de son histoire. Des centaines de
-                  maisons indépendantes sont menacées par la faillite de leur
-                  distributeur Makassar qui disparaît avec des dettes importantes.
-                </p>
-                <p>
-                  Pour Les éditions sociales et La Dispute, c’est plus de{" "}
-                  <strong className="whitespace-nowrap font-sans text-[1.5em] font-black italic leading-none text-pop-orange sm:text-[1.8em]">
-                    130&nbsp;000&nbsp;€
-                  </strong>{" "}
-                  de ventes en librairie que nous ne toucherons jamais
-                  pour des livres dont nous avons pourtant payé des frais
-                  d’impression et de maquette, ainsi que des avances de droits
-                  d’auteur.
-                </p>
-              </div>
-              {/* La chute clôt le descriptif DANS la colonne de texte (retour
-                  Youri 25/07) : plus de bandeau ink pleine largeur, qui
-                  ouvrait un gap et un second changement de fond dans la même
-                  section. Le liseré orange reste le seul marqueur d'accent. */}
-              <p className="mt-8 max-w-[70ch] border-l-[14px] border-pop-orange pl-5 font-sans text-[clamp(24px,5vw,36px)] font-black italic leading-[1.1] text-ink sm:mt-10 sm:pl-7">
-                Pour nos maisons, c’est le genre de coup qui peut être fatal.
-              </p>
-            </Container>
-          </Reveal>
-        </section>
+        <RecitSection
+          bg={POP_BG.teal}
+          titre={content.recit.guerre.titre}
+          titreItalique={content.recit.guerre.titreItalique}
+          corps={content.recit.guerre.corps}
+        >
+          <p>
+            La faillite de Makassar est le résultat d’un marché de l’édition où les grands
+            groupes – Hachette, Editis, Média-Participations, Madrigall – détiennent à eux
+            seuls près de{" "}
+            <span className={HL_TEAL}>90&nbsp;% de la production éditoriale</span> et de la
+            distribution en France. Ces grands groupes font la course aux profits et
+            imposent leur loi à tous,{" "}
+            <strong className="font-bold">
+              avec des conséquences néfastes pour l’ensemble des acteurs indépendants mais
+              aussi des lecteurices.
+            </strong>
+          </p>
+          <p>
+            C’est parce que ces groupes existent que leurs propriétaires peuvent se
+            permettre de les utiliser pour mener leurs guerres idéologiques, comme on le
+            voit avec Vincent Bolloré.
+          </p>
+          <p>
+            <strong className="font-bold">
+              Parce que la bataille des idées est aussi une guerre matérielle,
+            </strong>{" "}
+            <span className={HL_TEAL}>soutenir les éditeurs indépendants est un devoir politique.</span>
+          </p>
+        </RecitSection>
 
-        {/* Section 2 — la bataille matérielle : tout le titre (kicker
-            compris) sur bandeau bleu, le 90 % en marquage inline (le bleu ne
-            tient pas en couleur de texte sur paper — cf. `pop-palette.ts` —,
-            l'exergue devient donc un aplat, comme « la fin de la propriété
-            privée… »), « un devoir politique » en soulignement ORANGE (padding
-            vertical nul + leading du paragraphe hôte : le marqueur ne
-            percute jamais la ligne précédente). Orange et non bleu : sur
-            paper, seule cette teinte de la palette passe 3:1 en TRAIT
-            (3,38:1 ; le bleu tombe à 1,74:1) — cf. `pop-palette.ts`. */}
-        <section className="mt-12 sm:mt-16">
-          <Reveal>
-            <h2 className="font-sans font-black italic text-ink">
-              <span className={`block ${POP_BG.teal}`}>
-                <span className={`${SPAN_CONTAINER} py-7 sm:py-9`}>
-                  <span className="block text-xl leading-tight sm:text-2xl">
-                    La guerre culturelle est aussi une
-                  </span>{" "}
-                  <span className="mt-4 block text-[clamp(44px,11vw,110px)] uppercase leading-[0.82] tracking-[-0.02em] sm:mt-5 lg:text-[clamp(44px,8vw,110px)]">
-                    <span className="block">guerre</span>{" "}
-                    <span className="block">matérielle</span>
-                  </span>
-                </span>
-              </span>
-            </h2>
-            <Container className="pt-8 sm:pt-10">
-              <div className="max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:space-y-8 sm:text-xl sm:leading-[1.55]">
-                <p>
-                  La faillite de Makassar est le résultat d’un marché de
-                  l’édition où les grands groupes — Hachette, Editis,
-                  Média-Participations, Madrigall — détiennent à eux seuls près de{" "}
-                  <strong className="whitespace-nowrap box-decoration-clone bg-pop-teal px-1.5 font-sans text-[1.5em] font-black italic leading-none text-ink sm:text-[1.8em]">
-                    90&nbsp;%
-                  </strong>{" "}
-                  de la production éditoriale et de la distribution. Ces
-                  grands groupes font la course aux profits et imposent leur loi à
-                  tous, avec des conséquences néfastes pour l’ensemble des
-                  acteurs indépendants mais aussi des lecteurices.
-                </p>
-                <p>
-                  C’est parce que ces groupes existent que leurs propriétaires
-                  peuvent se permettre de les utiliser pour mener leurs guerres
-                  idéologiques, comme on l’a vu récemment avec Vincent Bolloré.
-                </p>
-                <p>
-                  Face à eux, nous devons aller à la racine en exigeant{" "}
-                  <strong className="box-decoration-clone bg-pop-teal px-1 font-semibold text-ink">
-                    la fin de la propriété privée des moyens de production
-                    culturelle et des infrastructures de distribution
-                  </strong>
-                  .
-                </p>
-              </div>
-              {/* Punchline en carton « Spécimen » : boîte bordée sous ombre
-                  dure bleue (R8). */}
-              <p className="mt-10 max-w-[38ch] border-2 border-ink bg-paper p-6 font-sans text-xl font-black italic leading-[1.2] text-ink shadow-[8px_8px_0_0_var(--color-pop-teal)] sm:mt-12 sm:p-8 sm:text-2xl">
-                Et, parce que la bataille des idées est aussi une guerre
-                matérielle, soutenir les éditeurs indépendants est{" "}
-                {/* Soulignement (retour Youri 25/07, remplace le marqueur à
-                    fond bleu) — même recette que « préserver notre
-                    indépendance » plus bas, en ORANGE : seule teinte de la
-                    palette qui tienne en trait sur paper (`pop-palette.ts`). */}
-                <span className="underline decoration-pop-orange decoration-4 underline-offset-4">
-                  un devoir politique
-                </span>
-                .
-              </p>
-            </Container>
-          </Reveal>
-        </section>
+        <RecitSection
+          bg={POP_BG.yellow}
+          titre={content.recit.maisons.titre}
+          titreItalique={content.recit.maisons.titreItalique}
+          corps={content.recit.maisons.corps}
+        >
+          <p>
+            <strong className="font-bold">En 2027,</strong>{" "}
+            <span className={HL_YELLOW}>nos maisons fêteront leurs 100 ans d’existence.</span>
+          </p>
+          <p>
+            Cent ans de{" "}
+            <strong className="font-bold">
+              traductions de Marx, de livres marxistes et de formation militante.
+            </strong>
+          </p>
+          <p>
+            Cent ans de publications exigeantes, pour{" "}
+            <strong className="font-bold">
+              éclairer les transformations du capitalisme, des classes sociales, mener la
+              critique féministe
+            </strong>{" "}
+            et <span className={HL_YELLOW}>faire vivre le débat à gauche.</span>
+          </p>
+          <p>
+            Récemment, nous avons ouvert de nouveaux chantiers prometteurs pour nos maisons
+            en arrivant{" "}
+            <strong className="font-bold">
+              chez un nouveau diffuseur-distributeur, BLDD ; en lançant de nouvelles
+              collections ; en partant à la rencontre des libraires partout dans le pays.
+            </strong>
+          </p>
+          <p>
+            Mais notre équipe s’agrandit aussi : Nicolas Vieillescazes, ancien directeur
+            éditorial d’Amsterdam, nous rejoint pour renforcer les éditions sociales et La
+            Dispute.
+          </p>
+          <p>
+            <strong className="font-bold">
+              Tous ces choix portent leurs fruits mais la faillite de Makassar nous frappe au
+              moment où nous construisons l’avenir.
+            </strong>
+          </p>
+        </RecitSection>
 
-        {/* Section 3 — les maisons, cent ans : le titre entier en display
-            sur bandeau jaune, le « 100 ans » en tampon penché conservé —
-            REMPLI en jaune bordé d'ink depuis le passage à la palette du site
-            (un filet jaune sur paper serait invisible, ≈1,1:1 — cf.
-            `pop-palette.ts`) —, l'anaphore « Cent ans de… » en barres
-            empilées séparées de hairlines ink. Reveal en deux blocs frères —
-            héritage de l'ex-étagère-séparatrice (remontée sous le titre de
-            l'ask le 25/07) ; sans coût, chaque bloc se révèle
-            indépendamment. */}
-        <section className="mt-12 sm:mt-16">
-          <Reveal>
-            <h2 className={`${POP_BG.yellow} font-sans font-black italic text-ink`}>
-              <span
-                className={`${SPAN_CONTAINER} py-6 text-[clamp(28px,6.5vw,64px)] uppercase leading-[0.95] sm:py-8`}
-              >
-                Les éditions sociales et La Dispute
-              </span>
-            </h2>
-            <Container className="pt-8 sm:pt-10">
-              <p className="max-w-[30ch] font-sans text-lg font-bold leading-snug text-ink sm:text-xl">
-                En 2027, nos maisons fêteront leurs{" "}
-                <span className="mx-1 my-2 inline-block -rotate-2 whitespace-nowrap border-4 border-ink bg-pop-yellow px-3 py-1 align-middle font-black italic text-[clamp(40px,10vw,64px)] leading-[0.9] text-ink">
-                  100 ans
-                </span>{" "}
-                d’existence.
-              </p>
-              <div className="mt-8 flex flex-col gap-[2px] border-2 border-ink bg-ink sm:mt-10">
-                <p className="bg-pop-yellow px-5 py-5 font-sans text-base font-bold leading-snug text-ink sm:px-7 sm:py-6 sm:text-lg">
-                  <span className="font-black italic uppercase">Cent ans</span> de
-                  traductions de Marx et de livres marxistes et de formation
-                  militante.
-                </p>
-                <p className="bg-paper-2 px-5 py-5 font-sans text-base font-bold leading-snug text-ink sm:px-7 sm:py-6 sm:text-lg">
-                  <span className="box-decoration-clone bg-pop-yellow px-1.5 font-black italic uppercase text-ink">Cent ans</span> de
-                  publications exigeantes, pour éclairer les transformations du
-                  capitalisme, des classes sociales, mener la critique féministe
-                  et faire vivre le débat à gauche.
-                </p>
-              </div>
-            </Container>
-          </Reveal>
+        <RecitSection
+          bg={POP_BG.pink}
+          titre={content.recit.appel.titre}
+          titreItalique={content.recit.appel.titreItalique}
+          corps={content.recit.appel.corps}
+        >
+          <p>
+            <strong className="font-bold">Nous voulons que notre histoire se poursuive ;</strong>{" "}
+            <span className={HL_PINK}>c’est pourquoi nous faisons appel à vous.</span>
+          </p>
+          <p>
+            En faisant un don, vous nous aiderez à surmonter cette crise, à préserver notre
+            indépendance et à poursuivre un travail éditorial engagé, exigeant et
+            indispensable.
+          </p>
+          <p>
+            <strong className="font-bold">
+              Vous nous permettrez de continuer à publier les livres qui
+            </strong>{" "}
+            <span className={HL_PINK}>
+              imaginent la fin du capitalisme plutôt que la fin du monde.
+            </span>
+          </p>
+        </RecitSection>
 
-          <Reveal>
-            <Container>
-              <div className="mt-10 max-w-[52ch] space-y-6 font-sans text-lg font-medium leading-relaxed text-ink sm:mt-12 sm:space-y-8 sm:text-2xl sm:leading-[1.45]">
-                <p>
-                  Récemment, nous avons ouvert de nouveaux chantiers prometteurs
-                  pour nos maisons en arrivant chez un nouveau
-                  diffuseur-distributeur, BLDD ; en lançant de nouvelles
-                  collections ; en partant à la rencontre des libraires partout
-                  dans le pays.
-                </p>
-                <p>
-                  Mais notre équipe s’agrandit aussi :{" "}
-                  <strong className="font-semibold text-ink">
-                    Nicolas Vieillescazes
-                  </strong>
-                  , ancien directeur éditorial d’Amsterdam, nous rejoint pour
-                  renforcer les éditions sociales et La Dispute.
-                </p>
-                <p>
-                  Tous ces choix portent leurs fruits mais la faillite de Makassar
-                  nous frappe{" "}
-                  <strong className="font-semibold text-ink">
-                    au moment où nous construisons l’avenir
-                  </strong>
-                  .
-                </p>
-              </div>
-            </Container>
-          </Reveal>
-        </section>
-
-        {/* Section 4 — l'appel : tout le h2 sur bandeau rose, en crescendo
-            (« Nous avons besoin » modéré, « de vous » géant), clos par un
-            POINT D'EXCLAMATION à la hauteur des deux lignes (retour Youri
-            25/07) — seul ajout de texte au verbatim du docx, assumé comme
-            ponctuation de l'ask. Les deux lignes passent en colonne flex pour
-            que le « ! » se pose à leur droite : le corps du « ! » est calé
-            sur la SOMME des deux hauteurs de ligne (≈16,4vw ÷ 0,72 de hauteur
-            de glyphe), et son `leading` serré l'empêche de dicter la hauteur
-            de la rangée. Le paragraphe unique reste agrandi (c'est l'ask du
-            récit, pas un descriptif). */}
-        <section className="mt-12 sm:mt-16">
-          <Reveal>
-            <h2 className={`${POP_BG.pink} font-sans font-black italic text-ink`}>
-              <span className="mx-auto flex w-full max-w-6xl items-center gap-2 px-5 pb-8 pt-8 sm:gap-5 sm:px-8 sm:pb-10 sm:pt-10">
-                <span className="block min-w-0 flex-1">
-                  <span className="block text-[clamp(22px,5vw,44px)] uppercase leading-[0.9]">
-                    Nous avons besoin
-                  </span>{" "}
-                  <span className="block text-[clamp(54px,14vw,140px)] uppercase leading-[0.85] tracking-[-0.02em] lg:text-[clamp(54px,10vw,140px)]">
-                    de vous
-                  </span>
-                </span>
-                <span className="block shrink-0 text-[clamp(92px,22vw,210px)] leading-[0.72] lg:text-[clamp(92px,17.5vw,210px)]">
-                  !
-                </span>
-              </span>
-            </h2>
-            <Container className="pt-8 sm:pt-10">
-              <p className="max-w-[52ch] font-sans text-lg font-medium leading-relaxed text-ink sm:text-xl sm:leading-[1.55]">
-                Nous voulons que notre histoire se poursuive ; c’est pourquoi
-                nous faisons appel à vous. En faisant un don, vous nous aiderez
-                à surmonter cette crise, à{" "}
-                <strong className="font-bold underline decoration-pop-orange decoration-4 underline-offset-4">
-                  préserver notre indépendance
-                </strong>{" "}
-                et à poursuivre un travail éditorial engagé, exigeant et
-                indispensable.
-              </p>
-            </Container>
-          </Reveal>
-        </section>
-
-        {/* 5 ▪ Objectifs de la jauge — l'escalier typographique : trois
-            barres pleine largeur empilées (hairlines ink) sous ombre dure
-            (R8), montant qui grossit d'une marche à l'autre, sommet inversé
-            ink. Pas de titre de section au-dessus, la jauge d'ouverture
-            porte déjà « Objectif » : les barres parlent d'elles-mêmes. La
-            section se clôt sur la chute du récit et le CTA final — d'où le
-            `pb-` : dernière section de la colonne, le CTA butait sinon
-            directement sur le pied de page (zéro pixel sous le bouton). */}
+        {/* 4 ▪ Objectifs de la jauge — trois cartes UNIFORMES (remplacent
+            l'escalier typographique) : liseré gauche épais à l'accent de
+            palier, montant à la MÊME taille pour les trois, sommet (100k)
+            seul inversé (`bg-ink text-paper`). Pas de titre de section
+            au-dessus, la jauge d'ouverture porte déjà « Objectif ». Clôt la
+            section : dernière de la colonne, le CTA final butait sinon
+            directement sur le pied de page. */}
         <section className="mt-12 pb-16 sm:mt-16 sm:pb-24">
           <Container>
             <Reveal>
-              <div className="flex flex-col gap-[2px] border-2 border-ink bg-ink shadow-[8px_8px_0_0_var(--color-ink)]">
+              <div className="flex flex-col gap-6 sm:gap-8">
                 {OBJECTIFS.map((o) => (
                   <div
-                    key={o.titre}
-                    className={`grid grid-cols-[10px_1fr] sm:grid-cols-[14px_1fr] ${o.sommet ? "bg-ink text-paper" : "bg-paper text-ink"}`}
+                    key={o.value}
+                    className={`border-2 border-ink ${o.border} border-l-[12px] p-6 sm:p-8 ${
+                      o.sommet ? "bg-ink text-paper" : "bg-paper text-ink"
+                    }`}
                   >
-                    <span aria-hidden="true" className={`block ${o.accent}`} />
-                    {/* Corps agrandi sous `sm` (retour Youri 25/07) : sur
-                        mobile, l'intitulé et le descriptif du palier passaient
-                        en 15/14px sur une colonne pleine largeur — ils y sont
-                        la seule explication de l'objectif, pas une légende. */}
-                    <div className="flex flex-wrap items-center gap-x-8 gap-y-4 px-5 py-7 sm:gap-y-3 sm:px-7 sm:py-8">
-                      {/* `{" "}` porteur (hérité de l'ancienne grille) : les
-                          nœuds espace entre blocs ne sont pas rendus, mais
-                          AT/copier-coller séparent bien « 50 000 € » de son
-                          intitulé. */}
-                      <p className={`font-sans font-black italic leading-none ${o.display}`}>
-                        {formatInt(o.value)}&nbsp;€
-                      </p>{" "}
-                      <div className="min-w-0 flex-1 basis-[26ch]">
-                        <p className="font-sans text-base font-extrabold uppercase tracking-[.06em] sm:text-[15px]">
-                          {o.titre}
-                        </p>
-                        <p
-                          className={`mt-2 text-[15px] leading-relaxed sm:mt-1.5 sm:text-sm ${o.sommet ? "text-paper/80 sm:text-paper/70" : "text-ink/80 sm:text-ink/70"}`}
-                        >
-                          {o.desc}
-                        </p>
-                      </div>
-                    </div>
+                    <p className="font-sans text-[clamp(32px,7vw,48px)] font-black italic leading-none">
+                      {formatInt(o.value)}&nbsp;€
+                    </p>
+                    <p className="mt-3 font-sans text-sm font-extrabold uppercase tracking-[.06em] sm:text-[15px]">
+                      {o.titre}
+                    </p>
+                    <p
+                      className={`mt-2 text-sm leading-relaxed sm:text-base ${
+                        o.sommet ? "text-paper/80" : "text-ink/80"
+                      }`}
+                    >
+                      {o.desc}
+                    </p>
                   </div>
                 ))}
               </div>
             </Reveal>
 
-            {/* Chute du docx (verbatim) + CTA final : ils closent la section
-                des objectifs (retour Youri 25/07) — plus de section propre à
-                bandeau ink liseré pop, plus de changement de fond ni de gap.
-                La phrase coule d'un seul trait (aucun span `block` : les
-                retours à la ligne forcés de l'ancienne opposition d'échelle
-                sont retirés) et « la fin du capitalisme » n'est plus qu'un
-                SOULIGNEMENT orange (la seule teinte de la palette lisible en
-                trait sur paper, cf. `pop-palette.ts`) — plus de surlignage,
-                plus de display géant. UN SEUL <h2>. Le montant libre vivant en clôture du
-                rail, le CTA y renvoie simplement. */}
+            {/* CTA final : renvoie simplement à l'ancre unique du rail — le
+                montant libre vit en clôture du rail, pas ici. */}
             <Reveal>
-              <h2 className="mt-12 max-w-[38ch] font-sans text-[clamp(24px,5vw,40px)] font-black italic leading-[1.15] text-ink sm:mt-16">
-                Vous nous permettrez de continuer à publier les livres qui
-                imaginent{" "}
-                <span className="underline decoration-pop-orange decoration-4 underline-offset-4">
-                  la fin du capitalisme
-                </span>{" "}
-                plutôt que la fin du monde.
-              </h2>
-              {/* UN SEUL rendu depuis que la cible est unique : l'ancre
-                  déploie la feuille sous `lg`, le tiroir au-dessus. Les deux
-                  `<span>` exclusifs qui portaient les deux cibles ont disparu
-                  avec elles. */}
               <Button
                 href={PALIERS_CTA}
                 aria-label="Contribuer — voir les contreparties"
-                className="mt-8 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-10"
+                className="mt-10 px-7 py-3.5 text-sm font-extrabold tracking-[.03em] sm:mt-12"
               >
                 Contribuer&nbsp;↓
               </Button>
             </Reveal>
           </Container>
         </section>
-
       </div>
 
       {/* Téléphone : le rail devient une feuille de bas d'écran, déroulée au

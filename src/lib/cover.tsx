@@ -17,7 +17,7 @@
  * avant chargement (éviter le saut de mise en page).
  *
  * À réutiliser PARTOUT où l'on affiche une couverture (carrousel, fiche,
- * vignettes du catalogue, étagère 3D…).
+ * vignettes du catalogue…).
  */
 import Image from "next/image";
 import type { Cover } from "./types";
