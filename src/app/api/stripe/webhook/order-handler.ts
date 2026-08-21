@@ -208,7 +208,9 @@ async function decrementStock(
 async function createPaidOrderPart(
   session: Stripe.Checkout.Session,
   createdAtEpoch: number,
-  orderType: OrderKind,
+  // Jamais "don" : un don passe par `handleDonationSessionCompleted` (mailer
+  // don, pas de confirmation boutique) — le type le garantit à la compilation.
+  orderType: Exclude<OrderKind, "don">,
   part: ResolvedPart,
   books: Map<number, CheckoutBookLookup>,
   discountCents: number,

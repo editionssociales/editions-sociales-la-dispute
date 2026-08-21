@@ -407,9 +407,9 @@ export interface Order {
    */
   number?: string | null;
   /**
-   * Commande normale (articles parus) ou précommande (articles à paraître avec « Ouvert à la précommande » coché) — posé par le webhook selon la scission du panier au paiement (client 2026-08-20). Un panier mixte produit UNE commande de chaque type, même session/paiement Stripe, chacune avec SES lignes et SES frais de port.
+   * Commande normale (articles parus) ou précommande (articles à paraître avec « Ouvert à la précommande » coché) — posé par le webhook selon la scission du panier au paiement (client 2026-08-20). Un panier mixte produit UNE commande de chaque type, même session/paiement Stripe, chacune avec SES lignes et SES frais de port. « Don » (contreparties) : étanche des deux autres types — exclu de tout agrégat de CA/TVA (export compta, « Ventes du mois » du dashboard), mais visible en préparation/expédition comme une commande normale.
    */
-  orderType: 'commande' | 'precommande';
+  orderType: 'commande' | 'precommande' | 'don';
   /**
    * Seul champ modifiable au back-office — suivi de préparation (paid → prepared → shipped) ; annulation/remboursement au besoin. « Échec du paiement » : posé par le webhook (checkout.session.async_payment_failed) pour un moyen de paiement différé (ex. virement/prélèvement) dont la confirmation échoue APRÈS que checkout.session.completed s'est déjà présenté en attente — trace l'essai sans jamais décrémenter le stock (webhook route, lot 2 étape 9).
    */
