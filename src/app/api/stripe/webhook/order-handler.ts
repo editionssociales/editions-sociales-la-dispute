@@ -514,8 +514,23 @@ function recapAddressFromOrder(order: Order): DonationMailRecap["shippingAddress
  * manquant sans jamais recréer la commande ni renvoyer un effet déjà posé.
  * JAMAIS `sendOrderConfirmation` (mail boutique) pour un don — uniquement
  * `selectDonationMailer().sendDonationThanks`.
+ *
+ * `opts` — réservé au backfill (`scripts/backfill-dons-contreparties.ts`) ;
+ * `route.ts` ne les passe jamais, le webhook garde son comportement
+ * inchangé (défauts `undefined`/`new Date()`) :
+ * - `skipThanksMail` : pose `confirmationSent: true` SANS envoyer, pour les
+ *   dons dont le donateur a déjà reçu le remerciement simple avant que
+ *   cette commande n'existe ;
+ * - `paidAtISOOverride` : remplace l'approximation « instant de traitement »
+ *   (`new Date()`, valide pour le webhook temps réel — quelques secondes
+ *   après le paiement) par une date exacte — le backfill tourne parfois des
+ *   jours après le don réel, `paidAt`/`createdAt` doivent rester la date du
+ *   don, pas celle du run.
  */
-export async function handleDonationSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
+export async function handleDonationSessionCompleted(
+  session: Stripe.Checkout.Session,
+  opts?: { skipThanksMail?: boolean; paidAtISOOverride?: string },
+): Promise<void> {
   if (session.payment_status !== "paid") return;
   const decoded = decodeCheckoutLines(session.metadata?.donLines);
   if (decoded.length === 0) return;
@@ -547,7 +562,9 @@ export async function handleDonationSessionCompleted(session: Stripe.Checkout.Se
       // réduite à la session, symétrique de la server action de don) — l'instant
       // de traitement du webhook est une approximation suffisante de « payée le »,
       // même esprit que `event.created` côté commerce (jamais un instant inventé).
-      paidAtISO: new Date().toISOString(),
+      // `paidAtISOOverride` (backfill) remplace cette approximation par la date
+      // réelle du don quand le run a lieu longtemps après le paiement.
+      paidAtISO: opts?.paidAtISOOverride ?? new Date().toISOString(),
     };
     const orderData = buildOrderCreateData(facts, "paid");
     if ("error" in orderData) {
@@ -565,20 +582,25 @@ export async function handleDonationSessionCompleted(session: Stripe.Checkout.Se
   }
 
   if (!order.confirmationSent) {
-    const tierId = session.metadata?.tier;
-    const tier = tierId ? DONATION_TIERS.find((t) => t.id === tierId) : undefined;
-    await selectDonationMailer().sendDonationThanks({
-      email: order.email,
-      recap: {
-        // Repli sur le brut `tierId` si le palier a disparu de la table
-        // (retrait ultérieur) — jamais un intitulé vide dans le mail.
-        tierTitle: tier?.title ?? tierId ?? "Contrepartie",
-        amountEuros: order.totalTTC,
-        lines: (order.lines ?? []).map((l) => ({ title: l.titleSnapshot, quantity: l.quantity })),
-        shippingAddress: recapAddressFromOrder(order),
-      },
-    });
-    await updateOrder(order.id, { confirmationSent: true });
+    if (opts?.skipThanksMail) {
+      // Backfill (cf. docstring) : marqueur posé SANS envoi, aucun mail.
+      await updateOrder(order.id, { confirmationSent: true });
+    } else {
+      const tierId = session.metadata?.tier;
+      const tier = tierId ? DONATION_TIERS.find((t) => t.id === tierId) : undefined;
+      await selectDonationMailer().sendDonationThanks({
+        email: order.email,
+        recap: {
+          // Repli sur le brut `tierId` si le palier a disparu de la table
+          // (retrait ultérieur) — jamais un intitulé vide dans le mail.
+          tierTitle: tier?.title ?? tierId ?? "Contrepartie",
+          amountEuros: order.totalTTC,
+          lines: (order.lines ?? []).map((l) => ({ title: l.titleSnapshot, quantity: l.quantity })),
+          shippingAddress: recapAddressFromOrder(order),
+        },
+      });
+      await updateOrder(order.id, { confirmationSent: true });
+    }
   }
 }
 
