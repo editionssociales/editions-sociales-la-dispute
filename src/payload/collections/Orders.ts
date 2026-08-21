@@ -101,6 +101,9 @@ export const Orders: CollectionConfig = {
     singular: 'Commande',
     plural: 'Commandes',
   },
+  // Les plus récentes en premier (propriété de collection, PAS `admin.*` —
+  // même emplacement que `Rencontres.ts`).
+  defaultSort: '-createdAt',
   admin: {
     group: 'Quotidien',
     useAsTitle: 'number',
@@ -110,7 +113,6 @@ export const Orders: CollectionConfig = {
     // commande SORT des colonnes par défaut (reste dispo dans le column
     // picker et en titre de fiche, `useAsTitle` inchangé).
     defaultColumns: ['clientResume', 'contenuResume', 'createdAt', 'totalTTC', 'status', 'orderType'],
-    defaultSort: '-createdAt',
     // Une libraire cherche un NOM avant un n°/e-mail — chemin imbriqué
     // fonctionnel côté requête (`mergeListSearchAndWhere` résout nativement
     // les chemins pointillés dans un `where` Payload) ; seul le libellé du

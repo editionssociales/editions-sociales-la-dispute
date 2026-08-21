@@ -23,7 +23,13 @@ import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997e
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BooksFilterChipsPanel as BooksFilterChipsPanel_6423322f3bdd549270b95d6fae592749 } from '../../../payload/admin/books/BooksFilterChipsPanel.tsx'
+import { OrderCreatedAtField as OrderCreatedAtField_e92b5936f887f7a7906d3ddc20350f73 } from '../../../payload/admin/orders/OrderCreatedAtField.tsx'
+import { OrderClientCell as OrderClientCell_c85bbcca92e65625b8d3ed60870be711 } from '../../../payload/admin/orders/OrderClientCell.tsx'
+import { OrderContentCell as OrderContentCell_0c21c39c4955774236e15eb61138f92c } from '../../../payload/admin/orders/OrderContentCell.tsx'
+import { OrdersFilterChipsPanel as OrdersFilterChipsPanel_54541178fb8cd99cf29cfb7d7e6c24ec } from '../../../payload/admin/orders/OrdersFilterChipsPanel.tsx'
 import { OrderExportPanel as OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0 } from '../../../payload/admin/OrderExportPanel.tsx'
+import { PromoStatusCell as PromoStatusCell_25194799f840adb1e4fb478a2598df32 } from '../../../payload/admin/cells/PromoStatusCell.tsx'
+import { HighlightLiveCell as HighlightLiveCell_601e17702a673359c1d6db00f11b092b } from '../../../payload/admin/cells/HighlightLiveCell.tsx'
 import { RencontresFilterChipsPanel as RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7 } from '../../../payload/admin/rencontres/RencontresFilterChipsPanel.tsx'
 import { StockNavLink as StockNavLink_6618fbe14a6645bc8a42a9773c06e167 } from '../../../payload/admin/stock/StockNavLink.tsx'
 import { HealthNavLink as HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e } from '../../../payload/admin/health/HealthNavLink.tsx'
@@ -60,7 +66,13 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "/payload/admin/books/BooksFilterChipsPanel.tsx#BooksFilterChipsPanel": BooksFilterChipsPanel_6423322f3bdd549270b95d6fae592749,
+  "/payload/admin/orders/OrderCreatedAtField.tsx#OrderCreatedAtField": OrderCreatedAtField_e92b5936f887f7a7906d3ddc20350f73,
+  "/payload/admin/orders/OrderClientCell.tsx#OrderClientCell": OrderClientCell_c85bbcca92e65625b8d3ed60870be711,
+  "/payload/admin/orders/OrderContentCell.tsx#OrderContentCell": OrderContentCell_0c21c39c4955774236e15eb61138f92c,
+  "/payload/admin/orders/OrdersFilterChipsPanel.tsx#OrdersFilterChipsPanel": OrdersFilterChipsPanel_54541178fb8cd99cf29cfb7d7e6c24ec,
   "/payload/admin/OrderExportPanel.tsx#OrderExportPanel": OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0,
+  "/payload/admin/cells/PromoStatusCell.tsx#PromoStatusCell": PromoStatusCell_25194799f840adb1e4fb478a2598df32,
+  "/payload/admin/cells/HighlightLiveCell.tsx#HighlightLiveCell": HighlightLiveCell_601e17702a673359c1d6db00f11b092b,
   "/payload/admin/rencontres/RencontresFilterChipsPanel.tsx#RencontresFilterChipsPanel": RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7,
   "/payload/admin/stock/StockNavLink.tsx#StockNavLink": StockNavLink_6618fbe14a6645bc8a42a9773c06e167,
   "/payload/admin/health/HealthNavLink.tsx#HealthNavLink": HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e,

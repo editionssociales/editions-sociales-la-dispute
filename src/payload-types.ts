@@ -407,29 +407,16 @@ export interface Order {
    */
   number?: string | null;
   /**
-   * Commande normale (articles parus) ou précommande (articles à paraître avec « Ouvert à la précommande » coché) — posé par le webhook selon la scission du panier au paiement (client 2026-08-20). Un panier mixte produit UNE commande de chaque type, même session/paiement Stripe, chacune avec SES lignes et SES frais de port. « Don » (contreparties) : étanche des deux autres types — exclu de tout agrégat de CA/TVA (export compta, « Ventes du mois » du dashboard), mais visible en préparation/expédition comme une commande normale.
-   */
-  orderType: 'commande' | 'precommande' | 'don';
-  /**
    * Seul champ modifiable au back-office — suivi de préparation (paid → prepared → shipped) ; annulation/remboursement au besoin. « Échec du paiement » : posé par le webhook (checkout.session.async_payment_failed) pour un moyen de paiement différé (ex. virement/prélèvement) dont la confirmation échoue APRÈS que checkout.session.completed s'est déjà présenté en attente — trace l'essai sans jamais décrémenter le stock (webhook route, lot 2 étape 9).
    */
   status: 'paid' | 'prepared' | 'shipped' | 'cancelled' | 'refunded' | 'failed';
+  /**
+   * Commande normale (articles parus) ou précommande (articles à paraître avec « Ouvert à la précommande » coché) — posé par le webhook selon la scission du panier au paiement (client 2026-08-20). Un panier mixte produit UNE commande de chaque type, même session/paiement Stripe, chacune avec SES lignes et SES frais de port. « Don » (contreparties) : étanche des deux autres types — exclu de tout agrégat de CA/TVA (export compta, carte KPI ventes 30 j du dashboard), mais visible en préparation/expédition comme une commande normale.
+   */
+  orderType: 'commande' | 'precommande' | 'don';
+  paidAt?: string | null;
   email: string;
   shippingAddress: {
-    fullName: string;
-    addressLine1: string;
-    addressLine2?: string | null;
-    postalCode: string;
-    city: string;
-    /**
-     * Ventes restreintes FR/BE/CH (plan phase 4, étape 8).
-     */
-    country: 'FR' | 'BE' | 'CH';
-  };
-  /**
-   * Dupliquée depuis la livraison par le webhook si le checkout ne collecte pas d’adresse de facturation distincte (étape 8).
-   */
-  billingAddress: {
     fullName: string;
     addressLine1: string;
     addressLine2?: string | null;
@@ -459,11 +446,24 @@ export interface Order {
   discountTTC?: number | null;
   totalTTC: number;
   /**
+   * Dupliquée depuis la livraison par le webhook si le checkout ne collecte pas d’adresse de facturation distincte (étape 8).
+   */
+  billingAddress: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string | null;
+    postalCode: string;
+    city: string;
+    /**
+     * Ventes restreintes FR/BE/CH (plan phase 4, étape 8).
+     */
+    country: 'FR' | 'BE' | 'CH';
+  };
+  /**
    * Clé d'idempotence du webhook avec « Type » (étape 9, étendue 2026-08-20) — une même session ne crée jamais deux commandes du MÊME type, mais peut légitimement porter DEUX commandes (une « Commande » + une « Précommande ») pour un panier mixte.
    */
   stripeSessionId: string;
   stripePaymentIntentId?: string | null;
-  paidAt?: string | null;
   /**
    * Marqueur technique du webhook (issue #64 — reprise après échec partiel) : le stock des lignes de cette commande a-t-il déjà été décrémenté ? Un rejeu Stripe ne redécrémente jamais tant que ce marqueur est vrai. Ne se modifie jamais à la main.
    */
@@ -805,20 +805,11 @@ export interface BooksSelect<T extends boolean = true> {
  */
 export interface OrdersSelect<T extends boolean = true> {
   number?: T;
-  orderType?: T;
   status?: T;
+  orderType?: T;
+  paidAt?: T;
   email?: T;
   shippingAddress?:
-    | T
-    | {
-        fullName?: T;
-        addressLine1?: T;
-        addressLine2?: T;
-        postalCode?: T;
-        city?: T;
-        country?: T;
-      };
-  billingAddress?:
     | T
     | {
         fullName?: T;
@@ -843,9 +834,18 @@ export interface OrdersSelect<T extends boolean = true> {
   promoCode?: T;
   discountTTC?: T;
   totalTTC?: T;
+  billingAddress?:
+    | T
+    | {
+        fullName?: T;
+        addressLine1?: T;
+        addressLine2?: T;
+        postalCode?: T;
+        city?: T;
+        country?: T;
+      };
   stripeSessionId?: T;
   stripePaymentIntentId?: T;
-  paidAt?: T;
   stockDecremented?: T;
   confirmationSent?: T;
   updatedAt?: T;
