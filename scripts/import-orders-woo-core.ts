@@ -493,9 +493,11 @@ export function computeShippingMethod(shippingLabel: string | null, shippingCost
  *      (`redirects-produits.json`) → books (edition+slug puis slug seul)
  *      [bucket 'redirects'] ;
  *   2) sinon books par slug identique (au `post_name` du produit), puis TITRE
- *      NORMALISÉ (du `post_title` produit) [buckets 'slug-direct'/'titre'] ;
+ *      NORMALISÉ (du `post_title` produit) [buckets 'slug-direct'/'titre'],
+ *      puis heuristique préfixe-auteur/suffixe [bucket 'titre-auteur'] ;
  *   3) produit supprimé (pas de post `product` pour cet id) → titre normalisé
- *      de `order_item_name` vs `books.title` [bucket 'titre-ligne'] ;
+ *      de `order_item_name` vs `books.title` [bucket 'titre-ligne'], puis la
+ *      même heuristique [bucket 'titre-auteur'] ;
  *   4) échec → fiche de repli [bucket 'repli'].
  *
  * Un candidat multiple (plusieurs fiches pour le même slug/titre normalisé)
@@ -522,7 +524,7 @@ export interface BookIndexEntry {
   origin: "catalogue" | "boutique";
 }
 
-export type ProductMatchBucket = "redirects" | "slug-direct" | "titre" | "titre-ligne" | "repli";
+export type ProductMatchBucket = "redirects" | "slug-direct" | "titre" | "titre-auteur" | "titre-ligne" | "repli";
 
 export interface ProductMatchResult {
   bucket: ProductMatchBucket;
@@ -579,6 +581,42 @@ export function buildProductMatchIndex(
   };
 }
 
+/** Longueur minimale (titre normalisé) pour la correspondance par suffixe — sous ça, trop de faux positifs possibles. */
+const MIN_SUFFIX_KEY_LENGTH = 10;
+
+function uniqueByNormalizedTitle(norm: string, index: ProductMatchIndex): BookIndexEntry | null {
+  const candidates = index.booksByNormalizedTitle.get(norm) ?? [];
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+/**
+ * Appariement « titre-auteur » : les titres Woo préfixent souvent l'auteur
+ * (« Lucien Sève, Structuralisme et dialectique ») là où la fiche porte le
+ * titre seul — l'égalité de titre normalisé échoue alors systématiquement.
+ * Deux heuristiques CONSERVATRICES, mesurées contre le dump final (13
+ * produits / 86 lignes récupérées, zéro faux positif constaté) :
+ *   (a) tout ce qui suit la PREMIÈRE virgule = titre candidat (unique) ;
+ *   (b) un SEUL titre de fiche (normalisé, ≥ MIN_SUFFIX_KEY_LENGTH) est un
+ *       suffixe du titre Woo normalisé — la moindre ambiguïté (deuxième
+ *       suffixe possible, titre partagé par plusieurs fiches) → abandon.
+ */
+function matchByLooseTitle(rawTitle: string, index: ProductMatchIndex): BookIndexEntry | null {
+  const clean = cleanLineTitle(rawTitle);
+  const commaIdx = clean.indexOf(",");
+  if (commaIdx !== -1) {
+    const book = uniqueByNormalizedTitle(normalizeTitle(clean.slice(commaIdx + 1)), index);
+    if (book) return book;
+  }
+  const norm = normalizeTitle(rawTitle);
+  let hit: BookIndexEntry | null = null;
+  for (const [key, books] of index.booksByNormalizedTitle) {
+    if (key.length < MIN_SUFFIX_KEY_LENGTH || !norm.endsWith(` ${key}`)) continue;
+    if (books.length !== 1 || hit) return null;
+    hit = books[0];
+  }
+  return hit;
+}
+
 function resolveRedirectBook(entry: RedirectEntry, index: ProductMatchIndex): BookIndexEntry | null {
   const byEditionSlug = index.booksByEditionSlug.get(bookKey(entry.edition, entry.slug));
   if (byEditionSlug) return byEditionSlug;
@@ -608,11 +646,17 @@ export function matchProduct(productId: number, orderItemName: string, index: Pr
     if (titleCandidates.length === 1) {
       return { bucket: "titre", book: titleCandidates[0] };
     }
+
+    const loose = matchByLooseTitle(product.title, index);
+    if (loose) return { bucket: "titre-auteur", book: loose };
   } else {
     const titleCandidates = index.booksByNormalizedTitle.get(normalizeTitle(orderItemName)) ?? [];
     if (titleCandidates.length === 1) {
       return { bucket: "titre-ligne", book: titleCandidates[0] };
     }
+
+    const loose = matchByLooseTitle(orderItemName, index);
+    if (loose) return { bucket: "titre-auteur", book: loose };
   }
 
   return { bucket: "repli", book: null };

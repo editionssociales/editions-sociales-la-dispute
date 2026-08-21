@@ -673,8 +673,10 @@ function buildMarkdownSummary(report: FullReport): string {
   lines.push("");
   for (const row of repliRows) lines.push(`- product_id ${row.productId} (${row.productTitle ?? "produit supprimé"}) — ${row.lineCount} ligne(s)`);
   lines.push("");
-  const titleRows = report.productMapping.filter((r) => r.bucket === "titre" || r.bucket === "titre-ligne");
-  lines.push(`### Appariements par titre (${titleRows.length} produit(s), buckets \`titre\`/\`titre-ligne\`)`);
+  const titleRows = report.productMapping.filter(
+    (r) => r.bucket === "titre" || r.bucket === "titre-ligne" || r.bucket === "titre-auteur",
+  );
+  lines.push(`### Appariements par titre (${titleRows.length} produit(s), buckets \`titre\`/\`titre-ligne\`/\`titre-auteur\`)`);
   lines.push("");
   for (const row of titleRows) {
     lines.push(`- product_id ${row.productId} (${row.productTitle ?? "produit supprimé"}) → book ${row.bookId} (\`${row.bookSlug}\`) [${row.bucket}]`);

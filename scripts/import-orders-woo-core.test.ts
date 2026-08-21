@@ -335,6 +335,46 @@ describe("matchProduct — chaîne à 4 buckets", () => {
     expect(matchProduct(999999, "Un produit totalement inconnu", index)).toEqual({ bucket: "repli", book: null });
   });
 
+  it("bucket 'titre-auteur' (virgule) : titre Woo « Auteur, Titre » vs fiche portant le titre seul (cas réel #2173)", () => {
+    const chapitreVi = book({ id: 2, slug: "le-chapitre-vi", title: "Le chapitre VI. Manuscrits de 1863-1867." });
+    const existing = buildIndex({
+      products: [{ id: 2173, slug: "chapitre-vi", title: "Karl Marx, Le chapitre VI. Manuscrits de 1863-1867." }],
+      books: [chapitreVi],
+    });
+    expect(matchProduct(2173, "", existing)).toEqual({ bucket: "titre-auteur", book: chapitreVi });
+    // Produit supprimé : même heuristique depuis order_item_name.
+    const deleted = buildIndex({ books: [chapitreVi] });
+    expect(matchProduct(999999, "Karl Marx, Le chapitre VI. Manuscrits de 1863-1867.", deleted)).toEqual({
+      bucket: "titre-auteur",
+      book: chapitreVi,
+    });
+  });
+
+  it("bucket 'titre-auteur' (suffixe) : liste d'auteurs à virgules, titre de fiche en suffixe unique (cas réel #3495)", () => {
+    const avecMarx = book({ id: 3, slug: "avec-marx", title: "Avec Marx, philosophie et politique" });
+    const index = buildIndex({
+      products: [{ id: 3495, slug: "avec-marx-woo", title: "Badiou, Balibar, Bidet, Löwy, Sève, Avec Marx, philosophie et politique" }],
+      books: [avecMarx],
+    });
+    expect(matchProduct(3495, "", index)).toEqual({ bucket: "titre-auteur", book: avecMarx });
+  });
+
+  it("'titre-auteur' abandonne à la moindre ambiguïté (deux titres suffixes possibles → repli)", () => {
+    const capital = book({ id: 4, slug: "le-capital-court", title: "Le Capital abrégé" });
+    const etudier = book({ id: 5, slug: "etudier-le-capital", title: "Étudier Le Capital abrégé" });
+    const index = buildIndex({
+      products: [{ id: 50, slug: "produit-x", title: "Karl Marx, Étudier Le Capital abrégé" }],
+      books: [capital, etudier],
+    });
+    // Après la virgule : « Étudier Le Capital abrégé » correspond exactement à
+    // UNE fiche → heuristique virgule prioritaire, pas d'ambiguïté ici.
+    expect(matchProduct(50, "", index).bucket).toBe("titre-auteur");
+    // Sans la virgule (produit supprimé, nom sans auteur) : deux suffixes
+    // possibles (« Le Capital abrégé » et « Étudier Le Capital abrégé ») → repli.
+    const deleted = buildIndex({ books: [capital, etudier] });
+    expect(matchProduct(999999, "Coffret Étudier Le Capital abrégé", deleted)).toEqual({ bucket: "repli", book: null });
+  });
+
   it("cas obligatoire : produit 7870 résout vers la vraie fiche malgré le préfixe « PRÉCOMMANDE »", () => {
     const index = indexWithPrecommandeResolved();
     const result = matchProduct(PRECOMMANDE_PRODUCT_ID, "", index);
