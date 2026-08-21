@@ -1093,13 +1093,154 @@ export interface PageAPropos {
   createdAt?: string | null;
 }
 /**
- * Contreparties de la page /souscription. Un bloc vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
+ * Titre, récit et contreparties de la page /souscription. Un champ vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "page-souscription".
  */
 export interface PageSouscription {
   id: number;
+  /**
+   * Vide = « 100 ans ».
+   */
+  titre?: string | null;
+  /**
+   * Vide = « d’édition marxiste : ».
+   */
+  sousTitre?: string | null;
+  /**
+   * Vide = « aidez-nous à poursuivre l’histoire. ».
+   */
+  demande?: string | null;
+  danger?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  guerre?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  maisons?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  appel?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  /**
+   * Les montants et intitulés des trois paliers restent calés sur la jauge de collecte — seule la description qui les accompagne se modifie ici.
+   */
+  objectifs?: {
+    /**
+     * Vide = texte actuel.
+     */
+    descriptif50?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    descriptif80?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    descriptif100?: string | null;
+  };
   /**
    * Aucune contrepartie = les neuf cartes actuelles. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.
    */
@@ -1276,6 +1417,44 @@ export interface PageAProposSelect<T extends boolean = true> {
  * via the `definition` "page-souscription_select".
  */
 export interface PageSouscriptionSelect<T extends boolean = true> {
+  titre?: T;
+  sousTitre?: T;
+  demande?: T;
+  danger?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  guerre?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  maisons?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  appel?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  objectifs?:
+    | T
+    | {
+        descriptif50?: T;
+        descriptif80?: T;
+        descriptif100?: T;
+      };
   contreparties?:
     | T
     | {
