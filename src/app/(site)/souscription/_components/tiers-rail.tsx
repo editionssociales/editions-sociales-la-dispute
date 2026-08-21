@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image, { type StaticImageData } from "next/image";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
@@ -11,6 +12,7 @@ import {
   RAIL_PULSE_CLASS,
 } from "@/components/rail-inset";
 import { type DonationTierId, FREE_AMOUNT } from "@/lib/donation-tiers";
+import { tierHasChoices } from "@/lib/contreparties-core";
 import type { PageSouscriptionContent } from "@/lib/site-content-core";
 import { createDonationCheckout } from "../actions";
 
@@ -322,17 +324,35 @@ export function TiersRail({
                       ))}
                     </ul>
                     {enabled ? (
-                      <form action={createDonationCheckout} className="contents">
-                        <input type="hidden" name="tierId" value={p.tier.id} />
-                        <SubmitButton
-                          tone="dark"
-                          pendingLabel="Redirection…"
-                          ariaLabel={`Contribuer ${formatInt(p.tier.amount)} € — ${p.tier.title}`}
+                      // Palier À CHOIX (client 2026-08-21) : le CTA n'encaisse
+                      // plus directement — il mène à l'étape de sélection
+                      // dédiée (`/souscription/contrepartie/<id>`), un LIEN
+                      // stylé à l'identique du `SubmitButton` (même libellé,
+                      // même nom accessible), jamais le `<form>` Stripe direct
+                      // des paliers fixes. `tierHasChoices` lit
+                      // `CONTREPARTIES_2026` (`contreparties-core.ts`), pas ce
+                      // contenu éditorial — la SEULE source de la règle.
+                      tierHasChoices(p.tier.id as DonationTierId) ? (
+                        <Link
+                          href={`/souscription/contrepartie/${p.tier.id}`}
+                          aria-label={`Contribuer ${formatInt(p.tier.amount)} € — ${p.tier.title}`}
                           className={`mt-3 ${SUBMIT_CTA}`}
                         >
                           Contribuer
-                        </SubmitButton>
-                      </form>
+                        </Link>
+                      ) : (
+                        <form action={createDonationCheckout} className="contents">
+                          <input type="hidden" name="tierId" value={p.tier.id} />
+                          <SubmitButton
+                            tone="dark"
+                            pendingLabel="Redirection…"
+                            ariaLabel={`Contribuer ${formatInt(p.tier.amount)} € — ${p.tier.title}`}
+                            className={`mt-3 ${SUBMIT_CTA}`}
+                          >
+                            Contribuer
+                          </SubmitButton>
+                        </form>
+                      )
                     ) : (
                       <ClosedCta className="mt-3" noteId={`ouverture-${p.tier.id}`} />
                     )}

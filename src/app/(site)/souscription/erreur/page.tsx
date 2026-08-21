@@ -10,8 +10,10 @@ import { FREE_AMOUNT } from "@/lib/donation-tiers";
  * `/souscription` elle-même ne plante jamais. Elle lit `raison` dans
  * `searchParams` (Promise en Next 16 — rendu dynamique, assumé pour une page
  * d'erreur) pour distinguer un montant refusé par la validation serveur
- * (`?raison=montant`, bornes rappelées) d'un vrai échec technique (clé
- * absente, Stripe indisponible, erreur réseau). Jamais indexée.
+ * (`?raison=montant`, bornes rappelées), une contrepartie impossible à
+ * composer (`?raison=contrepartie`, client 2026-08-21 — slug introuvable en
+ * base pour la composition résolue, `actions.ts`) d'un vrai échec technique
+ * (clé absente, Stripe indisponible, erreur réseau). Jamais indexée.
  */
 export const metadata: Metadata = {
   title: "Paiement indisponible",
@@ -29,7 +31,9 @@ export default async function ErreurPage({
   const intro =
     raison === "montant"
       ? `Le montant saisi n’a pas pu être accepté — un don libre va de ${FREE_AMOUNT.min} à ${formatInt(FREE_AMOUNT.max)} €. Aucune somme n’a été prélevée.`
-      : "Un problème technique a empêché l’ouverture de la page de paiement. Aucune somme n’a été prélevée. Vous pouvez réessayer, ou nous écrire si le problème persiste.";
+      : raison === "contrepartie"
+        ? "Votre contrepartie n’a pas pu être préparée pour le paiement. Aucune somme n’a été prélevée — vous pouvez réessayer, ou nous écrire si le problème persiste."
+        : "Un problème technique a empêché l’ouverture de la page de paiement. Aucune somme n’a été prélevée. Vous pouvez réessayer, ou nous écrire si le problème persiste.";
 
   return (
     <>
