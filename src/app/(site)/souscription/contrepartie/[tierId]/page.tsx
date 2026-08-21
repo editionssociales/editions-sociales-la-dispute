@@ -88,10 +88,7 @@ export default async function ContrepartieChoicePage({
   return (
     <section className="bg-paper">
       <Container className="py-16 sm:py-20">
-        <PageHero
-          title={`${tier.title} — ${formatInt(tier.amount)} €`}
-          intro="Choisissez votre contrepartie avant de continuer vers le paiement."
-        />
+        <PageHero title={`${tier.title} — ${formatInt(tier.amount)} €`} />
 
         {erreur === "choix" && (
           <p
