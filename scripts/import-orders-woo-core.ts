@@ -455,7 +455,14 @@ export function resolveAddresses(billing: WooAddressRaw, shipping: WooAddressRaw
   }
 
   const shippingFullName = nonEmpty(`${shipping.firstName ?? ""} ${shipping.lastName ?? ""}`.trim());
-  const shippingAddressLine2Base = nonEmpty(shipping.address2) ?? billingAddressLine2Base;
+  // Ligne 2 : repli billing seulement si la livraison n'a pas sa propre
+  // adresse (line1 vide → tout vient de billing) ou si c'est la MÊME adresse
+  // (line1 identique, ligne 2 qui la complète) — jamais greffer le complément
+  // de facturation sur une adresse de livraison différente (dump final : 55
+  // commandes concernées, 54 même adresse, 1 seule divergente — #159, 2018).
+  const shippingLine1Raw = nonEmpty(shipping.address1);
+  const sameAddressAsBilling = shippingLine1Raw == null || shippingLine1Raw === nonEmpty(billing.address1);
+  const shippingAddressLine2Base = nonEmpty(shipping.address2) ?? (sameAddressAsBilling ? billingAddressLine2Base : null);
   const shippingAddress: OrderAddress = {
     fullName: shippingFullName ?? billingAddress.fullName,
     addressLine1: nonEmpty(shipping.address1) ?? billingAddress.addressLine1,

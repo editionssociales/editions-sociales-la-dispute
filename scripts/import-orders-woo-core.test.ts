@@ -247,6 +247,21 @@ describe("resolveAddresses", () => {
     const result = resolveAddresses(address({ country: "BE" }), emptyAddress());
     expect(result.shippingAddress.country).toBe("BE");
   });
+
+  it("ligne 2 : complétée depuis billing si MÊME adresse (line1 identique), jamais greffée sur une adresse différente (cas réel #159)", () => {
+    // Même adresse (line1 identique, line2 shipping vide) → le complément
+    // d'adresse de facturation s'applique aussi à la livraison.
+    const same = resolveAddresses(address({ address2: "Bâtiment B" }), address({ address2: null }));
+    expect(same.shippingAddress.addressLine2).toBe("Bâtiment B");
+    // Adresse de livraison DIFFÉRENTE sans ligne 2 → on ne greffe pas le
+    // complément de facturation (adresse chimère interdite).
+    const different = resolveAddresses(
+      address({ address2: "Bâtiment B" }),
+      address({ address1: "Autre adresse", address2: null }),
+    );
+    expect(different.shippingAddress.addressLine1).toBe("Autre adresse");
+    expect(different.shippingAddress.addressLine2).toBeUndefined();
+  });
 });
 
 /* ─────────────────────────── méthode de port ─────────────────────────── */
