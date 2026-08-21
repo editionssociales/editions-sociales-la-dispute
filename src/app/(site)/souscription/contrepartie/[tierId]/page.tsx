@@ -62,9 +62,9 @@ function ItemVisual({ item, className }: { item: ContrepartieDisplayItem; classN
   }
   return (
     <span
-      className={`flex items-center justify-center border-2 border-ink bg-paper-2 p-2 text-center font-sans text-xs font-bold uppercase leading-snug text-ink ${className}`}
+      className={`flex items-center justify-center overflow-hidden border-2 border-ink bg-paper-2 px-1 py-2 text-center font-sans text-[10px] font-bold uppercase leading-tight text-ink ${className}`}
     >
-      {item.title}
+      <span className="break-words">{item.title}</span>
     </span>
   );
 }
@@ -154,7 +154,7 @@ export default async function ContrepartieChoicePage({
                     >
                       {section.items.map((item) => (
                         <li key={item.slug} className="flex items-center gap-3 bg-paper p-3">
-                          <ItemVisual item={item} className="h-16 w-11 shrink-0" />
+                          <ItemVisual item={item} className="h-28 w-20 shrink-0" />
                           <span className="font-sans text-sm font-bold text-ink">
                             {item.title}
                             {item.qty > 1 ? ` × ${item.qty}` : ""}
