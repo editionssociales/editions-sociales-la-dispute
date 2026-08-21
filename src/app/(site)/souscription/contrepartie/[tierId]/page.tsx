@@ -52,18 +52,29 @@ const SUBMIT_CTA =
   `min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-6 py-3 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink active:brightness-90 ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`;
 
 /**
+ * Fiches dont le visuel est un OBJET DÉTOURÉ (PNG alpha posé en données le
+ * 2026-08-21) et non une couverture rectangulaire : rendu SANS cadre —
+ * encadrer un objet à fond transparent redessinerait la boîte qu'on vient de
+ * lui retirer. Liste alignée sur les goodies de `CONTREPARTIES_2026`
+ * (compositions figées en code, même régime).
+ */
+const DETOURED_SLUGS = new Set(["totebag", "planche-de-stickers"]);
+
+/**
  * Visuel d'un item de contrepartie — la MISE EN FORME DES GRILLES du catalogue
  * (client 2026-08-21) : couverture au ratio RÉEL sous cadre ink 2px (`Cover`,
  * `fit="height"` — l'appelant fixe la hauteur, la largeur suit l'image), sans
  * boîte `paper-2` intermédiaire ni marge interne — le treillis de la grille et
  * le cadre de la couverture suffisent, tout encadrement de plus était du
- * sur-encadrement. Repli sobre (titre) pour une fiche sans image, au même
- * gabarit 2/3 que le repli de `cover.tsx`.
+ * sur-encadrement. Les objets détourés (`DETOURED_SLUGS`) flottent sans même
+ * ce cadre. Repli sobre (titre) pour une fiche sans image, au même gabarit
+ * 2/3 que le repli de `cover.tsx`.
  */
 function ItemVisual({ item, heightClass }: { item: ContrepartieDisplayItem; heightClass: string }) {
   if (item.cover) {
+    const frame = DETOURED_SLUGS.has(item.slug) ? "" : "overflow-hidden border-2 border-ink";
     return (
-      <span className={`block w-fit shrink-0 overflow-hidden border-2 border-ink ${heightClass}`}>
+      <span className={`block w-fit shrink-0 ${frame} ${heightClass}`}>
         <Cover cover={item.cover} alt="" fit="height" sizes="240px" className="block h-full w-auto" />
       </span>
     );
