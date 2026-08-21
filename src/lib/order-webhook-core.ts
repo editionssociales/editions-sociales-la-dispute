@@ -15,8 +15,13 @@ import { centsToEuros } from "./money";
 /** Ventes restreintes FR/BE/CH (`Orders.ts:shippingAddress.country`, même contrainte que `shipping_address_collection`). */
 export type OrderCountry = "FR" | "BE" | "CH";
 
-/** Type de commande (`Orders.ts:orderType`, client 2026-08-20) — un panier mixte produit UNE commande de chaque type, même session/paiement Stripe. */
-export type OrderKind = "commande" | "precommande";
+/**
+ * Type de commande (`Orders.ts:orderType`, client 2026-08-20) — un panier
+ * mixte produit UNE commande de chaque type, même session/paiement Stripe.
+ * `"don"` (client 2026-08-21, contreparties) : expédition d'une contrepartie
+ * de palier, étanche des deux autres types (aucun agrégat de CA/TVA).
+ */
+export type OrderKind = "commande" | "precommande" | "don";
 
 export interface OrderAddressFacts {
   fullName: string;
@@ -163,9 +168,18 @@ export function buildOrderCreateData(
  * Nouveau stock après décrément d'une vente — plancher 0 (jamais négatif),
  * `null` (non suivi) reste `null` (jamais un plancher qui invente un suivi de
  * stock, même règle que `resolveNativePurchase`/`checkout-core.ts`).
+ * `allowNegative` (don avec contrepartie, client 2026-08-21) : la
+ * contrepartie est TOUJOURS servie, même après réassort — lève le plancher,
+ * `null` reste `null` dans tous les cas (le suivi de stock n'est jamais
+ * inventé).
  */
-export function computeStockAfterDecrement(currentStock: number | null, qty: number): number | null {
+export function computeStockAfterDecrement(
+  currentStock: number | null,
+  qty: number,
+  opts?: { allowNegative?: boolean },
+): number | null {
   if (currentStock == null) return null;
+  if (opts?.allowNegative) return currentStock - qty;
   return Math.max(0, currentStock - qty);
 }
 

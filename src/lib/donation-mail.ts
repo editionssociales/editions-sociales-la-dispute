@@ -3,27 +3,57 @@
  * — même architecture que `order-mail.ts` : module dédié, rendu HTML + texte
  * brut (multipart, `textContent` — classification Gmail et accessibilité) pur
  * et testable, mailer sélectionné par `brevoConfigured()` (Brevo réel via
- * `sendTransactionalEmail`, sinon log console). Aucune donnée requise au-delà
- * de l'email du donateur — pas de récapitulatif de montant, le reçu Stripe
- * natif (`payment_intent_data`, `souscription/actions.ts`) s'en charge déjà.
+ * `sendTransactionalEmail`, sinon log console).
+ *
+ * `recap` (contreparties, client 2026-08-21) : optionnel — un don SANS
+ * contrepartie (montant libre, ou palier antérieur à la feature) reste le
+ * mail sobre d'origine, aucun récapitulatif de montant (le reçu Stripe natif,
+ * `payment_intent_data`/`souscription/actions.ts`, s'en charge déjà). Un don
+ * AVEC contrepartie (`order-handler.ts:handleDonationSessionCompleted`)
+ * fournit `recap` : le corps VERBATIM (`PARAGRAPHS`/signature) reste
+ * STRICTEMENT identique à l'octet, le récap est un bloc additionnel après.
  *
  * Ne jette JAMAIS : même garantie que `OrderMailer` — un échec d'envoi ne
  * doit jamais casser le webhook ni le flux commandes.
  *
- * **Limite assumée — pas d'idempotence.** La jauge de dons lit les charges
- * Stripe directement (zéro stockage de dons en base, cf. `donations.ts`) :
- * il n'existe donc aucune ligne où marquer « déjà envoyé », contrairement à
- * `Orders.confirmationSent` côté commande. Un rejeu d'event Stripe (retry
- * réseau, redélivrance manuelle) peut donc renvoyer ce mail une seconde fois
- * au même donateur — best effort assumé, pas un bug à corriger tant que les
- * dons ne sont pas persistés.
+ * **Limite assumée — pas d'idempotence intrinsèque.** La jauge de dons lit
+ * les charges Stripe directement (zéro stockage de dons en base, cf.
+ * `donations.ts`) : ce module n'a donc lui-même aucune ligne où marquer
+ * « déjà envoyé ». Un don SANS contrepartie (chemin `route.ts` legacy) peut
+ * ainsi renvoyer ce mail une seconde fois au même donateur sur un rejeu
+ * d'event Stripe — best effort assumé. Un don AVEC contrepartie EST
+ * idempotent : c'est `handleDonationSessionCompleted` (`order-handler.ts`)
+ * qui porte ce marqueur (`Orders.confirmationSent`, comme côté commande),
+ * pas ce module.
  */
 import { brevoConfigured, sendTransactionalEmail } from "./brevo";
 import { CONTACT_EMAIL } from "./contact-address";
-import { FONT_STACK, INK, LINE_COLOR, MUTED, SITE_URL, renderMailShell } from "./mail-shell";
+import { formatPrice } from "./format";
+import { FONT_STACK, INK, LINE_COLOR, MUTED, SITE_URL, escapeHtml, renderMailShell } from "./mail-shell";
+
+/** Adresse de livraison de la contrepartie — mêmes champs que `OrderAddressFacts` (`order-webhook-core.ts`), recopiés ici pour ne pas faire dépendre ce module pur du cœur webhook. */
+export interface DonationMailRecapAddress {
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  postalCode: string;
+  city: string;
+  country: string;
+}
+
+/** Récapitulatif de la contrepartie (palier, composition, adresse) — présent uniquement pour un don qui en porte une (`donLines`, cf. `order-handler.ts`). */
+export interface DonationMailRecap {
+  tierTitle: string;
+  /** Euros — montant du don (pas la valeur des articles, toujours à 0 en contrepartie). */
+  amountEuros: number;
+  lines: { title: string; quantity: number }[];
+  /** Absente en théorie jamais (tous les paliers 2026 collectent une adresse) — optionnelle par défensivité, jamais un bloc adresse inventé. */
+  shippingAddress?: DonationMailRecapAddress;
+}
 
 export interface DonationMailPayload {
   email: string;
+  recap?: DonationMailRecap;
 }
 
 export interface DonationMailer {
@@ -64,16 +94,85 @@ function paragraphRow(text: string, opts: { strong?: boolean } = {}): string {
   );
 }
 
+function euros(amount: number): string {
+  return formatPrice(amount) ?? `${amount.toFixed(2)} €`;
+}
+
+/** Lignes d'adresse — mêmes champs dans le même ordre en HTML et en texte brut, jamais réénoncés séparément. */
+function addressLines(address: DonationMailRecapAddress): string[] {
+  return [
+    address.fullName,
+    address.addressLine1,
+    ...(address.addressLine2 ? [address.addressLine2] : []),
+    `${address.postalCode} ${address.city}`,
+    address.country,
+  ];
+}
+
+/**
+ * Bloc récap HTML — encadré (même recette que le RÉCAPITULATIF de
+ * `order-mail.ts`) : titre du palier, composition (titre × qté), montant du
+ * don, puis l'adresse de livraison si fournie. Titres/adresse échappés (même
+ * garde que `order-mail.ts:lineRow` — un titre catalogue peut contenir
+ * `&`/`<`, cette chaîne part directement vers l'API Brevo).
+ */
+function recapRow(recap: DonationMailRecap): string {
+  const linesHtml = recap.lines
+    .map(
+      (l) =>
+        `<tr><td style="padding:3px 0;font-family:${FONT_STACK};font-size:14px;color:${INK};">` +
+        `${escapeHtml(l.title)} × ${l.quantity}</td></tr>`,
+    )
+    .join("");
+  const addressHtml = recap.shippingAddress
+    ? `<tr><td style="padding-top:10px;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${MUTED};">` +
+      `Adresse de livraison :<br />` +
+      addressLines(recap.shippingAddress).map(escapeHtml).join("<br />") +
+      `</td></tr>`
+    : "";
+  return (
+    `<tr><td style="border:2px solid ${INK};padding:16px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td style="padding-bottom:10px;font-family:${FONT_STACK};font-size:15px;font-weight:800;color:${INK};">` +
+    `Votre contrepartie — ${escapeHtml(recap.tierTitle)}` +
+    `</td></tr>` +
+    linesHtml +
+    `<tr><td style="padding-top:10px;font-family:${FONT_STACK};font-size:13px;color:${MUTED};">` +
+    `Montant du don : ${euros(recap.amountEuros)}` +
+    `</td></tr>` +
+    addressHtml +
+    `</table>` +
+    `</td></tr>`
+  );
+}
+
+/** Même bloc que `recapRow`, en texte brut. */
+function recapText(recap: DonationMailRecap): string {
+  const lines = recap.lines.map((l) => `- ${l.title} ×${l.quantity}`).join("\n");
+  const address = recap.shippingAddress
+    ? "\n\nAdresse de livraison :\n" + addressLines(recap.shippingAddress).join("\n")
+    : "";
+  return (
+    `Votre contrepartie — ${recap.tierTitle}\n` +
+    lines +
+    `\nMontant du don : ${euros(recap.amountEuros)}` +
+    address
+  );
+}
+
 /**
  * Rendu texte brut (multipart) — mêmes paragraphes VERBATIM que le HTML
  * (constantes `PARAGRAPHS`/`SIGNATURE`, jamais retapés), séparés par des
  * lignes vides, puis le même pied que le HTML (contact, domaine). Sert deux
  * fins : classification Gmail (un mail HTML seul part en onglet Promotions)
- * et accessibilité (lecteurs texte brut).
+ * et accessibilité (lecteurs texte brut). `recap` (contreparties) : bloc
+ * additionnel après les paragraphes/signature, absent par défaut (don sans
+ * contrepartie — verbatim inchangé).
  */
-function renderDonationThanksText(): string {
+function renderDonationThanksText(recap?: DonationMailRecap): string {
   return (
     [...PARAGRAPHS, SIGNATURE].join("\n\n") +
+    (recap ? "\n\n" + recapText(recap) : "") +
     "\n\n" +
     `Une question ? Écrivez-nous à ${CONTACT_EMAIL}.` +
     "\n\n" +
@@ -82,18 +181,27 @@ function renderDonationThanksText(): string {
 }
 
 /**
- * Rendu HTML du mail de remerciement — pur (aucune I/O), aucune donnée
- * variable (pas de nom, pas de montant) donc pas de paramètre. Pas de
- * bouton CTA marketing (contrairement au mail de commande) : le ton du
- * texte est un remerciement, pas une relance. Pied sobre après la
- * signature (adresse de contact + domaine), même recette que
- * `order-mail.ts` sans le bouton « Consulter le site ».
+ * Rendu HTML du mail de remerciement — pur (aucune I/O). Le corps VERBATIM
+ * (`PARAGRAPHS`/`SIGNATURE`) ne dépend d'aucun paramètre — un don sans
+ * contrepartie (`recap` absent, montant libre ou palier antérieur à la
+ * feature) reste STRICTEMENT le mail d'origine. Pas de bouton CTA marketing
+ * (contrairement au mail de commande) : le ton du texte est un remerciement,
+ * pas une relance. Pied sobre après la signature/le récap (adresse de
+ * contact + domaine), même recette que `order-mail.ts` sans le bouton
+ * « Consulter le site ».
  */
-export function renderDonationThanksEmail(): { subject: string; html: string; text: string } {
+export function renderDonationThanksEmail(recap?: DonationMailRecap): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   const bodyHtml =
     PARAGRAPHS.map((p) => paragraphRow(p)).join("") +
     paragraphRow(SIGNATURE, { strong: true }) +
-    // Contact — pied sobre, APRÈS la signature, pas de CTA marketing.
+    // Contrepartie (client 2026-08-21) — bloc additionnel, APRÈS le corps
+    // verbatim, jamais entre deux paragraphes.
+    (recap ? recapRow(recap) : "") +
+    // Contact — pied sobre, APRÈS la signature/le récap, pas de CTA marketing.
     `<tr><td style="padding-bottom:24px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${MUTED};">` +
     `Une question ? Écrivez-nous à ` +
     `<a href="mailto:${CONTACT_EMAIL}" style="color:${INK};">${CONTACT_EMAIL}</a>.` +
@@ -111,7 +219,7 @@ export function renderDonationThanksEmail(): { subject: string; html: string; te
     bodyHtml,
   });
 
-  return { subject: "Merci pour votre don", html, text: renderDonationThanksText() };
+  return { subject: "Merci pour votre don", html, text: renderDonationThanksText(recap) };
 }
 
 /**
@@ -122,7 +230,7 @@ export function renderDonationThanksEmail(): { subject: string; html: string; te
 export const brevoDonationMailer: DonationMailer = {
   async sendDonationThanks(payload) {
     try {
-      const { subject, html, text } = renderDonationThanksEmail();
+      const { subject, html, text } = renderDonationThanksEmail(payload.recap);
       const result = await sendTransactionalEmail({ to: payload.email, subject, html, textContent: text });
       if (!result.ok) {
         console.error(

@@ -337,6 +337,29 @@ describe("decrementBookStock (issue #65 — écriture atomique)", () => {
     raceOnNextBookRead = Number.POSITIVE_INFINITY; // course à chaque tentative
     await expect(decrementBookStock(12, 1)).rejects.toThrow(/trop de tentatives/);
   });
+
+  it("allowNegative: true (don avec contrepartie) — passe sous 0 sans plancher", async () => {
+    books = [{ id: 12, commerce: { stock: 2 } }];
+    await decrementBookStock(12, 5, { allowNegative: true });
+    expect(books[0].commerce.stock).toBe(-3);
+    expect(lastUpdateArgsByCollection.books).toMatchObject({
+      where: { id: { equals: 12 }, "commerce.stock": { equals: 2 } },
+      data: { commerce: { stock: -3 } },
+    });
+  });
+
+  it("allowNegative: true mais stock non suivi (`null`) → aucune écriture, comportement inchangé", async () => {
+    books = [{ id: 12, commerce: { stock: null } }];
+    await decrementBookStock(12, 2, { allowNegative: true });
+    expect(books[0].commerce.stock).toBeNull();
+    expect(lastUpdateArgsByCollection.books).toBeUndefined();
+  });
+
+  it("sans opts (défaut) → comportement inchangé, plancher 0", async () => {
+    books = [{ id: 12, commerce: { stock: 1 } }];
+    await decrementBookStock(12, 5);
+    expect(books[0].commerce.stock).toBe(0);
+  });
 });
 
 describe("findLatestOrderUpdatedAt", () => {
