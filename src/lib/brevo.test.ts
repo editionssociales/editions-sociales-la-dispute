@@ -8,10 +8,15 @@ import { setupServer } from "msw/node";
  * importable) — même traitement que `catalogue-http.test.ts`. Couvre surtout
  * le contrat de dégradation : `BREVO_API_KEY`/`BREVO_LIST_ID_SITE`/
  * `BREVO_DOI_TEMPLATE_ID`/`CONTACT_TO_EMAIL` absentes ou malformées → aucun
- * appel réseau, `{ ok: false }`, jamais un throw.
+ * appel réseau, `{ ok: false }`, jamais un throw. `getNewsletterListStats`
+ * (seule lecture du module, sans paramètre `env` — lit `process.env`
+ * directement) suit le même contrat : env posé/retiré autour de chaque appel
+ * (motif `brevoOrderMailer`, `order-mail.test.ts`), plutôt qu'un paramètre
+ * `env` que sa signature exacte n'admet pas.
  */
 
-const { brevoConfigured, sendDoiConfirmation, sendTransactionalEmail } = await import("./brevo");
+const { brevoConfigured, getNewsletterListStats, sendDoiConfirmation, sendTransactionalEmail } =
+  await import("./brevo");
 
 const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -187,5 +192,124 @@ describe("sendTransactionalEmail — appel réel", () => {
     );
     expect(result).toEqual({ ok: true });
     expect(capturedBody).toMatchObject({ textContent: "Bonjour" });
+  });
+});
+
+describe("getNewsletterListStats", () => {
+  // `getNewsletterListStats` lit `process.env` (signature sans paramètre —
+  // un autre agent l'importe telle quelle) : posé/retiré autour de chaque
+  // appel, même limite/convention que `brevoOrderMailer` (`order-mail.test.ts`).
+
+  it("BREVO_API_KEY absente → ok:false, aucun appel réseau", async () => {
+    delete process.env.BREVO_API_KEY;
+    process.env.BREVO_LIST_ID_SITE = "42";
+    try {
+      const result = await getNewsletterListStats();
+      expect(result).toEqual({ ok: false });
+    } finally {
+      delete process.env.BREVO_LIST_ID_SITE;
+    }
+  });
+
+  it("BREVO_LIST_ID_SITE absente ou non numérique → ok:false, aucun appel réseau", async () => {
+    process.env.BREVO_API_KEY = "xkeysib-test";
+    delete process.env.BREVO_LIST_ID_SITE;
+    try {
+      expect(await getNewsletterListStats()).toEqual({ ok: false });
+      process.env.BREVO_LIST_ID_SITE = "abc";
+      expect(await getNewsletterListStats()).toEqual({ ok: false });
+    } finally {
+      delete process.env.BREVO_API_KEY;
+      delete process.env.BREVO_LIST_ID_SITE;
+    }
+  });
+
+  describe("appel réel (msw)", () => {
+    // Réutilise le `server` msw déclaré en tête de fichier (déjà `listen()`)
+    // — un second `setupServer()` interceptant le même `fetch` global en
+    // parallèle serait un piège, pas une isolation.
+
+    it("200 avec totalSubscribers → ok:true + valeur, GET vers /contacts/lists/{id} avec api-key", async () => {
+      let capturedApiKey: string | null = null;
+      let capturedMethod = "";
+      server.use(
+        http.get("https://api.brevo.com/v3/contacts/lists/42", ({ request }) => {
+          capturedApiKey = request.headers.get("api-key");
+          capturedMethod = request.method;
+          return HttpResponse.json({ id: 42, name: "Inscrits site (2026)", totalSubscribers: 128 });
+        }),
+      );
+      process.env.BREVO_API_KEY = "xkeysib-test";
+      process.env.BREVO_LIST_ID_SITE = "42";
+      try {
+        const result = await getNewsletterListStats();
+        expect(result).toEqual({ ok: true, totalSubscribers: 128 });
+      } finally {
+        delete process.env.BREVO_API_KEY;
+        delete process.env.BREVO_LIST_ID_SITE;
+      }
+      expect(capturedMethod).toBe("GET");
+      expect(capturedApiKey).toBe("xkeysib-test");
+    });
+
+    it("totalSubscribers absent, repli sur uniqueSubscribers → ok:true + valeur", async () => {
+      server.use(
+        http.get("https://api.brevo.com/v3/contacts/lists/42", () =>
+          HttpResponse.json({ id: 42, uniqueSubscribers: 64 }),
+        ),
+      );
+      process.env.BREVO_API_KEY = "xkeysib-test";
+      process.env.BREVO_LIST_ID_SITE = "42";
+      try {
+        expect(await getNewsletterListStats()).toEqual({ ok: true, totalSubscribers: 64 });
+      } finally {
+        delete process.env.BREVO_API_KEY;
+        delete process.env.BREVO_LIST_ID_SITE;
+      }
+    });
+
+    it("200 avec un corps inattendu (compteur absent/non numérique) → ok:false", async () => {
+      server.use(
+        http.get("https://api.brevo.com/v3/contacts/lists/42", () =>
+          HttpResponse.json({ id: 42, name: "Inscrits site (2026)" }),
+        ),
+      );
+      process.env.BREVO_API_KEY = "xkeysib-test";
+      process.env.BREVO_LIST_ID_SITE = "42";
+      try {
+        expect(await getNewsletterListStats()).toEqual({ ok: false });
+      } finally {
+        delete process.env.BREVO_API_KEY;
+        delete process.env.BREVO_LIST_ID_SITE;
+      }
+    });
+
+    it("réponse non-ok (HTTP 401) → ok:false, aucun throw", async () => {
+      server.use(
+        http.get("https://api.brevo.com/v3/contacts/lists/42", () =>
+          HttpResponse.json({ message: "unauthorized" }, { status: 401 }),
+        ),
+      );
+      process.env.BREVO_API_KEY = "xkeysib-test";
+      process.env.BREVO_LIST_ID_SITE = "42";
+      try {
+        await expect(getNewsletterListStats()).resolves.toEqual({ ok: false });
+      } finally {
+        delete process.env.BREVO_API_KEY;
+        delete process.env.BREVO_LIST_ID_SITE;
+      }
+    });
+
+    it("exception réseau → ok:false, aucun throw", async () => {
+      server.use(http.get("https://api.brevo.com/v3/contacts/lists/42", () => HttpResponse.error()));
+      process.env.BREVO_API_KEY = "xkeysib-test";
+      process.env.BREVO_LIST_ID_SITE = "42";
+      try {
+        await expect(getNewsletterListStats()).resolves.toEqual({ ok: false });
+      } finally {
+        delete process.env.BREVO_API_KEY;
+        delete process.env.BREVO_LIST_ID_SITE;
+      }
+    });
   });
 });

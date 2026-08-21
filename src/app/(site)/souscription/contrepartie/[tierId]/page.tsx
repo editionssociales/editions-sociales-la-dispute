@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
 import { BookHoverCard } from "@/components/book-hover-card";
@@ -8,6 +7,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { PageHero } from "@/components/page-hero";
 import { Reveal } from "@/components/reveal";
 import { FramedGrid } from "@/components/framed-grid";
+import { Cover } from "@/lib/cover";
 import { formatInt } from "@/lib/format";
 import { stripeEnabled } from "@/lib/stripe";
 import { DONATION_TIERS } from "@/lib/donation-tiers";
@@ -52,18 +52,37 @@ export async function generateMetadata({
 const SUBMIT_CTA =
   `min-h-11 inline-flex items-center justify-center gap-2 border-2 border-ink bg-ink px-6 py-3 font-sans text-sm font-bold uppercase tracking-[.03em] text-paper transition-colors motion-reduce:transition-none hover:bg-paper hover:text-ink active:brightness-90 ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`;
 
-/** Visuel d'un item de contrepartie — couverture réelle, ou repli sobre (titre) pour un pack/brouillon sans image. */
-function ItemVisual({ item, className }: { item: ContrepartieDisplayItem; className: string }) {
-  if (item.coverUrl) {
+/**
+ * Fiches dont le visuel est un OBJET DÉTOURÉ (PNG alpha posé en données le
+ * 2026-08-21) et non une couverture rectangulaire : rendu SANS cadre —
+ * encadrer un objet à fond transparent redessinerait la boîte qu'on vient de
+ * lui retirer. Liste alignée sur les goodies de `CONTREPARTIES_2026`
+ * (compositions figées en code, même régime).
+ */
+const DETOURED_SLUGS = new Set(["totebag", "planche-de-stickers"]);
+
+/**
+ * Visuel d'un item de contrepartie — la MISE EN FORME DES GRILLES du catalogue
+ * (client 2026-08-21) : couverture au ratio RÉEL sous cadre ink 2px (`Cover`,
+ * `fit="height"` — l'appelant fixe la hauteur, la largeur suit l'image), sans
+ * boîte `paper-2` intermédiaire ni marge interne — le treillis de la grille et
+ * le cadre de la couverture suffisent, tout encadrement de plus était du
+ * sur-encadrement. Les objets détourés (`DETOURED_SLUGS`) flottent sans même
+ * ce cadre. Repli sobre (titre) pour une fiche sans image, au même gabarit
+ * 2/3 que le repli de `cover.tsx`.
+ */
+function ItemVisual({ item, heightClass }: { item: ContrepartieDisplayItem; heightClass: string }) {
+  if (item.cover) {
+    const frame = DETOURED_SLUGS.has(item.slug) ? "" : "overflow-hidden border-2 border-ink";
     return (
-      <span className={`relative block overflow-hidden border-2 border-ink bg-paper-2 ${className}`}>
-        <Image src={item.coverUrl} alt="" fill sizes="200px" className="object-contain p-2" />
+      <span className={`block w-fit shrink-0 ${frame} ${heightClass}`}>
+        <Cover cover={item.cover} alt="" fit="height" sizes="240px" className="block h-full w-auto" />
       </span>
     );
   }
   return (
     <span
-      className={`flex items-center justify-center overflow-hidden border-2 border-ink bg-paper-2 px-1 py-2 text-center font-sans text-[10px] font-bold uppercase leading-tight text-ink ${className}`}
+      className={`flex aspect-[2/3] shrink-0 items-center justify-center overflow-hidden border-2 border-ink bg-paper-2 px-1 py-2 text-center font-sans text-[10px] font-bold uppercase leading-tight text-ink ${heightClass}`}
     >
       <span className="break-words">{item.title}</span>
     </span>
@@ -89,10 +108,7 @@ export default async function ContrepartieChoicePage({
   return (
     <section className="bg-paper">
       <Container className="py-16 sm:py-20">
-        <PageHero
-          title={`${tier.title} — ${formatInt(tier.amount)} €`}
-          intro="Choisissez votre contrepartie avant de continuer vers le paiement."
-        />
+        <PageHero title={`${tier.title} — ${formatInt(tier.amount)} €`} />
 
         {erreur === "choix" && (
           <p
@@ -168,7 +184,7 @@ export default async function ContrepartieChoicePage({
                             />
                             <span className="flex flex-wrap justify-center gap-2">
                               {option.items.map((item) => (
-                                <ItemVisual key={item.slug} item={item} className="h-36 w-24 shrink-0" />
+                                <ItemVisual key={item.slug} item={item} heightClass="h-56" />
                               ))}
                             </span>
                             {/* ATTENTION nested-interactive : ce libellé vit DANS
@@ -212,7 +228,7 @@ export default async function ContrepartieChoicePage({
                         );
                         return (
                           <li key={item.slug} className="flex items-center gap-3 bg-paper p-3">
-                            <ItemVisual item={item} className="h-28 w-20 shrink-0" />
+                            <ItemVisual item={item} heightClass="h-40" />
                             {item.fiche ? (
                               <BookHoverCard data={item.fiche} focusable className={titleClassName}>
                                 {label}

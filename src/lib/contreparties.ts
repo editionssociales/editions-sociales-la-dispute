@@ -10,6 +10,7 @@ import {
 } from "./book-hover-card-data";
 import { renderHtml } from "./catalogue-pg-map";
 import { cmsExcerpt, sanitizeCms } from "./cms-html";
+import type { Cover } from "./types";
 import type { ContrepartieComposition, ContrepartieItemRef } from "./contreparties-core";
 import { EDITIONS, isEditionSlug } from "./editions";
 import { formatPrice } from "./format";
@@ -42,7 +43,8 @@ import { formatPrice } from "./format";
 export interface ContrepartieBook {
   id: number;
   title: string;
-  coverUrl?: string;
+  /** Couverture AVEC dimensions (client 2026-08-21) : l'étape de choix rend au ratio réel, la recette des grilles (`lib/cover.tsx`) — jamais une URL nue. */
+  cover?: Cover;
   /** Maison — distingue deux fiches homonymes (unicité composite `(edition, slug)`, `Books.ts`). */
   edition?: string;
   /** Snapshot de ligne de commande don (webhook) — null sur les fiches brouillon sans ISBN. */
@@ -92,7 +94,10 @@ function toContrepartieBook(doc: PayloadBook): ContrepartieBook {
   return {
     id: doc.id,
     title: doc.title,
-    coverUrl: isPopulated<Media>(doc.cover) ? (doc.cover.url ?? undefined) : undefined,
+    cover:
+      isPopulated<Media>(doc.cover) && doc.cover.url
+        ? { url: doc.cover.url, width: doc.cover.width ?? 0, height: doc.cover.height ?? 0 }
+        : undefined,
     edition: doc.edition ?? undefined,
     isbn: doc.isbn ?? null,
     price: doc.prix ?? null,
@@ -116,7 +121,7 @@ function toFiche(book: ContrepartieBook): BookHoverCardData | null {
     libelles: book.libelles,
     priceLabel: formatPrice(book.price),
     excerpt: book.excerpt,
-    coverUrl: book.coverUrl ?? null,
+    coverUrl: book.cover?.url ?? null,
   };
   return isUsefulBookHoverCardData(data) ? data : null;
 }
@@ -214,7 +219,8 @@ export interface ContrepartieDisplayItem {
   slug: string;
   qty: number;
   title: string;
-  coverUrl?: string;
+  /** Cf. `ContrepartieBook.cover` — dimensions incluses, rendu au ratio réel. */
+  cover?: Cover;
   /** Mini fiche au survol (`BookHoverCard`) — `null` si le slug est introuvable OU si la fiche n'a rien d'utile à montrer (`toFiche`) : l'appelant rend alors le titre nu. */
   fiche: BookHoverCardData | null;
 }
@@ -247,7 +253,7 @@ export async function getContrepartieDisplay(
       slug: item.slug,
       qty: item.qty,
       title: book?.title ?? item.slug,
-      coverUrl: book?.coverUrl,
+      cover: book?.cover,
       fiche: book ? toFiche(book) : null,
     };
   };

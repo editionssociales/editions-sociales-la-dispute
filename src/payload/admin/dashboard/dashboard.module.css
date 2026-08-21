@@ -318,3 +318,157 @@
 .detailsBlock {
   font-size: 13px;
 }
+
+/* ────────────────────────── Bandeau KPI (home v4) ────────────────────────── */
+
+.kpiRow {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.kpiCard {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  background: var(--theme-elevation-0, #ffffff);
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 8px;
+  padding: 16px 18px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.kpiCardPrimary {
+  border-width: 2px;
+}
+
+a.kpiCardPrimary:hover {
+  background: var(--theme-elevation-50, #f1efe9);
+}
+
+.kpiCardSecondary {
+  background: var(--theme-elevation-50, #f8f7f3);
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.kpiAmount {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiAmountSmall {
+  font-size: 19px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiMeta {
+  font-size: 13px;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.kpiDelta {
+  font-size: 12px;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.kpiExternalLink {
+  align-self: flex-start;
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+/* ────────────────────────── Graphique ventes (home v4) ────────────────────────── */
+
+.chartSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chartBar {
+  fill: var(--theme-elevation-800, #2b2820);
+}
+
+.chartAxisLabel {
+  fill: var(--theme-elevation-500, #6b675e);
+  font-size: 11px;
+}
+
+/* ────────────────────────── Ligne de tableau étendue (« Commandes à traiter », home v4) ────────────────────────── */
+
+/*
+ * Motif « lien étendu » sans JS : le `<tr>` est le seul ancêtre positionné
+ * (`position: relative`) ; le `::after` de l'`<a>` du nom (lui-même statique)
+ * remonte donc jusqu'à LUI pour se positionner (`position: absolute; inset:
+ * 0`), couvrant toute la ligne — comportement standard des navigateurs pour
+ * un `<tr>` positionné, malgré son type d'affichage `table-row`.
+ */
+.rowExpandable {
+  position: relative;
+}
+
+.rowExpandable:hover {
+  background: var(--theme-elevation-50, #f1efe9);
+}
+
+.rowLink {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.rowLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.rowSubtle {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+/* ────────────────────────── Bloc « En cours » (sous-blocs, home v4) ────────────────────────── */
+
+.subBlockTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.entryRow {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.gaugeTrack {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--theme-elevation-100, #e9e6dd);
+  overflow: hidden;
+}
+
+.gaugeFill {
+  height: 100%;
+  background: var(--theme-elevation-800, #2b2820);
+  border-radius: 3px;
+}
