@@ -19,6 +19,7 @@ Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : 
 - Résilience Neon : `onInit` branche `attachPoolErrorHandler` (`lib/pool-error-handler.ts`) — sans listener `error` sur le pool `pg`, un client idle coupé à l'autosuspend Neon (plan Free, ~5 min) tuait tout le process Vercel (constat prod 2026-08-07) ; même motif pour `connectionTimeoutMillis` borné dans `payload.config.ts`.
 - Découpage cœur pur (testé, sans I/O) + orchestration I/O dans `lib/` — jumeaux `*-core.ts` pour `stock-import` et `import-run-report` ; le cœur pur d'`order-export-handler` vit dans `src/lib/order-export.ts`.
 - Nav admin = ordre de déclaration dans `payload.config.ts` (tableau `collections` puis `globals`, un global rejoint le groupe existant à sa suite) ; groupes cibles : Quotidien (Livres, Commandes) · Catalogue (Auteur·rice·s, Libellés, Médias) · Boutique (Codes promo, Imports routeur, Réglages boutique) · Site (Mises en avant, Rencontres, Page À propos, Page Souscription, Pages) · Administration (Utilisateur·rice·s).
+- `Books` : `buy.parislibrairies`/`buy.lalibrairie` s'autoremplissent depuis l'ISBN au `beforeChange` humain (`autofillBuyLinks`, `lib/buy-links-autofill.ts`) — jamais sous `context.migration`, fail-open (une résolution en échec ne fait jamais échouer l'enregistrement, réessayée au prochain save) ; rattrapage de la base existante via `scripts/backfill-buy-links.ts` (dry-run par défaut, jamais lancé automatiquement).
 
 ## Verification
 
