@@ -136,6 +136,11 @@ function checkRequiredEnv(): void {
   if (!stripeEnabled()) missing.push("STRIPE_SECRET_KEY (sk_test_… ou sk_live_… attendue)");
   if (missing.length > 0) {
     console.error(`[backfill-dons] variable(s) d'environnement manquante(s)/invalide(s) : ${missing.join(", ")} — abandon.`);
+    // Le .env local du repo ne porte volontairement PAS les accès prod : ils
+    // se sourcent explicitement depuis .env.vercel.prod, jamais par défaut.
+    console.error(
+      "[backfill-dons] pour viser la prod : set -a && source .env.vercel.prod && set +a && pnpm backfill:dons",
+    );
     process.exit(1);
   }
 }
