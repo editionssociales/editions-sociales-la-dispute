@@ -25,6 +25,7 @@ Does NOT own : le schéma SQL `public` (réservé — p. ex. dons) ; la jauge de
 - **CatalogueSource** : port de lecture des fonds (`src/lib`) — adaptateurs pg (Payload) et mémoire (tests).
 - **parachute `*LegacyHtml`/`contentTouched`** : le HTML hérité de WordPress fait foi tant qu'un humain n'a pas réédité la fiche dans Payload. Ces champs sont **lisibles publiquement** (la lecture front garde `overrideAccess: false` — un champ réservé aux connectés serait invisible du rendu) ; TOUTE écriture humaine, API REST comprise, pose `contentTouched=true`.
 - **`stockSuivi`** / **routeur** : origine du stock (import mensuel du distributeur vs saisie manuelle).
+- **Historique Woo importé** : les `Orders` au `stripeSessionId` préfixé `woo-<id>` sont l'historique WooCommerce 2018→2026 (import one-shot `scripts/import-orders-woo.ts`, idempotent par ce préfixe, depuis le dump final du 2026-08-20) — `number` = n° Woo brut (jamais `CMD-*`), `createdAt` antidaté, aucun objet Stripe réel (l'export compta les étiquette « Stripe », constante du module) ; lignes de produits disparus rattachées à la fiche brouillon `archive-boutique-woo` (jamais publiée), vrai titre conservé en snapshot.
 
 ## Decisions
 
