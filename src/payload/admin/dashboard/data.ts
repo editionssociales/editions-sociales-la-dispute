@@ -573,6 +573,57 @@ export async function readUpcomingBooks(
   }
 }
 
+/* ────────────────────────── Précommandes — total vie entière (bloc « En cours ») ────────────────────────── */
+
+export type PreorderTotalsData = { state: 'ok'; totalByBook: Map<number, number> } | { state: 'na' }
+
+/**
+ * Précommandes payées/préparées/expédiées, quantité totale par livre, SANS
+ * fenêtre temporelle — complète `precommandeQuantityByBook` (`derive.ts`,
+ * fenêtre glissante 30 j) qui SOUS-COMPTE une campagne de précommande ouverte
+ * avant la fenêtre : ce lecteur ne fenêtre rien, juste `orderType:
+ * 'precommande'` sur les 3 statuts vendus, somme vie entière de la campagne.
+ * Nourrit l'affichage « N précommandes payées » du bloc « Prochaines
+ * parutions » (`Dashboard.tsx`), qui retombe sur `UpcomingBookRow.precommandesPayees`
+ * (fenêtré 30 j, déjà zéro-safe) si ce lecteur est `na` — jamais un zéro
+ * inventé, juste un repli sur une valeur déjà sûre.
+ *
+ * Select API (issue #68) : `lines` entier plutôt qu'une sélection imbriquée
+ * (`lines: { book: true, quantity: true }`) — même réserve que
+ * `readSalesWindow` ci-dessus (Payload ne garantit pas le pruning SQL d'un
+ * champ `array`) ; on ne conserve que `book`/`quantity` à la sortie. Pas de
+ * réducteur pur de `derive.ts` réutilisable tel quel ici
+ * (`sumQuantityByBookInWindow` fenêtre par date ; ce lecteur, lui, ne fenêtre
+ * rien) : la somme par livre est donc faite à la main, ci-dessous.
+ */
+export async function readPreorderTotals(payload: Payload): Promise<PreorderTotalsData> {
+  try {
+    const { docs } = await payload.find({
+      collection: 'orders',
+      where: {
+        and: [
+          { orderType: { equals: 'precommande' } },
+          { status: { in: ['paid', 'prepared', 'shipped'] } },
+        ],
+      },
+      select: { lines: true },
+      depth: 0,
+      limit: 0,
+      overrideAccess: true,
+    })
+    const totalByBook = new Map<number, number>()
+    for (const doc of docs) {
+      for (const line of doc.lines ?? []) {
+        const book = typeof line.book === 'number' ? line.book : line.book.id
+        totalByBook.set(book, (totalByBook.get(book) ?? 0) + line.quantity)
+      }
+    }
+    return { state: 'ok', totalByBook }
+  } catch {
+    return { state: 'na' }
+  }
+}
+
 /* ────────────────────────── Rencontres à venir (bloc « En cours ») ────────────────────────── */
 
 export interface UpcomingRencontreRow {
