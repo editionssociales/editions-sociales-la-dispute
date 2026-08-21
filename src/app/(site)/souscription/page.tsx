@@ -121,17 +121,26 @@ function RecitSection({
     <section className="mt-12 sm:mt-16">
       <Reveal>
         <Container>
-          <div className="max-w-[52ch]">
+          {/* Le bandeau vit dans une colonne PLUS LARGE (2xl) que le corps
+              (52ch) : les titres tiennent alors sur les coupes prévues par la
+              maquette (« La guerre culturelle est aussi » / « une guerre
+              matérielle ») au lieu de casser en orphelin dans la colonne de
+              lecture — constat au rendu 2026-08-21. Le corps garde sa mesure
+              de lecture. */}
+          <div className="max-w-2xl">
             <h2
-              className={`w-full ${bg} px-4 py-3 font-sans text-[clamp(20px,4vw,30px)] font-black uppercase leading-[1.05] text-ink sm:px-6`}
+              className={`w-full ${bg} px-4 py-3 font-sans text-[clamp(20px,3vw,28px)] font-black uppercase leading-[1.1] text-ink sm:px-6`}
             >
               <span className="block">{titre}</span>
               {titreItalique && <span className="mt-1 block italic">{titreItalique}</span>}
             </h2>
             {corps ? (
-              <div className={RECIT_CORPS_CLASS} dangerouslySetInnerHTML={{ __html: corps }} />
+              <div
+                className={`max-w-[52ch] ${RECIT_CORPS_CLASS}`}
+                dangerouslySetInnerHTML={{ __html: corps }}
+              />
             ) : (
-              <div className={RECIT_CORPS_CLASS}>{children}</div>
+              <div className={`max-w-[52ch] ${RECIT_CORPS_CLASS}`}>{children}</div>
             )}
           </div>
         </Container>
