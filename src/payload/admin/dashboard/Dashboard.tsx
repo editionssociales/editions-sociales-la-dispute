@@ -55,7 +55,8 @@ export async function Dashboard({ payload }: ServerProps) {
     expiredPromos.state === 'ok' && expiredPromos.promos.length > 0 ? expiredPromos : null
 
   const monthBounds = parisMonthBounds(now)
-  const monthSalesHref = `/admin/collections/orders?where[or][0][and][0][paidAt][greater_than_equal]=${encodeURIComponent(monthBounds.start.toISOString())}&where[or][0][and][1][paidAt][less_than]=${encodeURIComponent(monthBounds.end.toISOString())}`
+  // Les dons ne sont pas des ventes — exclus du lien « Ventes du mois ».
+  const monthSalesHref = `/admin/collections/orders?where[or][0][and][0][paidAt][greater_than_equal]=${encodeURIComponent(monthBounds.start.toISOString())}&where[or][0][and][1][paidAt][less_than]=${encodeURIComponent(monthBounds.end.toISOString())}&where[or][0][and][2][orderType][not_equals]=don`
 
   return (
     <div className={styles.board}>
