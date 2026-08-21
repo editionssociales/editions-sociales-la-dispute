@@ -120,8 +120,17 @@ const MAX_STOCK_DECREMENT_ATTEMPTS = 5;
  * l'une l'autre (contrairement à l'ancienne écriture en valeur absolue calculée
  * côté application). Même garde que l'import stock routeur (`stock-import.ts`) :
  * écriture automatisée, ni `contentTouched` ni revalidation par ligne.
+ *
+ * `allowNegative` (don avec contrepartie, client 2026-08-21) : transmis tel
+ * quel au cœur pur (`computeStockAfterDecrement`) — la contrepartie est
+ * toujours servie, y compris sous 0, même après réassort ; `null` (stock non
+ * suivi) reste `null` dans tous les cas.
  */
-export async function decrementBookStock(id: number, qty: number): Promise<void> {
+export async function decrementBookStock(
+  id: number,
+  qty: number,
+  opts?: { allowNegative?: boolean },
+): Promise<void> {
   const payload = await getPayload({ config });
 
   for (let attempt = 0; attempt < MAX_STOCK_DECREMENT_ATTEMPTS; attempt++) {
@@ -132,7 +141,7 @@ export async function decrementBookStock(id: number, qty: number): Promise<void>
       overrideAccess: true,
     });
     const currentStock: number | null = current.commerce?.stock ?? null;
-    const nextStock = computeStockAfterDecrement(currentStock, qty);
+    const nextStock = computeStockAfterDecrement(currentStock, qty, opts);
     if (nextStock === null) return; // stock non suivi — rien à décrémenter
 
     const { docs } = await payload.update({

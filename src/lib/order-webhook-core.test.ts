@@ -114,6 +114,50 @@ describe("buildOrderCreateData", () => {
       expect(result.orderType).toBe("precommande");
     }
   });
+
+  it("orderType « don » (contreparties, client 2026-08-21) — lignes gratuites, port offert, total = montant du don", () => {
+    const result = buildOrderCreateData(
+      facts({
+        orderType: "don",
+        lines: [
+          { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
+          {
+            bookId: 22,
+            titleSnapshot: "Planche de stickers",
+            isbnSnapshot: null,
+            quantity: 1,
+            unitPriceCents: 0,
+          },
+        ],
+        shippingMethod: "offert",
+        shippingCostCents: 0,
+        discountCents: 0,
+        promoCodeId: null,
+        totalCents: 5000, // palier à 50 € — le total reflète le don, pas la valeur des articles
+      }),
+    );
+    expect(result).toEqual({
+      status: "paid",
+      orderType: "don",
+      email: "client@exemple.fr",
+      shippingAddress: ADDRESS,
+      billingAddress: ADDRESS,
+      lines: [
+        { book: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+        { book: 22, titleSnapshot: "Planche de stickers", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+      ],
+      shippingMethod: "offert",
+      shippingCostTTC: 0,
+      promoCode: null,
+      discountTTC: 0,
+      totalTTC: 50,
+      stripeSessionId: "cs_test_1",
+      stripePaymentIntentId: "pi_test_1",
+      paidAt: "2026-07-12T10:00:00.000Z",
+      stockDecremented: false,
+      confirmationSent: false,
+    });
+  });
 });
 
 describe("computePartTotalCents", () => {
@@ -152,5 +196,20 @@ describe("computeStockAfterDecrement", () => {
   });
   it("exactement épuisé", () => {
     expect(computeStockAfterDecrement(3, 3)).toBe(0);
+  });
+
+  describe("allowNegative (don avec contrepartie, client 2026-08-21)", () => {
+    it("passe sous 0 sans plancher quand demandé", () => {
+      expect(computeStockAfterDecrement(2, 5, { allowNegative: true })).toBe(-3);
+    });
+    it("comportement normal (plancher 0) tant que le stock suffit", () => {
+      expect(computeStockAfterDecrement(10, 3, { allowNegative: true })).toBe(7);
+    });
+    it("stock non suivi (`null`) reste `null` même avec allowNegative", () => {
+      expect(computeStockAfterDecrement(null, 3, { allowNegative: true })).toBeNull();
+    });
+    it("allowNegative: false explicite → même comportement que le défaut (plancher 0)", () => {
+      expect(computeStockAfterDecrement(2, 5, { allowNegative: false })).toBe(0);
+    });
   });
 });

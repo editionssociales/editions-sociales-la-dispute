@@ -3,30 +3,40 @@ import { revalidateTag } from "next/cache";
 import type Stripe from "stripe";
 import { selectDonationMailer } from "@/lib/donation-mail";
 import { getStripe } from "@/lib/stripe";
-import { handleOrderWebhookEvent } from "./order-handler";
+import { handleDonationSessionCompleted, handleOrderWebhookEvent, markOrderRefunded } from "./order-handler";
 
 /**
  * Premier route handler du repo — POST, dynamique par nature (hors ISR).
  *
- * N'écrit dans AUCUNE base de données côté DONS (la jauge lit les charges
- * Stripe directement, zéro stockage, cf. `donations.ts`) : rejouer un
- * événement n'a donc aucun effet secondaire PERSISTANT, et **aucune
- * déduplication par `event.id` n'est nécessaire** pour l'invalidation de
- * cache ci-dessous. Un effet non idempotent existe déjà malgré tout : le
- * mail de remerciement (`donation-mail.ts`, best effort) peut repartir en
- * double sur un rejeu Stripe (retry réseau, redélivrance manuelle) faute
- * d'une ligne où marquer « déjà envoyé » — contrairement à
- * `Orders.confirmationSent` côté commande (`order-handler.ts`).
+ * Côté DONS (`kind: "donation"` ou absent), deux chemins distincts sur
+ * `metadata.donLines` (client 2026-08-21, contreparties) :
+ * - **Sans** `donLines` (montant libre, ou palier antérieur à la feature) :
+ *   chemin HISTORIQUE, N'ÉCRIT dans AUCUNE base de données (la jauge lit les
+ *   charges Stripe directement, zéro stockage, cf. `donations.ts`) — rejouer
+ *   un event n'a donc aucun effet secondaire PERSISTANT, et **aucune
+ *   déduplication par `event.id` n'est nécessaire** pour l'invalidation de
+ *   cache ci-dessous. Un effet non idempotent existe déjà malgré tout : le
+ *   mail de remerciement (`donation-mail.ts`, best effort) peut repartir en
+ *   double sur un rejeu Stripe (retry réseau, redélivrance manuelle) faute
+ *   d'une ligne où marquer « déjà envoyé ».
+ * - **Avec** `donLines` (don avec contrepartie) : délégué à
+ *   `handleDonationSessionCompleted` (`order-handler.ts`), qui ÉCRIT (commande
+ *   `orderType: "don"`, décrément de stock, mail enrichi) — idempotent par
+ *   effet comme le commerce, `Orders.confirmationSent` y porte le marqueur
+ *   que le chemin historique n'a pas. `charge.refunded` y fait transiter les
+ *   commandes don liées (`markOrderRefunded`, réutilisée du commerce — même
+ *   fonction, agnostique du type de commande) ; un don sans commande associée
+ *   (montant libre, ou antérieur à la feature) reste un no-op silencieux.
  *
- * Rôle honnête (côté DONS, `kind: "donation"` ou absent) : un
- * **accélérateur best-effort**, pas le mécanisme de fraîcheur de la jauge. La
- * Search API Stripe indexe en ~1 min (documentée « à ne pas utiliser en
- * read-after-write ») et `revalidateTag(…, "max")` sert le périmé puis
- * re-fetch en arrière-plan à la visite suivante : un re-fetch parti avant
- * l'indexation re-cacherait l'ancien total. La fraîcheur réelle vient de la
- * fenêtre de 60 s du fetch taggé (`donations.ts`). `charge.refunded` est
- * écouté pour décompter vite un remboursement (dont le don de test de la mise
- * en réel).
+ * Rôle honnête de l'invalidation de cache ci-dessous, dans tous les cas côté
+ * DONS : un **accélérateur best-effort**, pas le mécanisme de fraîcheur de la
+ * jauge. La Search API Stripe indexe en ~1 min (documentée « à ne pas
+ * utiliser en read-after-write ») et `revalidateTag(…, "max")` sert le périmé
+ * puis re-fetch en arrière-plan à la visite suivante : un re-fetch parti
+ * avant l'indexation re-cacherait l'ancien total. La fraîcheur réelle vient
+ * de la fenêtre de 60 s du fetch taggé (`donations.ts`). `charge.refunded`
+ * est écouté pour décompter vite un remboursement (dont le don de test de la
+ * mise en réel).
  *
  * Étendu (plan §4 étape 9, lot 2 « commerce natif ») pour le commerce : un
  * event dont `metadata.kind === "order"` (posée par `POST /api/checkout`,
@@ -82,18 +92,36 @@ export async function POST(req: Request) {
       event.type === "checkout.session.async_payment_succeeded" ||
       event.type === "charge.refunded"
     ) {
-      if (event.type !== "charge.refunded") {
+      if (event.type === "charge.refunded") {
+        // Fait transiter les commandes don liées (contrepartie, client
+        // 2026-08-21) — même chemin que le commerce (`findOrdersByPaymentIntent`
+        // via `markOrderRefunded`, réutilisée telle quelle, agnostique du type
+        // de commande). Un don SANS commande (montant libre, ou antérieur à la
+        // feature) est un no-op silencieux — pas de warning Sentry ici,
+        // contrairement au commerce (`orderFound === false` n'est jamais une
+        // anomalie côté dons : la majorité des remboursements de dons n'ont
+        // toujours pas de commande associée).
+        await markOrderRefunded(event.data.object as Stripe.Charge);
+      } else {
         const session = event.data.object as Stripe.Checkout.Session;
         // Paiement réellement confirmé — jamais pour un moyen différé encore
         // en attente (`checkout.session.completed` peut se présenter en
         // `payment_status !== "paid"`, `async_payment_succeeded` relaiera
         // l'event le jour où il se confirme, même logique que côté commande).
-        // `sendDonationThanks` ne jette jamais (contrat `DonationMailer`) —
-        // best effort assumé, cf. docblock de fichier.
-        if (session.payment_status === "paid" && session.customer_details?.email) {
-          await selectDonationMailer().sendDonationThanks({
-            email: session.customer_details.email,
-          });
+        if (session.payment_status === "paid") {
+          if (session.metadata?.donLines) {
+            // Don AVEC contrepartie — commande `orderType: "don"` + décrément
+            // + mail enrichi, idempotents par effet (`order-handler.ts`).
+            // JAMAIS le mailer simple ci-dessous pour ce chemin.
+            await handleDonationSessionCompleted(session);
+          } else if (session.customer_details?.email) {
+            // Don à montant libre (ou palier antérieur à la feature) — chemin
+            // historique, `sendDonationThanks` ne jette jamais (contrat
+            // `DonationMailer`) — best effort assumé, cf. docblock de fichier.
+            await selectDonationMailer().sendDonationThanks({
+              email: session.customer_details.email,
+            });
+          }
         }
       }
       revalidateTag("donations", "max"); // Next 16 : signature à 2 arguments

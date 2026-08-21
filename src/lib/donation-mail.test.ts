@@ -83,6 +83,74 @@ describe("renderDonationThanksEmail — pur, texte verbatim", () => {
   });
 });
 
+describe("renderDonationThanksEmail — bloc récap (contreparties, client 2026-08-21)", () => {
+  const RECAP = {
+    tierTitle: "Camarade de lecture",
+    amountEuros: 50,
+    lines: [
+      { title: "Tote bag", quantity: 1 },
+      { title: "Planche de stickers", quantity: 1 },
+    ],
+    shippingAddress: {
+      fullName: "Jean Dupont",
+      addressLine1: "1 rue Paul Lafargue",
+      postalCode: "75001",
+      city: "Paris",
+      country: "FR",
+    },
+  };
+
+  it("recap absent → aucun bloc contrepartie, corps verbatim inchangé", () => {
+    const { html, text } = renderDonationThanksEmail();
+    expect(html).not.toContain("Votre contrepartie");
+    expect(text).not.toContain("Votre contrepartie");
+  });
+
+  it("recap présent → affiche le titre du palier, la composition et le montant", () => {
+    const { html } = renderDonationThanksEmail(RECAP);
+    expect(html).toContain("Votre contrepartie — Camarade de lecture");
+    expect(html).toContain("Tote bag");
+    expect(html).toContain("Planche de stickers");
+    expect(html).toMatch(/Montant du don\s*:\s*50,00\s*€/);
+  });
+
+  it("recap présent avec adresse → affiche l'adresse de livraison", () => {
+    const { html } = renderDonationThanksEmail(RECAP);
+    expect(html).toContain("Adresse de livraison");
+    expect(html).toContain("Jean Dupont");
+    expect(html).toContain("1 rue Paul Lafargue");
+    expect(html).toContain("75001");
+    expect(html).toContain("Paris");
+  });
+
+  it("recap sans adresse → aucun bloc adresse", () => {
+    const { html } = renderDonationThanksEmail({ ...RECAP, shippingAddress: undefined });
+    expect(html).not.toContain("Adresse de livraison");
+  });
+
+  it("le récap est placé APRÈS la signature, jamais avant (corps verbatim intact)", () => {
+    const { html } = renderDonationThanksEmail(RECAP);
+    const signatureIndex = html.indexOf("L’équipe des éditions sociales et de La Dispute");
+    const recapIndex = html.indexOf("Votre contrepartie");
+    expect(recapIndex).toBeGreaterThan(signatureIndex);
+  });
+
+  it("titre d'article échappé (contrat verrouillé même que order-mail.ts)", () => {
+    const { html } = renderDonationThanksEmail({
+      ...RECAP,
+      lines: [{ title: "Marx & Engels", quantity: 1 }],
+    });
+    expect(html).toContain("Marx &amp; Engels");
+  });
+
+  it("version texte reprend aussi le récap, après la signature", () => {
+    const { text } = renderDonationThanksEmail(RECAP);
+    expect(text).toContain("Votre contrepartie — Camarade de lecture");
+    expect(text).toContain("Tote bag");
+    expect(text).toContain("Adresse de livraison");
+  });
+});
+
 describe("selectDonationMailer", () => {
   it("BREVO_API_KEY absente → logDonationMailer", () => {
     expect(selectDonationMailer({})).toBe(logDonationMailer);
