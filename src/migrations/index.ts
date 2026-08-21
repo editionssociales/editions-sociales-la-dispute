@@ -21,6 +21,7 @@ import * as migration_20260820_140000_precommande from './20260820_140000_precom
 import * as migration_20260821_090000_don_ordertype from './20260821_090000_don_ordertype';
 import * as migration_20260821_150000_souscription_recit_sobre from './20260821_150000_souscription_recit_sobre';
 import * as migration_20260821_150000_editorial_pages from './20260821_150000_editorial_pages';
+import * as migration_20260821_160000_produits_contreparties from './20260821_160000_produits_contreparties';
 
 export const migrations = [
   {
@@ -137,5 +138,10 @@ export const migrations = [
     up: migration_20260821_150000_editorial_pages.up,
     down: migration_20260821_150000_editorial_pages.down,
     name: '20260821_150000_editorial_pages',
+  },
+  {
+    up: migration_20260821_160000_produits_contreparties.up,
+    down: migration_20260821_160000_produits_contreparties.down,
+    name: '20260821_160000_produits_contreparties',
   },
 ];

@@ -206,7 +206,7 @@ describe("createDonationCheckout — contrepartie (contrat metadata.donLines)", 
       [
         `${bookId("les-luttes-de-classes-en-france")}:1:0`,
         `${bookId("le-communisme-qui-vient")}:1:0`,
-        `${bookId("tote-bag")}:1:0`,
+        `${bookId("totebag")}:1:0`,
         `${bookId("planche-de-stickers")}:1:0`,
       ].join(";"),
     );
@@ -219,8 +219,8 @@ describe("createDonationCheckout — contrepartie (contrat metadata.donLines)", 
     expect(lastBody?.get("metadata[tier]")).toBe("palier-50");
     expect(lastBody?.get("metadata[donLines]")).toBe(
       [
-        `${bookId("decouvrir-l-antifascisme")}:1:0`,
-        `${bookId("tote-bag")}:1:0`,
+        `${bookId("decouvrir-lantifascisme")}:1:0`,
+        `${bookId("totebag")}:1:0`,
         `${bookId("planche-de-stickers")}:1:0`,
       ].join(";"),
     );
@@ -232,7 +232,7 @@ describe("createDonationCheckout — contrepartie (contrat metadata.donLines)", 
     ).rejects.toThrow("NEXT_REDIRECT:https://checkout.stripe.com/c/pay/cs_test_1");
     expect(lastBody?.get("shipping_address_collection[allowed_countries][0]")).toBe("FR");
     expect(lastBody?.get("metadata[donLines]")).toBe(
-      [`${bookId("pack-5-geme")}:1:0`, `${bookId("tote-bag")}:1:0`, `${bookId("planche-de-stickers")}:1:0`].join(
+      [`${bookId("pack-5-geme")}:1:0`, `${bookId("totebag")}:1:0`, `${bookId("planche-de-stickers")}:1:0`].join(
         ";",
       ),
     );

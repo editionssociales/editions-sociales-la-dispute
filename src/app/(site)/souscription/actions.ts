@@ -87,7 +87,7 @@ export async function createDonationCheckout(formData: FormData) {
     if (missingSlug) {
       // On n'encaisse jamais un don dont on ne peut pas fabriquer la
       // commande : fiche `books` manquante en base pour un slug de la
-      // composition (TODO-AUDIT, `contreparties-core.ts`) — signalé en
+      // composition (fiche supprimée/renommée depuis l'audit) — signalé en
       // erreur (pas un simple warning, ce refus bloque le don).
       Sentry.captureMessage(
         `Contrepartie : slug introuvable en base — impossible de composer la commande de don`,

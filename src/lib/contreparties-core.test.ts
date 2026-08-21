@@ -78,7 +78,7 @@ describe("resolveContrepartieItems — paliers fixes (sans sélection)", () => {
       items: [
         { slug: "les-luttes-de-classes-en-france", qty: 1 },
         { slug: "le-communisme-qui-vient", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -91,7 +91,7 @@ describe("resolveContrepartieItems — paliers fixes (sans sélection)", () => {
         { slug: "decoloniser-le-marxisme", qty: 1 },
         { slug: "les-luttes-de-classes-en-france", qty: 1 },
         { slug: "de-metoo-a-noustoutes", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -104,9 +104,9 @@ describe("resolveContrepartieItems — paliers fixes (sans sélection)", () => {
         { slug: "decouvrir-foucault", qty: 1 },
         { slug: "decouvrir-althusser", qty: 1 },
         { slug: "l-etat-et-la-revolution-citoyenne", qty: 1 },
-        { slug: "les-guerres-de-l-empire-americain-au-moyen-orient", qty: 1 },
-        { slug: "clara-zetkin", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "les-guerres-de-lempire-americain-au-moyen-orient", qty: 1 },
+        { slug: "clara-zetkin-feministe-sans-frontieres", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -125,8 +125,8 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
     expect(resolveContrepartieItems("palier-50", { titre: "antifascisme" })).toEqual({
       ok: true,
       items: [
-        { slug: "decouvrir-l-antifascisme", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "decouvrir-lantifascisme", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -136,8 +136,8 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
     expect(resolveContrepartieItems("palier-50", { titre: "ecologie-de-guerre" })).toEqual({
       ok: true,
       items: [
-        { slug: "contre-l-ecologie-de-guerre", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "contre-lecologie-de-guerre", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -147,8 +147,8 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
     expect(resolveContrepartieItems("palier-100", { titre: "gaza" })).toEqual({
       ok: true,
       items: [
-        { slug: "gaza-genocide-annonce", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "gaza-un-genocide-annonce-un-tournant-dans-lhistoire-mondiale", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -159,7 +159,7 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
       ok: true,
       items: [
         { slug: "fascisme-et-dictature", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -171,7 +171,7 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
       items: [
         { slug: "decoloniser-le-marxisme", qty: 1 },
         { slug: "l-etat-et-la-revolution-citoyenne", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -182,8 +182,8 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
       ok: true,
       items: [
         { slug: "decouvrir-luxemburg", qty: 1 },
-        { slug: "decouvrir-clara-zetkin", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "clara-zetkin-feministe-sans-frontieres", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -194,7 +194,7 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
       ok: true,
       items: [
         { slug: "selection-15-decouvrir", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -205,7 +205,7 @@ describe("resolveContrepartieItems — paliers à choix, chaque option", () => {
       ok: true,
       items: [
         { slug: "pack-5-geme", qty: 1 },
-        { slug: "tote-bag", qty: 1 },
+        { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
       ],
     });
@@ -302,16 +302,16 @@ describe("allContrepartieSlugs", () => {
     expect(slugs).toEqual(
       expect.arrayContaining([
         "planche-de-stickers",
-        "tote-bag",
-        "clara-zetkin",
-        "decouvrir-clara-zetkin",
+        "totebag",
+        "clara-zetkin-feministe-sans-frontieres",
+        "clara-zetkin-feministe-sans-frontieres",
         "selection-15-decouvrir",
         "pack-5-geme",
       ]),
     );
   });
 
-  it("20 slugs distincts au total sur la table 2026", () => {
-    expect(allContrepartieSlugs()).toHaveLength(20);
+  it("19 slugs distincts au total sur la table 2026 (« Clara Zetkin, féministe sans frontières » sert les paliers 200 ET 500)", () => {
+    expect(allContrepartieSlugs()).toHaveLength(19);
   });
 });

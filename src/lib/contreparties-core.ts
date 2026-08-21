@@ -14,7 +14,10 @@
  * AUCUN pool « N parmi X », uniquement inclus et choix-entre-options
  * (arbitrages actés, PDF client « contreparties dans l'ordre »).
  *
- * Slugs à valider contre l'audit prod avant mise en production (TODO-AUDIT).
+ * Slugs validés contre la base prod le 2026-08-21 (audit lecture seule) :
+ * fiches existantes reprises telles quelles (dont `totebag`, déjà en vente) ;
+ * `planche-de-stickers` et les deux packs du palier 1000 sont créés par la
+ * migration `20260821_160000_produits_contreparties`.
  */
 import type { DonationTierId } from "./donation-tiers";
 
@@ -94,12 +97,12 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
           {
             id: "antifascisme",
             label: "Découvrir l'antifascisme",
-            items: [{ slug: "decouvrir-l-antifascisme", qty: 1 }],
+            items: [{ slug: "decouvrir-lantifascisme", qty: 1 }],
           },
           {
             id: "ecologie-de-guerre",
             label: "Contre l'écologie de guerre",
-            items: [{ slug: "contre-l-ecologie-de-guerre", qty: 1 }],
+            items: [{ slug: "contre-lecologie-de-guerre", qty: 1 }],
           },
         ],
       },
@@ -107,7 +110,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
         kind: "inclus",
         label: "Inclus",
         items: [
-          { slug: "tote-bag", qty: 1 },
+          { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
         ],
       },
@@ -122,7 +125,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
         items: [
           { slug: "les-luttes-de-classes-en-france", qty: 1 },
           { slug: "le-communisme-qui-vient", qty: 1 },
-          { slug: "tote-bag", qty: 1 },
+          { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
         ],
       },
@@ -139,7 +142,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
           {
             id: "gaza",
             label: "Gaza, génocide annoncé",
-            items: [{ slug: "gaza-genocide-annonce", qty: 1 }],
+            items: [{ slug: "gaza-un-genocide-annonce-un-tournant-dans-lhistoire-mondiale", qty: 1 }],
           },
           {
             id: "fascisme-et-dictature",
@@ -152,7 +155,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
         kind: "inclus",
         label: "Inclus",
         items: [
-          { slug: "tote-bag", qty: 1 },
+          { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
         ],
       },
@@ -176,10 +179,13 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
           },
           {
             id: "decouvrir",
-            label: "Découvrir Luxemburg + Découvrir Clara Zetkin",
+            // « Badia » des sources client = Gilbert Badia, auteur de « Clara
+            // Zetkin, féministe sans frontières » (pas un « Découvrir ») —
+            // résolu à l'audit prod du 2026-08-21.
+            label: "Découvrir Luxemburg + Clara Zetkin, féministe sans frontières",
             items: [
               { slug: "decouvrir-luxemburg", qty: 1 },
-              { slug: "decouvrir-clara-zetkin", qty: 1 },
+              { slug: "clara-zetkin-feministe-sans-frontieres", qty: 1 },
             ],
           },
         ],
@@ -188,7 +194,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
         kind: "inclus",
         label: "Inclus",
         items: [
-          { slug: "tote-bag", qty: 1 },
+          { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
         ],
       },
@@ -204,7 +210,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
           { slug: "decoloniser-le-marxisme", qty: 1 },
           { slug: "les-luttes-de-classes-en-france", qty: 1 },
           { slug: "de-metoo-a-noustoutes", qty: 1 },
-          { slug: "tote-bag", qty: 1 },
+          { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
         ],
       },
@@ -220,10 +226,10 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
           { slug: "decouvrir-foucault", qty: 1 },
           { slug: "decouvrir-althusser", qty: 1 },
           { slug: "l-etat-et-la-revolution-citoyenne", qty: 1 },
-          { slug: "les-guerres-de-l-empire-americain-au-moyen-orient", qty: 1 },
-          // Slug le plus incertain de toute la table (TODO-AUDIT) — à valider en priorité.
-          { slug: "clara-zetkin", qty: 1 },
-          { slug: "tote-bag", qty: 1 },
+          { slug: "les-guerres-de-lempire-americain-au-moyen-orient", qty: 1 },
+          // « Badia » / « Clara Zetkin » des sources client = ce titre de Gilbert Badia (audit 2026-08-21).
+          { slug: "clara-zetkin-feministe-sans-frontieres", qty: 1 },
+          { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
         ],
       },
@@ -254,7 +260,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
         kind: "inclus",
         label: "Inclus",
         items: [
-          { slug: "tote-bag", qty: 1 },
+          { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
         ],
       },
