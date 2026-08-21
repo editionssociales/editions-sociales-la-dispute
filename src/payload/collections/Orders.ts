@@ -104,16 +104,33 @@ export const Orders: CollectionConfig = {
   admin: {
     group: 'Quotidien',
     useAsTitle: 'number',
-    defaultColumns: ['number', 'orderType', 'status', 'email', 'totalTTC', 'createdAt'],
+    // Client (cellule dédiée `clientResume`, lit `shippingAddress.fullName`)
+    // · Contenu (résumé des lignes, `contenuResume`) · Quand (`createdAt`,
+    // champ natif — reste triable) · Montant · Statut · Type. Le n° de
+    // commande SORT des colonnes par défaut (reste dispo dans le column
+    // picker et en titre de fiche, `useAsTitle` inchangé).
+    defaultColumns: ['clientResume', 'contenuResume', 'createdAt', 'totalTTC', 'status', 'orderType'],
+    defaultSort: '-createdAt',
+    // Une libraire cherche un NOM avant un n°/e-mail — chemin imbriqué
+    // fonctionnel côté requête (`mergeListSearchAndWhere` résout nativement
+    // les chemins pointillés dans un `where` Payload) ; seul le libellé du
+    // placeholder de recherche omettra ce champ (`getTextFieldsToBeSearched`
+    // compare par `field.name` après aplatissement, jamais par accessor —
+    // cosmétique, recon 2026-08-21).
+    listSearchableFields: ['shippingAddress.fullName', 'number', 'email'],
     description:
       'Commandes du commerce natif — créées par le webhook Stripe, suivies ' +
       'ici (statut de préparation/expédition uniquement). Un panier mixte ' +
       '(articles parus + précommande) scinde en DEUX commandes distinctes ' +
       '(même session Stripe, même paiement) — cf. « Type ».',
-    // Export CSV (mission « exports compta + livraison de la PR », plan §4
-    // étape 10) — panneau au-dessus du tableau, cf. `OrderExportPanel.tsx`.
+    // Chips de filtre (état) AVANT l'export CSV (action quotidienne avant
+    // l'occasionnel, « descente de previews ») — cf.
+    // `orders/OrdersFilterChipsPanel.tsx` et `OrderExportPanel.tsx`.
     components: {
-      beforeListTable: ['/payload/admin/OrderExportPanel.tsx#OrderExportPanel'],
+      beforeListTable: [
+        '/payload/admin/orders/OrdersFilterChipsPanel.tsx#OrdersFilterChipsPanel',
+        '/payload/admin/OrderExportPanel.tsx#OrderExportPanel',
+      ],
     },
   },
   access: {
@@ -164,32 +181,6 @@ export const Orders: CollectionConfig = {
       access: lockedAfterCreate,
     },
     {
-      name: 'orderType',
-      type: 'select',
-      required: true,
-      defaultValue: 'commande',
-      index: true,
-      label: 'Type',
-      options: [
-        { value: 'commande', label: 'Commande' },
-        { value: 'precommande', label: 'Précommande' },
-        { value: 'don', label: 'Don' },
-      ],
-      access: lockedAfterCreate,
-      admin: {
-        description:
-          'Commande normale (articles parus) ou précommande (articles à ' +
-          'paraître avec « Ouvert à la précommande » coché) — posé par le ' +
-          'webhook selon la scission du panier au paiement (client ' +
-          '2026-08-20). Un panier mixte produit UNE commande de chaque ' +
-          "type, même session/paiement Stripe, chacune avec SES lignes et " +
-          "SES frais de port. « Don » (contreparties) : étanche des deux " +
-          'autres types — exclu de tout agrégat de CA/TVA (export compta, ' +
-          '« Ventes du mois » du dashboard), mais visible en préparation/' +
-          'expédition comme une commande normale.',
-      },
-    },
-    {
       name: 'status',
       type: 'select',
       required: true,
@@ -205,6 +196,12 @@ export const Orders: CollectionConfig = {
         { value: 'failed', label: 'Échec du paiement' },
       ],
       admin: {
+        // Champ d'action de la fiche — sidebar, en tête (« descente de
+        // previews » : l'utile au quotidien d'abord). Purement
+        // présentationnel (`fieldIsSidebar`, recon 2026-08-21) : ne change
+        // ni le nom du champ ni son verrouillage (`status` reste le seul
+        // champ sans `access.update`, cf. `Orders.test.ts`).
+        position: 'sidebar',
         description:
           'Seul champ modifiable au back-office — suivi de préparation ' +
           '(paid → prepared → shipped) ; annulation/remboursement au besoin. ' +
@@ -214,6 +211,60 @@ export const Orders: CollectionConfig = {
           "checkout.session.completed s'est déjà présenté en attente — trace " +
           "l'essai sans jamais décrémenter le stock (webhook route, lot 2 " +
           'étape 9).',
+      },
+    },
+    {
+      name: 'orderType',
+      type: 'select',
+      required: true,
+      defaultValue: 'commande',
+      index: true,
+      label: 'Type',
+      options: [
+        { value: 'commande', label: 'Commande' },
+        { value: 'precommande', label: 'Précommande' },
+        { value: 'don', label: 'Don' },
+      ],
+      access: lockedAfterCreate,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Commande normale (articles parus) ou précommande (articles à ' +
+          'paraître avec « Ouvert à la précommande » coché) — posé par le ' +
+          'webhook selon la scission du panier au paiement (client ' +
+          '2026-08-20). Un panier mixte produit UNE commande de chaque ' +
+          "type, même session/paiement Stripe, chacune avec SES lignes et " +
+          "SES frais de port. « Don » (contreparties) : étanche des deux " +
+          'autres types — exclu de tout agrégat de CA/TVA (export compta, ' +
+          'carte KPI ventes 30 j du dashboard), mais visible en préparation/' +
+          'expédition comme une commande normale.',
+      },
+    },
+    {
+      // Champ `ui` : `createdAt` n'existe pas dans `Orders.fields` (généré
+      // automatiquement par Payload, recon 2026-08-21) — seul moyen de le
+      // rendre lisible en sidebar, à côté de `paidAt`. Purement
+      // présentationnel : `flattenTopLevelFields` (Orders.test.ts) l'exclut
+      // d'office des traversées de verrouillage (`keepPresentationalFields`
+      // non posé) — rien à verrouiller, un champ `ui` ne porte pas de
+      // données.
+      type: 'ui',
+      name: 'createdAtResume',
+      label: 'Créée le',
+      admin: {
+        position: 'sidebar',
+        components: {
+          Field: '/payload/admin/orders/OrderCreatedAtField.tsx#OrderCreatedAtField',
+        },
+      },
+    },
+    {
+      name: 'paidAt',
+      type: 'date',
+      label: 'Payée le',
+      access: lockedAfterCreate,
+      admin: {
+        position: 'sidebar',
       },
     },
     {
@@ -231,16 +282,34 @@ export const Orders: CollectionConfig = {
       fields: addressFields(),
     },
     {
-      name: 'billingAddress',
-      type: 'group',
-      label: 'Adresse de facturation',
-      access: lockedAfterCreate,
+      // Champ `ui` dédié plutôt qu'un chemin imbriqué
+      // `shippingAddress.fullName` dans `defaultColumns` ou qu'un Cell posé
+      // sur le groupe `shippingAddress` lui-même : les deux donneraient un
+      // EN-TÊTE DE COLONNE dérivé du libellé du champ (« Nom complet » ou
+      // « Adresse de livraison > Nom complet »), jamais « Client » — voir
+      // `OrderClientCell.tsx`.
+      type: 'ui',
+      name: 'clientResume',
+      label: 'Client',
       admin: {
-        description:
-          'Dupliquée depuis la livraison par le webhook si le checkout ne ' +
-          'collecte pas d’adresse de facturation distincte (étape 8).',
+        components: {
+          Cell: '/payload/admin/orders/OrderClientCell.tsx#OrderClientCell',
+        },
       },
-      fields: addressFields(),
+    },
+    {
+      // Champ `ui` dédié plutôt qu'un Cell posé sur `lines` lui-même : la
+      // colonne doit s'intituler « Contenu » alors que la section du
+      // formulaire garde son libellé « Lignes » — voir
+      // `OrderContentCell.tsx`.
+      type: 'ui',
+      name: 'contenuResume',
+      label: 'Contenu',
+      admin: {
+        components: {
+          Cell: '/payload/admin/orders/OrderContentCell.tsx#OrderContentCell',
+        },
+      },
     },
     {
       name: 'lines',
@@ -334,60 +403,84 @@ export const Orders: CollectionConfig = {
       access: lockedAfterCreate,
     },
     {
-      name: 'stripeSessionId',
-      type: 'text',
-      required: true,
-      index: true,
-      label: 'Session Stripe',
-      access: lockedAfterCreate,
+      // Repli technique — replié par défaut (`initCollapsed`) : adresse de
+      // facturation (si distincte) + identifiants Stripe + marqueurs
+      // d'effet du webhook, jamais utiles au quotidien (« descente de
+      // previews »). Purement présentationnel (`CollapsibleField` ne peut
+      // structurellement pas porter de `name` — recon 2026-08-21) : ne
+      // change ni le nom ni le chemin de données des champs qu'il contient,
+      // ni leur verrouillage (`lockedAfterCreate`) — `flattenTopLevelFields`
+      // les traverse comme s'ils étaient encore au premier niveau
+      // (`Orders.test.ts`), et `payload-types.ts` n'en est pas affecté.
+      type: 'collapsible',
+      label: 'Technique',
       admin: {
-        description:
-          "Clé d'idempotence du webhook avec « Type » (étape 9, étendue " +
-          "2026-08-20) — une même session ne crée jamais deux commandes du " +
-          'MÊME type, mais peut légitimement porter DEUX commandes (une ' +
-          '« Commande » + une « Précommande ») pour un panier mixte.',
+        initCollapsed: true,
       },
-    },
-    {
-      name: 'stripePaymentIntentId',
-      type: 'text',
-      label: 'Intention de paiement Stripe',
-      access: lockedAfterCreate,
-    },
-    {
-      name: 'paidAt',
-      type: 'date',
-      label: 'Payée le',
-      access: lockedAfterCreate,
-    },
-    {
-      name: 'stockDecremented',
-      type: 'checkbox',
-      required: true,
-      defaultValue: false,
-      label: 'Stock décrémenté',
-      access: lockedAfterCreate,
-      admin: {
-        readOnly: true,
-        description:
-          'Marqueur technique du webhook (issue #64 — reprise après échec partiel) : ' +
-          "le stock des lignes de cette commande a-t-il déjà été décrémenté ? Un rejeu " +
-          "Stripe ne redécrémente jamais tant que ce marqueur est vrai. Ne se modifie jamais à la main.",
-      },
-    },
-    {
-      name: 'confirmationSent',
-      type: 'checkbox',
-      required: true,
-      defaultValue: false,
-      label: 'E-mail de confirmation envoyé',
-      access: lockedAfterCreate,
-      admin: {
-        readOnly: true,
-        description:
-          "Marqueur technique du webhook (issue #64) : l'e-mail de confirmation de cette " +
-          "commande a-t-il déjà été envoyé ? Ne se modifie jamais à la main.",
-      },
+      fields: [
+        {
+          name: 'billingAddress',
+          type: 'group',
+          label: 'Adresse de facturation',
+          access: lockedAfterCreate,
+          admin: {
+            description:
+              'Dupliquée depuis la livraison par le webhook si le checkout ne ' +
+              'collecte pas d’adresse de facturation distincte (étape 8).',
+          },
+          fields: addressFields(),
+        },
+        {
+          name: 'stripeSessionId',
+          type: 'text',
+          required: true,
+          index: true,
+          label: 'Session Stripe',
+          access: lockedAfterCreate,
+          admin: {
+            description:
+              "Clé d'idempotence du webhook avec « Type » (étape 9, étendue " +
+              "2026-08-20) — une même session ne crée jamais deux commandes du " +
+              'MÊME type, mais peut légitimement porter DEUX commandes (une ' +
+              '« Commande » + une « Précommande ») pour un panier mixte.',
+          },
+        },
+        {
+          name: 'stripePaymentIntentId',
+          type: 'text',
+          label: 'Intention de paiement Stripe',
+          access: lockedAfterCreate,
+        },
+        {
+          name: 'stockDecremented',
+          type: 'checkbox',
+          required: true,
+          defaultValue: false,
+          label: 'Stock décrémenté',
+          access: lockedAfterCreate,
+          admin: {
+            readOnly: true,
+            description:
+              'Marqueur technique du webhook (issue #64 — reprise après échec partiel) : ' +
+              "le stock des lignes de cette commande a-t-il déjà été décrémenté ? Un rejeu " +
+              "Stripe ne redécrémente jamais tant que ce marqueur est vrai. Ne se modifie jamais à la main.",
+          },
+        },
+        {
+          name: 'confirmationSent',
+          type: 'checkbox',
+          required: true,
+          defaultValue: false,
+          label: 'E-mail de confirmation envoyé',
+          access: lockedAfterCreate,
+          admin: {
+            readOnly: true,
+            description:
+              "Marqueur technique du webhook (issue #64) : l'e-mail de confirmation de cette " +
+              "commande a-t-il déjà été envoyé ? Ne se modifie jamais à la main.",
+          },
+        },
+      ],
     },
   ],
 }

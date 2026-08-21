@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { Access, Field } from 'payload'
+import { flattenTopLevelFields } from 'payload/shared'
 
 import { Orders } from './Orders.ts'
 
@@ -18,6 +19,34 @@ const noUser = { req: { user: null } } as Parameters<Access>[0]
 const adminUser = { req: { user: { role: 'admin' } } } as Parameters<Access>[0]
 const editorUser = { req: { user: { role: 'editor' } } } as Parameters<Access>[0]
 
+/**
+ * Traversée RÉCURSIVE (pas une simple lecture à plat) : `flattenTopLevelFields`
+ * (`payload/shared`, exporté par le SDK — recon 2026-08-21) est l'utilitaire
+ * que Payload lui-même utilise en interne (colonnes de liste,
+ * `payload-types.ts`) pour aplatir `collapsible`/`row`. Sans lui, un champ
+ * verrouillé déplacé dans le repli « Technique » (`billingAddress`,
+ * `stripeSessionId`, `stripePaymentIntentId`, `stockDecremented`,
+ * `confirmationSent` — cf. `Orders.ts`) disparaîtrait silencieusement d'une
+ * lecture à plat de `Orders.fields` : le test resterait VERT mais ne
+ * vérifierait plus RIEN sur ce champ (régression de couverture silencieuse,
+ * pas un échec — recon 2026-08-21). Utilisée par TOUS les `describe`
+ * ci-dessous (une seule traversée, jamais une lecture à plat locale qui
+ * regarderait dans son dos le repli technique).
+ *
+ * Appelée SANS options : les groupes NOMMÉS (`shippingAddress`/
+ * `billingAddress`) restent des entrées uniques (pas de hoisting de leurs
+ * sous-champs — comportement par défaut, `moveSubFieldsToTop` non posé),
+ * exactement comme la lecture à plat précédente les voyait. Les champs `ui`
+ * purement présentationnels (`clientResume`, `contenuResume`,
+ * `createdAtResume`) sont exclus par défaut (`keepPresentationalFields` non
+ * posé) : ils n'ont de toute façon ni `name` de données à verrouiller ni
+ * `access` (le type `UIField` ne le porte pas), leur absence d'ici ne change
+ * aucune des assertions ci-dessous.
+ */
+function topLevelFields(): (Field & { name?: string })[] {
+  return flattenTopLevelFields(Orders.fields) as (Field & { name?: string })[]
+}
+
 describe('Orders.access — create fermé, quel que soit le rôle', () => {
   it('create renvoie toujours false (aucune voie API/back-office, seul le webhook écrit en overrideAccess)', () => {
     const create = Orders.access?.create as Access
@@ -29,10 +58,6 @@ describe('Orders.access — create fermé, quel que soit le rôle', () => {
 
 describe('Orders.fields — verrouillage en écriture après création', () => {
   const STATUS_FIELD = 'status'
-
-  function topLevelFields(): (Field & { name?: string })[] {
-    return Orders.fields as (Field & { name?: string })[]
-  }
 
   it('`status` est le SEUL champ sans `access.update` verrouillé (`lockedAfterCreate`)', () => {
     const unlockedFields = topLevelFields()
@@ -80,7 +105,7 @@ describe('Orders.fields — verrouillage en écriture après création', () => {
 
 describe('Orders.fields — marqueurs techniques `stockDecremented`/`confirmationSent` (issue #64)', () => {
   function findField(name: string): (Field & { name?: string }) | undefined {
-    return (Orders.fields as (Field & { name?: string })[]).find((field) => field.name === name)
+    return topLevelFields().find((field) => field.name === name)
   }
 
   for (const name of ['stockDecremented', 'confirmationSent'] as const) {
@@ -101,7 +126,7 @@ describe('Orders.fields — marqueurs techniques `stockDecremented`/`confirmatio
 
 describe('Orders.fields — `orderType` (scission commande/précommande, client 2026-08-20)', () => {
   function findField(name: string): (Field & { name?: string }) | undefined {
-    return (Orders.fields as (Field & { name?: string })[]).find((field) => field.name === name)
+    return topLevelFields().find((field) => field.name === name)
   }
 
   it('existe, verrouillé après création (marqueur posé UNE fois par le webhook, jamais retouché)', () => {
@@ -127,9 +152,15 @@ describe('Orders.indexes — idempotence webhook sur `(stripeSessionId, orderTyp
   })
 
   it('`stripeSessionId` n\'est plus unique seul (le couple avec `orderType` l\'est)', () => {
-    const field = (Orders.fields as (Field & { name?: string })[]).find(
-      (f) => f.name === 'stripeSessionId',
-    ) as { unique?: boolean } | undefined
+    // Recherche RÉCURSIVE (`topLevelFields()`) : `stripeSessionId` vit
+    // désormais dans le repli « Technique » (`Orders.ts`) — une lecture à
+    // plat de `Orders.fields` ne le trouverait plus et cette assertion
+    // passerait pour la MAUVAISE raison (`undefined?.unique` est aussi
+    // falsy), sans plus rien vérifier de réel.
+    const field = topLevelFields().find((f) => f.name === 'stripeSessionId') as
+      | { unique?: boolean }
+      | undefined
+    expect(field).toBeDefined()
     expect(field?.unique).toBeFalsy()
   })
 })
