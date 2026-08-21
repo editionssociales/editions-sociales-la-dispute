@@ -22,14 +22,17 @@ const MICROCOPY_CLASS = "mt-2 font-sans text-xs font-bold uppercase tracking-[.0
 const IN_STOCK_COPY = "En stock — expédié sous 48 h";
 
 export function BuyLinksList({ book }: { book: Book }) {
-  // Liens libraires de repli — lus une seule fois, jamais jetés quel que
-  // soit le statut (bug corrigé : `upcoming`/`unavailable` les perdaient
-  // via un early return qui court-circuitait ce bloc). Seul le lien
-  // EXACTEMENT repris par le CTA principal (`book.permalink`, cf.
-  // `resolveNativePurchase` — priorité ParisLibrairies puis LaLibrairie
-  // pour `external`) est exclu du secondaire, pour ne pas le répéter :
-  // l'autre lien libraire, s'il existe, reste affiché (bug corrigé :
-  // `external` les perdait tous les deux, y compris celui non repris).
+  // Liens libraires de repli — lus une seule fois, rendus par les CINQ
+  // branches de statut sans exception (bug signalé par la cliente,
+  // corrigé en plusieurs passes : `upcoming`/`unavailable` les perdaient
+  // via un early return qui court-circuitait ce bloc, puis `preorder` et
+  // le panier natif de `canAddToCart` — LE cas majoritaire du catalogue —
+  // les perdaient encore). Seul le lien EXACTEMENT repris par le CTA
+  // principal (`book.permalink`, cf. `resolveNativePurchase` — priorité
+  // ParisLibrairies puis LaLibrairie pour `external`) est exclu du
+  // secondaire, pour ne pas le répéter : l'autre lien libraire, s'il existe,
+  // reste affiché (bug corrigé : `external` les perdait tous les deux, y
+  // compris celui non repris).
   const secondary = [
     book.buy.parislibrairies && book.buy.parislibrairies !== book.permalink
       ? { label: "ParisLibrairies", href: book.buy.parislibrairies }
@@ -83,6 +86,7 @@ export function BuyLinksList({ book }: { book: Book }) {
           Expédié à parution
           {book.publishedAt ? ` — le ${formatDateFr(book.publishedAt)}` : ""}
         </p>
+        {secondaryLinks}
       </div>
     );
   }
@@ -109,6 +113,7 @@ export function BuyLinksList({ book }: { book: Book }) {
         {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
         <AddToCartButton id={book.id} className="mt-3 w-full" />
         <p className={MICROCOPY_CLASS}>{IN_STOCK_COPY}</p>
+        {secondaryLinks}
       </div>
     );
   }

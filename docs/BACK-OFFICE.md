@@ -77,14 +77,40 @@ une page par erreur.
   Confidentialité ; pied de page (adresse, diffusion) ; liens réseaux
   sociaux (pied de page seulement — jamais en haut de page — s'il y en a au
   moins un) ; titre et description par défaut utilisés par Google.
-- **Page À propos** : les textes du haut de page, la citation, la
-  présentation des deux maisons, et des sections libres.
-- **Page Souscription** : le contenu des neuf cartes de contreparties (15 à
-  1 000 €) — le lot associé à chaque palier. Le récit de la page (texte de
-  campagne, objectifs, visuels) n'est pas éditable ici, il vient du code.
-  **Les montants ne se modifient pas ici** : ils sont calés sur les paliers
-  de paiement définis ailleurs, vous ne touchez que le texte qui les
-  accompagne.
+- **Pages des maisons** (pages `/editions/editions-sociales` et
+  `/editions/la-dispute`, ex-page À propos) :
+  - un onglet **Maisons** avec, pour chaque maison, le nom affiché, le
+    sous-titre, la description, et le **bureau éditorial** — une ligne par
+    personne (ajoutez, retirez ou réordonnez les lignes librement, chaque
+    maison garde le sien) ;
+  - un onglet **Équipe** avec la liste des noms de l'équipe permanente —
+    affichée à l'identique sur les deux pages ;
+  - un onglet **Dépôt de manuscrit**, lui aussi identique sur les deux
+    pages : l'adresse e-mail à laquelle les manuscrits sont envoyés, et un
+    champ de texte qui, si vous le remplissez, remplace entièrement le
+    paragraphe par défaut (adresse comprise — dans ce cas, pensez à inclure
+    l'adresse dans votre texte).
+- **Page Contact** : le titre et le texte d'introduction affichés en haut de
+  `/contact`. Le reste de la page (formulaire ou message d'indisponibilité de
+  l'envoi) n'est pas éditable ici.
+- **Page Souscription** a quatre onglets :
+  - **Titre** : les trois lignes du grand titre en haut de page (« 100 ans »,
+    « d'édition marxiste : » et la phrase d'appel).
+  - **Récit** : les quatre sections du texte de campagne (« Édition
+    indépendante et critique », « La guerre culturelle », « Les éditions
+    sociales et La Dispute », « Nous avons besoin de vous »). Pour chacune :
+    un titre, une 2ᵉ ligne facultative affichée en italique juste dessous, et
+    le texte de la section. Dans le texte, le **gras** est repris tel quel
+    sur le site ; **le souligné, lui, ne fait rien de visible sur le site** —
+    utilisez le gras si vous voulez mettre un passage en valeur.
+  - **Objectifs** : la phrase qui accompagne chacun des trois paliers de la
+    jauge (50 000 €, 80 000 € et 100 000 €). **Les montants et les intitulés
+    ne se modifient pas ici** : ils sont calés sur les paliers de la jauge de
+    collecte, vous ne touchez que le texte qui les accompagne.
+  - **Contreparties** : le contenu des neuf cartes de contreparties (15 à
+    1 000 €) — le lot associé à chaque palier. **Les montants ne se modifient
+    pas ici** non plus : ils sont calés sur les paliers de paiement définis
+    ailleurs, vous ne touchez que le texte qui les accompagne.
 
 - **Mise en avant** (bandeau ponctuel sur l'accueil, menu **Mises en avant**) :
   donnez un titre, un texte court, des dates de début/fin, cochez « Actif ».

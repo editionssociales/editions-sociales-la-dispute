@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   mergePageAPropos,
+  mergePageContact,
   mergePageSouscription,
   mergePagesLegales,
   mergeReglagesSite,
@@ -173,22 +174,16 @@ describe("mergeReglagesSite — pages-legales (pied/SEO) vide ⇒ layout et foot
   });
 });
 
-describe("mergePageAPropos — global vide ⇒ page actuelle, verbatim", () => {
-  it("global absent → textes par défaut exacts + maisons d'EDITION_LIST + sections null", () => {
+describe("mergePageAPropos — global vide ⇒ pages maisons actuelles, verbatim", () => {
+  it("global absent → équipe/dépôt manuscrit par défaut + maisons d'EDITION_LIST + bureau par défaut", () => {
     const merged = mergePageAPropos(null);
-    expect(merged.herosTitre).toBe(
-      "La maison de la pensée critique et des sciences sociales",
+    expect(merged.equipePermanente).toBe(
+      "Noémie Brun, Clara Laspalas, Marina Simonin et Nicolas Vieillescazes",
     );
-    expect(merged.herosIntro).toBe(
-      "Une maison d'édition de la pensée critique et des sciences sociales, portée par deux fonds historiques — sans rien perdre de ce qui fait leur singularité.",
-    );
-    expect(merged.citation).toBe(
-      "« Renforcer la puissance de penser et d'agir de celles et ceux qui veulent transformer le monde et changer la vie. »",
-    );
-    expect(merged.citationAttribution).toBe(
-      "Campagne 2024, « Sauvez les Éditions sociales et La Dispute »",
-    );
-    expect(merged.sections).toBeNull();
+    expect(merged.depotManuscrit).toEqual({
+      email: "manuscritsldes@gmail.com",
+      html: null,
+    });
     expect(merged.maisons).toEqual([
       {
         slug: "editions-sociales",
@@ -197,6 +192,7 @@ describe("mergePageAPropos — global vide ⇒ page actuelle, verbatim", () => {
         tagline: EDITIONS["editions-sociales"].tagline,
         description: EDITIONS["editions-sociales"].description,
         accent: EDITIONS["editions-sociales"].accent,
+        bureau: merged.maisons[0].bureau,
       },
       {
         slug: "la-dispute",
@@ -205,8 +201,16 @@ describe("mergePageAPropos — global vide ⇒ page actuelle, verbatim", () => {
         tagline: EDITIONS["la-dispute"].tagline,
         description: EDITIONS["la-dispute"].description,
         accent: EDITIONS["la-dispute"].accent,
+        bureau: merged.maisons[1].bureau,
       },
     ]);
+    // Bureaux par défaut verrouillés (extraits verbatim de l'ex-constante
+    // `BUREAUX` du JSX) — un seul membre au hasard par maison suffit à
+    // détecter une régression de source, la longueur verrouille le compte.
+    expect(merged.maisons[0].bureau).toHaveLength(13);
+    expect(merged.maisons[0].bureau).toContain("Alexia Blin");
+    expect(merged.maisons[1].bureau).toHaveLength(13);
+    expect(merged.maisons[1].bureau).toContain("Hélène Stevens");
   });
 
   it("surcharge d'une maison par slug : champ vide = défaut, l'autre maison intacte", () => {
@@ -225,27 +229,62 @@ describe("mergePageAPropos — global vide ⇒ page actuelle, verbatim", () => {
     expect(merged.maisons.map((m) => m.slug)).toEqual(["editions-sociales", "la-dispute"]);
   });
 
-  it("sections : titre requis, richText vide toléré (section titre seul)", () => {
-    const merged = mergePageAPropos({
-      id: 1,
-      sections: [
-        { titre: "Nous rencontrer", contenu: lexicalDoc("Toutes nos dates.") },
-        { titre: "  ", contenu: lexicalDoc("Perdue (sans titre).") },
-        { titre: "Sans contenu", contenu: null },
-      ],
-    });
-    expect(merged.sections).not.toBeNull();
-    expect(merged.sections).toHaveLength(2);
-    expect(merged.sections![0].titre).toBe("Nous rencontrer");
-    expect(merged.sections![0].html).toContain("Toutes nos dates.");
-    expect(merged.sections![1]).toEqual({ titre: "Sans contenu", html: null });
+  it("équipe permanente : partagée, indépendante des maisons", () => {
+    const merged = mergePageAPropos({ id: 1, equipe: { permanente: "A et B" } });
+    expect(merged.equipePermanente).toBe("A et B");
   });
 
-  it("tableau de sections vide ou sans titre valide → null (section « Le catalogue » en dur)", () => {
-    expect(mergePageAPropos({ id: 1, sections: [] }).sections).toBeNull();
-    expect(
-      mergePageAPropos({ id: 1, sections: [{ titre: " ", contenu: null }] }).sections,
-    ).toBeNull();
+  it("bureau éditorial : une ligne vide est ignorée, tableau vide ⇒ bureau par défaut de CETTE maison", () => {
+    const merged = mergePageAPropos({
+      id: 1,
+      maisons: [
+        {
+          maison: "editions-sociales",
+          bureau: [{ nom: " Nouvelle personne " }, { nom: "  " }],
+        },
+        { maison: "la-dispute", bureau: [] },
+      ],
+    });
+    const [es, ld] = merged.maisons;
+    expect(es.bureau).toEqual(["Nouvelle personne"]);
+    // La Dispute n'a rien saisi : son propre défaut, pas celui d'ES.
+    expect(ld.bureau).toHaveLength(13);
+    expect(ld.bureau).toContain("Noémie Brun");
+  });
+
+  it("dépôt de manuscrit : email seul surchargé, texte par défaut (html null) inchangé", () => {
+    const merged = mergePageAPropos({ id: 1, depotManuscrit: { email: "nouveau@exemple.fr" } });
+    expect(merged.depotManuscrit).toEqual({ email: "nouveau@exemple.fr", html: null });
+  });
+
+  it("dépôt de manuscrit : texte saisi ⇒ html non nul, remplace tout le bloc par défaut", () => {
+    const merged = mergePageAPropos({
+      id: 1,
+      depotManuscrit: { texte: lexicalDoc("Nouveau texte de dépôt.") },
+    });
+    expect(merged.depotManuscrit.html).toContain("Nouveau texte de dépôt.");
+  });
+});
+
+describe("mergePageContact — global vide ⇒ page /contact actuelle, verbatim", () => {
+  it("global absent → titre/intro par défaut exacts", () => {
+    const merged = mergePageContact(null);
+    expect(merged.titre).toBe("Contact");
+    expect(merged.intro).toBe(
+      "Une question sur un livre, une commande, une proposition éditoriale ? Écrivez-nous, nous vous répondrons dès que possible.",
+    );
+  });
+
+  it("document sauvegardé sans saisie (champs vides/espaces) → mêmes défauts", () => {
+    expect(mergePageContact({ id: 1, titre: "  ", intro: null })).toEqual(
+      mergePageContact(null),
+    );
+  });
+
+  it("chaque champ saisi surcharge son défaut indépendamment", () => {
+    const merged = mergePageContact({ id: 1, titre: "Écrivez-nous" });
+    expect(merged.titre).toBe("Écrivez-nous");
+    expect(merged.intro).toBe(mergePageContact(null).intro);
   });
 });
 
@@ -352,5 +391,109 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
     expect(merged.contreparties[0].items).toEqual([
       { texte: "Un seul lot", alternative: false },
     ]);
+  });
+});
+
+describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-08-21)", () => {
+  it("global absent → titre, quatre sections et objectifs en textes par défaut, verbatim", () => {
+    const merged = mergePageSouscription(null);
+    expect(merged.titre).toEqual({
+      titre: "100 ans",
+      sousTitre: "d’édition marxiste :",
+      demande: "aidez-nous à poursuivre l’histoire.",
+    });
+    expect(merged.recit.danger).toEqual({
+      titre: "Édition indépendante et critique :",
+      titreItalique: "Danger maximal",
+      corps: null,
+    });
+    expect(merged.recit.guerre).toEqual({
+      titre: "La guerre culturelle est aussi",
+      titreItalique: "une guerre matérielle",
+      corps: null,
+    });
+    // Sections sans 2ᵉ ligne (une seule ligne dans le bandeau) : `titreItalique` reste `null`.
+    expect(merged.recit.maisons).toEqual({
+      titre: "Les éditions sociales et La Dispute",
+      titreItalique: null,
+      corps: null,
+    });
+    expect(merged.recit.appel).toEqual({
+      titre: "Nous avons besoin de vous",
+      titreItalique: null,
+      corps: null,
+    });
+    expect(merged.objectifs).toEqual({
+      descriptif50:
+        "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+      descriptif80:
+        "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
+      descriptif100:
+        "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+    });
+  });
+
+  it("global absent ou jamais rempli → même rendu (titre/récit/objectifs)", () => {
+    expect(mergePageSouscription(undefined).titre).toEqual(mergePageSouscription(null).titre);
+    expect(mergePageSouscription({ id: 1 }).recit).toEqual(mergePageSouscription(null).recit);
+    expect(mergePageSouscription({ id: 1 }).objectifs).toEqual(
+      mergePageSouscription(null).objectifs,
+    );
+  });
+
+  it("surcharge du titre : champ par champ, les deux autres restent au défaut", () => {
+    const merged = mergePageSouscription({ id: 1, titre: "80 ans" });
+    expect(merged.titre.titre).toBe("80 ans");
+    expect(merged.titre.sousTitre).toBe("d’édition marxiste :");
+    expect(merged.titre.demande).toBe("aidez-nous à poursuivre l’histoire.");
+  });
+
+  it("surcharge d'une section : titre/2ᵉ ligne/corps indépendants, les trois autres sections intactes", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      danger: {
+        titre: "Nouveau titre",
+        titreItalique: "Nouvelle 2ᵉ ligne",
+        corps: lexicalDoc("Nouveau corps."),
+      },
+    });
+    expect(merged.recit.danger.titre).toBe("Nouveau titre");
+    expect(merged.recit.danger.titreItalique).toBe("Nouvelle 2ᵉ ligne");
+    expect(merged.recit.danger.corps).not.toBeNull();
+    expect(merged.recit.danger.corps).toContain("Nouveau corps.");
+    // Les trois autres sections n'ont pas bougé.
+    expect(merged.recit.guerre).toEqual({
+      titre: "La guerre culturelle est aussi",
+      titreItalique: "une guerre matérielle",
+      corps: null,
+    });
+  });
+
+  it("une section sans 2ᵉ ligne par défaut (maisons/appel) peut en recevoir une par saisie", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      maisons: { titreItalique: "Ajoutée en admin" },
+    });
+    expect(merged.recit.maisons.titre).toBe("Les éditions sociales et La Dispute");
+    expect(merged.recit.maisons.titreItalique).toBe("Ajoutée en admin");
+  });
+
+  it("corps vide (éditeur ouvert puis laissé vide) → null, comme un corps jamais saisi", () => {
+    const merged = mergePageSouscription({ id: 1, appel: { corps: lexicalVide() } });
+    expect(merged.recit.appel.corps).toBeNull();
+  });
+
+  it("surcharge d'une seule description d'objectif : les deux autres restent au défaut", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      objectifs: { descriptif80: "Nouveau texte pour 80 000 €." },
+    });
+    expect(merged.objectifs.descriptif50).toBe(
+      "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+    );
+    expect(merged.objectifs.descriptif80).toBe("Nouveau texte pour 80 000 €.");
+    expect(merged.objectifs.descriptif100).toBe(
+      "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+    );
   });
 });

@@ -6,6 +6,7 @@ import type { Accent } from "./format";
 import type { EditionSlug } from "./types";
 import type {
   PageAPropos,
+  PageContact,
   PageSouscription,
   PagesLegales,
 } from "@/payload-types";
@@ -138,13 +139,15 @@ export function mergeReglagesSite(
 }
 
 /* ------------------------------------------------------------------ */
-/* Page À propos (lot 3)                                               */
+/* Pages des maisons (ex-lot 3 « Page À propos »)                       */
 /* ------------------------------------------------------------------ */
 
 /**
  * Une maison de la section « Deux maisons » : textes surchargés champ par
  * champ depuis le global, tout le reste (slug, lien « Découvrir »,
- * couleur d'accent) vient d'`EDITION_LIST` — jamais éditable.
+ * couleur d'accent) vient d'`EDITION_LIST` — jamais éditable. `bureau` :
+ * liste des membres du bureau éditorial DE CETTE MAISON, dans l'ordre —
+ * jamais vide (retombe sur `BUREAU_DEFAUT[slug]`, jamais un tableau vide).
  */
 export interface MaisonAPropos {
   slug: EditionSlug;
@@ -153,33 +156,73 @@ export interface MaisonAPropos {
   tagline: string;
   description: string;
   accent: Accent;
+  bureau: string[];
 }
 
-/** Section libre {titre, richText} — `html` null = section titre seul. */
-export interface SectionAPropos {
-  titre: string;
+/**
+ * Bloc « Dépôt de manuscrit » — identique sur les deux pages maisons (le
+ * JSX de `editions/[slug]/page.tsx` ne l'indexe par aucun slug). `html` non
+ * nul REMPLACE tout le texte par défaut, `email` y compris ; `html` nul =
+ * les deux paragraphes par défaut, avec `email` inséré dans la phrase
+ * d'accroche (mailto inline).
+ */
+export interface DepotManuscritContent {
+  email: string;
   html: SafeHtml | null;
 }
 
 export interface PageAProposContent {
-  herosTitre: string;
-  herosIntro: string;
-  citation: string;
-  citationAttribution: string;
+  /** Noms de l'équipe permanente — identique sur les deux pages maisons. */
+  equipePermanente: string;
   maisons: MaisonAPropos[];
-  /** `null` = aucune section saisie : la page rend sa section « Le catalogue » en dur. */
-  sections: SectionAPropos[] | null;
+  depotManuscrit: DepotManuscritContent;
 }
 
-/** Textes actuels de `a-propos/page.tsx`, extraits verbatim (iso-rendu). */
-const A_PROPOS_DEFAUT = {
-  herosTitre: "La maison de la pensée critique et des sciences sociales",
-  herosIntro:
-    "Une maison d'édition de la pensée critique et des sciences sociales, portée par deux fonds historiques — sans rien perdre de ce qui fait leur singularité.",
-  citation:
-    "« Renforcer la puissance de penser et d'agir de celles et ceux qui veulent transformer le monde et changer la vie. »",
-  citationAttribution: "Campagne 2024, « Sauvez les Éditions sociales et La Dispute »",
+/**
+ * Textes actuels d'`editions/[slug]/page.tsx`, extraits verbatim (iso-rendu).
+ * ⚠️ Attribution des bureaux éditoriaux : les 2 variantes du PDF maquette
+ * répètent la même phrase d'intro avec des listes différentes — source non
+ * fiable pour trancher qui est qui. La répartition ci-dessous (antérieure à
+ * la maquette) est conservée telle quelle ; à confirmer avec le client avant
+ * tout changement (même réserve que l'ex-constante `BUREAUX` du JSX).
+ */
+const EQUIPE_PERMANENTE_DEFAUT =
+  "Noémie Brun, Clara Laspalas, Marina Simonin et Nicolas Vieillescazes";
+
+const BUREAU_DEFAUT: Record<EditionSlug, string[]> = {
+  "la-dispute": [
+    "Noémie Brun",
+    "Alexis Cukier",
+    "Jérôme Deauvieau",
+    "Pauline Delage",
+    "Étienne Douat",
+    "Amélie Jeammet",
+    "Danièle Kergoat",
+    "Aurore Koechlin",
+    "Richard Lagache",
+    "Clara Laspalas",
+    "Jacqueline Martinez",
+    "Marina Simonin",
+    "Hélène Stevens",
+  ],
+  "editions-sociales": [
+    "Alexia Blin",
+    "Yohann Douet",
+    "Isabelle Garo",
+    "Marion Leclair",
+    "Alix Bouffard",
+    "Alexandre Feron",
+    "Vincent Heimendinger",
+    "Antony Burlaud",
+    "Guillaume Fondu",
+    "Richard Lagache",
+    "Jean Quétier",
+    "Alexis Cukier",
+    "Quentin Fondu",
+  ],
 };
+
+const MANUSCRITS_EMAIL_DEFAUT = "manuscritsldes@gmail.com";
 
 /** Fusion du global `page-a-propos` — champ par champ, vide = défaut dur. */
 export function mergePageAPropos(
@@ -190,6 +233,10 @@ export function mergePageAPropos(
     // entrées : réordonner le tableau dans /admin ne peut pas intervertir
     // les textes des deux maisons.
     const surcharge = global?.maisons?.find((m) => m.maison === edition.slug);
+    const bureauSaisi = (surcharge?.bureau ?? []).flatMap((ligne) => {
+      const nom = ligne.nom?.trim();
+      return nom ? [nom] : [];
+    });
     return {
       slug: edition.slug,
       shortName: edition.shortName,
@@ -197,25 +244,17 @@ export function mergePageAPropos(
       name: texteOuDefaut(surcharge?.nom, edition.name),
       tagline: texteOuDefaut(surcharge?.tagline, edition.tagline),
       description: texteOuDefaut(surcharge?.description, edition.description),
+      bureau: bureauSaisi.length > 0 ? bureauSaisi : BUREAU_DEFAUT[edition.slug],
     };
   });
 
-  const sections = (global?.sections ?? []).flatMap((section) => {
-    const titre = section.titre?.trim();
-    if (!titre) return [];
-    return [{ titre, html: richTextToSafeHtml(section.contenu) }];
-  });
-
   return {
-    herosTitre: texteOuDefaut(global?.heros?.titre, A_PROPOS_DEFAUT.herosTitre),
-    herosIntro: texteOuDefaut(global?.heros?.intro, A_PROPOS_DEFAUT.herosIntro),
-    citation: texteOuDefaut(global?.citation?.texte, A_PROPOS_DEFAUT.citation),
-    citationAttribution: texteOuDefaut(
-      global?.citation?.attribution,
-      A_PROPOS_DEFAUT.citationAttribution,
-    ),
+    equipePermanente: texteOuDefaut(global?.equipe?.permanente, EQUIPE_PERMANENTE_DEFAUT),
     maisons,
-    sections: sections.length > 0 ? sections : null,
+    depotManuscrit: {
+      email: texteOuDefaut(global?.depotManuscrit?.email, MANUSCRITS_EMAIL_DEFAUT),
+      html: richTextToSafeHtml(global?.depotManuscrit?.texte),
+    },
   };
 }
 
@@ -258,13 +297,60 @@ export interface ContrepartieSouscription {
 }
 
 /**
- * Contenu éditable de `/souscription` : uniquement les 9 cartes de
- * contreparties. Le récit (ask, sections, objectifs, CTA final) est
- * éditorial figé dans `souscription/page.tsx` — livraison client 2026-07-24,
- * pas de CMS pour ces textes-là (consigne : rien qui ne soit un extrait des
- * documents fournis).
+ * Une section du récit (refonte sobre, maquette client 2026-08-21) :
+ * `titreItalique` est la 2ᵉ ligne optionnelle du bandeau (`null` = une seule
+ * ligne) ; `corps` est `null` quand le champ CMS est vide — la page rend
+ * alors SES PROPRES paragraphes JSX verbatim (même contrat que
+ * `PagesLegales`/`LegalCmsBody`, pas celui de `PageAPropos.sections` où
+ * `null` signifierait « rien à afficher » : ici il y a TOUJOURS un corps par
+ * défaut, chaque section a une identité fixe).
+ *
+ * Soulignement Lexical → surlignage couleur : ÉTUDIÉ et ABANDONNÉ.
+ * `convertLexicalToHTML` (`catalogue-pg-map.ts:lexicalToHtml`) rend le
+ * soulignement en `<span style="text-decoration: underline;">…</span>`, or
+ * `sanitizeCms` n'admet AUCUN attribut sur `<span>` (`ALLOWED_ATTRIBUTES`,
+ * `cms-html.ts`) : le style est repris NU (constat empirique, `sanitize-html`
+ * direct) — le signal « souligné » est perdu avant même d'atteindre le
+ * rendu, aucun marqueur ne survit sur lequel accrocher une classe de
+ * surlignage. Le remapper proprement demanderait de modifier `sanitizeCms`
+ * (fabricant PARTAGÉ de `SafeHtml`, utilisé par les fiches livre et les
+ * pages légales) pour une sortie de bibliothèque tierce non contractuelle —
+ * hors budget et hors périmètre de cette page. Seul le gras (`<strong>`,
+ * préservé tel quel) reste disponible côté CMS ; documenté pour l'équipe
+ * dans `docs/BACK-OFFICE.md`.
+ */
+export interface RecitSectionContent {
+  titre: string;
+  titreItalique: string | null;
+  corps: SafeHtml | null;
+}
+
+/** Les trois descriptions des paliers de jauge — montants/intitulés dérivés de `CAMPAIGN_2026_PALIERS`, jamais du CMS. */
+export interface ObjectifsSouscriptionContent {
+  descriptif50: string;
+  descriptif80: string;
+  descriptif100: string;
+}
+
+/**
+ * Contenu éditable de `/souscription` (refonte sobre, 2026-08-21) : titre de
+ * l'ask, quatre sections du récit (`danger`/`guerre`/`maisons`/`appel` —
+ * couleurs et ordre figés par le design, PAS un tableau), descriptions des
+ * paliers de jauge, et les neuf cartes de contreparties (inchangées).
  */
 export interface PageSouscriptionContent {
+  titre: {
+    titre: string;
+    sousTitre: string;
+    demande: string;
+  };
+  recit: {
+    danger: RecitSectionContent;
+    guerre: RecitSectionContent;
+    maisons: RecitSectionContent;
+    appel: RecitSectionContent;
+  };
+  objectifs: ObjectifsSouscriptionContent;
   contreparties: ContrepartieSouscription[];
 }
 
@@ -281,9 +367,11 @@ function tierObligatoire(id: string): DonationTier {
  * Contreparties définitives de la campagne 2026 (PDF client « contreparties
  * dans l'ordre », livraison Clara du 2026-07-24), extraites **verbatim** —
  * une ligne par bande du PDF, les alternatives portées par la règle « ou ».
- * Les tests verrouillent ces valeurs (iso-rendu).
+ * Les tests verrouillent ces valeurs (iso-rendu). Type réduit au SEUL champ
+ * qu'elle couvre (`Pick`) : le récit (titre/sections/objectifs) a son propre
+ * bloc de défauts ci-dessous, concerns distincts.
  */
-const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
+const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
   contreparties: [
     {
       tier: tierObligatoire("palier-15"),
@@ -369,9 +457,86 @@ const SOUSCRIPTION_DEFAUT: PageSouscriptionContent = {
 };
 
 /**
- * Fusion du global `page-souscription` — bloc unique (contreparties) : un
- * array vide (ou dont toutes les entrées sont invalides) retombe sur les 9
- * cartes par défaut, un array rempli les remplace entièrement.
+ * Titre de l'ask — texte actuel de `souscription/page.tsx` (refonte sobre,
+ * maquette client 2026-08-21), extrait verbatim.
+ */
+const TITRE_DEFAUT = {
+  titre: "100 ans",
+  sousTitre: "d’édition marxiste :",
+  demande: "aidez-nous à poursuivre l’histoire.",
+};
+
+/**
+ * Titre (+ 2ᵉ ligne italique optionnelle) des quatre sections du récit —
+ * texte actuel, verbatim. Le CORPS par défaut (paragraphes, gras, surlignage)
+ * reste en JSX dans `souscription/page.tsx` (pas de JSX dans ce module `.ts`
+ * pur) : `corps: null` y déclenche le rendu de CE JSX, exactement comme
+ * `PagesLegales`/`LegalCmsBody` retombe sur ses `<LegalSection>` en dur.
+ */
+const RECIT_DEFAUT: Record<
+  keyof PageSouscriptionContent["recit"],
+  { titre: string; titreItalique: string | null }
+> = {
+  danger: {
+    titre: "Édition indépendante et critique :",
+    titreItalique: "Danger maximal",
+  },
+  guerre: {
+    titre: "La guerre culturelle est aussi",
+    titreItalique: "une guerre matérielle",
+  },
+  maisons: {
+    titre: "Les éditions sociales et La Dispute",
+    titreItalique: null,
+  },
+  appel: {
+    titre: "Nous avons besoin de vous",
+    titreItalique: null,
+  },
+};
+
+/** Descriptions actuelles des trois paliers de jauge — texte actuel, verbatim. */
+const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = {
+  descriptif50:
+    "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+  descriptif80:
+    "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
+  // TODO(contenu) : phrase possiblement tronquée dans le docx/la maquette (le
+  // point final manque, cf. PDF client) — conservée telle quelle.
+  descriptif100:
+    "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+};
+
+/** Chaîne saisie si non vide (espaces exclus), sinon `null` (pas de 2ᵉ ligne / pas de section). */
+function texteOuDefautNullable(
+  saisi: string | null | undefined,
+  defaut: string | null,
+): string | null {
+  const propre = saisi?.trim();
+  return propre ? propre : defaut;
+}
+
+/** Fusion d'une section du récit — champ par champ, vide = défaut dur (titre/2ᵉ ligne) ou `null` (corps, cf. `RecitSectionContent`). */
+function mergeRecitSection(
+  groupe:
+    | { titre?: string | null; titreItalique?: string | null; corps?: unknown }
+    | null
+    | undefined,
+  defaut: { titre: string; titreItalique: string | null },
+): RecitSectionContent {
+  return {
+    titre: texteOuDefaut(groupe?.titre, defaut.titre),
+    titreItalique: texteOuDefautNullable(groupe?.titreItalique, defaut.titreItalique),
+    corps: richTextToSafeHtml(groupe?.corps),
+  };
+}
+
+/**
+ * Fusion du global `page-souscription` (refonte sobre, 2026-08-21) — champ
+ * par champ pour le titre/récit/objectifs (vide = défaut dur ci-dessus) ;
+ * `contreparties` garde sa règle propre : un array vide (ou dont toutes les
+ * entrées sont invalides) retombe sur les 9 cartes par défaut, un array
+ * rempli les remplace entièrement (inchangé).
  */
 export function mergePageSouscription(
   global: PageSouscription | null | undefined,
@@ -387,7 +552,52 @@ export function mergePageSouscription(
   });
 
   return {
+    titre: {
+      titre: texteOuDefaut(global?.titre, TITRE_DEFAUT.titre),
+      sousTitre: texteOuDefaut(global?.sousTitre, TITRE_DEFAUT.sousTitre),
+      demande: texteOuDefaut(global?.demande, TITRE_DEFAUT.demande),
+    },
+    recit: {
+      danger: mergeRecitSection(global?.danger, RECIT_DEFAUT.danger),
+      guerre: mergeRecitSection(global?.guerre, RECIT_DEFAUT.guerre),
+      maisons: mergeRecitSection(global?.maisons, RECIT_DEFAUT.maisons),
+      appel: mergeRecitSection(global?.appel, RECIT_DEFAUT.appel),
+    },
+    objectifs: {
+      descriptif50: texteOuDefaut(global?.objectifs?.descriptif50, OBJECTIFS_DEFAUT.descriptif50),
+      descriptif80: texteOuDefaut(global?.objectifs?.descriptif80, OBJECTIFS_DEFAUT.descriptif80),
+      descriptif100: texteOuDefaut(
+        global?.objectifs?.descriptif100,
+        OBJECTIFS_DEFAUT.descriptif100,
+      ),
+    },
     contreparties:
       contreparties.length > 0 ? contreparties : SOUSCRIPTION_DEFAUT.contreparties,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Page Contact                                                        */
+/* ------------------------------------------------------------------ */
+
+export interface PageContactContent {
+  titre: string;
+  intro: string;
+}
+
+/** Textes actuels de `contact/page.tsx` (`PageHero`), extraits verbatim. */
+const CONTACT_DEFAUT: PageContactContent = {
+  titre: "Contact",
+  intro:
+    "Une question sur un livre, une commande, une proposition éditoriale ? Écrivez-nous, nous vous répondrons dès que possible.",
+};
+
+/** Fusion du global `page-contact` — champ par champ, vide = défaut dur. */
+export function mergePageContact(
+  global: PageContact | null | undefined,
+): PageContactContent {
+  return {
+    titre: texteOuDefaut(global?.titre, CONTACT_DEFAUT.titre),
+    intro: texteOuDefaut(global?.intro, CONTACT_DEFAUT.intro),
   };
 }

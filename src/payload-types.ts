@@ -108,12 +108,14 @@ export interface Config {
     'page-a-propos': PageAPropos;
     'page-souscription': PageSouscription;
     'pages-legales': PagesLegales;
+    'page-contact': PageContact;
   };
   globalsSelect: {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
     'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
     'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
     'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
+    'page-contact': PageContactSelect<false> | PageContactSelect<true>;
   };
   locale: null;
   widgets: {
@@ -265,7 +267,13 @@ export interface Book {
   origin: 'catalogue' | 'boutique';
   buy?: {
     boutiqueUrl?: string | null;
+    /**
+     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     */
     parislibrairies?: string | null;
+    /**
+     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     */
     lalibrairie?: string | null;
   };
   /**
@@ -1020,35 +1028,21 @@ export interface ReglagesBoutique {
   createdAt?: string | null;
 }
 /**
- * Textes de la page /a-propos. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.
+ * Textes des pages /editions/editions-sociales et /editions/la-dispute. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "page-a-propos".
  */
 export interface PageAPropos {
   id: number;
-  heros?: {
+  equipe?: {
     /**
-     * Vide = titre actuel.
+     * Liste des noms séparés par des virgules (ex. « A, B et C »), affichée à l’identique sur les deux pages maisons. Vide = liste actuelle.
      */
-    titre?: string | null;
-    /**
-     * Vide = texte actuel.
-     */
-    intro?: string | null;
-  };
-  citation?: {
-    /**
-     * Guillemets compris. Vide = citation actuelle.
-     */
-    texte?: string | null;
-    /**
-     * Vide = attribution actuelle.
-     */
-    attribution?: string | null;
+    permanente?: string | null;
   };
   /**
-   * Surcharge les textes de la section « Deux maisons ». Maison absente ou champ vide = texte actuel ; les couleurs restent en code.
+   * Textes propres à chaque maison. Maison absente ou champ vide = texte actuel ; les couleurs restent en code.
    */
   maisons?:
     | {
@@ -1056,44 +1050,197 @@ export interface PageAPropos {
         nom?: string | null;
         tagline?: string | null;
         description?: string | null;
+        /**
+         * Une ligne par personne, listée dans cet ordre. Aucune ligne = liste actuelle de cette maison.
+         */
+        bureau?:
+          | {
+              nom: string;
+              id?: string | null;
+            }[]
+          | null;
         id?: string | null;
       }[]
     | null;
   /**
-   * Remplacent la section « Le catalogue » (titre, texte et boutons actuels). Aucune section = section actuelle.
+   * Bloc identique sur les deux pages maisons (pas de bureau éditorial concerné ici).
    */
-  sections?:
-    | {
-        titre: string;
-        contenu?: {
-          root: {
-            type: string;
-            children: {
-              type: any;
-              version: number;
-              [k: string]: unknown;
-            }[];
-            direction: ('ltr' | 'rtl') | null;
-            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-            indent: number;
-            version: number;
-          };
+  depotManuscrit?: {
+    /**
+     * Utilisée dans la phrase d’accroche par défaut ci-dessous. Vide = adresse actuelle.
+     */
+    email?: string | null;
+    /**
+     * Remplace ENTIÈREMENT le texte par défaut (adresse e-mail ci-dessus comprise) — à utiliser seulement si la phrase d’accroche ne convient plus telle quelle. Vide = texte actuel.
+     */
+    texte?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
           [k: string]: unknown;
-        } | null;
-        id?: string | null;
-      }[]
-    | null;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
 /**
- * Contreparties de la page /souscription. Un bloc vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
+ * Titre, récit et contreparties de la page /souscription. Un champ vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "page-souscription".
  */
 export interface PageSouscription {
   id: number;
+  /**
+   * Vide = « 100 ans ».
+   */
+  titre?: string | null;
+  /**
+   * Vide = « d’édition marxiste : ».
+   */
+  sousTitre?: string | null;
+  /**
+   * Vide = « aidez-nous à poursuivre l’histoire. ».
+   */
+  demande?: string | null;
+  danger?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  guerre?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  maisons?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  appel?: {
+    /**
+     * Vide = titre actuel.
+     */
+    titre?: string | null;
+    /**
+     * Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).
+     */
+    titreItalique?: string | null;
+    /**
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     */
+    corps?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  /**
+   * Les montants et intitulés des trois paliers restent calés sur la jauge de collecte — seule la description qui les accompagne se modifie ici.
+   */
+  objectifs?: {
+    /**
+     * Vide = texte actuel.
+     */
+    descriptif50?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    descriptif80?: string | null;
+    /**
+     * Vide = texte actuel.
+     */
+    descriptif100?: string | null;
+  };
   /**
    * Aucune contrepartie = les neuf cartes actuelles. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.
    */
@@ -1219,6 +1366,25 @@ export interface PagesLegales {
   createdAt?: string | null;
 }
 /**
+ * Textes de la page /contact. Un champ vide = le texte actuel du site.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-contact".
+ */
+export interface PageContact {
+  id: number;
+  /**
+   * Vide = titre actuel.
+   */
+  titre?: string | null;
+  /**
+   * Chapeau sous le titre. Vide = texte actuel.
+   */
+  intro?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique_select".
  */
@@ -1233,17 +1399,10 @@ export interface ReglagesBoutiqueSelect<T extends boolean = true> {
  * via the `definition` "page-a-propos_select".
  */
 export interface PageAProposSelect<T extends boolean = true> {
-  heros?:
+  equipe?:
     | T
     | {
-        titre?: T;
-        intro?: T;
-      };
-  citation?:
-    | T
-    | {
-        texte?: T;
-        attribution?: T;
+        permanente?: T;
       };
   maisons?:
     | T
@@ -1252,14 +1411,19 @@ export interface PageAProposSelect<T extends boolean = true> {
         nom?: T;
         tagline?: T;
         description?: T;
+        bureau?:
+          | T
+          | {
+              nom?: T;
+              id?: T;
+            };
         id?: T;
       };
-  sections?:
+  depotManuscrit?:
     | T
     | {
-        titre?: T;
-        contenu?: T;
-        id?: T;
+        email?: T;
+        texte?: T;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -1270,6 +1434,44 @@ export interface PageAProposSelect<T extends boolean = true> {
  * via the `definition` "page-souscription_select".
  */
 export interface PageSouscriptionSelect<T extends boolean = true> {
+  titre?: T;
+  sousTitre?: T;
+  demande?: T;
+  danger?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  guerre?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  maisons?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  appel?:
+    | T
+    | {
+        titre?: T;
+        titreItalique?: T;
+        corps?: T;
+      };
+  objectifs?:
+    | T
+    | {
+        descriptif50?: T;
+        descriptif80?: T;
+        descriptif100?: T;
+      };
   contreparties?:
     | T
     | {
@@ -1312,6 +1514,17 @@ export interface PagesLegalesSelect<T extends boolean = true> {
         titreParDefaut?: T;
         descriptionParDefaut?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-contact_select".
+ */
+export interface PageContactSelect<T extends boolean = true> {
+  titre?: T;
+  intro?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

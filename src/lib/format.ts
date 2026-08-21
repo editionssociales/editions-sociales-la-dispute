@@ -113,3 +113,16 @@ export function formatInt(value: number): string {
   return INT_FR.format(value);
 }
 
+/**
+ * Joint une liste de noms à la française : virgules entre les éléments, « et »
+ * avant le dernier (jamais de virgule d'Oxford) — ex. « A », « A et B »,
+ * « A, B et C ». Sert au bureau éditorial des pages maisons (`site-content`,
+ * `editions/[slug]/page.tsx`), dont le JSX rendait jusqu'ici une chaîne fixe
+ * de ce même gabarit.
+ */
+export function joinNomsFr(noms: string[]): string {
+  if (noms.length === 0) return "";
+  if (noms.length === 1) return noms[0];
+  return `${noms.slice(0, -1).join(", ")} et ${noms[noms.length - 1]}`;
+}
+

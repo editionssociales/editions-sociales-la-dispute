@@ -17,7 +17,7 @@
  * avant chargement (éviter le saut de mise en page).
  *
  * À réutiliser PARTOUT où l'on affiche une couverture (carrousel, fiche,
- * vignettes du catalogue, étagère 3D…).
+ * vignettes du catalogue…).
  */
 import Image from "next/image";
 import type { Cover } from "./types";
@@ -31,11 +31,6 @@ type CoverLike = Pick<Cover, "width" | "height"> | null | undefined;
  */
 const FALLBACK_W = 400;
 const FALLBACK_H = 600;
-
-export function coverAspectRatio(cover: CoverLike): string {
-  if (!cover || cover.width <= 0 || cover.height <= 0) return "2 / 3";
-  return `${cover.width} / ${cover.height}`;
-}
 
 /**
  * Plafond des dimensions passées à `next/image` : au-delà, le srcset généré
