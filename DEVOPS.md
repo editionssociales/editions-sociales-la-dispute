@@ -193,6 +193,14 @@ Règle transverse, vérifiée au boot (`env.ts:checkEnv`) : **aucune clé
 `sk_live_` hors Production.** Une PR ne doit pas pouvoir encaisser un
 paiement réel — bases et clés Stripe **distinctes par environnement**.
 
+Corollaire : `site/.env`/`.env.local` ne portent **jamais** les accès prod
+(`DATABASE_URL` Neon prod, `sk_live_`) — ils vivent dans `.env.vercel.prod`
+(hors Git), à sourcer **explicitement et uniquement** pour un run visant la
+prod : `set -a && source .env.vercel.prod && set +a && pnpm <script>`
+(précédents : `backfill:dons`, audits lecture seule). Un script qui échoue en
+« variable manquante » n'est donc pas cassé : il refuse de viser la prod par
+défaut.
+
 ---
 
 ## 5. Pipeline CI/CD
