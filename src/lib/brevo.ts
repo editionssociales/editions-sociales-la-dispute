@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 /**
  * Client Brevo (plan §5) — `fetch` natif, AUCUNE dépendance ajoutée (contrat
@@ -11,9 +12,10 @@ import "server-only";
  * (formulaire newsletter/contact, webhook de commande).
  *
  * Aucune fonction d'ici ne jette : le pire qui puisse arriver à un appelant
- * est un `{ ok: false, reason }` à traiter — jamais une exception qui
- * remonterait jusqu'à faire échouer une server action ou (pire) le webhook
- * Stripe qui a déjà écrit la commande en base (cf. `order-mail.ts`).
+ * est un `{ ok: false }` (accompagné d'un `reason` diagnostique côté écriture
+ * — `sendDoiConfirmation`/`sendTransactionalEmail`) à traiter — jamais une
+ * exception qui remonterait jusqu'à faire échouer une server action ou (pire)
+ * le webhook Stripe qui a déjà écrit la commande en base (cf. `order-mail.ts`).
  */
 
 const BREVO_API_BASE = "https://api.brevo.com/v3";
@@ -71,6 +73,56 @@ async function postToBrevo(
     return { ok: false, reason: "network-error" };
   }
 }
+
+/**
+ * `GET /v3/contacts/lists/{id}` (id = `BREVO_LIST_ID_SITE`, liste « Inscrits
+ * site (2026) ») — nombre d'inscrits, consommé par le bandeau KPI du
+ * dashboard admin (`/admin`). Seule lecture du module (le reste écrit) :
+ * contrairement à `postToBrevo`, un GET est idempotent, donc mémoïsé par
+ * requête via `cache()` (React — motif `readSentryIssues`,
+ * `src/payload/admin/dashboard/data.ts`) et opt-in au cache `fetch` de Next
+ * (`next: { revalidate: 300 }`, 5 min — même ordre de grandeur que les autres
+ * signaux du dashboard). Dégradation SILENCIEUSE et sans exception : appelée
+ * à chaque rendu du dashboard, elle ne doit ni jeter ni journaliser à
+ * répétition une absence de provisioning déjà couverte par
+ * `brevoConfigured()` ailleurs sur le site — un `{ ok: false }` couvre
+ * indifféremment clé/liste absentes, HTTP non-ok, JSON inattendu ou
+ * exception réseau. Champ retenu : `totalSubscribers` (repli sur
+ * `uniqueSubscribers` si absent — les deux coexistent selon les versions de
+ * l'API Brevo), parsé défensivement (`Number(...)` fini et ≥ 0).
+ */
+export const getNewsletterListStats = cache(
+  async (): Promise<{ ok: true; totalSubscribers: number } | { ok: false }> => {
+    const env = process.env;
+    const key = apiKey(env);
+    const listId = positiveIntFromEnv(env.BREVO_LIST_ID_SITE);
+    if (!key || listId === null) {
+      return { ok: false };
+    }
+    try {
+      const res = await fetch(`${BREVO_API_BASE}/contacts/lists/${listId}`, {
+        headers: { accept: "application/json", "api-key": key },
+        next: { revalidate: 300 },
+      });
+      if (!res.ok) {
+        return { ok: false };
+      }
+      const json: unknown = await res.json();
+      if (typeof json !== "object" || json === null) {
+        return { ok: false };
+      }
+      const record = json as Record<string, unknown>;
+      const raw = record.totalSubscribers ?? record.uniqueSubscribers;
+      const totalSubscribers = Number(raw);
+      if (!Number.isFinite(totalSubscribers) || totalSubscribers < 0) {
+        return { ok: false };
+      }
+      return { ok: true, totalSubscribers };
+    } catch {
+      return { ok: false };
+    }
+  },
+);
 
 export interface DoiConfirmationInput {
   email: string;

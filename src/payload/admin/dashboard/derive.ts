@@ -1,58 +1,33 @@
-import type { WorkOrdersData } from './data.ts'
+import { isoDayParis } from '../../../lib/format.ts'
 import { isPromoExpired } from '../../../lib/promo-core.ts'
 
 /**
- * Cœur pur du tableau de bord `/admin` (design v3 — home allégée : file du
- * jour + alertes promo + raccourcis) — dérivations sans I/O, testées dans
+ * Cœur pur du tableau de bord `/admin` (refonte home : bandeau KPI →
+ * graphique ventes → dernières commandes → bloc « En cours » → raccourcis,
+ * aucun panneau de plus de 4 entrées) — dérivations sans I/O, testées dans
  * `derive.test.ts`. Les lectures Payload/Stripe/Sentry vivent dans `data.ts`,
- * le rendu dans `Dashboard.tsx`, `../stock/StockPage.tsx` (`/admin/stock`),
+ * le rendu dans `Dashboard.tsx` (vague 2 — pas encore réécrit à la date de ce
+ * commit, cf. note plus bas), `../stock/StockPage.tsx` (`/admin/stock`),
  * `../health/HealthPage.tsx` (`/admin/sante`, admin) et `dashboard-classes.ts`.
  *
  * Principe non négociable du design : jamais de vert ni de zéro « par
  * défaut » — un signal non calculable est `na` (gris, « diagnostic
  * indisponible »), pas `ok`.
  *
- * `import type { ... } from './data.ts'` ci-dessus : uniquement des types
- * (effacés à la compilation, `isolatedModules`) — `data.ts` importe des
- * valeurs de ce module, pas l'inverse ; aucune dépendance runtime circulaire.
+ * Décision client actée : suppression TOTALE du système de retard des
+ * commandes — plus de seuils 48/72 h, plus de pastille de retard, plus de
+ * « provisoire ». Une commande de la file est juste une commande. Idem la
+ * notion de mois civil pour le KPI ventes, remplacée par une fenêtre
+ * glissante 30 j vs 30 j précédents (`rollingWindows`/`salesStats`) —
+ * `parisMonthBounds` (plus bas) reste néanmoins en place : son seul usage
+ * restant est le raccourci « Ventes du mois » de `Dashboard.tsx`, qui n'a pas
+ * encore été réécrit par la vague 2 (fichier hors périmètre de cet agent).
  */
 
 /** État d'un signal/panneau — `na` = non calculable (gris), jamais converti en vert. */
 export type PanelState = 'ok' | 'warn' | 'alert' | 'na'
 
-/* ────────────────────────── Commandes (3.2) ────────────────────────── */
-
-/**
- * Seuils de retard d'une commande `paid` non passée `prepared` — PROPOSITION
- * non actée par le client (design v2 §3.2) : l'UI doit les afficher comme
- * « provisoires, à valider », d'où leur export (repris dans le texte du
- * panneau, pas seulement dans la logique).
- */
-export const ORDER_WARN_HOURS = 48
-export const ORDER_ALERT_HOURS = 72
-
-const HOUR_MS = 3_600_000
-
-/**
- * Retard d'une commande de la liste de travail : seule une commande encore
- * `paid` vieillit (une `prepared` est considérée prise en charge). L'âge se
- * mesure depuis `paidAt`, à défaut `createdAt` (les deux sont posés par le
- * webhook au même moment en pratique).
- */
-export function orderLateness(
-  order: { status: string; paidAt?: string | null; createdAt: string },
-  now: Date,
-): PanelState {
-  if (order.status !== 'paid') return 'ok'
-  const since = Date.parse(order.paidAt ?? order.createdAt)
-  if (Number.isNaN(since)) return 'ok'
-  const ageHours = (now.getTime() - since) / HOUR_MS
-  if (ageHours > ORDER_ALERT_HOURS) return 'alert'
-  if (ageHours > ORDER_WARN_HOURS) return 'warn'
-  return 'ok'
-}
-
-/** Pire état d'un ensemble d'états (pour un signal de panneau ou le bandeau). */
+/** Pire état d'un ensemble d'états (pour un signal de panneau composite). */
 export function worstState(states: PanelState[]): PanelState {
   if (states.includes('alert')) return 'alert'
   if (states.includes('warn')) return 'warn'
@@ -60,15 +35,7 @@ export function worstState(states: PanelState[]): PanelState {
   return 'ok'
 }
 
-/**
- * État du signal Commandes (bandeau 3.1, dot du panneau 3.2) : liste de
- * travail `null`/illisible → gris ; sinon le pire retard des commandes de la
- * liste (cf. `orderLateness`).
- */
-export function commandesState(workOrders: WorkOrdersData | null, now: Date): PanelState {
-  if (workOrders === null || workOrders.state === 'na') return 'na'
-  return worstState(workOrders.orders.map((order) => orderLateness(order, now)))
-}
+const DAY_MS = 86_400_000
 
 /* ────────────────────────── Stock bas (3.3) ────────────────────────── */
 
@@ -87,6 +54,342 @@ export function stockSignal(stocks: number[]): PanelState {
   return 'ok'
 }
 
+/* ────────────────────────── Ventes — KPI 30 j + graphique ────────────────────────── */
+
+/**
+ * Bornes de la fenêtre glissante 30 j vs 30 j précédents (KPI ventes) —
+ * arithmétique ms simple, PAS de notion de jour civil/fuseau (contrairement à
+ * `parisMonthBounds` : une fenêtre glissante n'a pas de bord de mois, juste un
+ * intervalle de durée fixe).
+ */
+export function rollingWindows(now: Date): { start30: Date; start60: Date } {
+  return {
+    start30: new Date(now.getTime() - 30 * DAY_MS),
+    start60: new Date(now.getTime() - 60 * DAY_MS),
+  }
+}
+
+/**
+ * Forme neutre d'une commande vendue (paid/prepared/shipped), telle que
+ * lue par `readSalesWindow` — nourrit `salesStats`, `dailySalesBuckets`,
+ * `quantitySoldByBook` et `precommandeQuantityByBook`, UNE seule lecture pour
+ * ces quatre dérivations.
+ */
+export interface SalesWindowRow {
+  paidAt: string | null
+  createdAt: string
+  totalTTC: number
+  orderType: string
+  lines: { quantity: number; book: number | null }[]
+}
+
+export interface SalesStats {
+  ca: number
+  nbCommandes: number
+  nbExemplaires: number
+  caPrecommande: number
+  /** `null` si la fenêtre précédente est à 0 — jamais une division par zéro/`Infinity`. */
+  deltaPct: number | null
+}
+
+/**
+ * Statistiques de ventes en fenêtre glissante 30 j vs 30 j précédents (bandeau
+ * KPI). Étanchéité comptable DURE dons/ventes (CLAUDE.md racine, `orderType:
+ * "don"` jamais dans un agrégat de CA/TVA) : un don est écarté ICI, pas
+ * seulement dans le `where` du lecteur I/O — la garantie tient même si un
+ * autre appelant réutilise cette fonction sur des lignes non pré-filtrées.
+ * Fenêtre courante = `paidAt ?? createdAt` ∈ [start30, now] ; précédente =
+ * [start60, start30[ (borne haute exclusive — un ordre pile à `start30` ne
+ * compte qu'une fois, dans la fenêtre courante).
+ */
+export function salesStats(rows: SalesWindowRow[], now: Date): SalesStats {
+  const { start30, start60 } = rollingWindows(now)
+  const t30 = start30.getTime()
+  const t60 = start60.getTime()
+  const tNow = now.getTime()
+
+  let ca = 0
+  let nbCommandes = 0
+  let nbExemplaires = 0
+  let caPrecommande = 0
+  let caPrev = 0
+
+  for (const row of rows) {
+    if (row.orderType === 'don') continue
+    const at = Date.parse(row.paidAt ?? row.createdAt)
+    if (Number.isNaN(at)) continue
+    if (at >= t30 && at <= tNow) {
+      ca += row.totalTTC
+      nbCommandes += 1
+      nbExemplaires += row.lines.reduce((sum, l) => sum + l.quantity, 0)
+      if (row.orderType === 'precommande') caPrecommande += row.totalTTC
+    } else if (at >= t60 && at < t30) {
+      caPrev += row.totalTTC
+    }
+  }
+
+  const deltaPct = caPrev === 0 ? null : ((ca - caPrev) / caPrev) * 100
+  return { ca, nbCommandes, nbExemplaires, caPrecommande, deltaPct }
+}
+
+export interface DailySalesBucket {
+  day: string
+  ca: number
+}
+
+/**
+ * 30 seaux quotidiens (jour CIVIL PARIS, `isoDayParis`) pour le graphique
+ * ventes — série complète et ordonnée du plus ancien au plus récent (dernier
+ * seau = jour de `now`), jours sans vente à 0 (jamais un trou). Même
+ * étanchéité dons/ventes que `salesStats`.
+ */
+export function dailySalesBuckets(rows: SalesWindowRow[], now: Date): DailySalesBucket[] {
+  const days: string[] = []
+  for (let i = 29; i >= 0; i--) {
+    const day = isoDayParis(new Date(now.getTime() - i * DAY_MS))
+    if (day) days.push(day)
+  }
+  const byDay = new Map(days.map((day) => [day, 0]))
+
+  for (const row of rows) {
+    if (row.orderType === 'don') continue
+    const day = isoDayParis(row.paidAt ?? row.createdAt)
+    if (day && byDay.has(day)) {
+      byDay.set(day, (byDay.get(day) ?? 0) + row.totalTTC)
+    }
+  }
+
+  return days.map((day) => ({ day, ca: byDay.get(day) ?? 0 }))
+}
+
+export interface SalesChartBar {
+  x: number
+  y: number
+  w: number
+  h: number
+  day: string
+  ca: number
+}
+
+/**
+ * Géométrie des barres du graphique ventes — largeur égale par seau, hauteur
+ * proportionnelle au maximum de la série (le maximum touche `height` pleine).
+ * Seaux tous à 0 → barres de hauteur 0 (jamais de division par zéro/`NaN`) ;
+ * série vide → aucune barre.
+ */
+export function salesChartGeometry(
+  buckets: DailySalesBucket[],
+  dims: { width: number; height: number },
+): SalesChartBar[] {
+  const { width, height } = dims
+  const n = buckets.length
+  if (n === 0) return []
+  const w = width / n
+  const max = Math.max(0, ...buckets.map((b) => b.ca))
+
+  return buckets.map((b, i) => {
+    const h = max > 0 ? (b.ca / max) * height : 0
+    return { x: i * w, y: height - h, w, h, day: b.day, ca: b.ca }
+  })
+}
+
+/* ────────────────────────── Vélocité stock (précommandes + rupture) ────────────────────────── */
+
+/**
+ * Somme des quantités vendues par livre, dans la fenêtre glissante 30 j —
+ * réducteur commun à `quantitySoldByBook` (vélocité stock) et
+ * `precommandeQuantityByBook` (précommandes payées par titre), tous deux sur
+ * les lignes de `readSalesWindow` (pas de requête supplémentaire).
+ */
+function sumQuantityByBookInWindow(
+  rows: SalesWindowRow[],
+  now: Date,
+  keep: (orderType: string) => boolean,
+): Map<number, number> {
+  const { start30 } = rollingWindows(now)
+  const t30 = start30.getTime()
+  const tNow = now.getTime()
+  const result = new Map<number, number>()
+
+  for (const row of rows) {
+    if (!keep(row.orderType)) continue
+    const at = Date.parse(row.paidAt ?? row.createdAt)
+    if (Number.isNaN(at) || at < t30 || at > tNow) continue
+    for (const line of row.lines) {
+      if (line.book === null) continue
+      result.set(line.book, (result.get(line.book) ?? 0) + line.quantity)
+    }
+  }
+  return result
+}
+
+/**
+ * Quantités vendues (30 j) par livre — nourrit `stockOutlook` (vélocité).
+ * Compte TOUTES les commandes de la fenêtre, dons compris : un exemplaire
+ * donné en contrepartie quitte le stock comme un exemplaire vendu. Ce n'est
+ * PAS un agrégat de CA — l'étanchéité comptable dons/ventes de `salesStats`
+ * ne s'applique qu'aux agrégats financiers, pas au décompte physique du
+ * stock.
+ */
+export function quantitySoldByBook(rows: SalesWindowRow[], now: Date): Map<number, number> {
+  return sumQuantityByBookInWindow(rows, now, () => true)
+}
+
+/**
+ * Précommandes payées (30 j) par livre — pour le bloc « En cours » (nombre de
+ * précommandes reçues par titre à paraître). Fenêtre glissante 30 j, PAS le
+ * total vie entière d'une campagne de précommande ouverte plus tôt : même
+ * lecture unique `readSalesWindow` que le reste du dashboard (décision
+ * documentée dans `data.ts:readUpcomingBooks`), pas de requête dédiée.
+ */
+export function precommandeQuantityByBook(rows: SalesWindowRow[], now: Date): Map<number, number> {
+  return sumQuantityByBookInWindow(rows, now, (t) => t === 'precommande')
+}
+
+export interface StockOutlookInput {
+  id: number
+  title: string
+  edition: string | null
+  stock: number | null
+  stockSuivi: string | null
+}
+
+export interface StockOutlookRow {
+  id: number
+  title: string
+  edition: string | null
+  stock: number | null
+  stockSuivi: string | null
+  vendus30j: number
+  velociteJour: number
+  joursRestants: number | null
+  rupturePrevue: string | null
+}
+
+/**
+ * Projection de rupture par titre. `joursRestants`/`rupturePrevue` à `null`
+ * si le stock n'est pas suivi (`null`, "vide = pas de décompte") OU si la
+ * vélocité est nulle (jamais une division par zéro déguisée en "infini jours
+ * restants"). `joursRestants` arrondi à l'entier inférieur — un stock qui
+ * suffit encore 4,9 jours affiche 4, pas 5.
+ */
+export function stockOutlook(
+  books: StockOutlookInput[],
+  soldByBook: Map<number, number>,
+  now: Date,
+): StockOutlookRow[] {
+  return books.map((book) => {
+    const vendus30j = soldByBook.get(book.id) ?? 0
+    const velociteJour = vendus30j / 30
+    let joursRestants: number | null = null
+    let rupturePrevue: string | null = null
+    if (book.stock !== null && vendus30j > 0) {
+      joursRestants = Math.floor(book.stock / velociteJour)
+      rupturePrevue = isoDayParis(new Date(now.getTime() + joursRestants * DAY_MS))
+    }
+    return {
+      id: book.id,
+      title: book.title,
+      edition: book.edition,
+      stock: book.stock,
+      stockSuivi: book.stockSuivi,
+      vendus30j,
+      velociteJour,
+      joursRestants,
+      rupturePrevue,
+    }
+  })
+}
+
+/**
+ * Sous-ensemble « urgent » du stock (ce que la home affiche, cap 4 côté
+ * rendu) : épuisés (stock ≤ 0, vendable — un stock `null` n'est jamais
+ * requalifié en épuisé) d'abord, puis rupture prévue la plus proche. Un livre
+ * au stock non suivi (`null`) ou à vélocité nulle n'a pas de signal d'urgence
+ * calculable et n'apparaît pas ici, plutôt que d'être classé arbitrairement.
+ */
+export function urgentStockRows(outlook: StockOutlookRow[], seuilJours = 30): StockOutlookRow[] {
+  const isOut = (row: StockOutlookRow) => row.stock !== null && row.stock <= 0
+  const urgent = outlook.filter(
+    (row) => isOut(row) || (row.joursRestants !== null && row.joursRestants <= seuilJours),
+  )
+  return [...urgent].sort((a, b) => {
+    const aOut = isOut(a)
+    const bOut = isOut(b)
+    if (aOut !== bOut) return aOut ? -1 : 1
+    const aJours = a.joursRestants ?? Infinity
+    const bJours = b.joursRestants ?? Infinity
+    return aJours - bJours
+  })
+}
+
+export interface DatedQuantity {
+  date: string
+  quantity: number
+}
+
+/**
+ * Quantités par semaine glissante (mini-barres sparkline, page stock) —
+ * `weeks` seaux de 7 jours, le plus récent se terminant à `now`, du plus
+ * ancien au plus récent. Générique (indépendant d'un livre) : l'appelant
+ * pré-filtre les lignes par titre/livre avant d'agréger. Une date future ou
+ * illisible est ignorée (jamais une erreur, jamais un seau négatif).
+ */
+export function bucketWeeklyQuantities(rows: DatedQuantity[], now: Date, weeks = 8): number[] {
+  const buckets = new Array<number>(weeks).fill(0)
+  const nowMs = now.getTime()
+
+  for (const row of rows) {
+    const at = Date.parse(row.date)
+    if (Number.isNaN(at)) continue
+    const ageMs = nowMs - at
+    if (ageMs < 0) continue
+    const weekIndexFromEnd = Math.floor(ageMs / (7 * DAY_MS))
+    if (weekIndexFromEnd >= weeks) continue
+    buckets[weeks - 1 - weekIndexFromEnd] += row.quantity
+  }
+  return buckets
+}
+
+/* ────────────────────────── Résumés (file de travail / bloc « En cours ») ────────────────────────── */
+
+/**
+ * Âge relatif humain, français, sans librairie — « à l'instant » (strictement
+ * moins de 60 s), puis minutes/heures/jours (troncature entière). Une date
+ * illisible ou future dégrade en « à l'instant »/tiret plutôt que de planter.
+ */
+export function humanAge(iso: string, now: Date): string {
+  const at = Date.parse(iso)
+  if (Number.isNaN(at)) return '—'
+  const seconds = Math.floor((now.getTime() - at) / 1000)
+  if (seconds < 60) return 'à l’instant'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `il y a ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `il y a ${hours} h`
+  const days = Math.floor(hours / 24)
+  return `il y a ${days} j`
+}
+
+export interface SummarizableLine {
+  titleSnapshot: string
+  quantity: number
+}
+
+/**
+ * Résumé compact des lignes d'une commande — « 2× Titre A + 1× Titre B + 2
+ * autres ». Le « + N autres » compte les LIGNES au-delà de `max`, pas les
+ * exemplaires (une ligne à quantité 5 au-delà de `max` compte pour 1, pas 5).
+ */
+export function summarizeLines(lines: SummarizableLine[], max = 3): string {
+  if (lines.length === 0) return ''
+  const shown = lines.slice(0, max)
+  const rest = lines.length - shown.length
+  const parts = shown.map((l) => `${l.quantity}× ${l.titleSnapshot}`)
+  if (rest > 0) parts.push(`${rest} autre${rest > 1 ? 's' : ''}`)
+  return parts.join(' + ')
+}
+
 /* ────────────────────────── Raccourci « Ventes du mois » (zone C) ────────────────────────── */
 
 /**
@@ -94,6 +397,9 @@ export function stockSignal(stocks: number[]): PanelState {
  * stockés en UTC). Un 1ᵉʳ du mois n'est jamais dans la fenêtre de changement
  * d'heure (dernier dimanche de mars/octobre) : le décalage d'un début de mois
  * est donc déterministe — avril→octobre : UTC+2 (CEST), novembre→mars : UTC+1.
+ * Ne sert plus au KPI (fenêtre glissante 30 j, `rollingWindows`) — seul usage
+ * restant : le lien « Ventes du mois » de `Dashboard.tsx` (raccourci zone C,
+ * pas encore réécrit par la vague 2).
  */
 export function parisMonthBounds(now: Date): { start: Date; end: Date; label: string } {
   const fmt = new Intl.DateTimeFormat('fr-FR', {
@@ -160,8 +466,6 @@ export function defaultExportDateRange(now: Date): { from: string; to: string } 
  */
 export const IMPORT_ALERT_DAYS = 35
 
-const DAY_MS = 86_400_000
-
 /**
  * Signal de fraîcheur : aucun import enregistré → gris (pas un rouge
  * alarmiste au lancement) ; dernier import > 35 j → alerte ; sinon OK.
@@ -176,19 +480,30 @@ export function importSignal(lastRunAt: string | null, now: Date): PanelState {
 /* ────────────────────────── Codes promo (3.11) ────────────────────────── */
 
 /**
- * Codes encore `active` dont `expiresAt` est dépassé (comparaison en jour,
- * JOUR INCLUSIF — un code qui expire le 13/07 reste valable toute la
- * journée du 13/07, décision produit 17/07) — candidats au « désactiver en
- * un clic ». `expiresAt` absent = jamais expiré. Même règle, désormais
- * réellement partagée (et non plus seulement affirmée en commentaire) avec
- * l'évaluation panier de `promo-core.ts:evaluatePromoCode` — alignée
- * checkout ↔ dashboard.
+ * Répartit les codes encore `active` en deux lots — `live` (valides) et
+ * `expiredActive` (`expiresAt` dépassé, JOUR INCLUSIF : un code qui expire le
+ * 13/07 reste valable toute la journée du 13/07, décision produit 17/07),
+ * candidats au « désactiver en un clic ». `expiresAt` absent = jamais expiré,
+ * donc toujours `live`. Remplace l'ancien `expiredActivePromos` (même
+ * prédicat `isPromoExpired`, désormais réellement partagé — et non plus
+ * seulement affirmé en commentaire — avec l'évaluation panier de
+ * `promo-core.ts:evaluatePromoCode`, checkout ↔ dashboard alignés).
  */
-export function expiredActivePromos<T extends { active?: boolean | null; expiresAt?: string | null }>(
+export function splitPromos<T extends { active?: boolean | null; expiresAt?: string | null }>(
   promos: T[],
   now: Date,
-): T[] {
-  return promos.filter((p) => p.active === true && isPromoExpired(p.expiresAt, now))
+): { live: T[]; expiredActive: T[] } {
+  const live: T[] = []
+  const expiredActive: T[] = []
+  for (const promo of promos) {
+    if (promo.active !== true) continue
+    if (isPromoExpired(promo.expiresAt, now)) {
+      expiredActive.push(promo)
+    } else {
+      live.push(promo)
+    }
+  }
+  return { live, expiredActive }
 }
 
 /* ────────────────────────── Observabilité (3.12) ────────────────────────── */
