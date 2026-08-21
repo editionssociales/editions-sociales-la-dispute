@@ -111,15 +111,30 @@ export default async function ContrepartieChoicePage({
               <Reveal key={section.kind === "choix" ? section.id : `inclus-${n}`}>
                 {section.kind === "choix" ? (
                   <fieldset>
-                    <legend className="font-sans text-lg font-black italic text-ink sm:text-xl">
+                    <legend className="font-sans text-xl font-black italic text-ink sm:text-2xl">
                       {n}. {section.label}
                     </legend>
                     <FramedGrid className="mt-4 grid-cols-1 sm:grid-cols-2">
+                      {/* Affordance de sélection (lisibilité, client 2026-08-21) :
+                          l'inversion ink du `:checked` seule ne disait ni « c'est
+                          cliquable » (survol paper-2, surchargé pour ne pas
+                          éclaircir une carte déjà cochée) ni « voilà ton choix »
+                          — la case ✓ du coin le dit sans dépendre de la seule
+                          couleur de fond (le jaune tient sur paper ET sur ink). */}
                       {section.options.map((option) => (
                         <label
                           key={option.id}
-                          className="group relative flex cursor-pointer flex-col gap-3 bg-paper p-4 transition-colors has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-[-2px] has-[:focus-visible]:outline-ink"
+                          className="group relative flex cursor-pointer flex-col gap-3 bg-paper p-4 transition-colors hover:bg-paper-2 has-[:checked]:bg-ink has-[:checked]:text-paper has-[:checked]:hover:bg-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-[-2px] has-[:focus-visible]:outline-ink"
                         >
+                          {/* aria-hidden : l'état réel vit sur le radio (lu
+                              « coché/non coché ») — la case n'est qu'un écho
+                              visuel, l'annoncer doublerait l'état. */}
+                          <span
+                            aria-hidden="true"
+                            className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center border-2 border-ink bg-paper font-sans text-xs font-black leading-none text-black group-has-[:checked]:bg-pop-yellow"
+                          >
+                            <span className="opacity-0 group-has-[:checked]:opacity-100">✓</span>
+                          </span>
                           {/* Radio natif masqué visuellement (jamais `hidden` :
                               il reste focalisable et lu par les AT) — la carte
                               entière est le libellé cliquable, la sélection se
@@ -145,13 +160,15 @@ export default async function ContrepartieChoicePage({
                   </fieldset>
                 ) : (
                   <div>
-                    <h2 className="font-sans text-lg font-black italic text-ink sm:text-xl">
+                    <h2 className="font-sans text-xl font-black italic text-ink sm:text-2xl">
                       {n}. {section.label}
                     </h2>
-                    <ul
-                      role="list"
-                      className="mt-4 flex flex-wrap gap-[2px] border-2 border-ink bg-ink p-[2px]"
-                    >
+                    {/* `FramedGrid` et jamais la recette recopiée à la main :
+                        le flux flex est `w-fit` d'office — l'ancien littéral
+                        pleine largeur laissait tout le reste de la rangée en
+                        aplat ink derrière deux cellules (retour client
+                        2026-08-21, même artefact que les filtres actifs). */}
+                    <FramedGrid as="ul" flow="flex" role="list" className="mt-4">
                       {section.items.map((item) => (
                         <li key={item.slug} className="flex items-center gap-3 bg-paper p-3">
                           <ItemVisual item={item} className="h-28 w-20 shrink-0" />
@@ -161,7 +178,7 @@ export default async function ContrepartieChoicePage({
                           </span>
                         </li>
                       ))}
-                    </ul>
+                    </FramedGrid>
                   </div>
                 )}
               </Reveal>
