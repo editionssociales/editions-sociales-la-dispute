@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/container";
+import { BookHoverCard } from "@/components/book-hover-card";
 import { Button } from "@/components/button";
 import { SubmitButton } from "@/components/submit-button";
 import { PageHero } from "@/components/page-hero";
@@ -121,41 +122,73 @@ export default async function ContrepartieChoicePage({
                           éclaircir une carte déjà cochée) ni « voilà ton choix »
                           — la case ✓ du coin le dit sans dépendre de la seule
                           couleur de fond (le jaune tient sur paper ET sur ink). */}
-                      {section.options.map((option) => (
-                        <label
-                          key={option.id}
-                          className="group relative flex cursor-pointer flex-col gap-3 bg-paper p-4 transition-colors hover:bg-paper-2 has-[:checked]:bg-ink has-[:checked]:text-paper has-[:checked]:hover:bg-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-[-2px] has-[:focus-visible]:outline-ink"
-                        >
-                          {/* aria-hidden : l'état réel vit sur le radio (lu
-                              « coché/non coché ») — la case n'est qu'un écho
-                              visuel, l'annoncer doublerait l'état. */}
-                          <span
-                            aria-hidden="true"
-                            className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center border-2 border-ink bg-paper font-sans text-xs font-black leading-none text-black group-has-[:checked]:bg-pop-yellow"
+                      {section.options.map((option) => {
+                        // Fiche de survol de l'option (client 2026-08-21) : un
+                        // item UNIQUE (cas courant — choisir entre deux livres)
+                        // a une fiche cohérente avec `option.label`. Une option
+                        // qui combine plusieurs livres (« duo », palier 200) n'a
+                        // PAS de fiche unique cohérente avec son label composé
+                        // (« Titre A + Titre B », prose écrite à la main, pas une
+                        // simple concaténation des titres) : reste nue, comme
+                        // avant — les couvertures (`ItemVisual`) juste au-dessus
+                        // restent le seul repère visuel pour ces options-là.
+                        const soleFiche = option.items.length === 1 ? option.items[0].fiche : null;
+                        // `group-has-[:checked]:…outline-pop-yellow` : sur une
+                        // option cochée la carte s'inverse (fond ink) — l'anneau
+                        // `FOCUS_RING_LIGHT` (outline ink) posé par
+                        // `BookHoverCard` y disparaîtrait ; même couleur d'anneau
+                        // sombre que `FOCUS_RING_DARK` (`src/lib/ui`), et la
+                        // variante composée gagne par spécificité (`.group:has()`).
+                        const labelClassName =
+                          "text-center font-sans text-sm font-bold leading-snug group-has-[:checked]:focus-visible:outline-pop-yellow";
+                        return (
+                          <label
+                            key={option.id}
+                            className="group relative flex cursor-pointer flex-col gap-3 bg-paper p-4 transition-colors hover:bg-paper-2 has-[:checked]:bg-ink has-[:checked]:text-paper has-[:checked]:hover:bg-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-[-2px] has-[:focus-visible]:outline-ink"
                           >
-                            <span className="opacity-0 group-has-[:checked]:opacity-100">✓</span>
-                          </span>
-                          {/* Radio natif masqué visuellement (jamais `hidden` :
-                              il reste focalisable et lu par les AT) — la carte
-                              entière est le libellé cliquable, la sélection se
-                              lit sur le fond (`has-[:checked]`), zéro JS. */}
-                          <input
-                            type="radio"
-                            name={`choix.${section.id}`}
-                            value={option.id}
-                            required
-                            className="sr-only"
-                          />
-                          <span className="flex flex-wrap justify-center gap-2">
-                            {option.items.map((item) => (
-                              <ItemVisual key={item.slug} item={item} className="h-36 w-24 shrink-0" />
-                            ))}
-                          </span>
-                          <span className="text-center font-sans text-sm font-bold leading-snug">
-                            {option.label}
-                          </span>
-                        </label>
-                      ))}
+                            {/* aria-hidden : l'état réel vit sur le radio (lu
+                                « coché/non coché ») — la case n'est qu'un écho
+                                visuel, l'annoncer doublerait l'état. */}
+                            <span
+                              aria-hidden="true"
+                              className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center border-2 border-ink bg-paper font-sans text-xs font-black leading-none text-black group-has-[:checked]:bg-pop-yellow"
+                            >
+                              <span className="opacity-0 group-has-[:checked]:opacity-100">✓</span>
+                            </span>
+                            {/* Radio natif masqué visuellement (jamais `hidden` :
+                                il reste focalisable et lu par les AT) — la carte
+                                entière est le libellé cliquable, la sélection se
+                                lit sur le fond (`has-[:checked]`), zéro JS. */}
+                            <input
+                              type="radio"
+                              name={`choix.${section.id}`}
+                              value={option.id}
+                              required
+                              className="sr-only"
+                            />
+                            <span className="flex flex-wrap justify-center gap-2">
+                              {option.items.map((item) => (
+                                <ItemVisual key={item.slug} item={item} className="h-36 w-24 shrink-0" />
+                              ))}
+                            </span>
+                            {/* ATTENTION nested-interactive : ce libellé vit DANS
+                                le <label> du radio, dont le CLIC sélectionne
+                                l'option — `BookHoverCard` pose un <span
+                                tabIndex={0}>, PAS un élément interactif au sens
+                                HTML (ni lien, ni bouton, aucun handler de clic) :
+                                l'activation native du label au clic sur le
+                                titre continue de fonctionner sans qu'on y
+                                ajoute quoi que ce soit d'interactif. */}
+                            {soleFiche ? (
+                              <BookHoverCard data={soleFiche} focusable className={labelClassName}>
+                                {option.label}
+                              </BookHoverCard>
+                            ) : (
+                              <span className={labelClassName}>{option.label}</span>
+                            )}
+                          </label>
+                        );
+                      })}
                     </FramedGrid>
                   </fieldset>
                 ) : (
@@ -169,15 +202,27 @@ export default async function ContrepartieChoicePage({
                         aplat ink derrière deux cellules (retour client
                         2026-08-21, même artefact que les filtres actifs). */}
                     <FramedGrid as="ul" flow="flex" role="list" className="mt-4">
-                      {section.items.map((item) => (
-                        <li key={item.slug} className="flex items-center gap-3 bg-paper p-3">
-                          <ItemVisual item={item} className="h-28 w-20 shrink-0" />
-                          <span className="font-sans text-sm font-bold text-ink">
+                      {section.items.map((item) => {
+                        const titleClassName = "font-sans text-sm font-bold text-ink";
+                        const label = (
+                          <>
                             {item.title}
                             {item.qty > 1 ? ` × ${item.qty}` : ""}
-                          </span>
-                        </li>
-                      ))}
+                          </>
+                        );
+                        return (
+                          <li key={item.slug} className="flex items-center gap-3 bg-paper p-3">
+                            <ItemVisual item={item} className="h-28 w-20 shrink-0" />
+                            {item.fiche ? (
+                              <BookHoverCard data={item.fiche} focusable className={titleClassName}>
+                                {label}
+                              </BookHoverCard>
+                            ) : (
+                              <span className={titleClassName}>{label}</span>
+                            )}
+                          </li>
+                        );
+                      })}
                     </FramedGrid>
                   </div>
                 )}
