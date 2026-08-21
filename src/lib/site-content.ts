@@ -4,10 +4,12 @@ import config from "@payload-config";
 import { getPayload, type DataFromGlobalSlug, type GlobalSlug } from "payload";
 import {
   mergePageAPropos,
+  mergePageContact,
   mergePageSouscription,
   mergePagesLegales,
   mergeReglagesSite,
   type PageAProposContent,
+  type PageContactContent,
   type PageSouscriptionContent,
   type PagesLegalesContent,
   type ReglagesSiteContent,
@@ -77,5 +79,13 @@ export const getPageSouscription = cache(async (): Promise<PageSouscriptionConte
     "page-souscription",
     mergePageSouscription,
     "page Souscription servie avec ses textes par défaut",
+  );
+});
+
+export const getPageContact = cache(async (): Promise<PageContactContent> => {
+  return readGlobal(
+    "page-contact",
+    mergePageContact,
+    "page Contact servie avec ses textes par défaut",
   );
 });

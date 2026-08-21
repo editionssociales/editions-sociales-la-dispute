@@ -4,19 +4,26 @@ import { isAdminOrEditor } from '../access.ts'
 import { revalidateAProposAfterChange } from '../hooks/revalidate.ts'
 
 /**
- * Page À propos éditable (spec « éditeur de contenus », lot 3) : textes du
- * héros, citation en exergue, surcharge des textes des deux maisons
- * (`EDITION_LIST`, `src/lib/editions.ts` — les couleurs d'accent restent en
- * code) et sections libres {titre, richText} qui remplacent la section
- * « Le catalogue ». Chaque champ vide retombe sur le texte actuel codé en
- * dur (`src/lib/site-content-core.ts`) — iso-rendu strict à global vide.
+ * Pages des maisons éditables (`/editions/editions-sociales`,
+ * `/editions/la-dispute`) — nom/tagline/description + bureau éditorial PAR
+ * maison (`EDITION_LIST`, `src/lib/editions.ts` — les couleurs d'accent
+ * restent en code), plus deux blocs partagés entre les deux pages : l'équipe
+ * permanente et le dépôt de manuscrit (ni l'un ni l'autre n'est gardé par
+ * `maison` dans le JSX — cf. `editions/[slug]/page.tsx`). Chaque champ vide
+ * retombe sur le texte actuel codé en dur (`src/lib/site-content-core.ts`) —
+ * iso-rendu strict à global vide.
+ *
+ * Le slug `page-a-propos` est conservé pour ne pas casser les documents déjà
+ * en base (ancien nom de l'ex-page commune `/a-propos`, aujourd'hui une
+ * redirection sans contenu) ; seul le libellé admin a changé pour refléter ce
+ * que le global édite réellement.
  *
  * Onglets UI sans `name` (même pattern que `PagesLegales` / fiche Livre) :
  * chemins de données inchangés.
  */
 export const PageAPropos: GlobalConfig = {
   slug: 'page-a-propos',
-  label: 'Page À propos',
+  label: 'Pages des maisons',
   typescript: {
     // Sans quoi `generate:types` singulariserait le slug en « PageAPropo ».
     interface: 'PageAPropos',
@@ -24,7 +31,7 @@ export const PageAPropos: GlobalConfig = {
   admin: {
     group: 'Site',
     description:
-      'Textes de la page /a-propos. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.',
+      'Textes des pages /editions/editions-sociales et /editions/la-dispute. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.',
   },
   access: {
     read: () => true,
@@ -38,48 +45,21 @@ export const PageAPropos: GlobalConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Héros',
+          label: 'Équipe',
           fields: [
             {
-              name: 'heros',
+              name: 'equipe',
               type: 'group',
-              label: 'Héros',
+              label: 'Équipe permanente',
               fields: [
                 {
-                  name: 'titre',
+                  name: 'permanente',
                   type: 'text',
-                  label: 'Titre',
-                  admin: { description: 'Vide = titre actuel.' },
-                },
-                {
-                  name: 'intro',
-                  type: 'textarea',
-                  label: 'Introduction',
-                  admin: { description: 'Vide = texte actuel.' },
-                },
-              ],
-            },
-          ],
-        },
-        {
-          label: 'Citation',
-          fields: [
-            {
-              name: 'citation',
-              type: 'group',
-              label: 'Citation en exergue',
-              fields: [
-                {
-                  name: 'texte',
-                  type: 'textarea',
-                  label: 'Citation',
-                  admin: { description: 'Guillemets compris. Vide = citation actuelle.' },
-                },
-                {
-                  name: 'attribution',
-                  type: 'text',
-                  label: 'Attribution',
-                  admin: { description: 'Vide = attribution actuelle.' },
+                  label: 'Noms',
+                  admin: {
+                    description:
+                      'Liste des noms séparés par des virgules (ex. « A, B et C »), affichée à l’identique sur les deux pages maisons. Vide = liste actuelle.',
+                  },
                 },
               ],
             },
@@ -99,7 +79,7 @@ export const PageAPropos: GlobalConfig = {
               },
               admin: {
                 description:
-                  'Surcharge les textes de la section « Deux maisons ». Maison absente ou champ vide = texte actuel ; les couleurs restent en code.',
+                  'Textes propres à chaque maison. Maison absente ou champ vide = texte actuel ; les couleurs restent en code.',
               },
               fields: [
                 {
@@ -127,36 +107,60 @@ export const PageAPropos: GlobalConfig = {
                   type: 'textarea',
                   label: 'Description',
                 },
+                {
+                  name: 'bureau',
+                  type: 'array',
+                  label: 'Bureau éditorial',
+                  labels: {
+                    singular: 'Membre',
+                    plural: 'Membres',
+                  },
+                  admin: {
+                    description:
+                      'Une ligne par personne, listée dans cet ordre. Aucune ligne = liste actuelle de cette maison.',
+                  },
+                  fields: [
+                    {
+                      name: 'nom',
+                      type: 'text',
+                      required: true,
+                      label: 'Nom',
+                    },
+                  ],
+                },
               ],
             },
           ],
         },
         {
-          label: 'Sections',
+          label: 'Dépôt de manuscrit',
           fields: [
             {
-              name: 'sections',
-              type: 'array',
-              label: 'Sections',
-              labels: {
-                singular: 'Section',
-                plural: 'Sections',
-              },
+              name: 'depotManuscrit',
+              type: 'group',
+              label: 'Dépôt de manuscrit',
               admin: {
                 description:
-                  'Remplacent la section « Le catalogue » (titre, texte et boutons actuels). Aucune section = section actuelle.',
+                  'Bloc identique sur les deux pages maisons (pas de bureau éditorial concerné ici).',
               },
               fields: [
                 {
-                  name: 'titre',
+                  name: 'email',
                   type: 'text',
-                  required: true,
-                  label: 'Titre',
+                  label: 'Adresse e-mail de dépôt',
+                  admin: {
+                    description:
+                      'Utilisée dans la phrase d’accroche par défaut ci-dessous. Vide = adresse actuelle.',
+                  },
                 },
                 {
-                  name: 'contenu',
+                  name: 'texte',
                   type: 'richText',
-                  label: 'Contenu',
+                  label: 'Texte du bloc',
+                  admin: {
+                    description:
+                      'Remplace ENTIÈREMENT le texte par défaut (adresse e-mail ci-dessus comprise) — à utiliser seulement si la phrase d’accroche ne convient plus telle quelle. Vide = texte actuel.',
+                  },
                 },
               ],
             },

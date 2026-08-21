@@ -77,8 +77,22 @@ une page par erreur.
   Confidentialité ; pied de page (adresse, diffusion) ; liens réseaux
   sociaux (pied de page seulement — jamais en haut de page — s'il y en a au
   moins un) ; titre et description par défaut utilisés par Google.
-- **Page À propos** : les textes du haut de page, la citation, la
-  présentation des deux maisons, et des sections libres.
+- **Pages des maisons** (pages `/editions/editions-sociales` et
+  `/editions/la-dispute`, ex-page À propos) :
+  - un onglet **Maisons** avec, pour chaque maison, le nom affiché, le
+    sous-titre, la description, et le **bureau éditorial** — une ligne par
+    personne (ajoutez, retirez ou réordonnez les lignes librement, chaque
+    maison garde le sien) ;
+  - un onglet **Équipe** avec la liste des noms de l'équipe permanente —
+    affichée à l'identique sur les deux pages ;
+  - un onglet **Dépôt de manuscrit**, lui aussi identique sur les deux
+    pages : l'adresse e-mail à laquelle les manuscrits sont envoyés, et un
+    champ de texte qui, si vous le remplissez, remplace entièrement le
+    paragraphe par défaut (adresse comprise — dans ce cas, pensez à inclure
+    l'adresse dans votre texte).
+- **Page Contact** : le titre et le texte d'introduction affichés en haut de
+  `/contact`. Le reste de la page (formulaire ou message d'indisponibilité de
+  l'envoi) n'est pas éditable ici.
 - **Page Souscription** : le contenu des neuf cartes de contreparties (15 à
   1 000 €) — le lot associé à chaque palier. Le récit de la page (texte de
   campagne, objectifs, visuels) n'est pas éditable ici, il vient du code.

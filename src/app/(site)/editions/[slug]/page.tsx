@@ -6,6 +6,7 @@ import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { NewTabMark } from "@/components/new-tab-mark";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
+import { joinNomsFr } from "@/lib/format";
 import type { EditionSlug } from "@/lib/types";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import { POP_BG } from "@/components/pop-palette";
@@ -23,9 +24,11 @@ export const revalidate = 3600; // même fenêtre ISR que le reste du contenu Pa
  * deux colonnes encadrées. L'aplat porte une des quatre couleurs du site
  * (`BAND_BG` ci-dessous) — classes littérales (contrat Tailwind JIT).
  *
- * Textes : nom/tagline/description viennent du global `page-a-propos`
- * (onglet Maisons, surcharge champ par champ — vide = `EDITION_LIST` en
- * dur, via `mergePageAPropos`).
+ * Textes : nom/tagline/description/bureau éditorial viennent du global
+ * `page-a-propos` (onglet Maisons, surcharge champ par champ — vide =
+ * `EDITION_LIST`/bureau par défaut, via `mergePageAPropos`) ; équipe
+ * permanente et bloc « Dépôt de manuscrit » viennent du MÊME global mais sont
+ * PARTAGÉS entre les deux pages (le JSX ne les indexait déjà par aucun slug).
  */
 
 /**
@@ -44,23 +47,6 @@ const BAND_BG: Record<EditionSlug, string> = {
   "editions-sociales": POP_BG.teal,
   "la-dispute": POP_BG.orange,
 };
-
-/**
- * ⚠️ Attribution des bureaux éditoriaux : les 2 variantes du PDF maquette
- * répètent la même phrase d'intro avec des listes différentes — source non
- * fiable pour trancher qui est qui. La répartition ci-dessous (antérieure à
- * la maquette) est conservée telle quelle ; à confirmer avec le client
- * avant tout changement.
- */
-const EQUIPE_PERMANENTE =
-  "Noémie Brun, Clara Laspalas, Marina Simonin et Nicolas Vieillescazes";
-const BUREAUX: Record<EditionSlug, string> = {
-  "la-dispute":
-    "Noémie Brun, Alexis Cukier, Jérôme Deauvieau, Pauline Delage, Étienne Douat, Amélie Jeammet, Danièle Kergoat, Aurore Koechlin, Richard Lagache, Clara Laspalas, Jacqueline Martinez, Marina Simonin et Hélène Stevens",
-  "editions-sociales":
-    "Alexia Blin, Yohann Douet, Isabelle Garo, Marion Leclair, Alix Bouffard, Alexandre Feron, Vincent Heimendinger, Antony Burlaud, Guillaume Fondu, Richard Lagache, Jean Quétier, Alexis Cukier et Quentin Fondu",
-};
-const MANUSCRITS_EMAIL = "manuscritsldes@gmail.com";
 
 /** Recette des liens inline sur paper (celle du footer), réunie ici une fois. */
 const INLINE_LINK =
@@ -200,13 +186,13 @@ export default async function EditionPage({
                 <div className="flex flex-1 flex-col gap-5 border-t-2 border-ink p-6 text-[15px] leading-relaxed text-ink/80 sm:p-7">
                   <p>
                     Les Éditions sociales et La Dispute sont animées par une
-                    équipe permanente&nbsp;: {EQUIPE_PERMANENTE}.
+                    équipe permanente&nbsp;: {content.equipePermanente}.
                   </p>
                   <div>
                     <p className="font-sans text-xs font-extrabold uppercase tracking-[.05em] text-ink">
                       Bureau éditorial — {maison.name}
                     </p>
-                    <p className="mt-1.5">{BUREAUX[slug]}.</p>
+                    <p className="mt-1.5">{joinNomsFr(maison.bureau)}.</p>
                   </div>
                 </div>
               </div>
@@ -215,22 +201,37 @@ export default async function EditionPage({
               <div className="flex h-full flex-col bg-paper">
                 <h2 className={BAND_HEADING[slug]}>Dépôt de manuscrit</h2>
                 <div className="flex flex-1 flex-col gap-4 border-t-2 border-ink p-6 text-[15px] leading-relaxed text-ink/80 sm:p-7">
-                  <p>
-                    Vous pouvez nous soumettre un manuscrit en nous contactant à{" "}
-                    <a href={`mailto:${MANUSCRITS_EMAIL}`} className={INLINE_LINK}>
-                      {MANUSCRITS_EMAIL}
-                    </a>
-                    . Pour cela, merci de nous faire parvenir un synopsis
-                    contenant au minimum un résumé du manuscrit, une
-                    présentation de l&apos;auteur·ice et une table des matières
-                    indicative. Nos bureaux éditoriaux se réunissent et
-                    discutent des projets soumis une fois par trimestre.
-                  </p>
-                  <p>
-                    Nous recevons une très grande quantité de manuscrits, qui ne
-                    nous permet malheureusement pas de répondre à chaque
-                    proposition.
-                  </p>
+                  {content.depotManuscrit.html ? (
+                    // Texte du bloc entièrement remplacé depuis /admin
+                    // (adresse e-mail ci-dessous comprise) — `prose-book`
+                    // même recette que les pages légales (`LegalCmsBody`).
+                    <div
+                      className="prose-book"
+                      dangerouslySetInnerHTML={{ __html: content.depotManuscrit.html }}
+                    />
+                  ) : (
+                    <>
+                      <p>
+                        Vous pouvez nous soumettre un manuscrit en nous contactant à{" "}
+                        <a
+                          href={`mailto:${content.depotManuscrit.email}`}
+                          className={INLINE_LINK}
+                        >
+                          {content.depotManuscrit.email}
+                        </a>
+                        . Pour cela, merci de nous faire parvenir un synopsis
+                        contenant au minimum un résumé du manuscrit, une
+                        présentation de l&apos;auteur·ice et une table des matières
+                        indicative. Nos bureaux éditoriaux se réunissent et
+                        discutent des projets soumis une fois par trimestre.
+                      </p>
+                      <p>
+                        Nous recevons une très grande quantité de manuscrits, qui ne
+                        nous permet malheureusement pas de répondre à chaque
+                        proposition.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </Reveal>

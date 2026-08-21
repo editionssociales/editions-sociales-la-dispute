@@ -181,3 +181,9 @@ export const revalidateSouscriptionAfterChange: GlobalAfterChangeHook = ({ req }
   if (req.context?.disableRevalidate) return
   revalidatePath('/souscription')
 }
+
+/** Hook `page-contact` : seule la page /contact lit ce global. */
+export const revalidatePageContactAfterChange: GlobalAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidatePath('/contact')
+}

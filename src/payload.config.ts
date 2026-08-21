@@ -21,6 +21,7 @@ import { Rencontres } from './payload/collections/Rencontres.ts'
 import { Users } from './payload/collections/Users.ts'
 import { attachPoolErrorHandler } from './payload/lib/pool-error-handler.ts'
 import { PageAPropos } from './payload/globals/PageAPropos.ts'
+import { PageContact } from './payload/globals/PageContact.ts'
 import { PageSouscription } from './payload/globals/PageSouscription.ts'
 import { PagesLegales } from './payload/globals/PagesLegales.ts'
 import { ReglagesBoutique } from './payload/globals/ReglagesBoutique.ts'
@@ -77,7 +78,7 @@ export default buildConfig({
     Rencontres,
     Users,
   ],
-  globals: [ReglagesBoutique, PageAPropos, PageSouscription, PagesLegales],
+  globals: [ReglagesBoutique, PageAPropos, PageSouscription, PagesLegales, PageContact],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({

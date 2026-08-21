@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isoDayParis, parisMidnightUtc } from "./format";
+import { isoDayParis, joinNomsFr, parisMidnightUtc } from "./format";
 
 /**
  * `isoDayParis` ramène un instant au jour civil français — verrouille les
@@ -48,5 +48,23 @@ describe("parisMidnightUtc", () => {
     const borneJPlus1 = new Date(parisMidnightUtc("2026-06-24")).getTime();
     expect(saisieAdminJourJ).toBeGreaterThanOrEqual(borneJ);
     expect(saisieAdminJourJ).toBeLessThan(borneJPlus1);
+  });
+});
+
+describe("joinNomsFr", () => {
+  it("liste vide → chaîne vide", () => {
+    expect(joinNomsFr([])).toBe("");
+  });
+
+  it("un seul nom → tel quel, pas de « et »", () => {
+    expect(joinNomsFr(["Alexia Blin"])).toBe("Alexia Blin");
+  });
+
+  it("deux noms → « A et B », jamais de virgule", () => {
+    expect(joinNomsFr(["Alexia Blin", "Yohann Douet"])).toBe("Alexia Blin et Yohann Douet");
+  });
+
+  it("trois noms ou plus → virgules puis « et » avant le dernier (pas de virgule d'Oxford)", () => {
+    expect(joinNomsFr(["A", "B", "C", "D"])).toBe("A, B, C et D");
   });
 });
