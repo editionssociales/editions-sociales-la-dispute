@@ -1,7 +1,7 @@
 import type { CollectionBeforeChangeHook } from 'payload'
 
 import { planBuyLinksAutofill } from './buy-links-core.ts'
-import { resolveBuyLinks, type BuyLinksNeed, type ResolvedBuyLinks } from './buy-links-resolve.ts'
+import type { BuyLinksNeed, ResolvedBuyLinks } from './buy-links-resolve.ts'
 
 /**
  * Hook `beforeChange` de `Books` : remplit `buy.parislibrairies`/

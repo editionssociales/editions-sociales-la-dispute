@@ -265,7 +265,13 @@ export interface Book {
   origin: 'catalogue' | 'boutique';
   buy?: {
     boutiqueUrl?: string | null;
+    /**
+     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     */
     parislibrairies?: string | null;
+    /**
+     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     */
     lalibrairie?: string | null;
   };
   /**
