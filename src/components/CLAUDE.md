@@ -15,7 +15,7 @@ données ni le routage.
 
 ## Local Contracts
 
-- **Serveur par défaut** : seulement Navigation, Carrousels, Métriques, Formulaires, Feuille mobile, Mosaïque, Panier et Témoins de transition (`catalogue-transition.tsx` — estompage compteur+grille pendant un filtre ; `link-pending-hint.tsx` — témoin `useLinkStatus` de pagination/mosaïque) portent `"use client"` — exceptions documentées en code. `nav-accent.ts`/`rail-inset.ts`/`pop-palette.ts` restent plats, importables des deux arbres.
+- **Serveur par défaut** : seulement Navigation, Carrousels, Métriques, Formulaires, Étagères 3D, Feuille mobile, Mosaïque, Panier et Témoins de transition (`catalogue-transition.tsx` — estompage compteur+grille pendant un filtre ; `link-pending-hint.tsx` — témoin `useLinkStatus` de pagination/mosaïque) portent `"use client"` — exceptions documentées en code. `nav-accent.ts`/`rail-inset.ts`/`pop-palette.ts` restent plats, importables des deux arbres.
 - **Repli e-mail** : l'adresse publique (`src/lib/contact-address`) reste visible en permanence ; Brevo absent ⇒ `mailto:` seul ; `contact-form` renvoie le fallback dans son état.
 - **Déroulés** (header mobile, mosaïque) : bouton `aria-expanded` porte l'état, chevron tourne, repli par `inert` jamais `visibility`, focus suit la bascule. Verrouillé par tests (`mosaic-disclosure.test.tsx`).
 - **Header** : layout unique sous `lg` avec panier+menu en case de droite ; sur /souscription le rail compact force la marge du header — source unique `rail-inset.ts` pour header/grille/rail (380px).
