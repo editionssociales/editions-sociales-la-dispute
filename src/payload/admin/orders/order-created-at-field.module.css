@@ -1,0 +1,24 @@
+/*
+ * Bloc "Créée le" de la sidebar fiche Commande (`OrderCreatedAtField.tsx`,
+ * `Orders.ts`) — module dédié (même convention que
+ * `books/books-filter-chips.module.css`/`rencontres/rencontres-filter-chips.module.css` :
+ * pas de partage), mêmes variables de thème Payload `--theme-*`, mêmes hex
+ * de secours.
+ */
+
+.block {
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-elevation-800, #2c2a25);
+}
+
+.value {
+  margin: 0;
+  font-size: 13px;
+  color: var(--theme-elevation-600, #4a4740);
+}
