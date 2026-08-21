@@ -13,10 +13,45 @@ import { MigrateUpArgs, MigrateDownArgs } from '@payloadcms/db-postgres'
  * Idempotente par slug (rejouable, et CI la joue sur un Postgres vierge).
  */
 const PRODUITS = [
-  { slug: 'planche-de-stickers', title: 'Planche de stickers' },
-  { slug: 'selection-15-decouvrir', title: 'Sélection de 15 Découvrir' },
-  { slug: 'pack-5-geme', title: 'Pack de 5 livres de la GEME' },
+  {
+    slug: 'planche-de-stickers',
+    title: 'Planche de stickers',
+    presentation: 'Planche de stickers de la campagne de souscription 2026.',
+  },
+  {
+    slug: 'selection-15-decouvrir',
+    title: 'Sélection de 15 Découvrir',
+    presentation: 'Sélection de 15 titres de la collection Découvrir, composée par les éditions sociales.',
+  },
+  {
+    slug: 'pack-5-geme',
+    title: 'Pack de 5 livres de la GEME',
+    presentation: 'Pack de 5 livres de la Grande Édition Marx & Engels, composé par les éditions sociales.',
+  },
 ] as const
+
+/** Document lexical minimal (un paragraphe) — même forme que les fixtures de `site-content-core.test.ts`. */
+function lexicalDoc(text: string) {
+  return {
+    root: {
+      type: 'root',
+      format: '' as const,
+      indent: 0,
+      version: 1,
+      direction: 'ltr' as const,
+      children: [
+        {
+          type: 'paragraph',
+          format: '' as const,
+          indent: 0,
+          version: 1,
+          direction: 'ltr' as const,
+          children: [{ type: 'text', format: 0, style: '', mode: 'normal', detail: 0, text, version: 1 }],
+        },
+      ],
+    },
+  }
+}
 
 export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
   for (const produit of PRODUITS) {
@@ -36,9 +71,11 @@ export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
         title: produit.title,
         slug: produit.slug,
         origin: 'boutique',
-        // Date requise par le schéma — l'ouverture de la campagne fait foi
+        presentation: lexicalDoc(produit.presentation),
+        // Dates requises par le schéma — l'ouverture de la campagne fait foi
         // pour ces articles qui n'ont pas de parution réelle.
         dateParution: '2026-08-20',
+        sortDate: '2026-08-20',
         aParaitre: false,
         commerce: { sellable: false, stock: null, stockSuivi: 'manuel' },
       },
