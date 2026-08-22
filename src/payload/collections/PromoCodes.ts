@@ -28,6 +28,8 @@ export const PromoCodes: CollectionConfig = {
   admin: {
     group: 'Boutique',
     useAsTitle: 'code',
+    description:
+      'Codes de réduction utilisables au paiement (montant fixe ou livraison offerte) — à créer pour une opération commerciale, à désactiver une fois la campagne finie.',
     // « État » (calculée) remplace la colonne `active` brute — audit UX,
     // manque n°1 : aucune colonne ne disait « en cours en ce moment »
     // (croise active + expiresAt, cf. le champ `etat` plus bas).
@@ -111,6 +113,7 @@ export const PromoCodes: CollectionConfig = {
       type: 'date',
       label: 'Expire le',
       admin: {
+        position: 'sidebar',
         date: {
           pickerAppearance: 'dayOnly',
           displayFormat: 'dd/MM/yyyy',

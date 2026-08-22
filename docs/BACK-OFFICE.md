@@ -68,17 +68,21 @@ changez pas à la légère une fois publié.
 
 ## Éditer les contenus du site
 
-Menu de gauche → groupe **Site**. Chaque page listée là a un principe
-commun : **un champ laissé vide affiche le texte actuel du site** (rien ne
-casse si vous ne remplissez rien). Vous ne risquez donc jamais de « vider »
-une page par erreur.
+Les pages de contenu sont réparties dans deux groupes du menu de gauche :
+**Vie du site** (ce qui bouge avec l'actualité et les campagnes — Page
+Souscription, Mise en avant) et **Pages du site** (les pages plus statiques —
+Pages des maisons, Page Contact, Mentions légales & pied de page). Chaque
+page a un principe commun : **un champ laissé vide affiche le texte actuel du
+site** (rien ne casse si vous ne remplissez rien). Vous ne risquez donc
+jamais de « vider » une page par erreur.
 
-- **Pages** : textes des pages CGV & dons, Mentions légales et
-  Confidentialité ; pied de page (adresse, diffusion) ; liens réseaux
-  sociaux (pied de page seulement — jamais en haut de page — s'il y en a au
-  moins un) ; titre et description par défaut utilisés par Google.
-- **Pages des maisons** (pages `/editions/editions-sociales` et
-  `/editions/la-dispute`, ex-page À propos) :
+- **Mentions légales & pied de page** (groupe **Pages du site**) : textes des
+  pages CGV & dons, Mentions légales et Confidentialité ; pied de page
+  (adresse, diffusion) ; liens réseaux sociaux (pied de page seulement —
+  jamais en haut de page — s'il y en a au moins un) ; titre et description
+  par défaut utilisés par Google.
+- **Pages des maisons** (groupe **Pages du site** ; pages
+  `/editions/editions-sociales` et `/editions/la-dispute`, ex-page À propos) :
   - un onglet **Maisons** avec, pour chaque maison, le nom affiché, le
     sous-titre, la description, et le **bureau éditorial** — une ligne par
     personne (ajoutez, retirez ou réordonnez les lignes librement, chaque
@@ -90,10 +94,11 @@ une page par erreur.
     champ de texte qui, si vous le remplissez, remplace entièrement le
     paragraphe par défaut (adresse comprise — dans ce cas, pensez à inclure
     l'adresse dans votre texte).
-- **Page Contact** : le titre et le texte d'introduction affichés en haut de
-  `/contact`. Le reste de la page (formulaire ou message d'indisponibilité de
-  l'envoi) n'est pas éditable ici.
-- **Page Souscription** a quatre onglets :
+- **Page Contact** (groupe **Pages du site**) : le titre et le texte
+  d'introduction affichés en haut de `/contact`. Le reste de la page
+  (formulaire ou message d'indisponibilité de l'envoi) n'est pas éditable
+  ici.
+- **Page Souscription** (groupe **Vie du site**) a quatre onglets :
   - **Titre** : les trois lignes du grand titre en haut de page (« 100 ans »,
     « d'édition marxiste : » et la phrase d'appel).
   - **Récit** : les quatre sections du texte de campagne (« Édition
@@ -112,15 +117,16 @@ une page par erreur.
     pas ici** non plus : ils sont calés sur les paliers de paiement définis
     ailleurs, vous ne touchez que le texte qui les accompagne.
 
-- **Mise en avant** (bandeau ponctuel sur l'accueil, menu **Mises en avant**) :
-  donnez un titre, un texte court, des dates de début/fin, cochez « Actif ».
-  Le bandeau n'apparaît sur l'accueil que si la case est cochée ET que la
-  date du jour est dans la période choisie — pratique pour préparer une
-  annonce à l'avance sans qu'elle sorte trop tôt.
+- **Mise en avant** (groupe **Vie du site**, menu **Mises en avant** ;
+  bandeau ponctuel sur l'accueil) : donnez un titre, un texte court, des
+  dates de début/fin, cochez « Actif ». Le bandeau n'apparaît sur l'accueil
+  que si la case est cochée ET que la date du jour est dans la période
+  choisie — pratique pour préparer une annonce à l'avance sans qu'elle sorte
+  trop tôt.
 
 ## Gérer l'agenda des rencontres
 
-Menu de gauche → groupe **Site** → **Rencontres**. Chaque entrée est une
+Menu de gauche → groupe **Vie du site** → **Rencontres**. Chaque entrée est une
 rencontre, débat ou présentation affiché sur `/rencontres`, triée
 automatiquement entre « à venir » et « passées » selon la date du jour — vous
 n'avez rien à faire pour qu'une rencontre bascule d'une section à l'autre.
@@ -137,9 +143,11 @@ Une fois enregistrée, une rencontre est visible sur le site en moins d'une
 minute, comme le reste du back-office.
 
 Le **Seuil stock** (alerte stock bas du tableau de bord / page Stock) vit
-dans le groupe **Boutique**, à côté des codes promo. Les comptes
-(**Utilisateur·rice·s**) forment le groupe **Administration**, visible des
-admins uniquement.
+dans le groupe **Boutique**, à côté des codes promo — visible de toute
+l'équipe en lecture, modifiable par les administrateur·rice·s seulement. Les
+comptes (**Utilisateur·rice·s**) et l'historique des imports (**Imports
+routeur**) forment le groupe **Administration & technique**, entièrement
+masqué aux éditrices·eurs.
 
 ## Suivre les commandes et les remboursements
 

@@ -25,7 +25,7 @@ export const Rencontres: CollectionConfig = {
   },
   defaultSort: '-date',
   admin: {
-    group: 'Site',
+    group: 'Vie du site',
     useAsTitle: 'titre',
     // `lieu` manquait à côté de `ville` — colonnes utiles au quotidien,
     // ordre/tri (`defaultSort: '-date'` ci-dessus) inchangés.
@@ -148,6 +148,7 @@ export const Rencontres: CollectionConfig = {
       label: 'Grande affiche (pleine largeur)',
       defaultValue: false,
       admin: {
+        position: 'sidebar',
         description:
           'Coché : l’événement s’affiche en grande carte pleine largeur en tête de l’agenda (ex. braderie). Décoché : carte standard dans la grille 2-3 colonnes.',
       },

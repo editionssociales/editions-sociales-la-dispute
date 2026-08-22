@@ -13,8 +13,10 @@ export const Users: CollectionConfig = {
     plural: 'Utilisateur·rice·s',
   },
   admin: {
-    group: 'Administration',
+    group: 'Administration & technique',
     useAsTitle: 'name',
+    description:
+      'Comptes du back-office (administrateur·rice ou éditrice·eur) — à créer ou modifier seulement pour donner ou retirer un accès à l’équipe.',
     // Invisible pour les non-admins (recette n°4 du plan : un compte editor
     // « ne voit pas Users ») — leur propre compte reste accessible via
     // /admin/account, l'access control reste la vraie barrière.
