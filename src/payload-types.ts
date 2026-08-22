@@ -72,11 +72,11 @@ export interface Config {
     authors: Author;
     libelles: Libelle;
     media: Media;
-    'promo-codes': PromoCode;
-    'import-runs': ImportRun;
     highlight: Highlight;
     rencontres: Rencontre;
+    'promo-codes': PromoCode;
     users: User;
+    'import-runs': ImportRun;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -89,11 +89,11 @@ export interface Config {
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     libelles: LibellesSelect<false> | LibellesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
-    'import-runs': ImportRunsSelect<false> | ImportRunsSelect<true>;
     highlight: HighlightSelect<false> | HighlightSelect<true>;
     rencontres: RencontresSelect<false> | RencontresSelect<true>;
+    'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    'import-runs': ImportRunsSelect<false> | ImportRunsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -104,18 +104,18 @@ export interface Config {
   };
   fallbackLocale: null;
   globals: {
+    'page-souscription': PageSouscription;
     'reglages-boutique': ReglagesBoutique;
     'page-a-propos': PageAPropos;
-    'page-souscription': PageSouscription;
-    'pages-legales': PagesLegales;
     'page-contact': PageContact;
+    'pages-legales': PagesLegales;
   };
   globalsSelect: {
+    'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
     'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
-    'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
-    'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
     'page-contact': PageContactSelect<false> | PageContactSelect<true>;
+    'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
   };
   locale: null;
   widgets: {
@@ -146,6 +146,8 @@ export interface UserAuthOperations {
   };
 }
 /**
+ * Le catalogue des deux maisons : titre, présentation, couverture de chaque livre — et, pour les titres vendus sur le site, prix et stock dans l'onglet Commerce. À modifier à chaque parution, réédition ou changement de prix.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "books".
  */
@@ -162,6 +164,13 @@ export interface Book {
    * Thèmes du catalogue (plusieurs possibles). Liste gérée sous Catalogue → Libellés.
    */
   libelles?: (number | Libelle)[] | null;
+  dateParution: string;
+  /**
+   * ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.
+   */
+  isbn?: string | null;
+  pages?: number | null;
+  aParaitre?: boolean | null;
   /**
    * Téléversez une image (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
    */
@@ -253,33 +262,19 @@ export interface Book {
     };
     [k: string]: unknown;
   } | null;
-  dateParution: string;
-  aParaitre?: boolean | null;
-  /**
-   * ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.
-   */
-  isbn?: string | null;
-  pages?: number | null;
   /**
    * Prix TTC — la TVA 5,5 % est incluse et jamais recalculée au checkout.
    */
   prix?: number | null;
   origin: 'catalogue' | 'boutique';
-  buy?: {
-    boutiqueUrl?: string | null;
-    /**
-     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
-     */
-    parislibrairies?: string | null;
-    /**
-     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
-     */
-    lalibrairie?: string | null;
-  };
   /**
    * Vente en ligne native — pilote le panier et le checkout du site.
    */
   commerce?: {
+    /**
+     * Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.
+     */
+    stock?: number | null;
     /**
      * Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.
      */
@@ -293,10 +288,6 @@ export interface Book {
      */
     preorder?: boolean | null;
     /**
-     * Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.
-     */
-    stock?: number | null;
-    /**
      * Posé automatiquement à « routeur » par l'import mensuel ; « manuel » (défaut) sinon.
      */
     stockSuivi?: ('routeur' | 'manuel') | null;
@@ -304,6 +295,17 @@ export interface Book {
      * Posé automatiquement par l'import stock routeur mensuel (`POST /api/books/import-stock`) — jamais saisi à la main.
      */
     stockUpdatedAt?: string | null;
+  };
+  buy?: {
+    boutiqueUrl?: string | null;
+    /**
+     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     */
+    parislibrairies?: string | null;
+    /**
+     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     */
+    lalibrairie?: string | null;
   };
   contentTouched?: boolean | null;
   wpSource?: {
@@ -321,6 +323,8 @@ export interface Book {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * Fiches auteur·rice·s rattachées aux livres (nom, biographie) — à créer avant de pouvoir les associer à une fiche Livre.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "authors".
  */
@@ -369,6 +373,8 @@ export interface Libelle {
   createdAt: string;
 }
 /**
+ * Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
@@ -476,6 +482,8 @@ export interface Order {
   createdAt: string;
 }
 /**
+ * Codes de réduction utilisables au paiement (montant fixe ou livraison offerte) — à créer pour une opération commerciale, à désactiver une fois la campagne finie.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "promo-codes".
  */
@@ -496,37 +504,6 @@ export interface PromoCode {
   minCart?: number | null;
   expiresAt?: string | null;
   active?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Historique des imports mensuels du fichier stock routeur — un document par import réussi, créé automatiquement par l'import (jamais à la main). Le dernier run alimente le panneau « Import routeur » du tableau de bord.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "import-runs".
- */
-export interface ImportRun {
-  id: number;
-  /**
-   * Lignes exploitables du fichier routeur (EAN présent).
-   */
-  nbLignes: number;
-  /**
-   * Fiches appariées par ISBN normalisé et mises à jour.
-   */
-  nbMatchees: number;
-  /**
-   * Rapport complet du run (`StockImportReport`) — les non-appariés se téléchargent en CSV via le tableau de bord.
-   */
-  rapport?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -601,6 +578,8 @@ export interface Rencontre {
   createdAt: string;
 }
 /**
+ * Comptes du back-office (administrateur·rice ou éditrice·eur) — à créer ou modifier seulement pour donner ou retirer un accès à l’équipe.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
@@ -626,6 +605,37 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * Historique des imports mensuels du fichier stock routeur — un document par import réussi, créé automatiquement par l'import (jamais à la main). Le dernier run alimente le panneau « Import routeur » du tableau de bord. Consultation seule, réservée aux administrateur·rice·s ; le dernier import est déjà résumé sur le tableau de bord.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "import-runs".
+ */
+export interface ImportRun {
+  id: number;
+  /**
+   * Lignes exploitables du fichier routeur (EAN présent).
+   */
+  nbLignes: number;
+  /**
+   * Fiches appariées par ISBN normalisé et mises à jour.
+   */
+  nbMatchees: number;
+  /**
+   * Rapport complet du run (`StockImportReport`) — les non-appariés se téléchargent en CSV via le tableau de bord.
+   */
+  rapport?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -672,14 +682,6 @@ export interface PayloadLockedDocument {
         value: number | Media;
       } | null)
     | ({
-        relationTo: 'promo-codes';
-        value: number | PromoCode;
-      } | null)
-    | ({
-        relationTo: 'import-runs';
-        value: number | ImportRun;
-      } | null)
-    | ({
         relationTo: 'highlight';
         value: number | Highlight;
       } | null)
@@ -688,8 +690,16 @@ export interface PayloadLockedDocument {
         value: number | Rencontre;
       } | null)
     | ({
+        relationTo: 'promo-codes';
+        value: number | PromoCode;
+      } | null)
+    | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'import-runs';
+        value: number | ImportRun;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -743,6 +753,10 @@ export interface BooksSelect<T extends boolean = true> {
   edition?: T;
   authors?: T;
   libelles?: T;
+  dateParution?: T;
+  isbn?: T;
+  pages?: T;
+  aParaitre?: T;
   cover?: T;
   tablePdf?: T;
   extraitPdf?: T;
@@ -759,28 +773,24 @@ export interface BooksSelect<T extends boolean = true> {
       };
   video?: T;
   tableMatieres?: T;
-  dateParution?: T;
-  aParaitre?: T;
-  isbn?: T;
-  pages?: T;
   prix?: T;
   origin?: T;
+  commerce?:
+    | T
+    | {
+        stock?: T;
+        sellable?: T;
+        reducedShippingFlag?: T;
+        preorder?: T;
+        stockSuivi?: T;
+        stockUpdatedAt?: T;
+      };
   buy?:
     | T
     | {
         boutiqueUrl?: T;
         parislibrairies?: T;
         lalibrairie?: T;
-      };
-  commerce?:
-    | T
-    | {
-        sellable?: T;
-        reducedShippingFlag?: T;
-        preorder?: T;
-        stock?: T;
-        stockSuivi?: T;
-        stockUpdatedAt?: T;
       };
   contentTouched?: T;
   wpSource?:
@@ -893,31 +903,6 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "promo-codes_select".
- */
-export interface PromoCodesSelect<T extends boolean = true> {
-  code?: T;
-  type?: T;
-  amount?: T;
-  minCart?: T;
-  expiresAt?: T;
-  active?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "import-runs_select".
- */
-export interface ImportRunsSelect<T extends boolean = true> {
-  nbLignes?: T;
-  nbMatchees?: T;
-  rapport?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "highlight_select".
  */
 export interface HighlightSelect<T extends boolean = true> {
@@ -952,6 +937,20 @@ export interface RencontresSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-codes_select".
+ */
+export interface PromoCodesSelect<T extends boolean = true> {
+  code?: T;
+  type?: T;
+  amount?: T;
+  minCart?: T;
+  expiresAt?: T;
+  active?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
@@ -973,6 +972,17 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "import-runs_select".
+ */
+export interface ImportRunsSelect<T extends boolean = true> {
+  nbLignes?: T;
+  nbMatchees?: T;
+  rapport?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1013,84 +1023,6 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "reglages-boutique".
- */
-export interface ReglagesBoutique {
-  id: number;
-  /**
-   * En dessous de ce nombre d'exemplaires (`commerce.stock` des fiches Livres), un article est signalé comme stock bas — usage réservé aux étapes ultérieures du plan (back-office, étape 10) ; ce lot ne pose que le réglage.
-   */
-  seuilAlerteStockBas: number;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * Textes des pages /editions/editions-sociales et /editions/la-dispute. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "page-a-propos".
- */
-export interface PageAPropos {
-  id: number;
-  equipe?: {
-    /**
-     * Liste des noms séparés par des virgules (ex. « A, B et C »), affichée à l’identique sur les deux pages maisons. Vide = liste actuelle.
-     */
-    permanente?: string | null;
-  };
-  /**
-   * Textes propres à chaque maison. Maison absente ou champ vide = texte actuel ; les couleurs restent en code.
-   */
-  maisons?:
-    | {
-        maison: 'editions-sociales' | 'la-dispute';
-        nom?: string | null;
-        tagline?: string | null;
-        description?: string | null;
-        /**
-         * Une ligne par personne, listée dans cet ordre. Aucune ligne = liste actuelle de cette maison.
-         */
-        bureau?:
-          | {
-              nom: string;
-              id?: string | null;
-            }[]
-          | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Bloc identique sur les deux pages maisons (pas de bureau éditorial concerné ici).
-   */
-  depotManuscrit?: {
-    /**
-     * Utilisée dans la phrase d’accroche par défaut ci-dessous. Vide = adresse actuelle.
-     */
-    email?: string | null;
-    /**
-     * Remplace ENTIÈREMENT le texte par défaut (adresse e-mail ci-dessus comprise) — à utiliser seulement si la phrase d’accroche ne convient plus telle quelle. Vide = texte actuel.
-     */
-    texte?: {
-      root: {
-        type: string;
-        children: {
-          type: any;
-          version: number;
-          [k: string]: unknown;
-        }[];
-        direction: ('ltr' | 'rtl') | null;
-        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-        indent: number;
-        version: number;
-      };
-      [k: string]: unknown;
-    } | null;
-  };
-  updatedAt?: string | null;
-  createdAt?: string | null;
 }
 /**
  * Titre, récit et contreparties de la page /souscription. Un champ vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
@@ -1272,13 +1204,141 @@ export interface PageSouscription {
   createdAt?: string | null;
 }
 /**
- * Pages légales, pied de page, réseaux sociaux et référencement. Un champ vide = texte actuel du site.
+ * Nombre d’exemplaires en dessous duquel un livre est signalé « stock bas » sur le tableau de bord et la page Stock — modifiable par les administrateur·rice·s uniquement.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-boutique".
+ */
+export interface ReglagesBoutique {
+  id: number;
+  /**
+   * En dessous de ce nombre d'exemplaires (`commerce.stock` des fiches Livres), un article est signalé comme stock bas — usage réservé aux étapes ultérieures du plan (back-office, étape 10) ; ce lot ne pose que le réglage.
+   */
+  seuilAlerteStockBas: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Textes des pages /editions/editions-sociales et /editions/la-dispute. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-a-propos".
+ */
+export interface PageAPropos {
+  id: number;
+  /**
+   * Textes propres à chaque maison. Maison absente ou champ vide = texte actuel ; les couleurs restent en code.
+   */
+  maisons?:
+    | {
+        maison: 'editions-sociales' | 'la-dispute';
+        nom?: string | null;
+        tagline?: string | null;
+        description?: string | null;
+        /**
+         * Une ligne par personne, listée dans cet ordre. Aucune ligne = liste actuelle de cette maison.
+         */
+        bureau?:
+          | {
+              nom: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  equipe?: {
+    /**
+     * Liste des noms séparés par des virgules (ex. « A, B et C »), affichée à l’identique sur les deux pages maisons. Vide = liste actuelle.
+     */
+    permanente?: string | null;
+  };
+  /**
+   * Bloc identique sur les deux pages maisons (pas de bureau éditorial concerné ici).
+   */
+  depotManuscrit?: {
+    /**
+     * Utilisée dans la phrase d’accroche par défaut ci-dessous. Vide = adresse actuelle.
+     */
+    email?: string | null;
+    /**
+     * Remplace ENTIÈREMENT le texte par défaut (adresse e-mail ci-dessus comprise) — à utiliser seulement si la phrase d’accroche ne convient plus telle quelle. Vide = texte actuel.
+     */
+    texte?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Textes de la page /contact. Un champ vide = le texte actuel du site.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-contact".
+ */
+export interface PageContact {
+  id: number;
+  /**
+   * Vide = titre actuel.
+   */
+  titre?: string | null;
+  /**
+   * Chapeau sous le titre. Vide = texte actuel.
+   */
+  intro?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * CGV & dons, mentions légales, confidentialité, pied de page, réseaux sociaux et réglages de référencement (SEO) — textes communs à tout le site, très rarement modifiés.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages-legales".
  */
 export interface PagesLegales {
   id: number;
+  footer?: {
+    /**
+     * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
+     */
+    adresse?: string | null;
+  };
+  /**
+   * Affichés dans le pied de page (cellule « Suivez-nous »). Aucun lien = pied de page inchangé.
+   */
+  reseauxSociaux?:
+    | {
+        label: string;
+        /**
+         * URL complète (https://…).
+         */
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  seo?: {
+    /**
+     * Titre de la page d’accueil et suffixe des titres de pages (« Page — Titre »). Vide = titre actuel.
+     */
+    titreParDefaut?: string | null;
+    /**
+     * Méta-description par défaut du site. Vide = description actuelle.
+     */
+    descriptionParDefaut?: string | null;
+  };
   /**
    * Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.
    */
@@ -1333,101 +1393,8 @@ export interface PagesLegales {
     };
     [k: string]: unknown;
   } | null;
-  footer?: {
-    /**
-     * Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.
-     */
-    adresse?: string | null;
-  };
-  /**
-   * Affichés dans le pied de page (cellule « Suivez-nous »). Aucun lien = pied de page inchangé.
-   */
-  reseauxSociaux?:
-    | {
-        label: string;
-        /**
-         * URL complète (https://…).
-         */
-        url: string;
-        id?: string | null;
-      }[]
-    | null;
-  seo?: {
-    /**
-     * Titre de la page d’accueil et suffixe des titres de pages (« Page — Titre »). Vide = titre actuel.
-     */
-    titreParDefaut?: string | null;
-    /**
-     * Méta-description par défaut du site. Vide = description actuelle.
-     */
-    descriptionParDefaut?: string | null;
-  };
   updatedAt?: string | null;
   createdAt?: string | null;
-}
-/**
- * Textes de la page /contact. Un champ vide = le texte actuel du site.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "page-contact".
- */
-export interface PageContact {
-  id: number;
-  /**
-   * Vide = titre actuel.
-   */
-  titre?: string | null;
-  /**
-   * Chapeau sous le titre. Vide = texte actuel.
-   */
-  intro?: string | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "reglages-boutique_select".
- */
-export interface ReglagesBoutiqueSelect<T extends boolean = true> {
-  seuilAlerteStockBas?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "page-a-propos_select".
- */
-export interface PageAProposSelect<T extends boolean = true> {
-  equipe?:
-    | T
-    | {
-        permanente?: T;
-      };
-  maisons?:
-    | T
-    | {
-        maison?: T;
-        nom?: T;
-        tagline?: T;
-        description?: T;
-        bureau?:
-          | T
-          | {
-              nom?: T;
-              id?: T;
-            };
-        id?: T;
-      };
-  depotManuscrit?:
-    | T
-    | {
-        email?: T;
-        texte?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1490,12 +1457,65 @@ export interface PageSouscriptionSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reglages-boutique_select".
+ */
+export interface ReglagesBoutiqueSelect<T extends boolean = true> {
+  seuilAlerteStockBas?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-a-propos_select".
+ */
+export interface PageAProposSelect<T extends boolean = true> {
+  maisons?:
+    | T
+    | {
+        maison?: T;
+        nom?: T;
+        tagline?: T;
+        description?: T;
+        bureau?:
+          | T
+          | {
+              nom?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  equipe?:
+    | T
+    | {
+        permanente?: T;
+      };
+  depotManuscrit?:
+    | T
+    | {
+        email?: T;
+        texte?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-contact_select".
+ */
+export interface PageContactSelect<T extends boolean = true> {
+  titre?: T;
+  intro?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages-legales_select".
  */
 export interface PagesLegalesSelect<T extends boolean = true> {
-  cgv?: T;
-  mentionsLegales?: T;
-  confidentialite?: T;
   footer?:
     | T
     | {
@@ -1514,17 +1534,9 @@ export interface PagesLegalesSelect<T extends boolean = true> {
         titreParDefaut?: T;
         descriptionParDefaut?: T;
       };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "page-contact_select".
- */
-export interface PageContactSelect<T extends boolean = true> {
-  titre?: T;
-  intro?: T;
+  cgv?: T;
+  mentionsLegales?: T;
+  confidentialite?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
