@@ -20,15 +20,15 @@ import styles from './dashboard.module.css'
  *      seulement la barre visible, souvent large de quelques px) — c'est LUI
  *      qui rend le survol praticable sur une barre fine ;
  *   2. la barre visible (`.chartBar`, classe existante) ;
- *   3. l'étiquette de détail (`.barDetail`), masquée par défaut, révélée au
- *      survol du groupe, lisible sur tout fond via `paint-order: stroke` (un
- *      liseré de la couleur de fond du panneau derrière le texte) ;
+ *   3. l'étiquette de détail (`.barDetail`) : chaque barre porte sa copie du
+ *      texte à des coordonnées FIXES en haut à gauche du graphique (bande
+ *      `topPadding`), masquée par défaut, révélée au survol du groupe — une
+ *      seule visible à la fois, donc jamais de superposition avec les barres
+ *      (retour client 2026-08-22) ; lisible sur tout fond via
+ *      `paint-order: stroke` ;
  *   4. un `<title>` de repli (accessibilité — lecteur d'écran, appui long
  *      tactile), conservé en plus du texte visuel.
  *
- * `text-anchor` de l'étiquette de détail s'adapte à la position de la barre
- * (`detailAnchorFor`) : `start`/`end` près des bords du graphique pour ne
- * jamais déborder du `viewBox`, `middle` ailleurs.
  */
 
 export interface SalesBarChartBar {
@@ -71,20 +71,6 @@ export interface SalesBarChartProps {
   /** Texte de survol par barre (clé = `bar.key`) — une barre sans entrée n'affiche ni détail ni `<title>`. */
   details: Map<string, string>
   ariaLabel: string
-}
-
-/** `start`/`end` près des bords du graphique (jamais un texte qui déborde du `viewBox`), `middle` ailleurs. */
-function detailAnchorFor(centerX: number, width: number): 'start' | 'middle' | 'end' {
-  const margin = width * 0.1
-  if (centerX <= margin) return 'start'
-  if (centerX >= width - margin) return 'end'
-  return 'middle'
-}
-
-function detailXFor(bar: SalesBarChartBar, anchor: 'start' | 'middle' | 'end'): number {
-  if (anchor === 'start') return bar.x
-  if (anchor === 'end') return bar.x + bar.w
-  return bar.x + bar.w / 2
 }
 
 /**
@@ -137,8 +123,6 @@ export function SalesBarChart({ bars, dims, ticks, axisMax, xLabels, details, ar
 
       {bars.map((bar) => {
         const detail = details.get(bar.key)
-        const centerX = bar.x + bar.w / 2
-        const anchor = detailAnchorFor(centerX, width)
         return (
           <g key={bar.key} className={styles.barGroup}>
             <rect x={bar.x} y={topPadding} width={bar.w} height={barAreaHeight} className={styles.barCapture} />
@@ -149,13 +133,15 @@ export function SalesBarChart({ bars, dims, ticks, axisMax, xLabels, details, ar
               height={bar.h}
               className={styles.chartBar}
             />
+            {/* Lecture FIXE en haut à gauche (retour client 2026-08-22 : une
+                étiquette flottant au-dessus de sa barre se superposait aux
+                barres voisines plus hautes) — chaque barre porte SA copie du
+                texte aux MÊMES coordonnées, seule celle du groupe survolé est
+                révélée : une seule visible à la fois, superposition impossible.
+                La bande `topPadding` lui est réservée ; les libellés € de
+                l'axe vivent à droite, jamais de collision. */}
             {detail && (
-              <text
-                x={detailXFor(bar, anchor)}
-                y={topPadding + bar.y - 6}
-                textAnchor={anchor}
-                className={styles.barDetail}
-              >
+              <text x={2} y={topPadding - 6} textAnchor="start" className={styles.barDetail}>
                 {detail}
               </text>
             )}
