@@ -185,6 +185,10 @@ export const Books: CollectionConfig = {
     // la colonne d'état de vente.
     defaultColumns: ['title', 'edition', 'dateParution', 'commerce.stock', 'libelles', '_status'],
     listSearchableFields: ['title', 'isbn', 'slug'],
+    description:
+      'Le catalogue des deux maisons : titre, présentation, couverture de chaque livre — et, ' +
+      'pour les titres vendus sur le site, prix et stock dans l\'onglet Commerce. À modifier à ' +
+      'chaque parution, réédition ou changement de prix.',
     // Chips de filtre État/Maison + bouton « Nouveau livre » (issue #26) —
     // au-dessus du tableau, cf. `BooksFilterChipsPanel.tsx` (même slot que
     // `OrderExportPanel.tsx`/`Orders.ts`).
@@ -318,6 +322,53 @@ export const Books: CollectionConfig = {
               ],
             },
             {
+              // Remonté ici (issue #24, plan d'évolution du 22/08) : la date
+              // de parution pilote le statut « à paraître »
+              // (`upcomingBoundaryUtc`/`sellability.ts`) — donnée de tête,
+              // pas de fin de tab.
+              type: 'row',
+              fields: [
+                {
+                  name: 'dateParution',
+                  type: 'date',
+                  required: true,
+                  label: 'Date de parution',
+                  admin: {
+                    width: '25%',
+                    date: {
+                      pickerAppearance: 'dayOnly',
+                      displayFormat: 'dd/MM/yyyy',
+                    },
+                  },
+                },
+                {
+                  name: 'isbn',
+                  type: 'text',
+                  label: 'ISBN',
+                  validate: validateIsbn,
+                  admin: {
+                    width: '35%',
+                    placeholder: '978-2-35367-036-9',
+                    description:
+                      'ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.',
+                  },
+                },
+                {
+                  name: 'pages',
+                  type: 'number',
+                  label: 'Pages',
+                  admin: { width: '20%' },
+                },
+              ],
+            },
+            {
+              name: 'aParaitre',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'À paraître (informatif)',
+              admin: { width: '20%' },
+            },
+            {
               type: 'row',
               fields: [
                 {
@@ -390,116 +441,89 @@ export const Books: CollectionConfig = {
                 disableListColumn: true,
               },
             },
-            // Onglets de la fiche publique (maquette client « essai page de
-            // livre », 2026-07-23) : citations presse + vidéo dans l'onglet
-            // « La presse en parle », table des matières en texte dans
-            // l'onglet « Table des matières ». Aucun contenu = pas d'onglet.
+            // Contenus souvent ajoutés après coup, tous explicitement
+            // optionnels (issue #24, plan d'évolution du 22/08) — repliés par
+            // défaut pour ne pas alourdir la fiche au quotidien.
             {
-              name: 'presse',
-              type: 'array',
-              label: 'La presse en parle',
-              labels: {
-                singular: 'Citation presse',
-                plural: 'Citations presse',
-              },
+              type: 'collapsible',
+              label: 'Contenus additionnels (optionnels)',
               admin: {
-                disableListColumn: true,
-                description:
-                  'Citations affichées dans l’onglet « La presse en parle » de la fiche. Aucune citation ni vidéo = pas d’onglet.',
+                initCollapsed: true,
               },
               fields: [
+                // Onglets de la fiche publique (maquette client « essai page
+                // de livre », 2026-07-23) : citations presse + vidéo dans
+                // l'onglet « La presse en parle », table des matières en
+                // texte dans l'onglet « Table des matières ». Aucun contenu
+                // = pas d'onglet.
                 {
-                  name: 'citation',
-                  type: 'textarea',
-                  required: true,
-                  label: 'Citation',
-                  admin: { description: 'Sans guillemets — ils sont ajoutés à l’affichage.' },
-                },
-                {
-                  type: 'row',
+                  name: 'presse',
+                  type: 'array',
+                  label: 'La presse en parle',
+                  labels: {
+                    singular: 'Citation presse',
+                    plural: 'Citations presse',
+                  },
+                  admin: {
+                    disableListColumn: true,
+                    description:
+                      'Citations affichées dans l’onglet « La presse en parle » de la fiche. Aucune citation ni vidéo = pas d’onglet.',
+                  },
                   fields: [
                     {
-                      name: 'source',
-                      type: 'text',
+                      name: 'citation',
+                      type: 'textarea',
                       required: true,
-                      label: 'Source',
-                      admin: { width: '40%', description: 'Ex. « Mediapart ».' },
+                      label: 'Citation',
+                      admin: { description: 'Sans guillemets — ils sont ajoutés à l’affichage.' },
                     },
                     {
-                      name: 'date',
-                      type: 'text',
-                      label: 'Date',
-                      admin: { width: '30%', description: 'Texte libre, ex. « 10 juin 2026 ».' },
-                    },
-                    {
-                      name: 'lien',
-                      type: 'text',
-                      label: 'Lien (URL)',
-                      admin: { width: '30%', description: 'Article en ligne (facultatif).' },
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'source',
+                          type: 'text',
+                          required: true,
+                          label: 'Source',
+                          admin: { width: '40%', description: 'Ex. « Mediapart ».' },
+                        },
+                        {
+                          name: 'date',
+                          type: 'text',
+                          label: 'Date',
+                          admin: {
+                            width: '30%',
+                            description: 'Texte libre, ex. « 10 juin 2026 ».',
+                          },
+                        },
+                        {
+                          name: 'lien',
+                          type: 'text',
+                          label: 'Lien (URL)',
+                          admin: { width: '30%', description: 'Article en ligne (facultatif).' },
+                        },
+                      ],
                     },
                   ],
                 },
-              ],
-            },
-            {
-              name: 'video',
-              type: 'text',
-              label: 'Vidéo YouTube (URL)',
-              admin: {
-                description:
-                  'URL YouTube (watch, youtu.be ou embed) — intégrée sous les citations de l’onglet « La presse en parle ».',
-              },
-            },
-            {
-              name: 'tableMatieres',
-              type: 'richText',
-              label: 'Table des matières (texte)',
-              admin: {
-                disableListColumn: true,
-                description:
-                  'Affichée dans l’onglet « Table des matières » de la fiche ; le PDF téléversé plus haut reste proposé en lien.',
-              },
-            },
-            {
-              type: 'row',
-              fields: [
                 {
-                  name: 'dateParution',
-                  type: 'date',
-                  required: true,
-                  label: 'Date de parution',
-                  admin: {
-                    width: '25%',
-                    date: {
-                      pickerAppearance: 'dayOnly',
-                      displayFormat: 'dd/MM/yyyy',
-                    },
-                  },
-                },
-                {
-                  name: 'aParaitre',
-                  type: 'checkbox',
-                  defaultValue: false,
-                  label: 'À paraître (informatif)',
-                  admin: { width: '20%' },
-                },
-                {
-                  name: 'isbn',
+                  name: 'video',
                   type: 'text',
-                  label: 'ISBN',
-                  validate: validateIsbn,
+                  label: 'Vidéo YouTube (URL)',
                   admin: {
-                    width: '35%',
-                    placeholder: '978-2-35367-036-9',
                     description:
-                      'ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.',
+                      'URL YouTube (watch, youtu.be ou embed) — intégrée sous les citations de l’onglet « La presse en parle ».',
                   },
                 },
                 {
-                  name: 'pages',
-                  type: 'number',
-                  label: 'Pages',
-                  admin: { width: '20%' },
+                  name: 'tableMatieres',
+                  type: 'richText',
+                  label: 'Table des matières (texte)',
+                  admin: {
+                    disableListColumn: true,
+                    description:
+                      'Affichée dans l’onglet « Table des matières » de la fiche ; le PDF téléversé plus haut reste proposé en lien.',
+                  },
                 },
               ],
             },
@@ -539,6 +563,113 @@ export const Books: CollectionConfig = {
               ],
             },
             {
+              name: 'commerce',
+              type: 'group',
+              label: 'Commerce natif',
+              admin: {
+                description: 'Vente en ligne native — pilote le panier et le checkout du site.',
+              },
+              fields: [
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'stock',
+                      type: 'number',
+                      min: 0,
+                      label: 'Stock',
+                      admin: {
+                        width: '20%',
+                        description:
+                          'Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.',
+                      },
+                    },
+                    {
+                      name: 'sellable',
+                      type: 'checkbox',
+                      defaultValue: true,
+                      label: 'Vendable nativement',
+                      admin: {
+                        width: '50%',
+                        description:
+                          'Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.',
+                      },
+                    },
+                  ],
+                },
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'reducedShippingFlag',
+                      type: 'checkbox',
+                      defaultValue: false,
+                      label: 'Port réduit (« manifeste »)',
+                      admin: {
+                        width: '50%',
+                        description:
+                          "Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.",
+                      },
+                    },
+                    {
+                      name: 'preorder',
+                      type: 'checkbox',
+                      defaultValue: false,
+                      label: 'Ouvert à la précommande',
+                      admin: {
+                        description:
+                          "Un livre « à paraître » (parution future) devient achetable en précommande dans le panier natif dès que cette case est cochée — expédié à la parution. Sans effet sur une fiche déjà parue. Sans cette case, un livre à paraître reste refusé à la vente comme aujourd'hui.",
+                      },
+                    },
+                  ],
+                },
+                // Automatique (routeur ou webhook d'import) — jamais saisi à
+                // la main, replié par défaut (issue #24, plan d'évolution du
+                // 22/08).
+                {
+                  type: 'collapsible',
+                  label: 'Technique',
+                  admin: {
+                    initCollapsed: true,
+                  },
+                  fields: [
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'stockSuivi',
+                          type: 'select',
+                          defaultValue: 'manuel',
+                          label: 'Suivi du stock',
+                          options: [
+                            { value: 'routeur', label: 'Routeur (import mensuel)' },
+                            { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
+                          ],
+                          admin: {
+                            width: '40%',
+                            description:
+                              "Posé automatiquement à « routeur » par l'import mensuel ; « manuel » (défaut) sinon.",
+                          },
+                        },
+                        {
+                          name: 'stockUpdatedAt',
+                          type: 'date',
+                          label: 'Stock mis à jour le',
+                          admin: {
+                            width: '40%',
+                            readOnly: true,
+                            description:
+                              "Posé automatiquement par l'import stock routeur mensuel " +
+                              '(`POST /api/books/import-stock`) — jamais saisi à la main.',
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
               name: 'buy',
               type: 'group',
               label: "Liens d'achat",
@@ -570,96 +701,6 @@ export const Books: CollectionConfig = {
                         width: '33%',
                         description:
                           'Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.',
-                      },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              name: 'commerce',
-              type: 'group',
-              label: 'Commerce natif',
-              admin: {
-                description: 'Vente en ligne native — pilote le panier et le checkout du site.',
-              },
-              fields: [
-                {
-                  type: 'row',
-                  fields: [
-                    {
-                      name: 'sellable',
-                      type: 'checkbox',
-                      defaultValue: true,
-                      label: 'Vendable nativement',
-                      admin: {
-                        width: '50%',
-                        description:
-                          'Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.',
-                      },
-                    },
-                    {
-                      name: 'reducedShippingFlag',
-                      type: 'checkbox',
-                      defaultValue: false,
-                      label: 'Port réduit (« manifeste »)',
-                      admin: {
-                        width: '50%',
-                        description:
-                          "Un panier composé uniquement d'articles cochés bénéficie du tarif de port réduit.",
-                      },
-                    },
-                  ],
-                },
-                {
-                  name: 'preorder',
-                  type: 'checkbox',
-                  defaultValue: false,
-                  label: 'Ouvert à la précommande',
-                  admin: {
-                    description:
-                      "Un livre « à paraître » (parution future) devient achetable en précommande dans le panier natif dès que cette case est cochée — expédié à la parution. Sans effet sur une fiche déjà parue. Sans cette case, un livre à paraître reste refusé à la vente comme aujourd'hui.",
-                  },
-                },
-                {
-                  type: 'row',
-                  fields: [
-                    {
-                      name: 'stock',
-                      type: 'number',
-                      min: 0,
-                      label: 'Stock',
-                      admin: {
-                        width: '20%',
-                        description:
-                          'Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.',
-                      },
-                    },
-                    {
-                      name: 'stockSuivi',
-                      type: 'select',
-                      defaultValue: 'manuel',
-                      label: 'Suivi du stock',
-                      options: [
-                        { value: 'routeur', label: 'Routeur (import mensuel)' },
-                        { value: 'manuel', label: 'Manuel (saisie dans la fiche)' },
-                      ],
-                      admin: {
-                        width: '40%',
-                        description:
-                          "Posé automatiquement à « routeur » par l'import mensuel ; « manuel » (défaut) sinon.",
-                      },
-                    },
-                    {
-                      name: 'stockUpdatedAt',
-                      type: 'date',
-                      label: 'Stock mis à jour le',
-                      admin: {
-                        width: '40%',
-                        readOnly: true,
-                        description:
-                          "Posé automatiquement par l'import stock routeur mensuel " +
-                          '(`POST /api/books/import-stock`) — jamais saisi à la main.',
                       },
                     },
                   ],
