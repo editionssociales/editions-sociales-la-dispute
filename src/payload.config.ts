@@ -65,20 +65,28 @@ export default buildConfig({
   },
   // L'ordre de déclaration EST le menu admin : la nav groupe collections ET
   // globals par `admin.group`, dans l'ordre de rencontre ci-dessous — groupes
-  // Quotidien · Catalogue · Boutique · Site · Administration.
+  // Quotidien · Catalogue · Vie du site · Boutique · Administration &
+  // technique · Pages du site.
+  // Contrainte du framework (`groupNavItems.js`) : les collections sont
+  // traitées en bloc avant les globals, donc un groupe qui ne compte AUCUNE
+  // collection (uniquement des globals) est structurellement rejeté après
+  // tous les groupes qui en comptent au moins une — quel que soit son rang de
+  // première rencontre dans ce tableau. C'est le cas de « Pages du site »
+  // (Pages des maisons, Page Contact, Mentions légales & pied de page) :
+  // assumé, le plus statique atterrit en bas.
   collections: [
     Books,
     Orders,
     Authors,
     BookLabels,
     Media,
-    PromoCodes,
-    ImportRuns,
     Highlight,
     Rencontres,
+    PromoCodes,
     Users,
+    ImportRuns,
   ],
-  globals: [ReglagesBoutique, PageAPropos, PageSouscription, PagesLegales, PageContact],
+  globals: [PageSouscription, ReglagesBoutique, PageAPropos, PageContact, PagesLegales],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({

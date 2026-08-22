@@ -33,6 +33,8 @@ export const Media: CollectionConfig = {
   },
   admin: {
     group: 'Catalogue',
+    description:
+      'Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé.',
   },
   upload: {
     mimeTypes: ['image/*', 'application/pdf'],
@@ -54,24 +56,33 @@ export const Media: CollectionConfig = {
   },
   fields: [
     {
-      name: 'alt',
-      type: 'text',
-      label: 'Texte alternatif',
+      type: 'collapsible',
+      label: 'Technique',
       admin: {
-        readOnly: true,
-        description:
-          'Rempli automatiquement à la sauvegarde du livre (couverture, table des matières ou extrait — titre + auteur·rice·s). Non modifiable à la main.',
+        initCollapsed: true,
       },
-    },
-    {
-      name: 'sourceUrl',
-      type: 'text',
-      unique: true,
-      index: true,
-      admin: {
-        readOnly: true,
-        description: "Clé d'idempotence de la migration",
-      },
+      fields: [
+        {
+          name: 'alt',
+          type: 'text',
+          label: 'Texte alternatif',
+          admin: {
+            readOnly: true,
+            description:
+              'Rempli automatiquement à la sauvegarde du livre (couverture, table des matières ou extrait — titre + auteur·rice·s). Non modifiable à la main.',
+          },
+        },
+        {
+          name: 'sourceUrl',
+          type: 'text',
+          unique: true,
+          index: true,
+          admin: {
+            readOnly: true,
+            description: "Clé d'idempotence de la migration",
+          },
+        },
+      ],
     },
   ],
 }

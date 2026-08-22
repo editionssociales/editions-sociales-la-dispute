@@ -20,6 +20,8 @@ export const Authors: CollectionConfig = {
   admin: {
     group: 'Catalogue',
     useAsTitle: 'name',
+    description:
+      'Fiches auteur·rice·s rattachées aux livres (nom, biographie) — à créer avant de pouvoir les associer à une fiche Livre.',
   },
   access: {
     read: () => true,

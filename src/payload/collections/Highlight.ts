@@ -24,7 +24,7 @@ export const Highlight: CollectionConfig = {
     plural: 'Mises en avant',
   },
   admin: {
-    group: 'Site',
+    group: 'Vie du site',
     useAsTitle: 'titre',
     // « Live » (calculée, cf. le champ `live` plus bas) remplace `actif` brut
     // en tête — dit si la bannière serait affichée AUJOURD'HUI, pas
@@ -34,7 +34,7 @@ export const Highlight: CollectionConfig = {
   },
   access: {
     // Lu par la page d'accueil via la Local API ; même lecture ouverte que
-    // les autres collections/globals du groupe Site (Pages) — aucune donnée
+    // les autres collections/globals du groupe Vie du site — aucune donnée
     // sensible. Écriture réservée aux mêmes rôles que le reste.
     read: () => true,
     create: isAdminOrEditor,
@@ -113,6 +113,7 @@ export const Highlight: CollectionConfig = {
       required: true,
       label: 'Date de début',
       admin: {
+        position: 'sidebar',
         date: {
           pickerAppearance: 'dayOnly',
           displayFormat: 'dd/MM/yyyy',
@@ -125,6 +126,7 @@ export const Highlight: CollectionConfig = {
       required: true,
       label: 'Date de fin',
       admin: {
+        position: 'sidebar',
         date: {
           pickerAppearance: 'dayOnly',
           displayFormat: 'dd/MM/yyyy',

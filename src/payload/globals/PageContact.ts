@@ -9,7 +9,8 @@ import { revalidatePageContactAfterChange } from '../hooks/revalidate.ts'
  * `brevoConfigured()`, n'a pas de texte éditorial : ce sont des microcopies
  * fonctionnelles, hors périmètre de l'éditeur de contenus). Champ vide =
  * texte actuel codé en dur (`src/lib/site-content-core.ts`) — iso-rendu
- * strict à global vide, même contrat que les autres globals « Site ».
+ * strict à global vide, même contrat que les autres globals de contenu
+ * (Pages du site / Vie du site).
  */
 export const PageContact: GlobalConfig = {
   slug: 'page-contact',
@@ -18,7 +19,7 @@ export const PageContact: GlobalConfig = {
     interface: 'PageContact',
   },
   admin: {
-    group: 'Site',
+    group: 'Pages du site',
     description: 'Textes de la page /contact. Un champ vide = le texte actuel du site.',
   },
   access: {

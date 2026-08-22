@@ -78,7 +78,7 @@ export const PageSouscription: GlobalConfig = {
     interface: 'PageSouscription',
   },
   admin: {
-    group: 'Site',
+    group: 'Vie du site',
     description:
       'Titre, récit et contreparties de la page /souscription. Un champ vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).',
   },

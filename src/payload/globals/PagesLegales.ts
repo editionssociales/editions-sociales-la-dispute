@@ -5,22 +5,23 @@ import { revalidatePagesLegalesAfterChange } from '../hooks/revalidate.ts'
 
 /**
  * Édition des pages / contenus transverses du site (ex-`pages-legales` +
- * ex-`reglages-site`) — un seul global à onglets : CGV & dons / Mentions /
- * Confidentialité / Pied de page / Réseaux / Référencement. Pattern Highlight
- * généralisé : le front lit via la Local API (`src/lib/site-content.ts`) et
- * retombe sur les textes codés en dur tant qu'un champ est vide.
+ * ex-`reglages-site`) — un seul global à onglets : Pied de page / Réseaux /
+ * Référencement / CGV & dons / Mentions / Confidentialité (petits réglages
+ * d'abord, longs textes juridiques au fond). Pattern Highlight généralisé :
+ * le front lit via la Local API (`src/lib/site-content.ts`) et retombe sur
+ * les textes codés en dur tant qu'un champ est vide.
  */
 export const PagesLegales: GlobalConfig = {
   slug: 'pages-legales',
-  label: 'Pages',
+  label: 'Mentions légales & pied de page',
   typescript: {
     // Sans quoi `generate:types` singulariserait le slug en « PagesLegale ».
     interface: 'PagesLegales',
   },
   admin: {
-    group: 'Site',
+    group: 'Pages du site',
     description:
-      'Pages légales, pied de page, réseaux sociaux et référencement. Un champ vide = texte actuel du site.',
+      'CGV & dons, mentions légales, confidentialité, pied de page, réseaux sociaux et réglages de référencement (SEO) — textes communs à tout le site, très rarement modifiés.',
   },
   access: {
     read: () => true,
@@ -33,48 +34,6 @@ export const PagesLegales: GlobalConfig = {
     {
       type: 'tabs',
       tabs: [
-        {
-          label: 'CGV & dons',
-          fields: [
-            {
-              name: 'cgv',
-              type: 'richText',
-              label: 'Conditions générales & conditions de don',
-              admin: {
-                description:
-                  'Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.',
-              },
-            },
-          ],
-        },
-        {
-          label: 'Mentions légales',
-          fields: [
-            {
-              name: 'mentionsLegales',
-              type: 'richText',
-              label: 'Mentions légales',
-              admin: {
-                description:
-                  'Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site (identité légale de l’éditeur).',
-              },
-            },
-          ],
-        },
-        {
-          label: 'Confidentialité',
-          fields: [
-            {
-              name: 'confidentialite',
-              type: 'richText',
-              label: 'Politique de confidentialité',
-              admin: {
-                description:
-                  'Remplace tout le corps de la page /confidentialite (chapeau compris). Vide = texte actuel du site.',
-              },
-            },
-          ],
-        },
         {
           label: 'Pied de page',
           fields: [
@@ -163,6 +122,48 @@ export const PagesLegales: GlobalConfig = {
                   },
                 },
               ],
+            },
+          ],
+        },
+        {
+          label: 'CGV & dons',
+          fields: [
+            {
+              name: 'cgv',
+              type: 'richText',
+              label: 'Conditions générales & conditions de don',
+              admin: {
+                description:
+                  'Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.',
+              },
+            },
+          ],
+        },
+        {
+          label: 'Mentions légales',
+          fields: [
+            {
+              name: 'mentionsLegales',
+              type: 'richText',
+              label: 'Mentions légales',
+              admin: {
+                description:
+                  'Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site (identité légale de l’éditeur).',
+              },
+            },
+          ],
+        },
+        {
+          label: 'Confidentialité',
+          fields: [
+            {
+              name: 'confidentialite',
+              type: 'richText',
+              label: 'Politique de confidentialité',
+              admin: {
+                description:
+                  'Remplace tout le corps de la page /confidentialite (chapeau compris). Vide = texte actuel du site.',
+              },
             },
           ],
         },

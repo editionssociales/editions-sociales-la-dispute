@@ -29,7 +29,7 @@ export const PageAPropos: GlobalConfig = {
     interface: 'PageAPropos',
   },
   admin: {
-    group: 'Site',
+    group: 'Pages du site',
     description:
       'Textes des pages /editions/editions-sociales et /editions/la-dispute. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.',
   },
@@ -44,27 +44,6 @@ export const PageAPropos: GlobalConfig = {
     {
       type: 'tabs',
       tabs: [
-        {
-          label: 'Équipe',
-          fields: [
-            {
-              name: 'equipe',
-              type: 'group',
-              label: 'Équipe permanente',
-              fields: [
-                {
-                  name: 'permanente',
-                  type: 'text',
-                  label: 'Noms',
-                  admin: {
-                    description:
-                      'Liste des noms séparés par des virgules (ex. « A, B et C »), affichée à l’identique sur les deux pages maisons. Vide = liste actuelle.',
-                  },
-                },
-              ],
-            },
-          ],
-        },
         {
           label: 'Maisons',
           fields: [
@@ -127,6 +106,27 @@ export const PageAPropos: GlobalConfig = {
                       label: 'Nom',
                     },
                   ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Équipe',
+          fields: [
+            {
+              name: 'equipe',
+              type: 'group',
+              label: 'Équipe permanente',
+              fields: [
+                {
+                  name: 'permanente',
+                  type: 'text',
+                  label: 'Noms',
+                  admin: {
+                    description:
+                      'Liste des noms séparés par des virgules (ex. « A, B et C »), affichée à l’identique sur les deux pages maisons. Vide = liste actuelle.',
+                  },
                 },
               ],
             },
