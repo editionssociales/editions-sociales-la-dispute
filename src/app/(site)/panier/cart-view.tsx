@@ -607,7 +607,6 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
                       applyPromoCode();
                     }
                   }}
-                  placeholder="AGREG2027"
                   className={`${FIELD_CLASS} min-w-[160px] flex-1 uppercase placeholder:normal-case placeholder:text-ink/40`}
                 />
                 <Button
