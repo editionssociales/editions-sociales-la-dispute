@@ -439,6 +439,8 @@ export const Books: CollectionConfig = {
               label: 'Pour aller plus loin',
               admin: {
                 disableListColumn: true,
+                description:
+                  'Affiché dans l’onglet « Pour aller plus loin » de la fiche (premier onglet, quand ce contenu est renseigné).',
               },
             },
             // Contenus souvent ajoutés après coup, tous explicitement
