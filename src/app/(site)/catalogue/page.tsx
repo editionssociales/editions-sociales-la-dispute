@@ -71,7 +71,7 @@ async function UpcomingCatalogueBody() {
   return (
     <Container className="bg-paper py-12 sm:py-16">
       <h1 className="sr-only">Les livres à paraître</h1>
-      <NouveautesCarousel books={nouveautes} />
+      <NouveautesCarousel books={nouveautes} showArrows={false} showCatalogueLink={false} />
     </Container>
   );
 }

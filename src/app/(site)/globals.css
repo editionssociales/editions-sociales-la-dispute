@@ -292,7 +292,14 @@ h1, h2, h3, h4 {
      `object-cover` remplit sans jamais recadrer (boîte au ratio de l'image). */
   aspect-ratio: var(--car);
   transform-origin: 0% 100%;
-  transform: rotateY(90deg);
+  /* `translateZ(1px)` EN DEHORS de la rotation (appliqué dans le repère du
+     parent, après le pli) : au repli/sortie, le dos et la couverture sont
+     coplanaires à l'arête de reliure (Z=0 des deux côtés dans le même
+     contexte `preserve-3d`) — un z-fighting réel qui laissait parfois le dos
+     coloré peindre PAR-DESSUS le contour noir de la couverture au lieu de
+     l'inverse. Un décalage de 1px vers la caméra lève l'ambiguïté sans
+     changer la géométrie perçue. */
+  transform: translateZ(1px) rotateY(90deg);
   overflow: hidden;
   backface-visibility: hidden;
   /* Bordure franche (R8, brutalisme), zéro border-radius. L'ombre floue,

@@ -44,8 +44,8 @@ const prefersReducedMotion = () =>
  * COUVERTURES SEULES (retour client 2026-07-23) : plus aucune légende
  * titre/auteur/date sous le rail — le titre et l'auteur restent portés par
  * l'`aria-label` de chaque lien. Flèches et sortie « Tout le catalogue »
- * sont désactivables par prop (la vitrine les masque, la vue « à paraître »
- * garde les flèches).
+ * sont désactivables par prop (la vitrine et la vue « à paraître » les
+ * masquent toutes deux).
  */
 export function NouveautesCarousel({
   books,

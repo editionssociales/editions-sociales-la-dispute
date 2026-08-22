@@ -72,24 +72,15 @@ export default async function RencontresPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript }} />
       )}
 
-      <section className="bg-paper py-14 md:py-24">
+      <section className="bg-paper pb-14 pt-6 sm:pt-8 md:pb-24">
         <Container>
-          <Reveal>
-            {/* Pas de surtitre au-dessus du titre (R6) — le marqueur pop-yellow
-                vit EN LIGNE avec le h2, jamais en surtitre distinct. */}
-            <h2 className="flex items-center gap-3 font-sans text-3xl font-black italic leading-[0.98] text-ink sm:text-4xl">
-              <span className="inline-block h-3 w-3 flex-none bg-pop-yellow" aria-hidden="true" />
-              À venir
-            </h2>
-          </Reveal>
-
           {/* Retour client 2026-07-23 : seuls les événements « grande
               affiche » (`pleinCadre`, ex. braderie) gardent la carte héros
               pleine largeur, en tête ; les autres s'affichent en grille 2-3
               colonnes au même format que les rencontres passées (cadre
               pointillé conservé — c'est lui qui distingue l'à-venir). */}
           {hasAVenir ? (
-            <div className="mt-14 flex flex-col gap-10">
+            <div className="flex flex-col gap-10">
               {aVenir
                 .filter((r) => r.pleinCadre)
                 .map((r, i) => (
@@ -114,7 +105,7 @@ export default async function RencontresPage() {
             </div>
           ) : (
             <Reveal delay={80}>
-              <div className="mt-14 border-2 border-dashed border-ink bg-paper-2 p-8 text-center">
+              <div className="border-2 border-dashed border-ink bg-paper-2 p-8 text-center">
                 <p className="font-sans text-lg font-black italic text-ink">
                   Prochaines dates en préparation
                 </p>
