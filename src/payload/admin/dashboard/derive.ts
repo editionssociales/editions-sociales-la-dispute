@@ -181,7 +181,7 @@ export interface DailySalesBucket {
  * seau = jour de `now`), jours sans vente à 0 (jamais un trou). Même
  * étanchéité dons/ventes que `salesStats`.
  */
-export function dailySalesBuckets(rows: SalesWindowRow[], now: Date): DailySalesBucket[] {
+export function dailySalesBuckets<T extends WindowStatsRow>(rows: T[], now: Date): DailySalesBucket[] {
   const days: string[] = []
   for (let i = 29; i >= 0; i--) {
     const day = isoDayParis(new Date(now.getTime() - i * DAY_MS))

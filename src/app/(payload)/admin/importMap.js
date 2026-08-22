@@ -28,15 +28,17 @@ import { OrderClientCell as OrderClientCell_c85bbcca92e65625b8d3ed60870be711 } f
 import { OrderContentCell as OrderContentCell_0c21c39c4955774236e15eb61138f92c } from '../../../payload/admin/orders/OrderContentCell.tsx'
 import { OrdersFilterChipsPanel as OrdersFilterChipsPanel_54541178fb8cd99cf29cfb7d7e6c24ec } from '../../../payload/admin/orders/OrdersFilterChipsPanel.tsx'
 import { OrderExportPanel as OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0 } from '../../../payload/admin/OrderExportPanel.tsx'
-import { PromoStatusCell as PromoStatusCell_25194799f840adb1e4fb478a2598df32 } from '../../../payload/admin/cells/PromoStatusCell.tsx'
 import { HighlightLiveCell as HighlightLiveCell_601e17702a673359c1d6db00f11b092b } from '../../../payload/admin/cells/HighlightLiveCell.tsx'
 import { RencontresFilterChipsPanel as RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7 } from '../../../payload/admin/rencontres/RencontresFilterChipsPanel.tsx'
+import { PromoStatusCell as PromoStatusCell_25194799f840adb1e4fb478a2598df32 } from '../../../payload/admin/cells/PromoStatusCell.tsx'
 import { StockNavLink as StockNavLink_6618fbe14a6645bc8a42a9773c06e167 } from '../../../payload/admin/stock/StockNavLink.tsx'
+import { VentesNavLink as VentesNavLink_a41d437a4d5b60b3c21d25728573cbee } from '../../../payload/admin/ventes/VentesNavLink.tsx'
 import { HealthNavLink as HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e } from '../../../payload/admin/health/HealthNavLink.tsx'
 import { Dashboard as Dashboard_1d6cee6a65112732ba58d10371f7c560 } from '../../../payload/admin/dashboard/Dashboard.tsx'
 import { VercelBlobClientUploadHandler as VercelBlobClientUploadHandler_16c82c5e25f430251a3e3ba57219ff4e } from '@payloadcms/storage-vercel-blob/client'
 import { StockPage as StockPage_767018cc66748d279e5219e5dfb697f8 } from '../../../payload/admin/stock/StockPage.tsx'
 import { HealthPage as HealthPage_82e477bd89d566e187cf7c9b6b6fa343 } from '../../../payload/admin/health/HealthPage.tsx'
+import { VentesPage as VentesPage_1adb41e3f9ed032d9709f20b6d2f8b32 } from '../../../payload/admin/ventes/VentesPage.tsx'
 import { NewBookView as NewBookView_0fd6440d15e71164b1992dad7c76cb95 } from '../../../payload/admin/books/NewBookView.tsx'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
@@ -71,15 +73,17 @@ export const importMap = {
   "/payload/admin/orders/OrderContentCell.tsx#OrderContentCell": OrderContentCell_0c21c39c4955774236e15eb61138f92c,
   "/payload/admin/orders/OrdersFilterChipsPanel.tsx#OrdersFilterChipsPanel": OrdersFilterChipsPanel_54541178fb8cd99cf29cfb7d7e6c24ec,
   "/payload/admin/OrderExportPanel.tsx#OrderExportPanel": OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0,
-  "/payload/admin/cells/PromoStatusCell.tsx#PromoStatusCell": PromoStatusCell_25194799f840adb1e4fb478a2598df32,
   "/payload/admin/cells/HighlightLiveCell.tsx#HighlightLiveCell": HighlightLiveCell_601e17702a673359c1d6db00f11b092b,
   "/payload/admin/rencontres/RencontresFilterChipsPanel.tsx#RencontresFilterChipsPanel": RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7,
+  "/payload/admin/cells/PromoStatusCell.tsx#PromoStatusCell": PromoStatusCell_25194799f840adb1e4fb478a2598df32,
   "/payload/admin/stock/StockNavLink.tsx#StockNavLink": StockNavLink_6618fbe14a6645bc8a42a9773c06e167,
+  "/payload/admin/ventes/VentesNavLink.tsx#VentesNavLink": VentesNavLink_a41d437a4d5b60b3c21d25728573cbee,
   "/payload/admin/health/HealthNavLink.tsx#HealthNavLink": HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e,
   "/payload/admin/dashboard/Dashboard.tsx#Dashboard": Dashboard_1d6cee6a65112732ba58d10371f7c560,
   "@payloadcms/storage-vercel-blob/client#VercelBlobClientUploadHandler": VercelBlobClientUploadHandler_16c82c5e25f430251a3e3ba57219ff4e,
   "/payload/admin/stock/StockPage.tsx#StockPage": StockPage_767018cc66748d279e5219e5dfb697f8,
   "/payload/admin/health/HealthPage.tsx#HealthPage": HealthPage_82e477bd89d566e187cf7c9b6b6fa343,
+  "/payload/admin/ventes/VentesPage.tsx#VentesPage": VentesPage_1adb41e3f9ed032d9709f20b6d2f8b32,
   "/payload/admin/books/NewBookView.tsx#NewBookView": NewBookView_0fd6440d15e71164b1992dad7c76cb95,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

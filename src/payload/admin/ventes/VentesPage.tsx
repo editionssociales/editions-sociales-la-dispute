@@ -194,8 +194,8 @@ export async function VentesPage(props: AdminViewServerProps) {
     ? monthlyChartBars(monthlyBuckets, { width: MONTHLY_CHART_WIDTH, height: MONTHLY_CHART_BAR_AREA_HEIGHT })
     : []
 
-  const top30 = salesHistory.state === 'ok' ? topTitles(rows, { days: 30, max: TOP_TITLES_MAX }) : []
-  const top365 = salesHistory.state === 'ok' ? topTitles(rows, { days: 365, max: TOP_TITLES_MAX }) : []
+  const top30 = salesHistory.state === 'ok' ? topTitles(rows, now, { days: 30, max: TOP_TITLES_MAX }) : []
+  const top365 = salesHistory.state === 'ok' ? topTitles(rows, now, { days: 365, max: TOP_TITLES_MAX }) : []
 
   return (
     <DefaultTemplate

@@ -64,7 +64,7 @@ export type SalesWindowData = { state: 'ok'; rows: SalesWindowRow[] } | { state:
  * Select API (issue #68) : `lines` entier plutôt qu'une sélection imbriquée
  * (`lines: { quantity: true, book: true }`) — Payload ne garantit pas le
  * pruning au niveau SQL pour un champ `array` (contrairement à un `group`,
- * cf. `commerce: { stock: true }` de `readLowStock`, éprouvé) ; on économise
+ * cf. `shippingAddress: { fullName: true }` de `readWorkOrders`, éprouvé) ; on économise
  * le risque et on ne conserve que `quantity`/`book` à la sortie.
  */
 export async function readSalesWindow(payload: Payload, now: Date): Promise<SalesWindowData> {
@@ -238,7 +238,7 @@ export async function readWorkOrders(payload: Payload): Promise<WorkOrdersData> 
       // Select API (issue #68) : la ligne de travail n'affiche que ces
       // champs — pas les coordonnées client complètes, les identifiants
       // Stripe, etc. `shippingAddress` est un `group` (pruning imbriqué
-      // éprouvé, cf. `readLowStock`) ; `lines`, en `array`, reste entier
+      // éprouvé, cf. `readWorkOrders`) ; `lines`, en `array`, reste entier
       // (même réserve que `readSalesWindow`).
       select: {
         number: true,

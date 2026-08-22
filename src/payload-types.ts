@@ -201,6 +201,9 @@ export interface Book {
     };
     [k: string]: unknown;
   };
+  /**
+   * Affiché dans l’onglet « Pour aller plus loin » de la fiche (premier onglet, quand ce contenu est renseigné).
+   */
   plusLoin?: {
     root: {
       type: string;
