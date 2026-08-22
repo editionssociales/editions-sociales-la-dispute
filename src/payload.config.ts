@@ -38,7 +38,8 @@ export default buildConfig({
     components: {
       // Home allégée : file du jour + alertes promo + raccourcis (plus de
       // bandeau ni panneau stock). Stock → `views.stock` ; Santé →
-      // `views.sante`. Grille `CollectionCards` masquée (`custom.scss`).
+      // `views.sante` ; détail des ventes → `views.ventes`. Grille
+      // `CollectionCards` masquée (`custom.scss`).
       beforeDashboard: ['/payload/admin/dashboard/Dashboard.tsx#Dashboard'],
       views: {
         stock: {
@@ -51,6 +52,11 @@ export default buildConfig({
           meta: { title: 'Santé' },
           path: '/sante',
         },
+        ventes: {
+          Component: '/payload/admin/ventes/VentesPage.tsx#VentesPage',
+          meta: { title: 'Ventes' },
+          path: '/ventes',
+        },
         nouveauLivre: {
           Component: '/payload/admin/books/NewBookView.tsx#NewBookView',
           meta: { title: 'Nouveau livre' },
@@ -59,6 +65,7 @@ export default buildConfig({
       },
       afterNavLinks: [
         '/payload/admin/stock/StockNavLink.tsx#StockNavLink',
+        '/payload/admin/ventes/VentesNavLink.tsx#VentesNavLink',
         '/payload/admin/health/HealthNavLink.tsx#HealthNavLink',
       ],
     },
