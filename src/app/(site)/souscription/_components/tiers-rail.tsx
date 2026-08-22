@@ -36,8 +36,9 @@ import camaradePourLaVieImg from "../_contreparties/camarade-pour-la-vie.jpg";
  * Rail des contreparties `#paliers` de `/souscription` — module colocalisé
  * privé (`_components`, hors routing App Router), composants serveur
  * uniquement (le seul îlot client est `SubmitButton`, importé). Porte tout le
- * module de conversion : 9 cartes de paliers + carte « montant libre » de
- * clôture, formulaires Stripe (`createDonationCheckout`) et l'état
+ * module de conversion : carte « montant libre » d'ouverture (retour client
+ * 2026-08-22 : premier choix de la liste, avant les paliers) + 9 cartes de
+ * paliers, formulaires Stripe (`createDonationCheckout`) et l'état
  * pré-ouverture (`ClosedCta`).
  */
 
@@ -126,11 +127,12 @@ function ClosedCta({ className, noteId }: { className: string; noteId: string })
 
 /**
  * Formulaire « montant libre » — rendu une seule fois, dans la carte qui
- * clôt la liste des contreparties (retour client 2026-07-24 : plus ni dans
- * l'ask ni dans le CTA final). Avant ouverture, `ClosedCta` porte le
- * comportement R7 ; une fois ouvert, `SubmitButton` (`useFormStatus`)
- * distingue l'état pendant la redirection Stripe de l'état bloqué. Recette
- * visuelle alignée sur les cartes de paliers (fond paper, bouton solid).
+ * OUVRE la liste des contreparties (retour client 2026-08-22 : premier choix
+ * plutôt que dernier ; reste hors de l'ask et du CTA final, retour client
+ * 2026-07-24). Avant ouverture, `ClosedCta` porte le comportement R7 ; une
+ * fois ouvert, `SubmitButton` (`useFormStatus`) distingue l'état pendant la
+ * redirection Stripe de l'état bloqué. Recette visuelle alignée sur les
+ * cartes de paliers (fond paper, bouton solid).
  */
 function FreeAmountForm({ enabled }: { enabled: boolean }) {
   if (!enabled) {
@@ -191,7 +193,8 @@ function FreeAmountForm({ enabled }: { enabled: boolean }) {
  * `@/components/rail-inset` — source unique partagée avec `site-header.tsx`
  * (`railInset`) et `souscription/page.tsx` (grille) pour que les 380px ne se
  * désynchronisent plus entre les trois arbres.
- * Les 9 cartes sont uniformes ; la carte « montant libre » clôt la liste.
+ * La carte « montant libre » ouvre la liste, suivie des 9 cartes de paliers,
+ * uniformes entre elles.
  * Sur mobile, le rail suit toute la colonne principale (l'ancre `#paliers` y
  * mène — `scroll-mt-24` à tous les breakpoints, le header mobile fait ~96px).
  * À l'impression : rail statique déplié, jamais tronqué — porté par
@@ -221,14 +224,36 @@ export function TiersRail({
           le coin de la première carte au repos. */}
       <div className="px-5 py-4 sm:px-8 sm:py-6 lg:pt-14">
         {/* Plus d'ancre « Ou donnez un montant libre ↓ » en tête (retirée
-            25/07) : la carte montant libre reste en CLÔTURE du rail, seuls le
-            CTA final et l'ancre externe `#montant-libre` y mènent. */}
+            25/07) : la carte montant libre EST désormais la tête du rail
+            (retour client 2026-08-22 : premier choix plutôt que dernier),
+            l'ancre externe `#montant-libre` y mène toujours directement. */}
         <FramedGrid className="grid-cols-1">
+          {/* Carte d'ouverture — montant libre (retour client 2026-08-22,
+              remplace la clôture du 2026-07-24) : le formulaire à montant
+              personnalisé vit en tête de la liste, avant les 9 paliers, et
+              ouvre le cycle des 4 couleurs du site (index 0). */}
+          <div className="h-full">
+            <div id="montant-libre" className="flex h-full flex-col bg-paper">
+              <div aria-hidden="true" className={`h-2 ${POP_BG[POP_ORDER[0]]}`} />
+              <div className="flex flex-1 flex-col p-6">
+                <h3>
+                  <span className="block font-sans text-3xl font-black italic text-ink">
+                    Montant libre
+                  </span>{" "}
+                  <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
+                    Contribuez à hauteur de votre choix
+                  </span>
+                </h3>
+                <FreeAmountForm enabled={enabled} />
+              </div>
+            </div>
+          </div>
           {content.contreparties.map((p, i) => {
             // Paliers de don : les quatre couleurs du site, dans leur ordre
             // canonique (retour Clara 2026-08-07 — la page entière a quitté les
-            // accents de couverture navy/bottle/ocher/brick).
-            const accentBg = POP_BG[POP_ORDER[i % 4]];
+            // accents de couverture navy/bottle/ocher/brick), décalées d'un cran
+            // (`i + 1`) car la carte montant libre occupe désormais l'index 0.
+            const accentBg = POP_BG[POP_ORDER[(i + 1) % 4]];
             // Un palier ajouté à DONATION_TIERS sans visuel dans
             // TIER_IMAGES rend une carte sans image, jamais un crash.
             const img = TIER_IMAGE_LOOKUP[p.tier.id];
@@ -361,29 +386,6 @@ export function TiersRail({
               </div>
             );
           })}
-          {/* Carte de clôture — montant libre (retour client 2026-07-24) : le
-              formulaire à montant personnalisé vit tout en bas de la liste,
-              après les 9 paliers, et poursuit le cycle des 4 couleurs du
-              site. */}
-          <div className="h-full">
-            <div id="montant-libre" className="flex h-full flex-col bg-paper">
-              <div
-                aria-hidden="true"
-                className={`h-2 ${POP_BG[POP_ORDER[content.contreparties.length % 4]]}`}
-              />
-              <div className="flex flex-1 flex-col p-6">
-                <h3>
-                  <span className="block font-sans text-3xl font-black italic text-ink">
-                    Montant libre
-                  </span>{" "}
-                  <span className="mt-1 block font-sans text-sm font-extrabold uppercase tracking-[.02em] text-ink">
-                    Contribuez à hauteur de votre choix
-                  </span>
-                </h3>
-                <FreeAmountForm enabled={enabled} />
-              </div>
-            </div>
-          </div>
         </FramedGrid>
       </div>
     </aside>

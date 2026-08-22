@@ -3,10 +3,14 @@ import type { ServerProps } from 'payload'
 import { Pill } from '@payloadcms/ui'
 
 import {
+  chartAxisTicks,
   dailySalesBuckets,
   editionTag,
+  everyNthLabels,
   fmtDateFr,
+  fmtDayMonthFr,
   fmtEuros,
+  fmtEurosAxis,
   humanAge,
   rollingWindows,
   salesChartGeometry,
@@ -31,6 +35,7 @@ import {
 import styles from './dashboard.module.css'
 import { PromoDeactivateButton } from './PromoDeactivateButton.tsx'
 import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
+import { buildChartXLabels, SalesBarChart } from './SalesBarChart.tsx'
 
 /**
  * Slot `beforeDashboard` du dashboard `/admin` (home — design v4, refonte
@@ -73,6 +78,8 @@ const CHART_WIDTH = 720
 const CHART_HEIGHT = 140
 const CHART_TOP_PADDING = 18
 const CHART_BAR_AREA_HEIGHT = 86
+/** ~1 libellé/semaine sur les 30 barres quotidiennes (`everyNthLabels`, `derive.ts`). */
+const CHART_X_LABEL_TARGET = 5
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
   paid: 'payée',
@@ -117,12 +124,30 @@ export async function Dashboard({ payload }: ServerProps) {
 
   const ventes = salesWindow.state === 'ok' ? salesStats(salesWindow.rows, now) : null
   const dailyBuckets = salesWindow.state === 'ok' ? dailySalesBuckets(salesWindow.rows, now) : null
-  const chartBars = dailyBuckets
-    ? salesChartGeometry(dailyBuckets, { width: CHART_WIDTH, height: CHART_BAR_AREA_HEIGHT })
-    : []
   const chartMax = dailyBuckets ? Math.max(0, ...dailyBuckets.map((b) => b.ca)) : 0
+  // Grille/barres à la même échelle (`axisMax`, jamais le maximum brut de la
+  // série) — cf. le commentaire de `salesChartGeometry` (`derive.ts`).
+  const chartAxis = chartAxisTicks(chartMax)
+  const chartBars = dailyBuckets
+    ? salesChartGeometry(dailyBuckets, { width: CHART_WIDTH, height: CHART_BAR_AREA_HEIGHT }, chartAxis.axisMax)
+    : []
   const chartFirstDay = dailyBuckets?.[0]?.day ?? null
   const chartLastDay = dailyBuckets?.[dailyBuckets.length - 1]?.day ?? null
+  const chartTicks = chartAxis.ticks.map((value) => ({ value, label: fmtEurosAxis(value) }))
+  const chartLabelIndices = dailyBuckets
+    ? everyNthLabels(
+        dailyBuckets.map((b) => b.day),
+        CHART_X_LABEL_TARGET,
+      )
+    : []
+  const chartXLabels = dailyBuckets
+    ? buildChartXLabels(chartBars, chartLabelIndices, CHART_WIDTH, (i) => fmtDayMonthFr(dailyBuckets[i].day))
+    : []
+  // Détail au survol par barre — « 12 août — 148,50 € » (jour + mois SANS
+  // année, réutilisé tel quel par `../ventes/VentesPage.tsx`, cf. `derive.ts`).
+  const chartDetails = new Map(
+    (dailyBuckets ?? []).map((b) => [b.day, `${fmtDayMonthFr(b.day)} — ${fmtEuros(b.ca)}`]),
+  )
 
   // Carte KPI ventes → liste des commandes filtrée sur la même borne 30 j
   // (dons exclus, même étanchéité comptable que `salesStats`), motif hérité
@@ -192,38 +217,22 @@ export async function Dashboard({ payload }: ServerProps) {
             indisponible
           </Pill>
         ) : (
-          <svg
-            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-            className={styles.chartSvg}
-            role="img"
-            aria-label={`Ventes par jour, du ${fmtDateFr(chartFirstDay ?? '')} au ${fmtDateFr(
+          <SalesBarChart
+            bars={chartBars.map((bar) => ({ x: bar.x, y: bar.y, w: bar.w, h: bar.h, key: bar.day }))}
+            dims={{
+              width: CHART_WIDTH,
+              height: CHART_HEIGHT,
+              topPadding: CHART_TOP_PADDING,
+              barAreaHeight: CHART_BAR_AREA_HEIGHT,
+            }}
+            ticks={chartTicks}
+            axisMax={chartAxis.axisMax}
+            xLabels={chartXLabels}
+            details={chartDetails}
+            ariaLabel={`Ventes par jour, du ${fmtDateFr(chartFirstDay ?? '')} au ${fmtDateFr(
               chartLastDay ?? '',
             )}, maximum ${fmtEuros(chartMax)}`}
-          >
-            {chartBars.map((bar) => (
-              <rect
-                key={bar.day}
-                x={bar.x}
-                y={CHART_TOP_PADDING + bar.y}
-                width={Math.max(bar.w - 2, 1)}
-                height={bar.h}
-                className={styles.chartBar}
-              >
-                <title>
-                  {fmtDateFr(bar.day)} — {fmtEuros(bar.ca)}
-                </title>
-              </rect>
-            ))}
-            <text x={0} y={CHART_HEIGHT - 4} className={styles.chartAxisLabel}>
-              {fmtDateFr(chartFirstDay ?? '')}
-            </text>
-            <text x={CHART_WIDTH} y={CHART_HEIGHT - 4} textAnchor="end" className={styles.chartAxisLabel}>
-              {fmtDateFr(chartLastDay ?? '')}
-            </text>
-            <text x={CHART_WIDTH} y={CHART_TOP_PADDING - 6} textAnchor="end" className={styles.chartAxisLabel}>
-              {fmtEuros(chartMax)}
-            </text>
-          </svg>
+          />
         )}
         <div className={styles.actions}>
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}

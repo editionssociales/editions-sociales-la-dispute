@@ -659,7 +659,7 @@ export default async function SouscriptionPage() {
             </Reveal>
 
             {/* CTA final : renvoie simplement à l'ancre unique du rail — le
-                montant libre vit en clôture du rail, pas ici. */}
+                montant libre vit en tête du rail, pas ici. */}
             <Reveal>
               <Button
                 href={PALIERS_CTA}

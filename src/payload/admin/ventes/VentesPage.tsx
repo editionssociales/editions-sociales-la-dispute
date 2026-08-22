@@ -8,14 +8,19 @@ import { Pill } from '@payloadcms/ui'
 import { pillStyleForState } from '../dashboard/dashboard-classes.ts'
 import { readSalesHistory } from '../dashboard/data.ts'
 import {
+  chartAxisTicks,
   dailySalesBuckets,
+  everyNthLabels,
+  fmtDayMonthFr,
   fmtEuros,
+  fmtEurosAxis,
   monthlySalesBuckets,
   salesChartGeometry,
   topTitles,
   windowSalesStats,
   type DailySalesBucket,
 } from '../dashboard/derive.ts'
+import { buildChartXLabels, SalesBarChart } from '../dashboard/SalesBarChart.tsx'
 import styles from '../dashboard/dashboard.module.css'
 import ventesStyles from './ventes.module.css'
 
@@ -51,29 +56,14 @@ const MONTHLY_CHART_BAR_AREA_HEIGHT = 118
 const MONTHLY_MONTHS = 13
 const TOP_TITLES_MAX = 10
 
+/** ~1 libellé/semaine sur les 30 barres quotidiennes, ~1/trimestre sur les 13 barres mensuelles (`everyNthLabels`). */
+const CHART_X_LABEL_TARGET = 5
+
 const KPI_WINDOWS = [
   { days: 30, label: '30 derniers jours' },
   { days: 90, label: '90 derniers jours' },
   { days: 365, label: '12 derniers mois' },
 ] as const
-
-/**
- * Jour + mois sans année (« 12 août »), pour les infobulles du graphique
- * quotidien — `fmtDateFr` (`derive.ts`, réutilisé tel quel ailleurs sur cette
- * page) porte l'année, trop long pour une infobulle de barre. Utilitaire de
- * PRÉSENTATION local à cette vue (même pattern que `fmtVelocite`/
- * `fmtJoursRestants` dans `../stock/StockPage.tsx`) — pas une dérivation
- * métier, donc pas dans `derive.ts` (hors périmètre de cet agent).
- */
-const DAY_MONTH_FR = new Intl.DateTimeFormat('fr-FR', {
-  timeZone: 'Europe/Paris',
-  day: 'numeric',
-  month: 'long',
-})
-function fmtDayMonthFr(iso: string): string {
-  const t = Date.parse(iso)
-  return Number.isNaN(t) ? '—' : DAY_MONTH_FR.format(t)
-}
 
 /** Panier moyen (CA/commandes, 2 décimales) — tiret si aucune commande sur la période (jamais un 0,00 € inventé). */
 function fmtPanierMoyen(ca: number, nbCommandes: number): string {
@@ -85,14 +75,17 @@ function fmtPanierMoyen(ca: number, nbCommandes: number): string {
  * quotidien (`salesChartGeometry`, `derive.ts`) — seaux mensuels adaptés en
  * forme de `DailySalesBucket` ({ day, ca }) juste pour le calcul de position,
  * même motif que `weeklyBars` dans `../stock/StockPage.tsx` (adaptation de
- * rendu, pas une nouvelle géométrie dans `derive.ts`).
+ * rendu, pas une nouvelle géométrie dans `derive.ts`). `maxValue` propagé tel
+ * quel à `salesChartGeometry` — même échelle barres/grille que le graphique
+ * quotidien (`axisMax` de `chartAxisTicks`, cf. `SalesBarChart.tsx`).
  */
 function monthlyChartBars(
   buckets: { month: string; label: string; ca: number; nbCommandes: number }[],
   dims: { width: number; height: number },
+  maxValue: number,
 ) {
   const asBuckets: DailySalesBucket[] = buckets.map((b) => ({ day: b.month, ca: b.ca }))
-  return salesChartGeometry(asBuckets, dims)
+  return salesChartGeometry(asBuckets, dims, maxValue)
 }
 
 interface KpiCardProps {
@@ -184,15 +177,59 @@ export async function VentesPage(props: AdminViewServerProps) {
   const rows = salesHistory.state === 'ok' ? salesHistory.rows : []
 
   const dailyBuckets = salesHistory.state === 'ok' ? dailySalesBuckets(rows, now) : null
-  const dailyBars = dailyBuckets
-    ? salesChartGeometry(dailyBuckets, { width: DAILY_CHART_WIDTH, height: DAILY_CHART_BAR_AREA_HEIGHT })
-    : []
   const dailyMax = dailyBuckets ? Math.max(0, ...dailyBuckets.map((b) => b.ca)) : 0
+  // Grille/barres à la même échelle (`axisMax`, jamais le maximum brut de la
+  // série) — cf. le commentaire de `salesChartGeometry` (`derive.ts`).
+  const dailyAxis = chartAxisTicks(dailyMax)
+  const dailyBars = dailyBuckets
+    ? salesChartGeometry(
+        dailyBuckets,
+        { width: DAILY_CHART_WIDTH, height: DAILY_CHART_BAR_AREA_HEIGHT },
+        dailyAxis.axisMax,
+      )
+    : []
+  const dailyTicks = dailyAxis.ticks.map((value) => ({ value, label: fmtEurosAxis(value) }))
+  const dailyLabelIndices = dailyBuckets
+    ? everyNthLabels(
+        dailyBuckets.map((b) => b.day),
+        CHART_X_LABEL_TARGET,
+      )
+    : []
+  const dailyXLabels = dailyBuckets
+    ? buildChartXLabels(dailyBars, dailyLabelIndices, DAILY_CHART_WIDTH, (i) => fmtDayMonthFr(dailyBuckets[i].day))
+    : []
+  // Détail au survol par barre — « 12 août — 148,50 € » (même formateur que
+  // `../dashboard/Dashboard.tsx`, cf. `fmtDayMonthFr` dans `derive.ts`).
+  const dailyDetails = new Map((dailyBuckets ?? []).map((b) => [b.day, `${fmtDayMonthFr(b.day)} — ${fmtEuros(b.ca)}`]))
 
   const monthlyBuckets = salesHistory.state === 'ok' ? monthlySalesBuckets(rows, now, MONTHLY_MONTHS) : null
+  const monthlyMax = monthlyBuckets ? Math.max(0, ...monthlyBuckets.map((b) => b.ca)) : 0
+  const monthlyAxis = chartAxisTicks(monthlyMax)
   const monthlyBars = monthlyBuckets
-    ? monthlyChartBars(monthlyBuckets, { width: MONTHLY_CHART_WIDTH, height: MONTHLY_CHART_BAR_AREA_HEIGHT })
+    ? monthlyChartBars(
+        monthlyBuckets,
+        { width: MONTHLY_CHART_WIDTH, height: MONTHLY_CHART_BAR_AREA_HEIGHT },
+        monthlyAxis.axisMax,
+      )
     : []
+  const monthlyTicks = monthlyAxis.ticks.map((value) => ({ value, label: fmtEurosAxis(value) }))
+  const monthlyLabelIndices = monthlyBuckets
+    ? everyNthLabels(
+        monthlyBuckets.map((b) => b.month),
+        CHART_X_LABEL_TARGET,
+      )
+    : []
+  const monthlyXLabels = monthlyBuckets
+    ? buildChartXLabels(monthlyBars, monthlyLabelIndices, MONTHLY_CHART_WIDTH, (i) => monthlyBuckets[i].label)
+    : []
+  // Détail au survol par barre — « août 2026 — 4 210,00 € · 57 commandes »
+  // (label + nbCommandes du seau, `MonthlySalesBucket`).
+  const monthlyDetails = new Map(
+    (monthlyBuckets ?? []).map((b) => [
+      b.month,
+      `${b.label} — ${fmtEuros(b.ca)} · ${b.nbCommandes} commande${b.nbCommandes > 1 ? 's' : ''}`,
+    ]),
+  )
 
   const top30 = salesHistory.state === 'ok' ? topTitles(rows, now, { days: 30, max: TOP_TITLES_MAX }) : []
   const top365 = salesHistory.state === 'ok' ? topTitles(rows, now, { days: 365, max: TOP_TITLES_MAX }) : []
@@ -254,50 +291,24 @@ export async function VentesPage(props: AdminViewServerProps) {
                 indisponible
               </Pill>
             ) : (
-              <svg
-                viewBox={`0 0 ${DAILY_CHART_WIDTH} ${DAILY_CHART_HEIGHT}`}
-                className={styles.chartSvg}
-                role="img"
-                aria-label={`Ventes par jour, du ${fmtDayMonthFr(
+              <SalesBarChart
+                bars={dailyBars.map((bar) => ({ x: bar.x, y: bar.y, w: bar.w, h: bar.h, key: bar.day }))}
+                dims={{
+                  width: DAILY_CHART_WIDTH,
+                  height: DAILY_CHART_HEIGHT,
+                  topPadding: DAILY_CHART_TOP_PADDING,
+                  barAreaHeight: DAILY_CHART_BAR_AREA_HEIGHT,
+                }}
+                ticks={dailyTicks}
+                axisMax={dailyAxis.axisMax}
+                xLabels={dailyXLabels}
+                details={dailyDetails}
+                ariaLabel={`Ventes par jour, du ${fmtDayMonthFr(
                   dailyBuckets[0]?.day ?? '',
                 )} au ${fmtDayMonthFr(dailyBuckets[dailyBuckets.length - 1]?.day ?? '')}, maximum ${fmtEuros(
                   dailyMax,
                 )}`}
-              >
-                {dailyBars.map((bar) => (
-                  <rect
-                    key={bar.day}
-                    x={bar.x}
-                    y={DAILY_CHART_TOP_PADDING + bar.y}
-                    width={Math.max(bar.w - 2, 1)}
-                    height={bar.h}
-                    className={styles.chartBar}
-                  >
-                    <title>
-                      {fmtDayMonthFr(bar.day)} — {fmtEuros(bar.ca)}
-                    </title>
-                  </rect>
-                ))}
-                <text x={0} y={DAILY_CHART_HEIGHT - 4} className={styles.chartAxisLabel}>
-                  {fmtDayMonthFr(dailyBuckets[0]?.day ?? '')}
-                </text>
-                <text
-                  x={DAILY_CHART_WIDTH}
-                  y={DAILY_CHART_HEIGHT - 4}
-                  textAnchor="end"
-                  className={styles.chartAxisLabel}
-                >
-                  {fmtDayMonthFr(dailyBuckets[dailyBuckets.length - 1]?.day ?? '')}
-                </text>
-                <text
-                  x={DAILY_CHART_WIDTH}
-                  y={DAILY_CHART_TOP_PADDING - 6}
-                  textAnchor="end"
-                  className={styles.chartAxisLabel}
-                >
-                  {fmtEuros(dailyMax)}
-                </text>
-              </svg>
+              />
             )}
           </section>
 
@@ -311,46 +322,22 @@ export async function VentesPage(props: AdminViewServerProps) {
                 indisponible
               </Pill>
             ) : (
-              <svg
-                viewBox={`0 0 ${MONTHLY_CHART_WIDTH} ${MONTHLY_CHART_HEIGHT}`}
-                className={styles.chartSvg}
-                role="img"
-                aria-label={`Ventes par mois, de ${monthlyBuckets[0]?.label ?? ''} à ${
+              <SalesBarChart
+                bars={monthlyBars.map((bar) => ({ x: bar.x, y: bar.y, w: bar.w, h: bar.h, key: bar.day }))}
+                dims={{
+                  width: MONTHLY_CHART_WIDTH,
+                  height: MONTHLY_CHART_HEIGHT,
+                  topPadding: MONTHLY_CHART_TOP_PADDING,
+                  barAreaHeight: MONTHLY_CHART_BAR_AREA_HEIGHT,
+                }}
+                ticks={monthlyTicks}
+                axisMax={monthlyAxis.axisMax}
+                xLabels={monthlyXLabels}
+                details={monthlyDetails}
+                ariaLabel={`Ventes par mois, de ${monthlyBuckets[0]?.label ?? ''} à ${
                   monthlyBuckets[monthlyBuckets.length - 1]?.label ?? ''
                 }`}
-              >
-                {monthlyBars.map((bar, i) => {
-                  const bucket = monthlyBuckets[i]
-                  return (
-                    <rect
-                      key={bar.day}
-                      x={bar.x}
-                      y={MONTHLY_CHART_TOP_PADDING + bar.y}
-                      width={Math.max(bar.w - 2, 1)}
-                      height={bar.h}
-                      className={styles.chartBar}
-                    >
-                      {bucket && (
-                        <title>
-                          {bucket.label} — {fmtEuros(bucket.ca)} · {bucket.nbCommandes} commande
-                          {bucket.nbCommandes > 1 ? 's' : ''}
-                        </title>
-                      )}
-                    </rect>
-                  )
-                })}
-                <text x={0} y={MONTHLY_CHART_HEIGHT - 4} className={styles.chartAxisLabel}>
-                  {monthlyBuckets[0]?.label ?? ''}
-                </text>
-                <text
-                  x={MONTHLY_CHART_WIDTH}
-                  y={MONTHLY_CHART_HEIGHT - 4}
-                  textAnchor="end"
-                  className={styles.chartAxisLabel}
-                >
-                  {monthlyBuckets[monthlyBuckets.length - 1]?.label ?? ''}
-                </text>
-              </svg>
+              />
             )}
           </section>
 
