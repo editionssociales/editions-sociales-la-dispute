@@ -406,6 +406,56 @@ a.kpiCardPrimary:hover {
   font-size: 11px;
 }
 
+/*
+ * Axes gradués + détail au survol (`SalesBarChart.tsx`, retour client
+ * 2026-08-22 : « pas d'axes gradués, ni de détail au survol ») — grille
+ * horizontale, groupe barre/capture/détail, tout en CSS pur (zéro JS client).
+ */
+
+.chartGridLine {
+  stroke: var(--theme-border-color, #e4e1d8);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/*
+ * Rect de capture invisible, pleine hauteur/largeur de colonne — la barre
+ * visible (`.chartBar`) est souvent large de quelques px seulement, bien trop
+ * étroite pour un survol praticable ; `pointer-events: all` la rend
+ * cliquable/survolable malgré `fill: transparent` (sans quoi un remplissage
+ * invisible ne reçoit aucun événement).
+ */
+.barCapture {
+  fill: transparent;
+  pointer-events: all;
+}
+
+/*
+ * Étiquette de détail par barre — masquée par défaut, révélée par
+ * `.barGroup:hover`, jamais interceptée par le pointeur elle-même
+ * (`pointer-events: none`, sans quoi elle volerait le survol à la barre
+ * voisine quand deux étiquettes se chevauchent). `paint-order: stroke` +
+ * liseré de la couleur de fond du panneau (`--theme-elevation-0`, le fond
+ * réel de `.panel`/`.kpiCard` dans ce module) la rend lisible même
+ * au-dessus d'une grille ou d'une barre voisine.
+ */
+.barDetail {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--theme-elevation-800, #2b2820);
+  paint-order: stroke;
+  stroke: var(--theme-elevation-0, #ffffff);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+
+.barGroup:hover .barDetail {
+  opacity: 1;
+}
+
 /* ────────────────────────── Ligne de tableau étendue (« Commandes à traiter », home v4) ────────────────────────── */
 
 /*

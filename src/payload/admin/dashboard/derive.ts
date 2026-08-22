@@ -211,24 +211,93 @@ export interface SalesChartBar {
 
 /**
  * Géométrie des barres du graphique ventes — largeur égale par seau, hauteur
- * proportionnelle au maximum de la série (le maximum touche `height` pleine).
- * Seaux tous à 0 → barres de hauteur 0 (jamais de division par zéro/`NaN`) ;
- * série vide → aucune barre.
+ * proportionnelle au maximum de la série (le maximum touche `height` pleine
+ * quand `maxValue` n'est pas fourni). Seaux tous à 0 → barres de hauteur 0
+ * (jamais de division par zéro/`NaN`) ; série vide → aucune barre.
+ *
+ * `maxValue` (3ᵉ paramètre optionnel, `SalesBarChart.tsx`) permet de mettre
+ * les barres à l'échelle de l'`axisMax` de `chartAxisTicks` plutôt que du
+ * maximum brut de la série, pour que la grille et les barres partagent
+ * EXACTEMENT la même échelle (sans quoi la barre la plus haute dépasserait la
+ * dernière ligne de grille, ou l'inverse). Omis, comportement STRICTEMENT
+ * inchangé (défaut = maximum des seaux, comme avant l'ajout des axes).
  */
 export function salesChartGeometry(
   buckets: DailySalesBucket[],
   dims: { width: number; height: number },
+  maxValue?: number,
 ): SalesChartBar[] {
   const { width, height } = dims
   const n = buckets.length
   if (n === 0) return []
   const w = width / n
-  const max = Math.max(0, ...buckets.map((b) => b.ca))
+  const max = maxValue ?? Math.max(0, ...buckets.map((b) => b.ca))
 
   return buckets.map((b, i) => {
     const h = max > 0 ? (b.ca / max) * height : 0
     return { x: i * w, y: height - h, w, h, day: b.day, ca: b.ca }
   })
+}
+
+export interface ChartAxisTicks {
+  /** Graduations de 0 à `axisMax` inclus, pas régulier « rond » (1-2-5×10ⁿ). */
+  ticks: number[]
+  /** Premier multiple du pas ≥ `maxValue` — échelle commune barres/grille (`salesChartGeometry`, 3ᵉ paramètre). */
+  axisMax: number
+}
+
+/**
+ * Graduations d'axe Y « rondes » pour les 3 graphiques ventes
+ * (`SalesBarChart.tsx`) — progression 1-2-5×10ⁿ (motif d'axe de graphique
+ * standard), jamais des pas arbitraires du type 1/`targetCount` du maximum
+ * qui produiraient des graduations illisibles (ex. « 37,125 € »).
+ * `maxValue` ≤ 0 (aucune vente sur la période, ou entrée invalide) →
+ * `{ ticks: [0], axisMax: 0 }`, jamais un `NaN` (division par le pas évitée).
+ * `targetCount` est un OBJECTIF, pas une garantie : le nombre de graduations
+ * réellement produit peut être inférieur (ex. `axisMax` déjà exactement 2
+ * pas) — jamais supérieur.
+ */
+export function chartAxisTicks(maxValue: number, targetCount = 4): ChartAxisTicks {
+  if (!(maxValue > 0)) return { ticks: [0], axisMax: 0 }
+
+  const rawStep = maxValue / targetCount
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep) + 1e-9)
+  const normalized = rawStep / magnitude
+  const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+  const step = niceNormalized * magnitude
+  const axisMax = Math.ceil(maxValue / step) * step
+  const stepCount = Math.round(axisMax / step)
+
+  const ticks = Array.from({ length: stepCount + 1 }, (_, i) => roundFloat(i * step))
+  return { ticks, axisMax: roundFloat(axisMax) }
+}
+
+/** Arrondi au nanoème pour effacer le bruit flottant d'une multiplication (ex. `0.1 + 0.2`). */
+function roundFloat(value: number): number {
+  return Math.round(value * 1e9) / 1e9
+}
+
+/**
+ * Indices de libellés d'axe X répartis sur `keys` (`SalesBarChart.tsx`) —
+ * premier et dernier toujours inclus, ~`target` libellés au total, jamais
+ * deux indices adjacents identiques (le pas peut arrondir sur le même indice
+ * quand `keys.length` est proche de `target`, un `Set` déduplique). Série de
+ * taille ≤ `target` → tous les indices (rien à répartir). Sert ~1
+ * libellé/semaine sur les 30 jours de `dailySalesBuckets` (`target=5` →
+ * pas ≈ 7-8 jours) et ~1/trimestre sur les 13 mois de `monthlySalesBuckets`
+ * (`target=5` → pas = 3 mois).
+ */
+export function everyNthLabels(keys: string[], target = 5): number[] {
+  const n = keys.length
+  if (n === 0) return []
+  if (n <= target || target <= 1) return keys.map((_, i) => i)
+
+  const step = (n - 1) / (target - 1)
+  const indices = new Set<number>()
+  for (let i = 0; i < target; i++) {
+    indices.add(Math.round(i * step))
+  }
+  return [...indices].sort((a, b) => a - b)
 }
 
 /* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
@@ -778,6 +847,22 @@ export function fmtEuros(amount: number): string {
   return EUR.format(amount)
 }
 
+const EUR_AXIS = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+})
+
+/**
+ * Montant en euros SANS centimes, arrondi (« 150 € ») — libellés d'axe Y des
+ * graphiques ventes (`SalesBarChart.tsx`, `chartAxisTicks`) : `fmtEuros`
+ * (avec centimes) y serait trop long/faussement précis pour une graduation
+ * ronde par construction (1-2-5×10ⁿ).
+ */
+export function fmtEurosAxis(amount: number): string {
+  return EUR_AXIS.format(amount)
+}
+
 const DATE_TIME = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'Europe/Paris',
   day: 'numeric',
@@ -793,6 +878,12 @@ const DATE_ONLY = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
 })
 
+const DAY_MONTH_ONLY = new Intl.DateTimeFormat('fr-FR', {
+  timeZone: 'Europe/Paris',
+  day: 'numeric',
+  month: 'long',
+})
+
 /** « 9 juillet, 14:02 » (heure de Paris). */
 export function fmtDateTimeFr(iso: string): string {
   const t = Date.parse(iso)
@@ -803,6 +894,19 @@ export function fmtDateTimeFr(iso: string): string {
 export function fmtDateFr(iso: string): string {
   const t = Date.parse(iso)
   return Number.isNaN(t) ? '—' : DATE_ONLY.format(t)
+}
+
+/**
+ * « 12 août » (jour + mois SANS année, heure de Paris) — infobulles/étiquettes
+ * de survol du graphique quotidien (`SalesBarChart.tsx`) : `fmtDateFr` porte
+ * l'année, trop long pour un survol de barre. Anciennement dupliqué localement
+ * dans `../ventes/VentesPage.tsx` (`fmtDayMonthFr`) ; déplacé ici pour être
+ * partagé avec `Dashboard.tsx` (même infobulle sur les deux graphiques
+ * quotidiens).
+ */
+export function fmtDayMonthFr(iso: string): string {
+  const t = Date.parse(iso)
+  return Number.isNaN(t) ? '—' : DAY_MONTH_ONLY.format(t)
 }
 
 /** Tag de maison affiché dans les tableaux (ES / LD / boutique seule). */

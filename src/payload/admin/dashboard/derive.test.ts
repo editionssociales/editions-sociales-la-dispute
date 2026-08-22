@@ -3,12 +3,16 @@ import { describe, expect, it } from 'vitest'
 import {
   bannerHidden,
   bucketWeeklyQuantities,
+  chartAxisTicks,
   dailySalesBuckets,
   defaultExportDateRange,
   editionTag,
+  everyNthLabels,
   fmtDateFr,
   fmtDateTimeFr,
+  fmtDayMonthFr,
   fmtEuros,
+  fmtEurosAxis,
   humanAge,
   IMPORT_ALERT_DAYS,
   importSignal,
@@ -332,6 +336,117 @@ describe('salesChartGeometry — géométrie des barres', () => {
     const bars = salesChartGeometry(buckets, dims)
     expect(bars.map((b) => b.w)).toEqual([100, 100, 100])
     expect(bars.map((b) => b.x)).toEqual([0, 100, 200])
+  })
+
+  it('3ᵉ paramètre `maxValue` omis : comportement STRICTEMENT inchangé (défaut = maximum des seaux)', () => {
+    const buckets: DailySalesBucket[] = [
+      { day: '2026-07-01', ca: 10 },
+      { day: '2026-07-02', ca: 40 },
+    ]
+    expect(salesChartGeometry(buckets, dims)).toEqual(salesChartGeometry(buckets, dims, undefined))
+  })
+
+  it('3ᵉ paramètre `maxValue` fourni : les barres sont mises à l’échelle de CETTE valeur, pas du maximum de la série', () => {
+    const buckets: DailySalesBucket[] = [
+      { day: '2026-07-01', ca: 10 },
+      { day: '2026-07-02', ca: 40 },
+    ]
+    // axisMax = 50 (au lieu du maximum réel 40) : la barre à 40 ne touche plus le sommet.
+    const bars = salesChartGeometry(buckets, dims, 50)
+    expect(bars[1].h).toBe(80) // 40/50 * 100
+    expect(bars[0].h).toBe(20) // 10/50 * 100
+  })
+
+  it('`maxValue` à 0 (aucune vente, axisMax de `chartAxisTicks` à 0) : barres de hauteur 0, jamais de NaN', () => {
+    const buckets: DailySalesBucket[] = [{ day: '2026-07-01', ca: 0 }]
+    const bars = salesChartGeometry(buckets, dims, 0)
+    expect(bars[0].h).toBe(0)
+    expect(Number.isNaN(bars[0].h)).toBe(false)
+  })
+})
+
+describe('chartAxisTicks — graduations rondes 1-2-5×10ⁿ', () => {
+  it('maxValue à 0 : axe dégénéré, jamais un NaN', () => {
+    expect(chartAxisTicks(0)).toEqual({ ticks: [0], axisMax: 0 })
+  })
+
+  it('maxValue négatif : même repli que 0 (jamais un NaN)', () => {
+    expect(chartAxisTicks(-5)).toEqual({ ticks: [0], axisMax: 0 })
+  })
+
+  it('7 → pas 2, axisMax 8', () => {
+    expect(chartAxisTicks(7)).toEqual({ ticks: [0, 2, 4, 6, 8], axisMax: 8 })
+  })
+
+  it('148,5 → pas 50, axisMax 150 (« 150 € » rond)', () => {
+    expect(chartAxisTicks(148.5)).toEqual({ ticks: [0, 50, 100, 150], axisMax: 150 })
+  })
+
+  it('4 210 → pas 2 000, axisMax 6 000', () => {
+    expect(chartAxisTicks(4210)).toEqual({ ticks: [0, 2000, 4000, 6000], axisMax: 6000 })
+  })
+
+  it('100 000 → pas 50 000, axisMax 100 000 (déjà rond, moins de graduations que `targetCount`)', () => {
+    expect(chartAxisTicks(100000)).toEqual({ ticks: [0, 50000, 100000], axisMax: 100000 })
+  })
+
+  it('`targetCount` personnalisable', () => {
+    expect(chartAxisTicks(4210, 6)).toEqual({
+      ticks: [0, 1000, 2000, 3000, 4000, 5000],
+      axisMax: 5000,
+    })
+  })
+
+  it('axisMax est toujours ≥ maxValue (jamais une barre qui dépasse la dernière ligne de grille)', () => {
+    for (const v of [1, 7, 148.5, 999, 4210, 100000]) {
+      expect(chartAxisTicks(v).axisMax).toBeGreaterThanOrEqual(v)
+    }
+  })
+})
+
+describe('everyNthLabels — indices de libellés d’axe X répartis', () => {
+  it('série vide : aucun indice', () => {
+    expect(everyNthLabels([])).toEqual([])
+  })
+
+  it('un seul élément : son indice seul', () => {
+    expect(everyNthLabels(['a'])).toEqual([0])
+  })
+
+  it('n ≤ target : tous les indices (rien à répartir)', () => {
+    expect(everyNthLabels(['a', 'b', 'c'], 5)).toEqual([0, 1, 2])
+    expect(everyNthLabels(['a', 'b', 'c', 'd', 'e'], 5)).toEqual([0, 1, 2, 3, 4])
+  })
+
+  it('30 jours, target 5 : premier + dernier inclus, ~1 libellé/semaine', () => {
+    const keys = Array.from({ length: 30 }, (_, i) => String(i))
+    const indices = everyNthLabels(keys, 5)
+    expect(indices[0]).toBe(0)
+    expect(indices[indices.length - 1]).toBe(29)
+    expect(indices).toEqual([0, 7, 15, 22, 29])
+  })
+
+  it('13 mois, target 5 : pas de 3 mois (~1/trimestre)', () => {
+    const keys = Array.from({ length: 13 }, (_, i) => String(i))
+    expect(everyNthLabels(keys, 5)).toEqual([0, 3, 6, 9, 12])
+  })
+
+  it('n grand (100), target 5 : premier + dernier inclus, indices strictement croissants (jamais de doublon adjacent)', () => {
+    const keys = Array.from({ length: 100 }, (_, i) => String(i))
+    const indices = everyNthLabels(keys, 5)
+    expect(indices[0]).toBe(0)
+    expect(indices[indices.length - 1]).toBe(99)
+    for (let i = 1; i < indices.length; i++) {
+      expect(indices[i]).toBeGreaterThan(indices[i - 1])
+    }
+  })
+
+  it('n juste au-dessus de target : jamais de doublon même si l’arrondi du pas pourrait en produire un', () => {
+    const keys = Array.from({ length: 6 }, (_, i) => String(i))
+    const indices = everyNthLabels(keys, 5)
+    expect(new Set(indices).size).toBe(indices.length)
+    expect(indices[0]).toBe(0)
+    expect(indices[indices.length - 1]).toBe(5)
   })
 })
 
@@ -966,6 +1081,12 @@ describe('formatage français', () => {
     expect(plain(fmtEuros(0))).toBe('0,00 €')
   })
 
+  it('fmtEurosAxis — sans centimes, arrondi (graduations d’axe)', () => {
+    expect(plain(fmtEurosAxis(150))).toBe('150 €')
+    expect(plain(fmtEurosAxis(0))).toBe('0 €')
+    expect(plain(fmtEurosAxis(4210))).toBe('4 210 €')
+  })
+
   it('fmtDateTimeFr — heure de Paris', () => {
     expect(plain(fmtDateTimeFr('2026-07-09T12:02:00Z'))).toBe('9 juillet à 14:02')
     expect(fmtDateTimeFr('pas une date')).toBe('—')
@@ -974,6 +1095,11 @@ describe('formatage français', () => {
   it('fmtDateFr — heure de Paris', () => {
     expect(fmtDateFr('2026-07-03T02:12:00Z')).toBe('3 juillet 2026')
     expect(fmtDateFr('')).toBe('—')
+  })
+
+  it('fmtDayMonthFr — jour + mois sans année, heure de Paris', () => {
+    expect(fmtDayMonthFr('2026-08-12T10:00:00Z')).toBe('12 août')
+    expect(fmtDayMonthFr('pas une date')).toBe('—')
   })
 
   it('editionTag', () => {
