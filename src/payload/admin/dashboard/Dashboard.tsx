@@ -207,7 +207,11 @@ export async function Dashboard({ payload }: ServerProps) {
                 width={Math.max(bar.w - 2, 1)}
                 height={bar.h}
                 className={styles.chartBar}
-              />
+              >
+                <title>
+                  {fmtDateFr(bar.day)} — {fmtEuros(bar.ca)}
+                </title>
+              </rect>
             ))}
             <text x={0} y={CHART_HEIGHT - 4} className={styles.chartAxisLabel}>
               {fmtDateFr(chartFirstDay ?? '')}
@@ -220,6 +224,10 @@ export async function Dashboard({ payload }: ServerProps) {
             </text>
           </svg>
         )}
+        <div className={styles.actions}>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
+          <a href="/admin/ventes">Détail des ventes →</a>
+        </div>
       </section>
 
       {/* ── 3. Commandes à traiter ── */}

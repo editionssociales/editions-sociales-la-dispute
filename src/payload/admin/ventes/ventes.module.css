@@ -1,0 +1,19 @@
+/*
+ * Styles propres à `/admin/ventes` (vue détaillée « Ventes — détail ») —
+ * complète `../dashboard/dashboard.module.css` (panneaux, cartes KPI,
+ * tableaux, graphiques) plutôt que de le dupliquer. Mêmes variables de thème
+ * Payload (clair/sombre suivi automatiquement).
+ */
+
+/* ── Titres les plus vendus : deux tables côte à côte, empilées sous la largeur d'un panneau étroit ── */
+
+.topTitlesRow {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.topTitlesCol {
+  flex: 1 1 320px;
+  min-width: 0;
+}
