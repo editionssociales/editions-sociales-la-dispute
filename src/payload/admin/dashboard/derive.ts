@@ -22,6 +22,14 @@ import { isPromoExpired } from '../../../lib/promo-core.ts'
  * `parisMonthBounds` (plus bas) reste néanmoins en place : son seul usage
  * restant est le raccourci « Ventes du mois » de `Dashboard.tsx`, qui n'a pas
  * encore été réécrit par la vague 2 (fichier hors périmètre de cet agent).
+ *
+ * Ce fichier nourrit aussi le futur détail `/admin/ventes` (KPIs
+ * multi-fenêtres, seaux mensuels, top titres) : `windowSalesStats`
+ * (généralisation de `salesStats` à une largeur de fenêtre paramétrable),
+ * `monthlySalesBuckets`/`monthlyBucketToChartInput` et `topTitles`, sur la
+ * lecture ~13 mois `readSalesHistory` (`data.ts`) — distincte de
+ * `readSalesWindow` (60 j, home). Rendu et endpoint I/O hors périmètre de cet
+ * agent (vue pas encore écrite à la date de ce commit).
  */
 
 /** État d'un signal/panneau — `na` = non calculable (gris), jamais converti en vert. */
@@ -93,19 +101,40 @@ export interface SalesStats {
 }
 
 /**
- * Statistiques de ventes en fenêtre glissante 30 j vs 30 j précédents (bandeau
- * KPI). Étanchéité comptable DURE dons/ventes (CLAUDE.md racine, `orderType:
- * "don"` jamais dans un agrégat de CA/TVA) : un don est écarté ICI, pas
- * seulement dans le `where` du lecteur I/O — la garantie tient même si un
- * autre appelant réutilise cette fonction sur des lignes non pré-filtrées.
- * Fenêtre courante = `paidAt ?? createdAt` ∈ [start30, now] ; précédente =
- * [start60, start30[ (borne haute exclusive — un ordre pile à `start30` ne
- * compte qu'une fois, dans la fenêtre courante).
+ * Forme minimale qu'exige `windowSalesStats` — satisfaite à la fois par
+ * `SalesWindowRow` (lignes `{quantity, book}`, `readSalesWindow` 60 j) et par
+ * `SalesHistoryRow` (lignes `{quantity, titleSnapshot, unitPriceTTC}`,
+ * `readSalesHistory` 13 mois) : seule la quantité par ligne compte ici, le
+ * typage structurel de TypeScript accepte les deux sans conversion.
  */
-export function salesStats(rows: SalesWindowRow[], now: Date): SalesStats {
-  const { start30, start60 } = rollingWindows(now)
-  const t30 = start30.getTime()
-  const t60 = start60.getTime()
+interface WindowStatsRow {
+  paidAt: string | null
+  createdAt: string
+  totalTTC: number
+  orderType: string
+  lines: { quantity: number }[]
+}
+
+/**
+ * Statistiques de ventes en fenêtre glissante de `days` jours vs `days` jours
+ * précédents — généralisation de l'ancien corps de `salesStats` (désormais un
+ * simple appel `windowSalesStats(rows, 30, now)`, cf. plus bas) à une largeur
+ * de fenêtre paramétrable (KPIs multi-fenêtres de la future page
+ * `/admin/ventes` : 7/30/90 j…). Étanchéité comptable DURE dons/ventes
+ * (CLAUDE.md racine, `orderType: "don"` jamais dans un agrégat de CA/TVA) :
+ * un don est écarté ICI, pas seulement dans le `where` du lecteur I/O — la
+ * garantie tient même si un autre appelant réutilise cette fonction sur des
+ * lignes non pré-filtrées. Fenêtre courante = `paidAt ?? createdAt` ∈
+ * [now-days, now] ; précédente = [now-2×days, now-days[ (borne haute
+ * exclusive — un ordre pile à la borne ne compte qu'une fois, dans la fenêtre
+ * courante). `deltaPct` à `null` si la fenêtre précédente est à 0 (jamais une
+ * division par zéro/`Infinity`).
+ */
+export function windowSalesStats<T extends WindowStatsRow>(rows: T[], days: number, now: Date): SalesStats {
+  const start = new Date(now.getTime() - days * DAY_MS)
+  const startPrev = new Date(now.getTime() - 2 * days * DAY_MS)
+  const tStart = start.getTime()
+  const tPrev = startPrev.getTime()
   const tNow = now.getTime()
 
   let ca = 0
@@ -118,18 +147,27 @@ export function salesStats(rows: SalesWindowRow[], now: Date): SalesStats {
     if (row.orderType === 'don') continue
     const at = Date.parse(row.paidAt ?? row.createdAt)
     if (Number.isNaN(at)) continue
-    if (at >= t30 && at <= tNow) {
+    if (at >= tStart && at <= tNow) {
       ca += row.totalTTC
       nbCommandes += 1
       nbExemplaires += row.lines.reduce((sum, l) => sum + l.quantity, 0)
       if (row.orderType === 'precommande') caPrecommande += row.totalTTC
-    } else if (at >= t60 && at < t30) {
+    } else if (at >= tPrev && at < tStart) {
       caPrev += row.totalTTC
     }
   }
 
   const deltaPct = caPrev === 0 ? null : ((ca - caPrev) / caPrev) * 100
   return { ca, nbCommandes, nbExemplaires, caPrecommande, deltaPct }
+}
+
+/**
+ * Statistiques de ventes en fenêtre glissante 30 j vs 30 j précédents (bandeau
+ * KPI) — délègue à `windowSalesStats` avec `days=30` (mêmes bornes que
+ * `rollingWindows`, résultats identiques à l'implémentation historique).
+ */
+export function salesStats(rows: SalesWindowRow[], now: Date): SalesStats {
+  return windowSalesStats(rows, 30, now)
 }
 
 export interface DailySalesBucket {
@@ -191,6 +229,139 @@ export function salesChartGeometry(
     const h = max > 0 ? (b.ca / max) * height : 0
     return { x: i * w, y: height - h, w, h, day: b.day, ca: b.ca }
   })
+}
+
+/* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
+
+/**
+ * Ligne d'une commande vendue telle que lue par `readSalesHistory`
+ * (`data.ts`, fenêtre ~13 mois civils Paris) — nourrit `windowSalesStats`
+ * (KPIs multi-fenêtres), `monthlySalesBuckets` (seaux mensuels) et
+ * `topTitles` (top titres) de la future page `/admin/ventes`. Distincte de
+ * `SalesWindowRow` (fenêtre 60 j de la home, lignes `{quantity, book}`) : ici
+ * chaque ligne porte son `titleSnapshot`/`unitPriceTTC`, nécessaires à
+ * `topTitles` (agrégation par titre, CA par ligne) — pas d'identifiant
+ * `book`, cette lecture ne nourrit aucune dérivation par livre.
+ */
+export interface SalesHistoryLine {
+  quantity: number
+  titleSnapshot: string
+  unitPriceTTC: number
+}
+
+export interface SalesHistoryRow {
+  paidAt: string | null
+  createdAt: string
+  totalTTC: number
+  orderType: string
+  lines: SalesHistoryLine[]
+}
+
+export interface MonthlySalesBucket {
+  /** `AAAA-MM` — clé stable, triable lexicographiquement. */
+  month: string
+  /** « août 2026 » — libellé humain, mois civil Paris. */
+  label: string
+  ca: number
+  nbCommandes: number
+}
+
+/**
+ * Seaux mensuels (mois CIVIL PARIS) pour la page `/admin/ventes` — série
+ * complète et ordonnée du plus ancien au plus récent, `months` seaux (mois
+ * courant inclus, forcément partiel), mois sans vente à 0 (jamais un trou).
+ * Même étanchéité comptable dons/ventes que `salesStats`/`dailySalesBuckets`
+ * (un don n'alimente ni `ca` ni `nbCommandes`). Le mois d'un timestamp est
+ * dérivé via `parisYearMonth` (Intl `Europe/Paris`), jamais un `slice(0, 7)`
+ * sur l'ISO UTC — un ordre passé après 22h/23h UTC (soir Paris) glisserait
+ * sinon sur le mois précédent, faux pour les 5-6 derniers jours de chaque
+ * mois selon la saison DST.
+ */
+export function monthlySalesBuckets(rows: SalesHistoryRow[], now: Date, months = 13): MonthlySalesBucket[] {
+  const { year: nowYear, month: nowMonth } = parisYearMonth(now)
+  const monthKeys: { year: number; month: number }[] = []
+  for (let i = months - 1; i >= 0; i--) {
+    monthKeys.push(shiftYearMonth(nowYear, nowMonth, -i))
+  }
+
+  const keyOf = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`
+  const byMonth = new Map(monthKeys.map(({ year, month }) => [keyOf(year, month), { ca: 0, nbCommandes: 0 }]))
+
+  for (const row of rows) {
+    if (row.orderType === 'don') continue
+    const at = new Date(row.paidAt ?? row.createdAt)
+    if (Number.isNaN(at.getTime())) continue
+    const { year, month } = parisYearMonth(at)
+    const bucket = byMonth.get(keyOf(year, month))
+    if (!bucket) continue // hors fenêtre (n'arrive pas si `rows` vient de `readSalesHistory`)
+    bucket.ca += row.totalTTC
+    bucket.nbCommandes += 1
+  }
+
+  const labelFmt = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', month: 'long', year: 'numeric' })
+  return monthKeys.map(({ year, month }) => {
+    const key = keyOf(year, month)
+    const bucket = byMonth.get(key)!
+    return { month: key, label: labelFmt.format(parisMonthStartUtc(year, month)), ca: bucket.ca, nbCommandes: bucket.nbCommandes }
+  })
+}
+
+/**
+ * Adapte un seau mensuel à la forme générique `{day, ca}` qu'attend
+ * `salesChartGeometry` — plutôt que de dupliquer la géométrie des barres pour
+ * une série mensuelle, on réutilise la fonction existante TELLE QUELLE
+ * (`day` porte alors la clé `AAAA-MM`, un simple libellé de seau pour cette
+ * fonction générique, pas nécessairement un jour).
+ */
+export function monthlyBucketToChartInput(bucket: MonthlySalesBucket): DailySalesBucket {
+  return { day: bucket.month, ca: bucket.ca }
+}
+
+export interface TopTitleRow {
+  title: string
+  exemplaires: number
+  ca: number
+}
+
+/**
+ * Top titres vendus sur une fenêtre glissante de `days` jours (page
+ * `/admin/ventes`) — agrégation des lignes par `titleSnapshot` (clé
+ * Woo-safe : un produit disparu du catalogue partage la fiche de repli
+ * `archive-boutique-woo`, mais conserve son vrai titre en snapshot, donc reste
+ * distinct des autres titres archivés dans ce top). `ca` = Σ quantity ×
+ * unitPriceTTC (euros), arrondi au centime (évite le bruit de l'arithmétique
+ * flottante, ex. 3 × 9,99 = 29,970000000000002). Tri exemplaires décroissant
+ * puis CA décroissant (départage), tronqué à `max`. Dons EXCLUS : vue
+ * « vendus », une contrepartie de don a un prix de ligne à 0 € qui
+ * fausserait le CA par titre sans rien apporter au classement par
+ * exemplaires. `now` explicite (et non un défaut interne) pour rester une
+ * fonction pure testable, comme le reste de ce fichier.
+ */
+export function topTitles(
+  rows: SalesHistoryRow[],
+  now: Date,
+  { days, max }: { days: number; max: number },
+): TopTitleRow[] {
+  const start = now.getTime() - days * DAY_MS
+  const tNow = now.getTime()
+  const byTitle = new Map<string, { exemplaires: number; ca: number }>()
+
+  for (const row of rows) {
+    if (row.orderType === 'don') continue
+    const at = Date.parse(row.paidAt ?? row.createdAt)
+    if (Number.isNaN(at) || at < start || at > tNow) continue
+    for (const line of row.lines) {
+      const entry = byTitle.get(line.titleSnapshot) ?? { exemplaires: 0, ca: 0 }
+      entry.exemplaires += line.quantity
+      entry.ca += line.quantity * line.unitPriceTTC
+      byTitle.set(line.titleSnapshot, entry)
+    }
+  }
+
+  return [...byTitle.entries()]
+    .map(([title, { exemplaires, ca }]) => ({ title, exemplaires, ca: Math.round(ca * 100) / 100 }))
+    .sort((a, b) => b.exemplaires - a.exemplaires || b.ca - a.ca)
+    .slice(0, max)
 }
 
 /* ────────────────────────── Vélocité stock (précommandes + rupture) ────────────────────────── */
@@ -402,15 +573,7 @@ export function summarizeLines(lines: SummarizableLine[], max = 3): string {
  * pas encore réécrit par la vague 2).
  */
 export function parisMonthBounds(now: Date): { start: Date; end: Date; label: string } {
-  const fmt = new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: 'numeric',
-  })
-  const parts = fmt.formatToParts(now)
-  const year = Number(parts.find((p) => p.type === 'year')?.value)
-  const month = Number(parts.find((p) => p.type === 'month')?.value) // 1-12
-
+  const { year, month } = parisYearMonth(now)
   const startUtc = parisMonthStartUtc(year, month)
   const endUtc = month === 12 ? parisMonthStartUtc(year + 1, 1) : parisMonthStartUtc(year, month + 1)
   const label = new Intl.DateTimeFormat('fr-FR', {
@@ -421,10 +584,55 @@ export function parisMonthBounds(now: Date): { start: Date; end: Date; label: st
   return { start: startUtc, end: endUtc, label }
 }
 
+/**
+ * Année/mois civil (1-12) **à l'heure de Paris** d'un instant — le seul point
+ * de passage pour dériver un mois civil d'un timestamp dans ce fichier
+ * (`parisMonthBounds`, `monthlySalesBuckets`, `monthsAgoParisMonthStartUtc`) :
+ * jamais un `slice(0, 7)` sur l'ISO UTC, qui glisserait sur le mois précédent
+ * pour tout instant tombé après 22h/23h UTC (soir Paris déjà dans le mois
+ * suivant).
+ */
+function parisYearMonth(instant: Date): { year: number; month: number } {
+  const fmt = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: 'numeric',
+  })
+  const parts = fmt.formatToParts(instant)
+  return {
+    year: Number(parts.find((p) => p.type === 'year')?.value),
+    month: Number(parts.find((p) => p.type === 'month')?.value), // 1-12
+  }
+}
+
 /** Minuit Paris du 1ᵉʳ du mois (1-12), en UTC. */
 function parisMonthStartUtc(year: number, month: number): Date {
   const offsetHours = month >= 4 && month <= 10 ? 2 : 1
   return new Date(Date.UTC(year, month - 1, 1, -offsetHours))
+}
+
+/**
+ * Décale un couple année/mois civil (1-12) de `delta` mois (négatif = en
+ * arrière) — arithmétique entière sur un total de mois depuis l'an 0, modulo
+ * toujours ramené en `[1, 12]` (le double `% 12` garde le résultat positif
+ * même pour un `delta` négatif qui ferait chuter `total` sous 0).
+ */
+function shiftYearMonth(year: number, month: number, delta: number): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta
+  return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 }
+}
+
+/**
+ * Instant UTC (minuit civil Paris) du 1ᵉʳ jour du mois situé `monthsBack` mois
+ * avant le mois civil Paris de `now` — borne basse partagée par
+ * `readSalesHistory` (`data.ts`, fenêtre I/O ~13 mois) et `monthlySalesBuckets`
+ * (série de seaux) : la lecture Postgres et l'agrégation portent ainsi
+ * exactement sur la même fenêtre, sans dupliquer l'arithmétique de mois.
+ */
+export function monthsAgoParisMonthStartUtc(now: Date, monthsBack: number): Date {
+  const { year, month } = parisYearMonth(now)
+  const target = shiftYearMonth(year, month, -monthsBack)
+  return parisMonthStartUtc(target.year, target.month)
 }
 
 /* ────────────────────────── Export CSV (bornes de dates) ────────────────────────── */

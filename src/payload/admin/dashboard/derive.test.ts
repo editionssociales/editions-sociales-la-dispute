@@ -12,6 +12,9 @@ import {
   humanAge,
   IMPORT_ALERT_DAYS,
   importSignal,
+  monthlyBucketToChartInput,
+  monthlySalesBuckets,
+  monthsAgoParisMonthStartUtc,
   parisDateYmd,
   parisMonthBounds,
   pastilleText,
@@ -28,11 +31,14 @@ import {
   stockRowState,
   stockSignal,
   summarizeLines,
+  topTitles,
   urgentStockRows,
+  windowSalesStats,
   worstState,
   type BannerItem,
   type DailySalesBucket,
   type DatedQuantity,
+  type SalesHistoryRow,
   type SalesWindowRow,
   type StockOutlookInput,
   type StockOutlookRow,
@@ -190,6 +196,69 @@ describe('salesStats — fenêtre glissante 30 j vs 30 j précédents', () => {
   })
 })
 
+function historyRow(overrides: Partial<SalesHistoryRow> = {}): SalesHistoryRow {
+  return {
+    paidAt: null,
+    createdAt: '2026-07-01T00:00:00Z',
+    totalTTC: 20,
+    orderType: 'commande',
+    lines: [{ quantity: 1, titleSnapshot: 'Titre', unitPriceTTC: 20 }],
+    ...overrides,
+  }
+}
+
+describe('windowSalesStats — généralisation à une largeur de fenêtre paramétrable', () => {
+  const now = new Date('2026-08-30T12:00:00Z')
+
+  it('salesStats délègue à windowSalesStats(rows, 30, now) : résultats strictement identiques', () => {
+    const rows = [
+      salesRow({ createdAt: now.toISOString(), totalTTC: 42, lines: [{ quantity: 2, book: 1 }] }),
+      salesRow({ createdAt: new Date(now.getTime() - 40 * DAY_MS).toISOString(), totalTTC: 10 }),
+      salesRow({ createdAt: now.toISOString(), totalTTC: 15, orderType: 'don' }),
+    ]
+    expect(salesStats(rows, now)).toEqual(windowSalesStats(rows, 30, now))
+  })
+
+  it('fenêtre 7 j vs 7 j précédents (au lieu de 30/30) : une commande à -20 j est hors des deux fenêtres', () => {
+    const rows = [
+      salesRow({ createdAt: now.toISOString(), totalTTC: 100 }),
+      salesRow({ createdAt: new Date(now.getTime() - 20 * DAY_MS).toISOString(), totalTTC: 50 }),
+    ]
+    const stats = windowSalesStats(rows, 7, now)
+    expect(stats.ca).toBe(100)
+    expect(stats.deltaPct).toBeNull() // -20 j est hors [now-14j, now-7j[ pour days=7
+  })
+
+  it('la même commande à -20 j entre dans la fenêtre précédente pour days=14', () => {
+    const rows = [
+      salesRow({ createdAt: now.toISOString(), totalTTC: 100 }),
+      salesRow({ createdAt: new Date(now.getTime() - 20 * DAY_MS).toISOString(), totalTTC: 50 }),
+    ]
+    const stats = windowSalesStats(rows, 14, now)
+    expect(stats.ca).toBe(100)
+    expect(stats.deltaPct).toBeCloseTo(100)
+  })
+
+  it('étanchéité comptable dons/ventes préservée quelle que soit la largeur de fenêtre', () => {
+    const rows = [salesRow({ createdAt: now.toISOString(), totalTTC: 999, orderType: 'don' })]
+    expect(windowSalesStats(rows, 90, now).ca).toBe(0)
+  })
+
+  it('fenêtre précédente vide : deltaPct null quelle que soit la largeur', () => {
+    const rows = [salesRow({ createdAt: now.toISOString(), totalTTC: 30 })]
+    expect(windowSalesStats(rows, 90, now).deltaPct).toBeNull()
+  })
+
+  it('accepte aussi des lignes au format SalesHistoryRow (titleSnapshot/unitPriceTTC) — typage structurel', () => {
+    const rows = [
+      historyRow({ createdAt: now.toISOString(), totalTTC: 30, lines: [{ quantity: 3, titleSnapshot: 'A', unitPriceTTC: 10 }] }),
+    ]
+    const stats = windowSalesStats(rows, 30, now)
+    expect(stats.ca).toBe(30)
+    expect(stats.nbExemplaires).toBe(3)
+  })
+})
+
 describe('dailySalesBuckets — 30 seaux quotidiens (jour civil Paris)', () => {
   it('série complète de 30 jours, du plus ancien au plus récent, jours sans vente à 0', () => {
     const now = new Date('2026-07-13T10:00:00Z')
@@ -263,6 +332,208 @@ describe('salesChartGeometry — géométrie des barres', () => {
     const bars = salesChartGeometry(buckets, dims)
     expect(bars.map((b) => b.w)).toEqual([100, 100, 100])
     expect(bars.map((b) => b.x)).toEqual([0, 100, 200])
+  })
+})
+
+/* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
+
+describe('monthsAgoParisMonthStartUtc — borne basse mensuelle Paris', () => {
+  it('12 mois avant août 2026 : 1er août 2025 minuit Paris (CEST, UTC-2)', () => {
+    const start = monthsAgoParisMonthStartUtc(new Date('2026-08-30T12:00:00Z'), 12)
+    expect(start.toISOString()).toBe('2025-07-31T22:00:00.000Z')
+  })
+
+  it('12 mois avant janvier 2026 : bascule d’année sur janvier 2025 (CET, UTC-1)', () => {
+    const start = monthsAgoParisMonthStartUtc(new Date('2026-01-15T12:00:00Z'), 12)
+    expect(start.toISOString()).toBe('2024-12-31T23:00:00.000Z')
+  })
+
+  it('0 mois en arrière : 1er du mois courant', () => {
+    const start = monthsAgoParisMonthStartUtc(new Date('2026-08-30T12:00:00Z'), 0)
+    expect(start.toISOString()).toBe('2026-07-31T22:00:00.000Z')
+  })
+})
+
+describe('monthlySalesBuckets — seaux mensuels (mois civil Paris)', () => {
+  it('13 seaux par défaut, du plus ancien au plus récent, mois courant inclus', () => {
+    const now = new Date('2026-08-15T12:00:00Z')
+    const buckets = monthlySalesBuckets([], now)
+    expect(buckets).toHaveLength(13)
+    expect(buckets[0].month).toBe('2025-08')
+    expect(buckets[0].label).toBe('août 2025')
+    expect(buckets[12].month).toBe('2026-08')
+    expect(buckets[12].label).toBe('août 2026')
+  })
+
+  it('mois manquants à 0, jamais un trou', () => {
+    const now = new Date('2026-08-15T12:00:00Z')
+    const buckets = monthlySalesBuckets([], now)
+    expect(buckets.every((b) => b.ca === 0 && b.nbCommandes === 0)).toBe(true)
+  })
+
+  it('bascule d’année : janvier courant remonte à janvier de l’année précédente', () => {
+    const now = new Date('2026-01-15T12:00:00Z')
+    const buckets = monthlySalesBuckets([], now)
+    expect(buckets[0].month).toBe('2025-01')
+    expect(buckets[0].label).toBe('janvier 2025')
+    expect(buckets[12].month).toBe('2026-01')
+    expect(buckets[12].label).toBe('janvier 2026')
+  })
+
+  it('agrège plusieurs commandes du même mois civil Paris', () => {
+    const now = new Date('2026-08-15T12:00:00Z')
+    const rows = [
+      historyRow({ createdAt: '2026-08-01T10:00:00Z', totalTTC: 10 }),
+      historyRow({ createdAt: '2026-08-14T20:00:00Z', totalTTC: 5 }),
+    ]
+    const buckets = monthlySalesBuckets(rows, now)
+    const august = buckets[buckets.length - 1]
+    expect(august.month).toBe('2026-08')
+    expect(august.ca).toBe(15)
+    expect(august.nbCommandes).toBe(2)
+  })
+
+  it('changement d’heure mars : un ordre après 22h UTC le 31/03 tombe déjà en avril à Paris (CEST)', () => {
+    const now = new Date('2026-11-15T12:00:00Z')
+    const rows = [historyRow({ createdAt: '2026-03-31T22:30:00Z', totalTTC: 40 })]
+    const buckets = monthlySalesBuckets(rows, now)
+    const april = buckets.find((b) => b.month === '2026-04')!
+    const march = buckets.find((b) => b.month === '2026-03')!
+    expect(april.ca).toBe(40)
+    expect(march.ca).toBe(0)
+  })
+
+  it('changement d’heure octobre : un ordre après 23h UTC le 31/10 tombe déjà en novembre à Paris (CET)', () => {
+    const now = new Date('2026-11-15T12:00:00Z')
+    const rows = [historyRow({ createdAt: '2026-10-31T23:30:00Z', totalTTC: 25 })]
+    const buckets = monthlySalesBuckets(rows, now)
+    const november = buckets.find((b) => b.month === '2026-11')!
+    const october = buckets.find((b) => b.month === '2026-10')!
+    expect(november.ca).toBe(25)
+    expect(october.ca).toBe(0)
+  })
+
+  it('étanchéité comptable : un don n’alimente aucun seau', () => {
+    const now = new Date('2026-08-15T12:00:00Z')
+    const rows = [historyRow({ createdAt: now.toISOString(), totalTTC: 500, orderType: 'don' })]
+    const buckets = monthlySalesBuckets(rows, now)
+    expect(buckets.reduce((sum, b) => sum + b.ca, 0)).toBe(0)
+  })
+
+  it('une commande hors fenêtre (plus de 13 mois) n’apparaît dans aucun seau, jamais un plantage', () => {
+    const now = new Date('2026-08-15T12:00:00Z')
+    const rows = [historyRow({ createdAt: '2020-01-01T00:00:00Z', totalTTC: 999 })]
+    const buckets = monthlySalesBuckets(rows, now)
+    expect(buckets.reduce((sum, b) => sum + b.ca, 0)).toBe(0)
+  })
+
+  it('paidAt prime sur createdAt pour déterminer le mois', () => {
+    const now = new Date('2026-08-15T12:00:00Z')
+    const rows = [historyRow({ paidAt: '2026-08-05T10:00:00Z', createdAt: '2026-06-01T10:00:00Z', totalTTC: 77 })]
+    const buckets = monthlySalesBuckets(rows, now)
+    expect(buckets.find((b) => b.month === '2026-08')!.ca).toBe(77)
+    expect(buckets.find((b) => b.month === '2026-06')!.ca).toBe(0)
+  })
+
+  it('paramètre months personnalisable', () => {
+    const now = new Date('2026-08-15T12:00:00Z')
+    const buckets = monthlySalesBuckets([], now, 3)
+    expect(buckets.map((b) => b.month)).toEqual(['2026-06', '2026-07', '2026-08'])
+  })
+})
+
+describe('monthlyBucketToChartInput — adaptateur pour salesChartGeometry', () => {
+  it('mappe {month, ca} en {day, ca} sans dupliquer la géométrie', () => {
+    const bucket = { month: '2026-08', label: 'août 2026', ca: 120, nbCommandes: 3 }
+    expect(monthlyBucketToChartInput(bucket)).toEqual({ day: '2026-08', ca: 120 })
+  })
+
+  it('la géométrie fonctionne telle quelle sur des seaux mensuels adaptés', () => {
+    const buckets = [
+      { month: '2026-07', label: 'juillet 2026', ca: 10, nbCommandes: 1 },
+      { month: '2026-08', label: 'août 2026', ca: 40, nbCommandes: 2 },
+    ]
+    const bars = salesChartGeometry(buckets.map(monthlyBucketToChartInput), { width: 200, height: 100 })
+    expect(bars).toHaveLength(2)
+    expect(bars[1].h).toBe(100)
+    expect(bars[0].h).toBe(25)
+  })
+})
+
+describe('topTitles — agrégation par titre sur une fenêtre glissante', () => {
+  const now = new Date('2026-08-30T12:00:00Z')
+
+  it('agrège exemplaires et CA par titleSnapshot, plusieurs commandes/lignes du même titre', () => {
+    const rows = [
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 2, titleSnapshot: 'Livre A', unitPriceTTC: 10 }] }),
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 3, titleSnapshot: 'Livre A', unitPriceTTC: 10 }] }),
+    ]
+    const top = topTitles(rows, now, { days: 30, max: 10 })
+    expect(top).toEqual([{ title: 'Livre A', exemplaires: 5, ca: 50 }])
+  })
+
+  it('tri exemplaires décroissant puis CA décroissant (départage)', () => {
+    const rows = [
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 10, titleSnapshot: 'C', unitPriceTTC: 1 }] }),
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 5, titleSnapshot: 'B', unitPriceTTC: 16 }] }),
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 5, titleSnapshot: 'A', unitPriceTTC: 10 }] }),
+    ]
+    const top = topTitles(rows, now, { days: 30, max: 10 })
+    expect(top.map((t) => t.title)).toEqual(['C', 'B', 'A'])
+  })
+
+  it('cap max', () => {
+    const rows = [
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 3, titleSnapshot: 'A', unitPriceTTC: 1 }] }),
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 2, titleSnapshot: 'B', unitPriceTTC: 1 }] }),
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 1, titleSnapshot: 'C', unitPriceTTC: 1 }] }),
+    ]
+    expect(topTitles(rows, now, { days: 30, max: 2 }).map((t) => t.title)).toEqual(['A', 'B'])
+  })
+
+  it('étanchéité comptable : un don (contrepartie) est exclu, jamais un exemplaire/CA fictif', () => {
+    const rows = [
+      historyRow({
+        createdAt: now.toISOString(),
+        orderType: 'don',
+        lines: [{ quantity: 1, titleSnapshot: 'Contrepartie', unitPriceTTC: 0 }],
+      }),
+    ]
+    expect(topTitles(rows, now, { days: 30, max: 10 })).toEqual([])
+  })
+
+  it('une précommande compte normalement (seuls les dons sont exclus)', () => {
+    const rows = [
+      historyRow({
+        createdAt: now.toISOString(),
+        orderType: 'precommande',
+        lines: [{ quantity: 2, titleSnapshot: 'À paraître', unitPriceTTC: 15 }],
+      }),
+    ]
+    expect(topTitles(rows, now, { days: 30, max: 10 })).toEqual([{ title: 'À paraître', exemplaires: 2, ca: 30 }])
+  })
+
+  it('une ligne hors fenêtre glissante n’est pas comptée', () => {
+    const rows = [
+      historyRow({
+        createdAt: new Date(now.getTime() - 40 * DAY_MS).toISOString(),
+        lines: [{ quantity: 99, titleSnapshot: 'Hors fenêtre', unitPriceTTC: 10 }],
+      }),
+    ]
+    expect(topTitles(rows, now, { days: 30, max: 10 })).toEqual([])
+  })
+
+  it('arrondi euros : pas de bruit flottant (3 × 9,99)', () => {
+    const rows = [
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 1, titleSnapshot: 'A', unitPriceTTC: 9.99 }] }),
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 1, titleSnapshot: 'A', unitPriceTTC: 9.99 }] }),
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 1, titleSnapshot: 'A', unitPriceTTC: 9.99 }] }),
+    ]
+    expect(topTitles(rows, now, { days: 30, max: 10 })[0].ca).toBe(29.97)
+  })
+
+  it('aucune ligne dans la fenêtre : liste vide', () => {
+    expect(topTitles([], now, { days: 30, max: 10 })).toEqual([])
   })
 })
 

@@ -3,12 +3,14 @@ import { cache } from 'react'
 import type { Payload } from 'payload'
 
 import {
+  monthsAgoParisMonthStartUtc,
   precommandeQuantityByBook,
   quantitySoldByBook,
   rollingWindows,
   splitPromos,
   STOCK_SEUIL_FALLBACK,
   stockOutlook,
+  type SalesHistoryRow,
   type SalesWindowRow,
   type StockOutlookRow,
 } from './derive.ts'
@@ -30,6 +32,12 @@ import { getActiveHighlight } from '../../../lib/highlight.ts'
  * graphique, les précommandes payées par titre (`readUpcomingBooks`) et la
  * vélocité stock (`readStockOutlook`) — les dérivations pures sur son
  * résultat vivent dans `derive.ts`, jamais une requête Payload par usage.
+ * `readSalesHistory` est sa cousine ~13 mois (mois courant + 12 précédents,
+ * plus bas) pour la future page `/admin/ventes` (KPIs multi-fenêtres, seaux
+ * mensuels, top titres) — une lecture distincte, PAS un simple élargissement
+ * de `readSalesWindow` : la forme de ligne diffère (`titleSnapshot`/
+ * `unitPriceTTC` par ligne plutôt que `book`, nécessaires à l'agrégation par
+ * titre) et l'usage (page dédiée) ne recoupe pas la home.
  * Les dérivations pures (états, seuils, bornes) vivent dans `derive.ts` ; le
  * rendu dans `Dashboard.tsx` (home) et `../health/HealthPage.tsx`/
  * `../stock/StockPage.tsx` (vues admin-only, hors périmètre de cet agent).
@@ -96,6 +104,83 @@ export async function readSalesWindow(payload: Payload, now: Date): Promise<Sale
         lines: (doc.lines ?? []).map((line) => ({
           quantity: line.quantity,
           book: typeof line.book === 'number' ? line.book : line.book.id,
+        })),
+      })),
+    }
+  } catch {
+    return { state: 'na' }
+  }
+}
+
+/* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
+
+export type SalesHistoryData = { state: 'ok'; rows: SalesHistoryRow[] } | { state: 'na' }
+
+/**
+ * Lecture UNIQUE des ventes ~13 mois civils Paris (mois courant + 12
+ * précédents, `monthsAgoParisMonthStartUtc(now, 12)`, `derive.ts`) — nourrira
+ * à elle seule la future page `/admin/ventes` (KPIs multi-fenêtres, seaux
+ * mensuels, top titres : `derive.ts:windowSalesStats`/`monthlySalesBuckets`/
+ * `topTitles`), jamais une requête Payload par usage — même principe que
+ * `readSalesWindow` ci-dessus, sur une fenêtre plus large et avec un besoin
+ * différent en aval (agrégation par titre plutôt que par livre).
+ *
+ * Mêmes statuts vendus que `readSalesWindow` (`paid`/`prepared`/`shipped`,
+ * jamais `refunded`/`cancelled`/`failed`) et même convention de borne
+ * (`paidAt` à défaut `createdAt`). AUCUN filtre `orderType` ici (les dons ont
+ * aussi un statut `paid`/`prepared`/`shipped`) — l'étanchéité comptable
+ * dons/ventes est appliquée en aval, dans les dérivations pures
+ * (`windowSalesStats`/`monthlySalesBuckets`/`topTitles`), pas dans cette
+ * lecture partagée.
+ *
+ * Select API (issue #68) : `lines` gardé ENTIER plutôt qu'une sélection
+ * imbriquée (`lines: { quantity: true, titleSnapshot: true, unitPriceTTC:
+ * true }`) — même réserve documentée ci-dessus pour `readSalesWindow`/
+ * `readWorkOrders`/`readPreorderTotals` : Payload ne garantit pas le pruning
+ * SQL d'un champ `array` (contrairement à un `group`), donc pas de gain de
+ * coût garanti à demander une forme imbriquée pour lui ; on ne conserve que
+ * `quantity`/`titleSnapshot`/`unitPriceTTC` à la sortie. Avec l'historique
+ * Woo, cette lecture porte sur environ 7 000 commandes : le select minimal
+ * sur les champs racine (`paidAt`/`createdAt`/`totalTTC`/`orderType`, pas de
+ * `number`/adresse/Stripe) reste le vrai levier de coût.
+ */
+export async function readSalesHistory(payload: Payload, now: Date): Promise<SalesHistoryData> {
+  const start = monthsAgoParisMonthStartUtc(now, 12)
+  try {
+    const { docs } = await payload.find({
+      collection: 'orders',
+      where: {
+        and: [
+          {
+            or: [
+              { paidAt: { greater_than_equal: start.toISOString() } },
+              {
+                and: [
+                  { paidAt: { exists: false } },
+                  { createdAt: { greater_than_equal: start.toISOString() } },
+                ],
+              },
+            ],
+          },
+          { status: { in: ['paid', 'prepared', 'shipped'] } },
+        ],
+      },
+      select: { paidAt: true, createdAt: true, totalTTC: true, orderType: true, lines: true },
+      depth: 0,
+      limit: 0,
+      overrideAccess: true,
+    })
+    return {
+      state: 'ok',
+      rows: docs.map((doc) => ({
+        paidAt: doc.paidAt ?? null,
+        createdAt: doc.createdAt,
+        totalTTC: doc.totalTTC,
+        orderType: doc.orderType,
+        lines: (doc.lines ?? []).map((line) => ({
+          quantity: line.quantity,
+          titleSnapshot: line.titleSnapshot,
+          unitPriceTTC: line.unitPriceTTC,
         })),
       })),
     }
