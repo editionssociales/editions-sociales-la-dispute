@@ -4,8 +4,10 @@ import { getBoutiqueBook } from "@/lib/catalogue";
 import { BookCover } from "@/lib/cover";
 import { Container } from "@/components/container";
 import { BuyLinksList } from "@/components/buy-links";
+import { BookTabs, type BookTab } from "@/components/book-tabs";
 import { NewTabMark } from "@/components/new-tab-mark";
 import { FramedGrid } from "@/components/framed-grid";
+import { youTubeEmbedUrl } from "@/lib/video";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { getReglagesSite } from "@/lib/site-content";
@@ -121,6 +123,88 @@ export default async function BoutiqueBookPage({
   };
   const productJsonLdScript = JSON.stringify(productJsonLd).replace(/</g, "\\u003c");
 
+  // Onglets de la fiche (même traitement que la fiche catalogue,
+  // `catalogue/[edition]/[slug]/page.tsx`) : « Pour aller plus loin » n'est
+  // plus une section empilée sous la présentation, c'est le premier onglet,
+  // suivi de « La presse en parle » (citations + vidéo YouTube) et « Table
+  // des matières » (richText). Aucun contenu = pas de bloc d'onglets du tout.
+  const videoEmbed = book.videoUrl ? youTubeEmbedUrl(book.videoUrl) : null;
+  const tabs: BookTab[] = [];
+  if (book.furtherReading) {
+    tabs.push({
+      id: "pour-aller-plus-loin",
+      label: "Pour aller plus loin",
+      panel: (
+        <div
+          className="prose-book max-w-none"
+          dangerouslySetInnerHTML={{ __html: book.furtherReading }}
+        />
+      ),
+    });
+  }
+  if (book.press.length > 0 || videoEmbed) {
+    tabs.push({
+      id: "presse",
+      label: "La presse en parle",
+      panel: (
+        <div className="flex flex-col gap-6">
+          {book.press.length > 0 && (
+            <ul className="flex flex-col gap-4">
+              {book.press.map((q, i) => (
+                <li key={i} className="text-[15px] leading-relaxed text-ink/80">
+                  {q.url ? (
+                    <a
+                      href={q.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`font-serif italic text-ink underline decoration-1 underline-offset-2 hover:decoration-2 ${FOCUS_RING_LIGHT}`}
+                    >
+                      «&nbsp;{q.quote}&nbsp;»
+                      <NewTabMark />
+                    </a>
+                  ) : (
+                    <span className="font-serif italic text-ink">
+                      «&nbsp;{q.quote}&nbsp;»
+                    </span>
+                  )}{" "}
+                  <span className="font-sans text-sm font-bold text-ink">
+                    {q.source}
+                    {q.date ? `, ${q.date}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {videoEmbed && (
+            <div className="border-2 border-ink bg-paper-2">
+              <iframe
+                src={videoEmbed}
+                title={`Vidéo — ${book.title}`}
+                className="aspect-video w-full"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          )}
+        </div>
+      ),
+    });
+  }
+  if (book.tocHtml) {
+    tabs.push({
+      id: "table-des-matieres",
+      label: "Table des matières",
+      panel: (
+        <div
+          className="prose-book max-w-none"
+          dangerouslySetInnerHTML={{ __html: book.tocHtml }}
+        />
+      ),
+    });
+  }
+
   return (
     <Container className="bg-paper py-12 sm:py-16">
       <script
@@ -214,16 +298,9 @@ export default async function BoutiqueBookPage({
             </section>
           )}
 
-          {book.furtherReading && (
+          {tabs.length > 0 && (
             <section className="mt-8">
-              <h2 className="mb-3 flex items-center gap-2.5 font-sans text-xl font-black italic uppercase tracking-[.01em] text-ink">
-                <span className="h-1.5 w-1.5 shrink-0 rotate-45 bg-ink" aria-hidden="true" />
-                Pour aller plus loin
-              </h2>
-              <div
-                className="prose-book max-w-none"
-                dangerouslySetInnerHTML={{ __html: book.furtherReading }}
-              />
+              <BookTabs tabs={tabs} />
             </section>
           )}
         </article>
