@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assessSellability, isUpcoming } from "./sellability";
+import { assessSellability, isUpcoming, upcomingBoundaryUtc } from "./sellability";
 
 /**
  * L'invariant « upcoming prime toujours » et la sémantique du stock
@@ -145,5 +145,38 @@ describe("assessSellability — précommande (`preorderEnabled`)", () => {
         NOW,
       ),
     ).toEqual({ ok: true });
+  });
+});
+
+/**
+ * `upcomingBoundaryUtc` — jumeau requête d'`isUpcoming` (borne pour les
+ * `where` admin sur le timestamp brut `dateParution`) : minuit Paris du
+ * LENDEMAIN du jour civil français de `now`. Verrouille les deux offsets
+ * (été/hiver), le passage de minuit Paris, et la cohérence avec les deux
+ * conventions de stockage du picker `dayOnly` (minuit Paris d'une saisie
+ * admin, minuit UTC d'un seed SQL).
+ */
+describe("upcomingBoundaryUtc", () => {
+  it("été : minuit Paris du lendemain (UTC+2)", () => {
+    expect(upcomingBoundaryUtc(new Date("2026-07-18T12:00:00Z"))).toBe("2026-07-18T22:00:00.000Z");
+  });
+
+  it("hiver : minuit Paris du lendemain (UTC+1)", () => {
+    expect(upcomingBoundaryUtc(new Date("2026-01-15T12:00:00Z"))).toBe("2026-01-15T23:00:00.000Z");
+  });
+
+  it("après minuit Paris (mais avant minuit UTC), le jour civil français a déjà tourné", () => {
+    // 22h30 UTC le 18/07 = 00h30 le 19/07 à Paris → lendemain = 20/07.
+    expect(upcomingBoundaryUtc(new Date("2026-07-18T22:30:00Z"))).toBe("2026-07-19T22:00:00.000Z");
+  });
+
+  it("parution du jour = parue, lendemain = à paraître — dans les DEUX conventions de stockage", () => {
+    const borne = upcomingBoundaryUtc(new Date("2026-07-18T12:00:00Z"));
+    // Saisie admin (minuit Paris) : 18/07 stocké « 2026-07-17T22:00Z », 19/07 stocké « 2026-07-18T22:00Z ».
+    expect("2026-07-17T22:00:00.000Z" < borne).toBe(true);
+    expect("2026-07-18T22:00:00.000Z" >= borne).toBe(true);
+    // Seed SQL (minuit UTC) : 18/07 stocké « 2026-07-18T00:00Z », 19/07 stocké « 2026-07-19T00:00Z ».
+    expect("2026-07-18T00:00:00.000Z" < borne).toBe(true);
+    expect("2026-07-19T00:00:00.000Z" >= borne).toBe(true);
   });
 });

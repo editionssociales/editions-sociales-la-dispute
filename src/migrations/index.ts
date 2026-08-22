@@ -22,6 +22,7 @@ import * as migration_20260821_090000_don_ordertype from './20260821_090000_don_
 import * as migration_20260821_150000_souscription_recit_sobre from './20260821_150000_souscription_recit_sobre';
 import * as migration_20260821_150000_editorial_pages from './20260821_150000_editorial_pages';
 import * as migration_20260821_160000_produits_contreparties from './20260821_160000_produits_contreparties';
+import * as migration_20260821_170000_a_paraitre_derive from './20260821_170000_a_paraitre_derive';
 
 export const migrations = [
   {
@@ -143,5 +144,10 @@ export const migrations = [
     up: migration_20260821_160000_produits_contreparties.up,
     down: migration_20260821_160000_produits_contreparties.down,
     name: '20260821_160000_produits_contreparties',
+  },
+  {
+    up: migration_20260821_170000_a_paraitre_derive.up,
+    down: migration_20260821_170000_a_paraitre_derive.down,
+    name: '20260821_170000_a_paraitre_derive',
   },
 ];

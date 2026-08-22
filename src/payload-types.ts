@@ -164,13 +164,15 @@ export interface Book {
    * Thèmes du catalogue (plusieurs possibles). Liste gérée sous Catalogue → Libellés.
    */
   libelles?: (number | Libelle)[] | null;
+  /**
+   * Une date future rend la fiche « à paraître » (badge, refus d’achat sauf précommande ouverte) — automatique, il n’y a rien d’autre à cocher.
+   */
   dateParution: string;
   /**
    * ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.
    */
   isbn?: string | null;
   pages?: number | null;
-  aParaitre?: boolean | null;
   /**
    * Téléversez une image (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
    */
@@ -759,7 +761,6 @@ export interface BooksSelect<T extends boolean = true> {
   dateParution?: T;
   isbn?: T;
   pages?: T;
-  aParaitre?: T;
   cover?: T;
   tablePdf?: T;
   extraitPdf?: T;

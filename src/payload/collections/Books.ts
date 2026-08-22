@@ -177,12 +177,14 @@ export const Books: CollectionConfig = {
     // `commerce.stock`, hoisté par `flattenTopLevelFields`, testé en dev
     // avant merge — premier usage de ce motif dans le repo). Un résumé
     // « Vente » (sellable/à paraître/précommande) a été envisagé mais
-    // écarté : `aParaitre` est un champ purement informatif (cf. son
-    // `admin.description` plus bas), pas le signal réel de vendabilité
-    // (`assessSellability`/`sellability.ts`, qui compare la date de parution
-    // à aujourd'hui) — un résumé bâti sur les seules cases à cocher
-    // afficherait un état parfois faux. `_status` (natif Payload) reste donc
-    // la colonne d'état de vente.
+    // écarté : le signal réel de vendabilité (`assessSellability`/
+    // `sellability.ts`) se dérive de la date de parution comparée à
+    // aujourd'hui — un résumé bâti sur les seules cases à cocher afficherait
+    // un état parfois faux. `_status` (natif Payload) reste donc la colonne
+    // d'état de vente. « À paraître » n'est d'ailleurs PAS un champ
+    // (l'ex-checkbox informative `aParaitre` a été supprimée, décision client
+    // 2026-08-21) mais une conséquence de `dateParution` — les vues admin le
+    // dérivent via `upcomingBoundaryUtc` (`sellability.ts`).
     defaultColumns: ['title', 'edition', 'dateParution', 'commerce.stock', 'libelles', '_status'],
     listSearchableFields: ['title', 'isbn', 'slug'],
     description:
@@ -334,7 +336,9 @@ export const Books: CollectionConfig = {
                   required: true,
                   label: 'Date de parution',
                   admin: {
-                    width: '25%',
+                    width: '30%',
+                    description:
+                      'Une date future rend la fiche « à paraître » (badge, refus d’achat sauf précommande ouverte) — automatique, il n’y a rien d’autre à cocher.',
                     date: {
                       pickerAppearance: 'dayOnly',
                       displayFormat: 'dd/MM/yyyy',
@@ -347,7 +351,7 @@ export const Books: CollectionConfig = {
                   label: 'ISBN',
                   validate: validateIsbn,
                   admin: {
-                    width: '35%',
+                    width: '45%',
                     placeholder: '978-2-35367-036-9',
                     description:
                       'ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.',
@@ -360,13 +364,6 @@ export const Books: CollectionConfig = {
                   admin: { width: '20%' },
                 },
               ],
-            },
-            {
-              name: 'aParaitre',
-              type: 'checkbox',
-              defaultValue: false,
-              label: 'À paraître (informatif)',
-              admin: { width: '20%' },
             },
             {
               type: 'row',

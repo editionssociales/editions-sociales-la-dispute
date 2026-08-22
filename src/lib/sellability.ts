@@ -12,6 +12,8 @@
  * (statut d'achat côté catalogue, refus de ligne motivé côté checkout).
  */
 
+import { isoDayParis, parisMidnightUtc } from "./format";
+
 /**
  * Un livre à date de parution future est-il « à paraître » ? Aujourd'hui en
  * ISO `YYYY-MM-DD`, comparaison lexicographique valide sur ce format. `now`
@@ -19,6 +21,32 @@
  */
 export function isUpcoming(publishedAt: string | null, now: Date = new Date()): boolean {
   return publishedAt != null && publishedAt > now.toISOString().slice(0, 10);
+}
+
+/**
+ * Jumeau requête d'`isUpcoming` — borne pour interroger Payload sur le
+ * TIMESTAMP brut `dateParution` (vues admin : dashboard, chips de filtre ;
+ * le front, lui, compare des jours déjà réduits). « À paraître » n'est PAS
+ * un champ mais une conséquence de la date (décision client 2026-08-21,
+ * suppression de l'ex-checkbox informative `aParaitre`) : une fiche est à
+ * paraître ssi `dateParution >= borne`, parue sinon.
+ *
+ * La borne est l'instant UTC du minuit Europe/Paris du LENDEMAIN du jour
+ * civil français de `now` : parution du jour = parue (strictement future
+ * seulement, comme `isUpcoming`), correct dans les deux conventions de
+ * stockage du picker `dayOnly` (minuit Paris d'une saisie admin, minuit UTC
+ * d'un seed SQL — cf. `isoDayParis`, `format.ts`). `now` injectable pour les
+ * tests.
+ */
+export function upcomingBoundaryUtc(now: Date = new Date()): string {
+  const today = isoDayParis(now) ?? now.toISOString().slice(0, 10);
+  // Lendemain calculé en UTC sur le jour civil déjà résolu — ajouter 24 h à
+  // `now` glisserait sur le même jour lors d'un jour de 25 h (fin d'heure
+  // d'été).
+  const tomorrow = new Date(Date.parse(`${today}T12:00:00Z`) + 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  return parisMidnightUtc(tomorrow);
 }
 
 /** Les faits dont le verdict a besoin — fournis par l'appelant (`CommerceInfo` du port ou `CheckoutBookLookup`), jamais relus ici. */

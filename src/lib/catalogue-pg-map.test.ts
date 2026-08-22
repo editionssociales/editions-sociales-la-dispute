@@ -82,7 +82,6 @@ function book(overrides: Partial<PayloadBook> = {}): PayloadBook {
     pages: 320,
     dateParution: "2020-03-01T00:00:00.000Z",
     sortDate: "2020-03-01T00:00:00.000Z",
-    aParaitre: false,
     authors: [AUTHOR],
     libelles: [LIBELLE],
     cover: COVER,

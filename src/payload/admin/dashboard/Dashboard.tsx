@@ -30,6 +30,7 @@ import {
 } from './data.ts'
 import styles from './dashboard.module.css'
 import { PromoDeactivateButton } from './PromoDeactivateButton.tsx'
+import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
 
 /**
  * Slot `beforeDashboard` du dashboard `/admin` (home — design v4, refonte
@@ -434,8 +435,9 @@ export async function Dashboard({ payload }: ServerProps) {
             )}
             {upcomingBooks.state === 'ok' && upcomingBooks.totalDocs > 4 && (
               <div className={styles.actions}>
-                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
-                <a href="/admin/collections/books?where[or][0][and][0][aParaitre][equals]=true">
+                <a
+                  href={`/admin/collections/books?where[or][0][and][0][dateParution][greater_than_equal]=${encodeURIComponent(upcomingBoundaryUtc())}`}
+                >
                   voir tous →
                 </a>
               </div>

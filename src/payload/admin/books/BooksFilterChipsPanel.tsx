@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 
 import type { BeforeListTableServerProps } from 'payload'
 
+import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
 import { STOCK_SEUIL_FALLBACK } from '../dashboard/derive.ts'
 import { BooksFilterChips } from './BooksFilterChips.tsx'
 
@@ -9,8 +10,10 @@ import { BooksFilterChips } from './BooksFilterChips.tsx'
  * Wrapper serveur du slot `beforeListTable` de `Books.ts` (issue #26,
  * pattern posé par `OrderExportPanel.tsx`/`Orders.ts`) — lit le seuil
  * d'alerte stock bas (`reglages-boutique.seuilAlerteStockBas`, même lecture
- * et même repli que `readLowStock`, `dashboard/data.ts` : illisible →
- * `STOCK_SEUIL_FALLBACK`, jamais une page cassée) puis rend les chips de
+ * et même repli que la page `/admin/stock` (`../stock/StockPage.tsx`) :
+ * illisible → `STOCK_SEUIL_FALLBACK`, jamais une page cassée), calcule la borne
+ * « à paraître » à la requête (`upcomingBoundaryUtc`, `sellability.ts` —
+ * même motif que la borne des chips `rencontres`) puis rend les chips de
  * filtre (composant client, `BooksFilterChips.tsx`). Aucune autre lecture
  * ici — les chips ne sont que des liens `where[...]` vers la liste native,
  * déjà filtrée/paginée par Payload.
@@ -37,7 +40,7 @@ export async function BooksFilterChipsPanel({ payload }: BeforeListTableServerPr
 
   return (
     <Suspense fallback={null}>
-      <BooksFilterChips seuil={seuil} />
+      <BooksFilterChips seuil={seuil} borne={upcomingBoundaryUtc()} />
     </Suspense>
   )
 }

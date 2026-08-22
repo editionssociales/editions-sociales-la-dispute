@@ -19,6 +19,7 @@ import { brevoConfigured, getNewsletterListStats } from '../../../lib/brevo.ts'
 import { getCampaign2026 } from '../../../lib/donations.ts'
 import { isoDayParis, parisMidnightUtc } from '../../../lib/format.ts'
 import { getActiveHighlight } from '../../../lib/highlight.ts'
+import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
 
 /**
  * Lecteurs I/O du dashboard `/admin` (refonte : bandeau KPI → graphique
@@ -329,7 +330,18 @@ export async function readStockOutlook(
     const { docs } = await payload.find({
       collection: 'books',
       where: {
-        and: [{ 'commerce.sellable': { equals: true } }, { aParaitre: { equals: false } }],
+        and: [
+          { 'commerce.sellable': { equals: true } },
+          // « Non à paraître » dérivé de la date de parution (borne
+          // `upcomingBoundaryUtc`, `sellability.ts`) — fiche sans date
+          // comptée parue, comme `isUpcoming(null)`.
+          {
+            or: [
+              { dateParution: { less_than: upcomingBoundaryUtc(now) } },
+              { dateParution: { exists: false } },
+            ],
+          },
+        ],
       },
       select: { title: true, edition: true, commerce: { stock: true, stockSuivi: true } },
       depth: 0,
@@ -562,7 +574,10 @@ export async function readUpcomingBooks(
   try {
     const { docs, totalDocs } = await payload.find({
       collection: 'books',
-      where: { aParaitre: { equals: true } },
+      // « À paraître » = `dateParution` strictement future (borne
+      // `upcomingBoundaryUtc`, même règle que le front) — plus aucune
+      // checkbox manuelle depuis la migration `20260821_170000`.
+      where: { dateParution: { greater_than_equal: upcomingBoundaryUtc(now) } },
       select: { title: true, edition: true, dateParution: true, commerce: { preorder: true } },
       sort: 'dateParution',
       depth: 0,

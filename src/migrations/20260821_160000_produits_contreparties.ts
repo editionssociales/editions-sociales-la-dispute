@@ -76,7 +76,6 @@ export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
         // pour ces articles qui n'ont pas de parution réelle.
         dateParution: '2026-08-20',
         sortDate: '2026-08-20',
-        aParaitre: false,
         commerce: { sellable: false, stock: null, stockSuivi: 'manuel' },
       },
       // Publiée d'emblée (pas un brouillon) — c'est `draft: false` qui le dit
