@@ -1,0 +1,20 @@
+/*
+ * Styles propres à `/admin/stock` (écran complet « Évolution du stock ») —
+ * complète `../dashboard/dashboard.module.css` (panneaux, tableaux,
+ * pastilles, notes) plutôt que de le dupliquer. Mêmes variables de thème
+ * Payload (clair/sombre suivi automatiquement) avec repli hex en secours.
+ */
+
+/* ── Mini-graphique « Ventes 8 semaines » (une ligne de la table) ── */
+
+.sparklineCell {
+  white-space: nowrap;
+}
+
+.sparkline {
+  display: block;
+}
+
+.sparkline rect {
+  fill: var(--theme-elevation-400, #b8b3a6);
+}
