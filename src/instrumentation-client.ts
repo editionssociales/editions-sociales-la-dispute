@@ -16,6 +16,23 @@ Sentry.init({
   sendDefaultPii: false,
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 0,
+  // Bruit client pur constaté au triage du 2026-08-21 : rien de tout ceci ne
+  // vient de notre code, et le filtrage serveur ne s'applique pas (erreurs
+  // levées dans le navigateur du visiteur). sentry.server.config.ts reste
+  // volontairement sans équivalent.
+  // — denyUrls : scripts de télémétrie injectés par les WebView Android
+  //   in-app (Instagram/Facebook), servis sous app:// (p. ex.
+  //   app://navigation_performance_logger_android).
+  denyUrls: [/^app:\/\//],
+  // — ignoreErrors : messages exacts de ces mêmes WebView (postMessage vers un
+  //   pont Java déjà détruit), plus les extensions navigateur qui appellent
+  //   runtime.sendMessage sur un onglet disparu. ignoreErrors matche par
+  //   sous-chaîne pour les strings, d'où le regex pour rester ciblé.
+  ignoreErrors: [
+    "Error invoking postMessage: Java exception was raised during method invocation",
+    "Java object is gone",
+    /Invalid call to runtime\.sendMessage\(\)/,
+  ],
 });
 
 // Spans de navigation App Router : avec tracesSampleRate posé ci-dessus, le

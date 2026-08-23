@@ -28,7 +28,11 @@ Le SDK est en place dans le repo :
   capture les erreurs **non gérées** des Server Components, route handlers et
   server actions) ;
 - `src/instrumentation-client.ts` (SDK navigateur — erreurs + spans
-  pageload/navigation, traces distribuées vers le serveur) ;
+  pageload/navigation, traces distribuées vers le serveur ; filtrage
+  anti-bruit `denyUrls`/`ignoreErrors` — télémétrie `app://` des WebView
+  Android in-app, extensions navigateur — doublé, côté projet Sentry, de
+  l'inbound filter « browser extensions », réglage dashboard sans trace
+  dans le repo) ;
 - `sentry.server.config.ts` (config serveur — erreurs + tracing APM via
   OpenTelemetry, spans http/fetch/pg, pas de PII) ;
 - `next.config.ts` — wrappé `withSentryConfig` (upload des source maps au
