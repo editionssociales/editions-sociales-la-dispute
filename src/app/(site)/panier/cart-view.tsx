@@ -316,6 +316,15 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
 
   const [snapshot, setSnapshot] = useState<CartSnapshot>({ books: [], reducedShippingFlags: [] });
   const [snapshotReady, setSnapshotReady] = useState(false);
+  /**
+   * Composition (`idsKey`) pour laquelle `snapshot` a été relu — l'auto-guérison
+   * ne doit comparer `missingIds` qu'à CET instantané. Sans ça, un goodie
+   * ajouté sur `/panier` (tote-bag au checkout) disparaissait au clic : le
+   * panier frais était confronté à l'instantané de la composition PRÉCÉDENTE,
+   * l'id tout juste posé tombait dans `missingIds`, `removeFromCart` l'annulait
+   * avant que `getCartSnapshot` n'ait relu.
+   */
+  const [snapshotIdsKey, setSnapshotIdsKey] = useState<string | null>(null);
   const [snapshotError, setSnapshotError] = useState(false);
   // Distinct de `snapshotReady` : celui-ci retombe à `false` à CHAQUE
   // relecture (même une relecture réussie ultérieure), alors que
@@ -343,12 +352,14 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
     // prévient jamais l'utilisateur — d'où `snapshotError`, affiché plutôt
     // que de laisser le panier indéfiniment en chargement.
     async function load() {
+      const requestedKey = idsKey;
       setSnapshotReady(false);
       setSnapshotError(false);
       try {
         const next = await getCartSnapshot(ids);
         if (cancelled) return;
         setSnapshot(next);
+        setSnapshotIdsKey(requestedKey);
         setSnapshotReady(true);
         setHasLoadedOnce(true);
       } catch {
@@ -382,14 +393,16 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
   // supprimé/dépublié entre l'ajout et la visite de `/panier`) est retiré du
   // panier persisté — jamais un article encore trouvé mais devenu
   // non-achetable (`purchasable: false`), qui reste affiché pour action de
-  // l'utilisateur (cf. `CartLineRow`). Garde `snapshotReady` INDISPENSABLE :
-  // avant la toute première résolution de `getCartSnapshot`, `snapshot.books`
-  // vaut `[]` par défaut — sans cette garde, chaque id du panier semblerait
-  // "introuvable" et cet effet viderait le panier entier dès le montage.
+  // l'utilisateur (cf. `CartLineRow`). Deux gardes INDISPENSABLES :
+  // `snapshotReady` — avant la première résolution, `snapshot.books` vaut `[]`
+  // et chaque id semblerait introuvable ; `snapshotIdsKey === idsKey` — un
+  // id ajouté depuis `/panier` (goodie) n'est pas introuvable, l'instantané
+  // n'a juste pas encore été relu pour cette composition.
   useEffect(() => {
     if (!snapshotReady) return;
+    if (snapshotIdsKey !== idsKey) return;
     for (const id of summary.missingIds) removeFromCart(id);
-  }, [snapshotReady, summary.missingIds, removeFromCart]);
+  }, [snapshotReady, snapshotIdsKey, idsKey, summary.missingIds, removeFromCart]);
 
   const [zone, setZone] = useState<ShippingZone>("FR");
   const [promoInput, setPromoInput] = useState("");
