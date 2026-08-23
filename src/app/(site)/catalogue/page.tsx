@@ -56,7 +56,7 @@ export async function generateMetadata({
 // fraîcheur vient du data-cache tagué `catalogue` (`src/lib/catalogue.ts`,
 // 24 h de filet, purgé par les hooks back-office), pas d'une fenêtre ISR de
 // cette route. Les fiches livre/boutique, elles, gardent un vrai
-// `revalidate = 3600` (pas de `searchParams`, ISR réelle).
+// `revalidate = 86400` (pas de `searchParams`, ISR réelle).
 
 /**
  * Vue « à paraître » (`?upcoming=1`) — épure minimaliste : plus de grille ni

@@ -304,7 +304,9 @@ de chaque domaine :
   Pro — l'email reste chez OVH ;
 - après bascule : poser `SITE_INDEXABLE=1`, puis — une fois les destinations
   de reprise validées — `REDIRECTS_PERMANENT=1` (302 → 301, cf.
-  `.env.example`) ;
+  `.env.example`) — FAIT le 2026-08-23 (audit coûts Vercel : les 302 non
+  cacheables entretenaient le recrawl des 5 hosts legacy) ; effective au
+  premier déploiement de prod qui suit ;
 - réévaluer les réglages « phase de dev » (`OPERATIONS.md` §8).
 
 ### 6.4 Protéger `main` — bloqué par le plan GitHub

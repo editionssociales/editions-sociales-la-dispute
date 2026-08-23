@@ -60,11 +60,15 @@ async function loadRawCatalogue(): Promise<RawCatalogue> {
 
 // `unstable_cache` exige un store Next (absent sous Vitest) — en test on
 // appelle `loadRawCatalogue` directement ; en runtime Next, data-cache tagué
-// `catalogue`, 86400 s.
+// `catalogue`, 86400 s. Clé versionnée (`-v2`) le 2026-08-23 : le Data Cache
+// Vercel SURVIT aux déploiements, et la bascule des médias vers les URLs Blob
+// directes (`disablePayloadAccessControl`, payload.config.ts) rendait 404 les
+// anciennes URLs `/api/media/file/…` encore en cache — versionner la clé
+// invalide d'un coup au déploiement, sans purge manuelle post-deploy.
 const getRawCatalogueData =
   process.env.VITEST === "true"
     ? loadRawCatalogue
-    : unstable_cache(loadRawCatalogue, ["catalogue-all-books"], {
+    : unstable_cache(loadRawCatalogue, ["catalogue-all-books-v2"], {
         revalidate: 86400,
         tags: ["catalogue"],
       });

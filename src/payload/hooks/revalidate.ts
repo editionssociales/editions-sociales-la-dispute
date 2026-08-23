@@ -6,6 +6,7 @@ import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
   GlobalAfterChangeHook,
+  Where,
 } from 'payload'
 
 /**
@@ -16,7 +17,7 @@ import type {
  * 02-guides au moment de coder, cf. AGENTS.md — fait) : les pages `(site)`
  * ne lisent jamais Payload en direct, elles passent par la façade
  * `src/lib/catalogue.ts`, elle-même consommée par des pages en ISR
- * classique — `export const revalidate = 3600` (voir chaque page.tsx). Les
+ * classique — `export const revalidate = 86400` (voir chaque page.tsx). Les
  * pages ISR classiques s'appuient sur `revalidatePath` (soft tags de
  * route) — ce fichier ne gère QUE ce levier ; l'autre (`getAllBooks`/
  * `getBook` posent un data-cache tagué `catalogue`, `unstable_cache`,
@@ -33,13 +34,21 @@ import type {
  * Les chemins littéraux (page d'accueil, listes) n'ont pas besoin du
  * groupe : ils correspondent à l'URL réellement visitée.
  */
-const CATALOGUE_LITERAL_PATHS = ['/', '/catalogue', '/editions', '/boutique']
+// `/panier` (suggestions goodies) et `/sitemap.xml` (liste des fiches) lisent
+// aussi le catalogue : ajoutés à l'allongement de la fenêtre ISR 1 h → 24 h
+// (audit coûts Vercel 2026-08-23) — sans purge à l'édition, ils resteraient
+// jusqu'à 24 h en retard.
+const CATALOGUE_LITERAL_PATHS = ['/', '/catalogue', '/editions', '/boutique', '/panier', '/sitemap.xml']
 // Motifs en ESPACE D'URL, sans le groupe de routes : la référence Next 16
 // (`revalidatePath.md` : « a route pattern with dynamic segments like
 // `/product/[slug]` ») ne préfixe jamais par le groupe — la forme
 // `/(site)/...` héritée d'un ancien exemple ne matchait RIEN (constat live :
 // fiches jamais purgées après édition back-office). Les deux formes sont
-// émises par prudence, l'appel excédentaire est inoffensif.
+// émises par prudence, l'appel excédentaire est inoffensif. Réservés aux
+// SUPPRESSIONS et au repli d'erreur depuis l'audit coûts 2026-08-23 : sur un
+// save ordinaire, la purge est CIBLÉE (listes + fiches réellement liées, cf.
+// `revalidateCatalogueAfterChange`) — purger ~330 fiches par save nourrissait
+// les ISR writes pour un motif de toute façon peu fiable sur Vercel.
 const CATALOGUE_PAGE_PATTERNS = [
   '/catalogue/[edition]',
   '/catalogue/[edition]/[slug]',
@@ -51,15 +60,58 @@ const CATALOGUE_PAGE_PATTERNS = [
   '/(site)/boutique/[slug]',
 ]
 
-/**
- * Revalide toutes les pages qui peuvent afficher un livre/auteur/collection/
- * média (purge ISR par chemin uniquement — le data-cache tagué `catalogue`
- * est invalidé séparément par `revalidate-catalogue.ts`, attaché aux mêmes
- * collections).
- */
-function revalidateCatalogueRoutes(): void {
+/** Purge les seules LISTES du catalogue (accueil, archives, panier, sitemap). */
+function revalidateCatalogueLists(): void {
   for (const path of CATALOGUE_LITERAL_PATHS) revalidatePath(path)
+}
+
+/**
+ * Purge LARGE (listes + motifs de fiches) — réservée aux suppressions et au
+ * repli d'erreur du ciblage : une fiche supprimée peut apparaître n'importe
+ * où, et un ciblage qui a échoué ne doit jamais laisser du contenu périmé.
+ */
+function revalidateCatalogueWide(): void {
+  revalidateCatalogueLists()
   for (const pattern of CATALOGUE_PAGE_PATTERNS) revalidatePath(pattern, 'page')
+}
+
+/** Chemin public de la fiche d'un livre — `null` si le doc n'en a pas (brouillon sans slug). */
+function bookFichePath(doc: {
+  slug?: unknown
+  edition?: unknown
+  origin?: unknown
+}): string | null {
+  if (typeof doc.slug !== 'string' || doc.slug === '') return null
+  if (typeof doc.edition === 'string') return `/catalogue/${doc.edition}/${doc.slug}`
+  if (doc.origin === 'boutique') return `/boutique/${doc.slug}`
+  return null
+}
+
+/**
+ * Fiches à purger quand un doc `authors`/`libelles`/`media` change : relation
+ * INVERSE résolue en une requête `books` (depth 0, champs du chemin
+ * uniquement) — remplace la purge catalogue-entière historique (« hors budget
+ * de l'étape E6 », depuis arbitrée par l'audit coûts Vercel 2026-08-23 : un
+ * simple upload d'image purgait ~330 fiches). Un média fraîchement téléversé
+ * n'est encore référencé par personne → zéro fiche, c'est le cas nominal.
+ */
+async function fichePathsReferencing(
+  req: Parameters<CollectionAfterChangeHook>[0]['req'],
+  where: Where,
+): Promise<string[]> {
+  const { docs } = await req.payload.find({
+    collection: 'books',
+    where,
+    depth: 0,
+    limit: 0,
+    pagination: false,
+    select: { slug: true, edition: true, origin: true },
+    overrideAccess: true,
+  })
+  return docs.flatMap((doc) => {
+    const path = bookFichePath(doc)
+    return path ? [path] : []
+  })
 }
 
 /** Revalide la seule page d'accueil (bandeau de mise en avant, E6bis). */
@@ -68,13 +120,15 @@ function revalidateHome(): void {
 }
 
 /**
- * Revalidation complète à la demande, HORS hooks — pour les écritures en lot
+ * Revalidation à la demande, HORS hooks — écritures en lot ou opérationnelles
  * qui posent `context.disableRevalidate` fiche par fiche mais exigent une
- * prise d'effet immédiate en fin de run (import stock routeur : le stock EST
- * la disponibilité). Ordre : tag d'abord (read-your-writes du data-cache,
- * même invariant que les paires de hooks), puis purge ISR par motifs, puis
- * chemins LITTÉRAUX des fiches touchées (seuls fiables sur Vercel, cf.
- * constat live plus haut). Try/catch global : hors d'une requête Next (test
+ * prise d'effet immédiate : import stock routeur (fin de run) et décrément de
+ * stock au paiement (webhook Stripe, `order-handler.ts` — le stock EST la
+ * disponibilité, et la fenêtre ISR est passée à 24 h). Ordre : tag d'abord
+ * (read-your-writes du data-cache, même invariant que les paires de hooks),
+ * puis listes, puis chemins LITTÉRAUX des fiches touchées (seuls fiables sur
+ * Vercel, cf. constat live plus haut — les motifs n'y débloquent rien, ils ne
+ * sont plus émis ici). Try/catch global : hors d'une requête Next (test
  * Vitest, script `payload run`), l'invariant « static generation store
  * missing » jette — avertir, jamais casser, le TTL 24 h du data-cache
  * rattrape.
@@ -82,7 +136,7 @@ function revalidateHome(): void {
 export function revalidateCatalogueNow(fichePaths: string[] = []): void {
   try {
     invalidateCatalogueTag()
-    revalidateCatalogueRoutes()
+    revalidateCatalogueLists()
     for (const path of fichePaths) revalidatePath(path)
   } catch (err) {
     console.warn('[revalidate] revalidation catalogue impossible (hors requête Next ?)', err)
@@ -90,10 +144,17 @@ export function revalidateCatalogueNow(fichePaths: string[] = []): void {
 }
 
 /**
- * Hooks `books`/`authors`/`libelles`/`media` : toute fiche de ces
- * collections peut apparaître sur n'importe quelle page catalogue (listes,
- * facettes, fiche détail) — on revalide donc large plutôt que de tenter un
- * ciblage fin par relation inverse (hors budget de cette étape, 0,5 j).
+ * Hooks `books`/`authors`/`libelles`/`media` — purge CIBLÉE par collection
+ * (audit coûts Vercel 2026-08-23, remplace la purge catalogue-entière
+ * historique) : toujours les listes (un livre/auteur/libellé/média peut
+ * apparaître sur accueil, archives, panier, sitemap), plus les seules fiches
+ * réellement liées au doc sauvé — la fiche elle-même pour `books`, la
+ * relation inverse résolue pour les trois autres. Les fiches « voisines »
+ * (bandeaux même libellé, hover-cards) suivent à l'expiration ISR (24 h) ou à
+ * la prochaine édition — compromis assumé, identique à l'ancien pour tout ce
+ * que les motifs ne purgeaient de toute façon pas sur Vercel. Toute erreur du
+ * ciblage retombe sur la purge large : jamais de contenu périmé pour économiser
+ * une requête.
  *
  * Garde **en tête** de chaque hook : neutralisé pendant l'import de
  * migration (`context.disableRevalidate`, posé par
@@ -102,27 +163,74 @@ export function revalidateCatalogueNow(fichePaths: string[] = []): void {
  * `payload run` hors requête HTTP (et lèverait l'invariant Next
  * « static generation store missing », faute de contexte de rendu).
  */
-export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = ({ doc, req }) => {
+export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = async ({
+  collection,
+  doc,
+  req,
+}) => {
   if (req.context?.disableRevalidate) return
-  revalidateCatalogueRoutes()
-  // Purge LITTÉRALE de la fiche modifiée (books uniquement — les autres
-  // collections n'ont pas de page propre) : constat live (boucle 3 de
-  // l'audit), la purge par motif `[edition]/[slug]` ne débloque pas les
-  // entrées ISR sur Vercel, seuls les chemins littéraux sont fiables.
-  // L'éditeur doit voir SA fiche à jour immédiatement ; les fiches voisines
-  // (bandeaux « même libellé ») suivent à l'expiration ISR (1 h).
-  if (typeof doc?.slug === 'string') {
-    if (typeof doc.edition === 'string') {
-      revalidatePath(`/catalogue/${doc.edition}/${doc.slug}`)
-    } else if (doc.origin === 'boutique') {
-      revalidatePath(`/boutique/${doc.slug}`)
+  try {
+    switch (collection?.slug) {
+      case 'books': {
+        // Purge LITTÉRALE de la fiche modifiée : constat live (boucle 3 de
+        // l'audit E6), la purge par motif `[edition]/[slug]` ne débloque pas
+        // les entrées ISR sur Vercel, seuls les chemins littéraux sont
+        // fiables. L'éditeur doit voir SA fiche à jour immédiatement.
+        revalidateCatalogueLists()
+        const path = doc ? bookFichePath(doc) : null
+        if (path) revalidatePath(path)
+        return
+      }
+      case 'authors': {
+        revalidateCatalogueLists()
+        for (const path of await fichePathsReferencing(req, { authors: { in: [doc.id] } })) {
+          revalidatePath(path)
+        }
+        return
+      }
+      case 'libelles': {
+        revalidateCatalogueLists()
+        for (const path of await fichePathsReferencing(req, { libelles: { in: [doc.id] } })) {
+          revalidatePath(path)
+        }
+        return
+      }
+      case 'media': {
+        // Cas nominal : média fraîchement téléversé, encore référencé par
+        // aucune fiche → zéro chemin, seules les listes sont purgées (un
+        // upload ne coûte plus ~330 réécritures ISR).
+        revalidateCatalogueLists()
+        const where: Where = {
+          or: [
+            { cover: { equals: doc.id } },
+            { tablePdf: { equals: doc.id } },
+            { extraitPdf: { equals: doc.id } },
+          ],
+        }
+        for (const path of await fichePathsReferencing(req, where)) {
+          revalidatePath(path)
+        }
+        return
+      }
+      default:
+        // Collection inattendue câblée sur ce hook : purge large, jamais du
+        // contenu périmé par surprise.
+        revalidateCatalogueWide()
     }
+  } catch (err) {
+    console.warn('[revalidate] ciblage impossible — repli purge large', err)
+    revalidateCatalogueWide()
   }
 }
 
+/**
+ * Suppression : purge LARGE (listes + motifs) — une fiche supprimée peut être
+ * référencée n'importe où et l'événement est rare, le ciblage n'y vaut pas sa
+ * complexité (les relations inverses sont déjà détricotées au moment du hook).
+ */
 export const revalidateCatalogueAfterDelete: CollectionAfterDeleteHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
-  revalidateCatalogueRoutes()
+  revalidateCatalogueWide()
 }
 
 /** Hooks `highlight` (E6bis) : seule la page d'accueil affiche le bandeau. */

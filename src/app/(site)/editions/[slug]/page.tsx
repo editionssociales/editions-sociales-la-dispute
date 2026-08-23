@@ -12,7 +12,7 @@ import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 import { POP_BG } from "@/components/pop-palette";
 import { getPageAPropos, getReglagesSite } from "@/lib/site-content";
 
-export const revalidate = 3600; // même fenêtre ISR que le reste du contenu Payload
+export const revalidate = 86400; // même fenêtre ISR 24 h (filet) que le reste du contenu Payload
 
 /**
  * Page de présentation PAR MAISON (retour client 2026-07-23) : les cellules

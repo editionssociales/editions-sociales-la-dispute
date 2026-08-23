@@ -191,12 +191,23 @@ async function redirects() {
       // Coupure OVH : plus aucune règle `wp-content`/`wp-admin`/`wp-json` —
       // les installs WordPress sont éteintes, ces URLs répondent 404 ici.
       //
-      // 12 — catch-all FINAL (dernier de la liste : premier match gagnant,
-      // toutes les règles spécifiques ci-dessus passent avant) : bascule
-      // canonique ld-es.fr. editionssociales.fr ne sert plus aucun 200 —
-      // couvre `/`, `/catalogue/editions-sociales`, `/catalogue/la-dispute`
-      // (cas négatifs de la règle 2) et tout le reste du domaine.
-      r({ source: "/:path*", destination: "https://ld-es.fr/:path*" }),
+      // 12 — cas négatifs de la règle 2 : les deux slugs maison sont des URLs
+      // réelles du site unifié, chemin préservé explicitement.
+      r({
+        source: "/catalogue/editions-sociales",
+        destination: "https://ld-es.fr/catalogue/editions-sociales",
+      }),
+      r({ source: "/catalogue/la-dispute", destination: "https://ld-es.fr/catalogue/la-dispute" }),
+      // 13 — catch-all FINAL (dernier de la liste : premier match gagnant) en
+      // destination FIXE, même politique que les hosts La Dispute (`/`) et
+      // boutique (`/catalogue`). L'ancien `/:path*` → `/:path*` (chemin
+      // préservé) déversait chaque URL WP morte et chaque probe de bot
+      // (`wp-login.php`, `xmlrpc.php`, `.env`…) dans le catch-all 404 du site
+      // canonique : un rendu dynamique + une entrée de cache ISR jamais relue
+      // PAR URL unique (audit coûts Vercel 2026-08-23, writes > reads). Les
+      // URLs WordPress réelles sont TOUTES couvertes par les règles 1-11
+      // ci-dessus — le reste n'a jamais été légitime sur ce host.
+      r({ source: "/:path*", destination: "https://ld-es.fr/" }),
     ]),
     // Hosts ladispute.fr / la-dispute.fr — mêmes règles, factorisées dans
     // `laDisputeRedirectRules()` (même pattern que BOUTIQUE_HOSTS ci-dessous).
@@ -274,19 +285,33 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // AVIF d'abord (gain typique 20-30 % sur les montages photo des
-    // contreparties et les couvertures Blob), repli WebP — encodage un peu
-    // plus lent au premier hit, mis en cache par l'optimiseur Vercel.
-    formats: ["image/avif", "image/webp"],
+    // WebP SEUL (défaut Next) — AVIF retiré (audit coûts Vercel 2026-08-23) :
+    // chaque format déclaré est transformé ET caché séparément par
+    // l'optimiseur Vercel, le couple AVIF+WebP doublait donc l'espace de
+    // variantes facturées (transformations + cache writes). Poids ~20-25 %
+    // au-dessus d'AVIF, assumé.
+    formats: ["image/webp"],
     // Couvertures affichées ≤ ~400px CSS : inutile de générer 1920/2048/3840w
     // (srcset gonflé, LCP/catalogue). 1080 couvre retina 2× sur une fiche 300–400px.
     deviceSizes: [384, 640, 750, 828, 1080],
     imageSizes: [32, 64, 96, 128, 256, 384],
-    // Couvertures/médias Payload (Blob) : chaque store Vercel Blob a un
-    // sous-domaine `<id>.public.blob.vercel-storage.com` distinct. Coupure OVH :
-    // plus aucun host WordPress autorisé.
+    // Plancher de survie des variantes optimisées : 31 jours (valeur
+    // recommandée par la doc Next pour réduire les revalidations facturées).
+    // Les URLs Blob sont immuables par upload (le fichier change → l'URL
+    // change) : aucun risque de péremption visuelle — simple filet si une
+    // source répondait un jour avec un Cache-Control court.
+    minimumCacheTTL: 2678400,
+    // Store Blob du projet (editions-sociales-media), épinglé : le wildcard
+    // `*.public.blob.vercel-storage.com` d'avant matchait le store public de
+    // N'IMPORTE QUEL compte Vercel — un tiers pouvait faire transformer ses
+    // images sur notre facture via /_next/image. Coupure OVH : plus aucun
+    // host WordPress autorisé.
     remotePatterns: [
-      { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
+      {
+        protocol: "https",
+        hostname: "woqtumysexotkwl1.public.blob.vercel-storage.com",
+        pathname: "/**",
+      },
     ],
   },
   redirects,

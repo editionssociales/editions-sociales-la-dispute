@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export const revalidate = 3600; // fenêtre ISR du catalogue (donnée Payload/Postgres)
+// Fenêtre ISR 24 h — filet seulement, la fraîcheur réelle vient des purges à
+// l'édition (hooks) et au paiement (audit coûts Vercel 2026-08-23).
+export const revalidate = 86400;
 
 /**
  * Couleur du bandeau de mise en avant (`Highlight.couleur`, PR #29) →

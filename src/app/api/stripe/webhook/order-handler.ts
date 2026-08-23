@@ -9,10 +9,12 @@ import { DONATION_TIERS } from "@/lib/donation-tiers";
 import {
   createOrder,
   decrementBookStock,
+  findBookFichePaths,
   findOrderBySessionId,
   findOrdersByPaymentIntent,
   updateOrder,
 } from "@/lib/order-source";
+import { revalidateCatalogueNow } from "@/payload/hooks/revalidate.ts";
 import {
   buildOrderCreateData,
   computePartTotalCents,
@@ -244,6 +246,17 @@ async function createPaidOrderPart(
   if (!order.stockDecremented) {
     await decrementStock(part.decoded, books);
     order = await updateOrder(order.id, { stockDecremented: true });
+    // Le stock EST la disponibilité (contrat racine) et la fenêtre ISR est à
+    // 24 h (audit coûts Vercel 2026-08-23) : purge ciblée immédiate (tag +
+    // listes + fiches vendues). Les écritures gardent `disableRevalidate` —
+    // la revalidation est un effet EXPLICITE du webhook, pas un hook.
+    // Best-effort : jamais un webhook en échec pour une purge de cache
+    // (l'affichage suivrait de toute façon la fenêtre ISR).
+    try {
+      revalidateCatalogueNow(await findBookFichePaths(part.decoded.map((line) => line.id)));
+    } catch (err) {
+      Sentry.captureException(err);
+    }
   }
 
   if (!order.confirmationSent) {
@@ -579,6 +592,15 @@ export async function handleDonationSessionCompleted(
       await decrementBookStock(l.id, l.qty, { allowNegative: true });
     }
     order = await updateOrder(order.id, { stockDecremented: true });
+    // Même purge ciblée que le flux commande (fenêtre ISR 24 h) : les
+    // produits contreparties sont aussi vendus en boutique — leur
+    // disponibilité affichée doit suivre le décrément. Une fiche brouillon
+    // sans chemin public est simplement omise par `findBookFichePaths`.
+    try {
+      revalidateCatalogueNow(await findBookFichePaths(decoded.map((line) => line.id)));
+    } catch (err) {
+      Sentry.captureException(err);
+    }
   }
 
   if (!order.confirmationSent) {

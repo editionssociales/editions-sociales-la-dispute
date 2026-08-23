@@ -13,7 +13,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export const revalidate = 3600; // fenêtre ISR des suggestions goodies (Payload/Postgres)
+// Fenêtre ISR 24 h — filet : `/panier` est dans CATALOGUE_LITERAL_PATHS,
+// purgé à chaque édition catalogue et à chaque décrément de stock.
+export const revalidate = 86400;
 
 /**
  * `/panier` — le panier natif (`CartView`, îlot client, plan §4 étape 6) +

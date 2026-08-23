@@ -134,10 +134,27 @@ export default buildConfig({
       // BLOB_READ_WRITE_TOKEN n'est pas posé dans l'environnement.
       enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
       collections: {
-        media: true,
+        media: {
+          // La lecture `media` est déjà publique (`Media.ts`, `read: () => true`) :
+          // l'access control Payload ne protégeait rien mais coûtait cher —
+          // chaque MISS de l'optimiseur d'images invoquait la fonction
+          // `/api/media/file/*` qui re-téléchargeait l'original entier (~2 Mo)
+          // depuis Blob en `no-store` (audit coûts Vercel 2026-08-23 : Fluid
+          // CPU + Fast Origin Transfer + Blob Data Transfer). Désactivé,
+          // `media.url` devient l'URL Blob directe (CDN Blob, Cache-Control
+          // 1 an) ; `remotePatterns` (next.config.ts) est épinglé sur le
+          // hostname exact du store.
+          disablePayloadAccessControl: true,
+        },
       },
       token: process.env.BLOB_READ_WRITE_TOKEN || '',
       clientUploads: true,
+      // Posé EXPLICITEMENT bien qu'égal au défaut serveur du plugin (1 an) :
+      // la route d'upload CLIENT (`clientUploads: true`, seule utilisée par
+      // l'admin) ne reçoit que l'option brute — non posée, les nouveaux blobs
+      // retombaient sur le défaut @vercel/blob (1 mois). Les URLs Blob sont
+      // immuables par upload : TTL long sans risque de péremption visuelle.
+      cacheControlMaxAge: 31536000,
     }),
   ],
 })

@@ -164,6 +164,36 @@ export async function decrementBookStock(
   );
 }
 
+/**
+ * Chemins publics des fiches d'une liste de livres (`/catalogue/<edition>/<slug>`
+ * ou `/boutique/<slug>`) — pour la purge ISR ciblée qui suit un décrément de
+ * stock (`order-handler.ts` + `revalidateCatalogueNow`) : depuis la fenêtre
+ * ISR 24 h (audit coûts Vercel 2026-08-23), l'affichage stock/disponibilité
+ * d'une fiche vendue ne peut plus attendre l'expiration. Même règle de chemin
+ * que `book-card.tsx`/`hooks/revalidate.ts` (fonds vs boutique-seul) ; une
+ * fiche sans chemin public (brouillon contrepartie sans slug publié) est
+ * simplement omise.
+ */
+export async function findBookFichePaths(ids: number[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const payload = await getPayload({ config });
+  const { docs } = await payload.find({
+    collection: "books",
+    where: { id: { in: ids } },
+    depth: 0,
+    limit: 0,
+    pagination: false,
+    select: { slug: true, edition: true, origin: true },
+    overrideAccess: true,
+  });
+  return docs.flatMap((doc) => {
+    if (typeof doc.slug !== "string" || doc.slug === "") return [];
+    if (typeof doc.edition === "string") return [`/catalogue/${doc.edition}/${doc.slug}`];
+    if (doc.origin === "boutique") return [`/boutique/${doc.slug}`];
+    return [];
+  });
+}
+
 /** `updatedAt` de la commande la plus récemment touchée (création OU passage à `refunded`) — signal `/api/health` (moniteur #8, R8), jamais d'appel réseau Stripe. */
 export async function findLatestOrderUpdatedAt(): Promise<string | null> {
   const payload = await getPayload({ config });

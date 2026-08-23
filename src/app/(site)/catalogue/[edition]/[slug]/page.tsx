@@ -134,7 +134,10 @@ type BookJsonLd = {
   offers?: OfferLd;
 };
 
-export const revalidate = 3600;
+// Fenêtre ISR 24 h — filet seulement : la fiche est purgée à l'édition
+// (hooks back-office) ET au paiement (décrément de stock, `order-handler.ts`)
+// — audit coûts Vercel 2026-08-23.
+export const revalidate = 86400;
 
 // Vide (et non la liste des ~295 fiches) : le build ne lit plus le catalogue
 // pour ce segment — chaque fiche est générée à sa première visite puis suit

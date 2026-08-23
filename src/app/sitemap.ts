@@ -25,7 +25,10 @@ import type { Book, EditionSlug } from "@/lib/types";
  * ici) : pas de `lastModified` non plus.
  */
 
-export const revalidate = 3600;
+// Fenêtre ISR 24 h — filet seulement : le sitemap est purgé à l'édition
+// catalogue (`/sitemap.xml` dans CATALOGUE_LITERAL_PATHS, audit coûts Vercel
+// 2026-08-23).
+export const revalidate = 86400;
 
 const STATIC_PATHS = [
   "/",

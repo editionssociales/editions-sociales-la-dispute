@@ -17,9 +17,10 @@ export const metadata: Metadata = {
 };
 
 // Donnée Payload/Postgres, comme le reste des pages branchées back-office
-// (`(site)/page.tsx`, fiche livre) — même fenêtre ISR, purgée à l'édition par
-// `revalidateRencontresAfterChange`/`AfterDelete` (`src/payload/hooks/revalidate.ts`).
-export const revalidate = 3600;
+// (`(site)/page.tsx`, fiche livre) — même fenêtre ISR 24 h (filet), purgée à
+// l'édition par `revalidateRencontresAfterChange`/`AfterDelete`
+// (`src/payload/hooks/revalidate.ts`).
+export const revalidate = 86400;
 
 /** URL de la fiche d'un livre lié — même règle que `book-card.tsx` (fonds vs boutique-seul). */
 function livreHref(livre: NonNullable<Rencontre["livre"]>): string {

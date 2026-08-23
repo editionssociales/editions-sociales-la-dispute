@@ -114,9 +114,10 @@ export async function importRouterStock(
   })
 
   // UNE revalidation pour tout le run (action occasionnelle à effet
-  // immédiat) : data-cache tagué + motifs ISR + chemins LITTÉRAUX des seules
+  // immédiat) : data-cache tagué + listes + chemins LITTÉRAUX des seules
   // fiches réellement écrites — sur Vercel la purge par motif ne débloque
-  // pas les entrées ISR existantes (constat live, cf. hooks/revalidate.ts).
+  // pas les entrées ISR existantes (constat live, cf. hooks/revalidate.ts),
+  // les motifs ne sont plus émis (audit coûts Vercel 2026-08-23).
   // Sans effet (warning) hors requête Next — script `payload run`, tests.
   revalidateCatalogueNow(
     report.matched.flatMap((entry) => {

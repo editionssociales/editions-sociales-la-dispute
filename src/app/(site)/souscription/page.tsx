@@ -166,7 +166,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary" },
 };
 
-export const revalidate = 3600; // fenêtre ISR (contreparties/récit lus dans Payload/Postgres)
+export const revalidate = 86400; // fenêtre ISR 24 h — filet, purgée à l'édition (`revalidateSouscriptionAfterChange`)
 
 /**
  * JSON-LD Organization + DonateAction — aide crawlers (et LLM-crawlers) à
