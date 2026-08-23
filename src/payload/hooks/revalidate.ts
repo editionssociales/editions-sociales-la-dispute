@@ -34,11 +34,22 @@ import type {
  * Les chemins littéraux (page d'accueil, listes) n'ont pas besoin du
  * groupe : ils correspondent à l'URL réellement visitée.
  */
-// `/panier` (suggestions goodies) et `/sitemap.xml` (liste des fiches) lisent
-// aussi le catalogue : ajoutés à l'allongement de la fenêtre ISR 1 h → 24 h
-// (audit coûts Vercel 2026-08-23) — sans purge à l'édition, ils resteraient
+// `/panier` (suggestions goodies), `/sitemap.xml` (liste des fiches),
+// `/rencontres` (livre lié : titre/couverture, `Rencontres.image`) et
+// `/souscription` (étagère `getNewReleases`) lisent aussi le catalogue ou des
+// médias : ajoutés à l'allongement de la fenêtre ISR 1 h → 24 h (audit coûts
+// Vercel 2026-08-23 + revue) — sans purge à l'édition, ils resteraient
 // jusqu'à 24 h en retard.
-const CATALOGUE_LITERAL_PATHS = ['/', '/catalogue', '/editions', '/boutique', '/panier', '/sitemap.xml']
+const CATALOGUE_LITERAL_PATHS = [
+  '/',
+  '/catalogue',
+  '/editions',
+  '/boutique',
+  '/panier',
+  '/sitemap.xml',
+  '/rencontres',
+  '/souscription',
+]
 // Motifs en ESPACE D'URL, sans le groupe de routes : la référence Next 16
 // (`revalidatePath.md` : « a route pattern with dynamic segments like
 // `/product/[slug]` ») ne préfixe jamais par le groupe — la forme
@@ -107,6 +118,10 @@ async function fichePathsReferencing(
     pagination: false,
     select: { slug: true, edition: true, origin: true },
     overrideAccess: true,
+    // Réutilise la connexion/transaction du save en cours — sans `req`, le
+    // find sortirait de la transaction et consommerait une connexion pg
+    // supplémentaire à chaque save admin (pool Neon contraint, cf. scope doc).
+    req,
   })
   return docs.flatMap((doc) => {
     const path = bookFichePath(doc)
@@ -166,6 +181,7 @@ export function revalidateCatalogueNow(fichePaths: string[] = []): void {
 export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = async ({
   collection,
   doc,
+  previousDoc,
   req,
 }) => {
   if (req.context?.disableRevalidate) return
@@ -179,6 +195,10 @@ export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = async (
         revalidateCatalogueLists()
         const path = doc ? bookFichePath(doc) : null
         if (path) revalidatePath(path)
+        // Slug/édition/origine changés : l'ANCIEN chemin garde sinon une
+        // entrée ISR servie jusqu'à 24 h (revue 2026-08-23).
+        const previousPath = previousDoc ? bookFichePath(previousDoc) : null
+        if (previousPath && previousPath !== path) revalidatePath(previousPath)
         return
       }
       case 'authors': {
@@ -198,7 +218,11 @@ export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = async (
       case 'media': {
         // Cas nominal : média fraîchement téléversé, encore référencé par
         // aucune fiche → zéro chemin, seules les listes sont purgées (un
-        // upload ne coûte plus ~330 réécritures ISR).
+        // upload ne coûte plus ~330 réécritures ISR). `/rencontres`
+        // (`Rencontres.image`) est couvert par les listes. Limite assumée :
+        // un média EMBARQUÉ dans un richText lexical (UploadFeature par
+        // défaut) échappe à la relation inverse — sa fiche hôte suit la
+        // fenêtre ISR (24 h).
         revalidateCatalogueLists()
         const where: Where = {
           or: [
@@ -227,10 +251,15 @@ export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = async (
  * Suppression : purge LARGE (listes + motifs) — une fiche supprimée peut être
  * référencée n'importe où et l'événement est rare, le ciblage n'y vaut pas sa
  * complexité (les relations inverses sont déjà détricotées au moment du hook).
+ * Le chemin LITTÉRAL du doc supprimé est purgé en plus : les motifs étant peu
+ * fiables sur Vercel (constat live plus haut), sans lui la fiche d'un livre
+ * supprimé resterait servie jusqu'à 24 h (revue 2026-08-23).
  */
-export const revalidateCatalogueAfterDelete: CollectionAfterDeleteHook = ({ req }) => {
+export const revalidateCatalogueAfterDelete: CollectionAfterDeleteHook = ({ doc, req }) => {
   if (req.context?.disableRevalidate) return
   revalidateCatalogueWide()
+  const path = doc ? bookFichePath(doc) : null
+  if (path) revalidatePath(path)
 }
 
 /** Hooks `highlight` (E6bis) : seule la page d'accueil affiche le bandeau. */

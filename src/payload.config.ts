@@ -152,8 +152,13 @@ export default buildConfig({
       // Posé EXPLICITEMENT bien qu'égal au défaut serveur du plugin (1 an) :
       // la route d'upload CLIENT (`clientUploads: true`, seule utilisée par
       // l'admin) ne reçoit que l'option brute — non posée, les nouveaux blobs
-      // retombaient sur le défaut @vercel/blob (1 mois). Les URLs Blob sont
-      // immuables par upload : TTL long sans risque de péremption visuelle.
+      // retombaient sur le défaut @vercel/blob (1 mois). Un ré-upload passe
+      // par `getSafeFileName` (collision → nom incrémenté → URL neuve), le
+      // TTL long est donc sûr — à UNE exception : l'outil de recadrage de
+      // l'admin réécrit le MÊME filename (`overwriteExistingFiles`), invisible
+      // jusqu'à un an derrière ce cache — consigne posée dans la description
+      // de la collection Media : remplacer = ré-uploader, jamais recadrer en
+      // place.
       cacheControlMaxAge: 31536000,
     }),
   ],

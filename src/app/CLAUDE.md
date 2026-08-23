@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Surface App Router sans root layout parent, en trois zones à la racine littérale : **`(site)/`** — routes publiques fines (lisent `src/lib`, composent `src/components`) ; **`(payload)/`** — `/admin` + API REST/GraphQL (générés, à une exception : `custom.scss`, seul point d'entrée CSS manuel de l'admin) ; **`api/`** — endpoints commerce écrits à la main (checkout, webhook Stripe, health), hors des deux groupes. `robots.ts`/`sitemap.ts` vivent aussi à cette racine littérale (convention de fichier Next, insensible aux groupes de routes).
+Surface App Router sans root layout parent, en trois zones à la racine littérale : **`(site)/`** — routes publiques fines (lisent `src/lib`, composent `src/components`) ; **`(payload)/`** — `/admin` + API REST/GraphQL (générés, à une exception : `custom.scss`, seul point d'entrée CSS manuel de l'admin) ; **`api/`** — endpoints écrits à la main (checkout, webhook Stripe, health, cron `/api/cron/parutions` — purge planifiée du jour de parution, gardée par `CRON_SECRET`), hors des deux groupes. `robots.ts`/`sitemap.ts` vivent aussi à cette racine littérale (convention de fichier Next, insensible aux groupes de routes).
 
 ## Ownership
 

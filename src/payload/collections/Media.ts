@@ -34,7 +34,7 @@ export const Media: CollectionConfig = {
   admin: {
     group: 'Catalogue',
     description:
-      'Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé.',
+      'Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé. Pour remplacer une image : téléverser un nouveau fichier (jamais l’outil de recadrage en place — l’image modifiée garderait la même adresse et resterait invisible derrière le cache, jusqu’à un an).',
   },
   upload: {
     mimeTypes: ['image/*', 'application/pdf'],

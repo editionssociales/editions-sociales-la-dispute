@@ -10,6 +10,21 @@ import { withSentryConfig } from "@sentry/nextjs";
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 /**
+ * Hostname public du store Vercel Blob des médias — dérivé du token quand il
+ * est présent (même parsing que le plugin `storage-vercel-blob`), repli sur
+ * le store de PRODUCTION (`editions-sociales-media`) sinon : un token de
+ * preview/dev pointant sur un autre store garde ainsi `remotePatterns` et la
+ * redirection `/api/media/file/*` alignés sur les URLs que `media.url` émet
+ * réellement, sans double source de vérité.
+ */
+const BLOB_STORE_HOSTNAME = (() => {
+  const storeId = process.env.BLOB_READ_WRITE_TOKEN?.match(
+    /^vercel_blob_rw_([a-z\d]+)_/i,
+  )?.[1]?.toLowerCase();
+  return `${storeId ?? "woqtumysexotkwl1"}.public.blob.vercel-storage.com`;
+})();
+
+/**
  * E4 du plan (`plan/02-mise-en-production.md`) — table de redirections 301 de
  * reprise, exécutée avant tout flip DNS (les règles host sont inertes tant que
  * le domaine ne pointe pas sur ce projet Vercel). Statut piloté par env :
@@ -150,6 +165,19 @@ function laDisputeRedirectRules(): StatusedRule[] {
  */
 async function redirects() {
   return [
+    // Shim médias (hostless, AVANT toutes les règles host — audit coûts
+    // 2026-08-23, revue) : depuis `disablePayloadAccessControl` sur `media`
+    // (payload.config.ts), la route Payload `/api/media/file/*` n'est plus
+    // servie — or ~200 URLs de cette forme restent INCRUSTÉES dans le contenu
+    // en base (galeries presse `*LegacyHtml`, liens PDF lexical réédités par
+    // les éditeur·rice·s), plus les caches externes (Google Images, cartes OG
+    // scrapées). Redirection edge vers l'URL Blob directe : zéro invocation,
+    // aucun 404. Vérifié à la revue : aucune de ces URLs en base ne contient
+    // d'espace ni de %-encodage, et chaque filename résout en 200 sur le store.
+    r({
+      source: "/api/media/file/:filename",
+      destination: `https://${BLOB_STORE_HOSTNAME}/:filename`,
+    }),
     ...onHost("editionssociales.fr", [
       // 1 — pagination de l'archive catalogue WP → archive ES (pas de pagination distincte côté nouveau site)
       r({ source: "/catalogue/page/:n(\\d+)", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
@@ -174,7 +202,9 @@ async function redirects() {
       r({ source: "/catalogue-collection", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
       r({ source: "/catalogue-auteur", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
       // 7 — page orpheline (défaut Q2, à ajuster avant E7 selon retour client)
-      r({ source: "/les-emissions-sociales", destination: "https://ld-es.fr/a-propos" }),
+      // — `t()` tant que l'arbitrage n'est pas clos : ne pas figer un défaut
+      // provisoire en 301 (revue 2026-08-23, `REDIRECTS_PERMANENT=1` posé).
+      t({ source: "/les-emissions-sociales", destination: "https://ld-es.fr/a-propos" }),
       // 8 — page orpheline (défaut Q2). Cible externe (GEME Marx-Engels, hors
       // périmètre de la bascule) : jamais réécrite vers ld-es.fr.
       r({ source: "/la-geme", destination: "https://gememarxengels.org" }),
@@ -191,22 +221,42 @@ async function redirects() {
       // Coupure OVH : plus aucune règle `wp-content`/`wp-admin`/`wp-json` —
       // les installs WordPress sont éteintes, ces URLs répondent 404 ici.
       //
-      // 12 — cas négatifs de la règle 2 : les deux slugs maison sont des URLs
-      // réelles du site unifié, chemin préservé explicitement.
+      // 12 — archive catalogue WP NUE (symétrie avec sa pagination, règle 1) :
+      // URL indexée depuis des années, jamais couverte par la règle 2 (un
+      // segment exigé) — sans elle, le catch-all fixe l'enverrait à l'accueil
+      // (constat de revue 2026-08-23).
+      r({ source: "/catalogue", destination: "https://ld-es.fr/catalogue/editions-sociales" }),
+      // 13 — URLs RÉELLES du site unifié écrites sur le domaine de marque
+      // (liens partagés/bookmarkés pendant le recouvrement 302, signatures
+      // mail @editionssociales.fr…) : chemin préservé explicitement — le
+      // catch-all fixe ci-dessous ne doit avaler que les URLs mortes, pas les
+      // surfaces vivantes (revue 2026-08-23 : figées en 301 depuis
+      // `REDIRECTS_PERMANENT=1`, une erreur ici serait cachée par les
+      // navigateurs). Couvre aussi les deux slugs maison (cas négatifs de la
+      // règle 2) et les fiches complètes à deux segments.
+      r({ source: "/catalogue/:path*", destination: "https://ld-es.fr/catalogue/:path*" }),
+      r({ source: "/boutique/:slug", destination: "https://ld-es.fr/boutique/:slug" }),
+      // `/souscription` exact AVANT le wildcard : `:path*` matche aussi zéro
+      // segment et fabriquerait un slash final superflu sur la destination.
+      r({ source: "/souscription", destination: "https://ld-es.fr/souscription" }),
       r({
-        source: "/catalogue/editions-sociales",
-        destination: "https://ld-es.fr/catalogue/editions-sociales",
+        source: "/souscription/:path*",
+        destination: "https://ld-es.fr/souscription/:path*",
       }),
-      r({ source: "/catalogue/la-dispute", destination: "https://ld-es.fr/catalogue/la-dispute" }),
-      // 13 — catch-all FINAL (dernier de la liste : premier match gagnant) en
+      r({ source: "/panier", destination: "https://ld-es.fr/panier" }),
+      r({ source: "/rencontres", destination: "https://ld-es.fr/rencontres" }),
+      r({ source: "/contact", destination: "https://ld-es.fr/contact" }),
+      r({ source: "/editions/:slug", destination: "https://ld-es.fr/editions/:slug" }),
+      // 14 — catch-all FINAL (dernier de la liste : premier match gagnant) en
       // destination FIXE, même politique que les hosts La Dispute (`/`) et
       // boutique (`/catalogue`). L'ancien `/:path*` → `/:path*` (chemin
       // préservé) déversait chaque URL WP morte et chaque probe de bot
       // (`wp-login.php`, `xmlrpc.php`, `.env`…) dans le catch-all 404 du site
       // canonique : un rendu dynamique + une entrée de cache ISR jamais relue
       // PAR URL unique (audit coûts Vercel 2026-08-23, writes > reads). Les
-      // URLs WordPress réelles sont TOUTES couvertes par les règles 1-11
-      // ci-dessus — le reste n'a jamais été légitime sur ce host.
+      // URLs WordPress réelles sont couvertes par les règles 1-12, les
+      // surfaces vivantes du site par la règle 13 — le reste n'a jamais été
+      // légitime sur ce host.
       r({ source: "/:path*", destination: "https://ld-es.fr/" }),
     ]),
     // Hosts ladispute.fr / la-dispute.fr — mêmes règles, factorisées dans
@@ -243,7 +293,9 @@ async function redirects() {
           source: "/categorie-produit/editions-sociales",
           destination: "https://ld-es.fr/catalogue/editions-sociales",
         }),
-        r({ source: "/categorie-produit/:cat", destination: "https://ld-es.fr/catalogue" }),
+        // `t()` : mapping encore ouvert (cf. commentaire ci-dessus) — un
+        // repli conservateur ne doit pas devenir 301 (revue 2026-08-23).
+        t({ source: "/categorie-produit/:cat", destination: "https://ld-es.fr/catalogue" }),
         // Accueil boutique → catalogue unifié. (Coupure OVH : le proxy
         // `?wc-api=…` vers WooCommerce a disparu avec les rewrites — un
         // callback Paybox résiduel suit désormais cette redirection.)
@@ -306,13 +358,7 @@ const nextConfig: NextConfig = {
     // N'IMPORTE QUEL compte Vercel — un tiers pouvait faire transformer ses
     // images sur notre facture via /_next/image. Coupure OVH : plus aucun
     // host WordPress autorisé.
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "woqtumysexotkwl1.public.blob.vercel-storage.com",
-        pathname: "/**",
-      },
-    ],
+    remotePatterns: [{ protocol: "https", hostname: BLOB_STORE_HOSTNAME, pathname: "/**" }],
   },
   redirects,
 };
