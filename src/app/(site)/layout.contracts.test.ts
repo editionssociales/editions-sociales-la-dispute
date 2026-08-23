@@ -8,12 +8,13 @@ const read = (relative: string) => readFileSync(path.join(ROOT, relative), "utf8
 describe("Layout site — contrats a11y / perf (issues #111 #112 #115)", () => {
   const layout = read("src/app/(site)/layout.tsx");
 
-  it("Typekit reste asynchrone (#84) et réécrit font-display:swap (#112)", () => {
+  it("Typekit reste asynchrone (#84), réécrit font-display:swap (#112), inject après load (LCP)", () => {
     expect(layout).toContain('media="print"');
     expect(layout).toContain('id="adobe-fonts-css"');
     expect(layout).toContain("font-display:swap");
     expect(layout).toContain("l.media='all'");
     expect(layout).toContain("<noscript>");
+    expect(layout).toContain("addEventListener('load'");
   });
 
   it("preconnect Sentry seulement via l'origine du DSN (#111)", () => {
@@ -41,10 +42,11 @@ describe("En-têtes de sécurité (issue #113)", () => {
   });
 });
 
-describe("Cover — fetchPriority sur preload (issue #109)", () => {
-  it("transmet fetchPriority=high quand preload est posé", () => {
+describe("Cover — fetchPriority / decoding sur preload (issue #109)", () => {
+  it("transmet fetchPriority=high et decoding=sync quand preload est posé", () => {
     const src = read("src/lib/cover.tsx");
-    expect(src).toContain('fetchPriority={preload ? "high" : undefined}');
+    expect(src).toContain('fetchPriority={preload ? "high" : "low"}');
+    expect(src).toContain('decoding={preload ? "sync" : "async"}');
   });
 });
 

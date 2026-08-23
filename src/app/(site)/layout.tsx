@@ -106,7 +106,11 @@ export default async function RootLayout({
             `font-display:auto` → `swap` avant de l'injecter : on ne
             contrôle pas le kit Adobe, et un <link> synchrone re-bloquerait
             le rendu. Si le fetch échoue, repli #84 : promotion `media=all`.
-            `<noscript>` couvre le cas sans JS. */}
+            `<noscript>` couvre le cas sans JS.
+            L'inject est différé à `window.load` : les 3 fichiers Effra
+            partaient en VeryHigh et volaient la bande au LCP (couverture
+            ~30 Ko High). `media=print` continue de précharger la CSS à
+            Low ; seuls les woff VeryHigh attendent la fin du document. */}
         <link rel="preconnect" href="https://use.typekit.net" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://p.typekit.net" crossOrigin="anonymous" />
         {/* Sentry ingest : le SDK part dans le chemin critique
@@ -124,7 +128,7 @@ export default async function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){var l=document.getElementById('adobe-fonts-css');if(!l)return;fetch(l.href).then(function(r){return r.ok?r.text():Promise.reject();}).then(function(c){var s=document.createElement('style');s.textContent=c.replace(/font-display:\\s*auto/g,'font-display:swap');l.replaceWith(s);}).catch(function(){l.media='all';});})();",
+              "(function(){function go(){var l=document.getElementById('adobe-fonts-css');if(!l)return;fetch(l.href).then(function(r){return r.ok?r.text():Promise.reject();}).then(function(c){var s=document.createElement('style');s.textContent=c.replace(/font-display:\\s*auto/g,'font-display:swap');l.replaceWith(s);}).catch(function(){l.media='all';});}if(document.readyState==='complete')go();else window.addEventListener('load',go);})();",
           }}
         />
         <noscript>

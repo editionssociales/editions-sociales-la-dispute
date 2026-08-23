@@ -6,6 +6,8 @@ import { Cover } from "@/lib/cover";
 import type { NouveauteBook } from "@/lib/nouveaute-book";
 import { FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
 import {
+  NOUVEAUTES_RAIL_ID,
+  nouveautesBootstrapScript,
   nouveautesCoverSizes,
   nouveautesInitialIndex,
 } from "./nouveautes-carousel-lcp";
@@ -284,46 +286,59 @@ export function NouveautesCarousel({
   // d'images ne doit pas se reconcilier pendant un défilement → saccades).
   const rail = useMemo(
     () => (
-      <ul
-        ref={trackRef}
-        role="list"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerLeave={onPointerUp}
-        onDragStart={(e) => e.preventDefault()}
-        className="flex cursor-grab select-none items-center gap-[clamp(14px,1.6vw,26px)] overflow-x-auto px-[calc(50%_-_clamp(96px,11vw,132px))] pb-[clamp(20px,3vw,40px)] pt-[clamp(24px,4vw,52px)] [--cover-h:clamp(200px,32vw,392px)] [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {books.map((book, i) => (
-          <li key={book.href} data-card className="flex-none [scroll-snap-align:center]">
-            <Link
-              href={book.href}
-              onClick={guardClick}
-              onFocus={() => centerCard(i)}
-              draggable={false}
-              aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
-              className={`block origin-center will-change-transform ${FOCUS_RING_LIGHT}`}
-            >
-              {/* Hauteur commune fixée ; la largeur suit le ratio réel de
-                  l'image (aucune bande, jamais coupée). draggable=false : le
-                  drag HTML5 natif entrerait en conflit avec le glissé du rail.
-                  Couverture initialement centrée : preload + fetchPriority
-                  high (LCP). Les autres restent lazy, `sizes` resserré. */}
-              <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[8px_8px_0_0_var(--color-ink)] ring-1 ring-ink">
-                <Cover
-                  cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
-                  alt={book.title}
-                  fit="height"
-                  sizes={nouveautesCoverSizes(i, initialIndex)}
-                  preload={i === initialIndex}
-                  draggable={false}
-                  className="block h-full w-auto select-none"
-                />
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <>
+        <ul
+          ref={trackRef}
+          id={NOUVEAUTES_RAIL_ID}
+          // Le script inline pose padding/scroll avant hydratation : ces
+          // attributs ne sont pas dans le VDOM React (centrage LCP).
+          suppressHydrationWarning
+          role="list"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerUp}
+          onDragStart={(e) => e.preventDefault()}
+          className="flex cursor-grab select-none items-center gap-[clamp(14px,1.6vw,26px)] overflow-x-auto px-[calc(50%_-_clamp(96px,11vw,132px))] pb-[clamp(20px,3vw,40px)] pt-[clamp(24px,4vw,52px)] [--cover-h:clamp(200px,32vw,392px)] [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {books.map((book, i) => (
+            <li key={book.href} data-card className="flex-none [scroll-snap-align:center]">
+              <Link
+                href={book.href}
+                onClick={guardClick}
+                onFocus={() => centerCard(i)}
+                draggable={false}
+                aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
+                className={`block origin-center will-change-transform ${FOCUS_RING_LIGHT} ${
+                  i === initialIndex ? "scale-[1.12]" : ""
+                }`}
+              >
+                {/* Hauteur commune fixée ; la largeur suit le ratio réel de
+                    l'image (aucune bande, jamais coupée). draggable=false : le
+                    drag HTML5 natif entrerait en conflit avec le glissé du rail.
+                    Couverture initialement centrée : preload + fetchPriority
+                    high (LCP). Les autres restent lazy, `sizes` resserré.
+                    `scale-[1.12]` : même zoom que `paint()` dès le HTML, sans
+                    attendre le JS (LCP déjà à la taille finale). */}
+                <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[8px_8px_0_0_var(--color-ink)] ring-1 ring-ink">
+                  <Cover
+                    cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
+                    alt={book.title}
+                    fit="height"
+                    sizes={nouveautesCoverSizes(i, initialIndex)}
+                    preload={i === initialIndex}
+                    draggable={false}
+                    className="block h-full w-auto select-none"
+                  />
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <script
+          dangerouslySetInnerHTML={{ __html: nouveautesBootstrapScript(initialIndex) }}
+        />
+      </>
     ),
     [books, guardClick, centerCard, onPointerDown, onPointerMove, onPointerUp, initialIndex],
   );
