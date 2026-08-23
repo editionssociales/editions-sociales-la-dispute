@@ -93,6 +93,16 @@ export const NAV_HOUSES: NavHouse[] = [
 ];
 
 /**
+ * Nom accessible d'un monogramme maison (WCAG 2.5.3 Label in Name) : le
+ * sigle visible (`LD` / `ES`) doit figurer dans le nom, avant le libellé
+ * complet — un utilisateur de commande vocale qui voit « LD » doit pouvoir
+ * dire « LD ».
+ */
+export function maisonMonogramName(sigle: string, label: string): string {
+  return `${sigle} — ${label}`;
+}
+
+/**
  * Entrée « Accueil » : source unique du href/libellé, consommée par la
  * cellule dédiée du header. Ce n'est pas une section pop (`NAV_SECTIONS`) —
  * l'état actif se lit simplement sur `pathname === "/"`.

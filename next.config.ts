@@ -320,19 +320,39 @@ const nextConfig: NextConfig = {
   // Pas de fingerprinting gratuit de la stack (Next + Payload s'annoncent
   // sinon dans `x-powered-by`).
   poweredByHeader: false,
-  // Durcissement minimal, sûr pour front ET back-office : pas de sniffing
-  // MIME, pas d'embarquement en iframe tiers (anti-clickjacking, /admin
-  // compris), referrer réduit hors origine. Une CSP complète reste hors
-  // périmètre (inline scripts Next/Payload à inventorier d'abord).
+  // Durcissement sûr pour front ET back-office : pas de sniffing MIME, pas
+  // d'embarquement en iframe tiers (anti-clickjacking, /admin compris),
+  // referrer réduit hors origine. COOP `same-origin-allow-popups` : isole
+  // le contexte d'origine sans casser une redirection Stripe Checkout
+  // (navigation pleine page) ni d'éventuels popups admin. Pas de COEP
+  // (casserait Typekit, Blob, Sentry, images).
+  //
+  // CSP / Trusted Types (issue #113, 2026-08-23) : toujours hors périmètre.
+  // Une CSP enforcement casserait Payload `/admin` (scripts inline), Next
+  // (hydratation), Typekit, Sentry et le JSON-LD du layout — l'inventaire
+  // `'unsafe-inline'` n'est pas fait. Report-Only sans report-uri ne ferait
+  // que spammer la console. Trusted Types incompatible avec
+  // `dangerouslySetInnerHTML` (même sanitisé) et le runtime Next/Payload.
   async headers() {
+    const security = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "SAMEORIGIN" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+    ];
+    // HSTS uniquement sur le build de production Vercel (HTTPS-only).
+    // Pas de `preload` (liste HSTS Preload = engagement long, hors
+    // décision explicite). Jamais en local HTTP ni sur les previews.
+    if (process.env.VERCEL_ENV === "production") {
+      security.push({
+        key: "Strict-Transport-Security",
+        value: "max-age=31536000; includeSubDomains",
+      });
+    }
     return [
       {
         source: "/:path*",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        ],
+        headers: security,
       },
     ];
   },
@@ -376,4 +396,11 @@ export default withSentryConfig(withPayload(nextConfig, { devBundleServerPackage
   // build, même sans aucune variable Sentry posée (url par défaut = sentry.io,
   // court-circuit dans allowedToSendTelemetry()) : on le coupe explicitement.
   telemetry: false,
+  // Issue #111 : couper le logger SDK et le code Replay non utilisé (replay
+  // déjà à sample rate 0). Ne PAS `excludeTracing` : tracesSampleRate 0.1.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayShadowDom: true,
+    excludeReplayIframe: true,
+  },
 });

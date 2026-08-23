@@ -5,6 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cover } from "@/lib/cover";
 import type { NouveauteBook } from "@/lib/nouveaute-book";
 import { FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import {
+  nouveautesCoverSizes,
+  nouveautesInitialIndex,
+} from "./nouveautes-carousel-lcp";
 
 export type { NouveauteBook };
 
@@ -75,7 +79,8 @@ export function NouveautesCarousel({
   // fonctionnel, comparé à la valeur précédente : `paint()` tourne à chaque
   // frame de défilement, mais ne déclenche un rendu que quand la valeur
   // affichée change réellement (#90).
-  const [activeIndex, setActiveIndex] = useState(n > 1 ? 1 : 0);
+  const initialIndex = nouveautesInitialIndex(n);
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(n <= 1);
 
@@ -189,7 +194,6 @@ export function NouveautesCarousel({
     const el = trackRef.current;
     if (!el) return;
     applyEndPadding();
-    const initialIndex = n > 1 ? 1 : 0;
     activeRef.current = initialIndex;
     centerCard(initialIndex, true);
     schedulePaint();
@@ -210,7 +214,7 @@ export function NouveautesCarousel({
       window.removeEventListener("resize", onResize);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [applyEndPadding, schedulePaint, centerCard, n]);
+  }, [applyEndPadding, schedulePaint, centerCard, initialIndex]);
 
   // Glisser-déposer à la souris (grab) : le trackpad / tactile / molette gardent
   // leur défilement natif. On coupe le snap le temps du glissé (proximity ne
@@ -303,14 +307,15 @@ export function NouveautesCarousel({
               {/* Hauteur commune fixée ; la largeur suit le ratio réel de
                   l'image (aucune bande, jamais coupée). draggable=false : le
                   drag HTML5 natif entrerait en conflit avec le glissé du rail.
-                  1re couverture : preload (LCP) — les suivantes restent lazy. */}
+                  Couverture initialement centrée : preload + fetchPriority
+                  high (LCP). Les autres restent lazy, `sizes` resserré. */}
               <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[8px_8px_0_0_var(--color-ink)] ring-1 ring-ink">
                 <Cover
                   cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
                   alt={book.title}
                   fit="height"
-                  sizes="(max-width: 640px) 42vw, 260px"
-                  preload={i === 0}
+                  sizes={nouveautesCoverSizes(i, initialIndex)}
+                  preload={i === initialIndex}
                   draggable={false}
                   className="block h-full w-auto select-none"
                 />
@@ -320,7 +325,7 @@ export function NouveautesCarousel({
         ))}
       </ul>
     ),
-    [books, guardClick, centerCard, onPointerDown, onPointerMove, onPointerUp],
+    [books, guardClick, centerCard, onPointerDown, onPointerMove, onPointerUp, initialIndex],
   );
 
   if (n === 0) return null;

@@ -83,6 +83,7 @@ export function ContactForm() {
           id="contact-name"
           name="name"
           type="text"
+          autoComplete="name"
           required
           maxLength={NAME_MAX_LENGTH}
           aria-invalid={erroredField === "name" ? true : undefined}
@@ -99,6 +100,7 @@ export function ContactForm() {
           id="contact-email"
           name="email"
           type="email"
+          autoComplete="email"
           required
           placeholder="vous@exemple.fr"
           aria-invalid={erroredField === "email" ? true : undefined}
@@ -115,6 +117,7 @@ export function ContactForm() {
           id="contact-subject"
           name="subject"
           type="text"
+          autoComplete="off"
           maxLength={SUBJECT_MAX_LENGTH}
           aria-invalid={erroredField === "subject" ? true : undefined}
           aria-describedby={erroredField === "subject" ? "contact-status" : undefined}
@@ -129,6 +132,7 @@ export function ContactForm() {
         <textarea
           id="contact-message"
           name="message"
+          autoComplete="off"
           required
           rows={7}
           minLength={MESSAGE_MIN_LENGTH}

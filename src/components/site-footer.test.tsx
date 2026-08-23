@@ -66,6 +66,10 @@ describe("SiteFooter — newsletter avec Brevo", () => {
     expect(html).toContain('type="email"');
   });
 
+  it("identifie le champ comme email (WCAG 1.3.5)", () => {
+    expect(html).toContain('autoComplete="email"');
+  });
+
   it("la mention de sous-traitance redevient vraie, et est affichée", () => {
     expect(html).toContain("Brevo");
   });

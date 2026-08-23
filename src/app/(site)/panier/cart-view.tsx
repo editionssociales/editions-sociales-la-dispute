@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Fragment, Suspense, useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useCart } from "@/components/cart/cart-context";
 import { GoodieSuggestionRow, type GoodieSuggestion } from "@/components/cart/goodie-suggestion-row";
 import { ShelfSpines } from "@/components/cart/shelf-spines";
@@ -456,6 +456,14 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
     () => new Set((checkoutError ?? []).flatMap((e) => (e.id != null ? [e.id] : []))),
     [checkoutError],
   );
+  const checkoutAlertRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function focusCheckoutAlert() {
+      if (!checkoutError || checkoutError.length === 0) return;
+      checkoutAlertRef.current?.focus();
+    }
+    focusCheckoutAlert();
+  }, [checkoutError]);
   const hasPurchasableLine = summary.lines.some((line) => line.purchasable);
 
   /**
@@ -589,13 +597,18 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
           </label>
 
           <div className="flex flex-col gap-2">
-            <label className="flex flex-col gap-1">
-              <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="cart-promo"
+                className="font-sans text-xs font-bold uppercase tracking-[.06em] text-muted"
+              >
                 Code promo
-              </span>
+              </label>
               <div className="flex flex-wrap gap-2">
                 <input
+                  id="cart-promo"
                   type="text"
+                  autoComplete="off"
                   value={promoInput}
                   onChange={(e) => {
                     setPromoInput(e.target.value);
@@ -618,7 +631,7 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
                   {promoPending ? "Vérification…" : "Appliquer"}
                 </Button>
               </div>
-            </label>
+            </div>
             {promoResult && (
               <p
                 aria-live="polite"
@@ -718,7 +731,12 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
           {checkoutPending ? "Redirection vers le paiement…" : "Commander"}
         </button>
         {checkoutError && checkoutError.length > 0 && (
-          <div className="w-full border-2 border-brick bg-paper-2 px-4 py-3 sm:w-auto" role="alert">
+          <div
+            ref={checkoutAlertRef}
+            tabIndex={-1}
+            className={`w-full border-2 border-brick bg-paper-2 px-4 py-3 sm:w-auto ${FOCUS_RING_LIGHT}`}
+            role="alert"
+          >
             <p className="font-sans text-xs font-extrabold uppercase tracking-[.06em] text-brick">
               Paiement impossible
             </p>

@@ -8,6 +8,7 @@ import {
   NAV_HOUSES,
   NAV_SECTIONS,
   activeSections,
+  maisonMonogramName,
   type NavSearch,
   type NavSectionId,
 } from "@/lib/nav";
@@ -100,7 +101,8 @@ const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
  * client 2026-08-20 — ex-brick, cf. `lib/editions.ts`). Clefs = labels de
  * `NAV_HOUSES` (clef stable, indépendante des hrefs — désormais les pages
  * maisons `/editions/[slug]`), classes littérales (contrat JIT) ; le nom
- * complet reste porté par l'`aria-label`.
+ * accessible est `maisonMonogramName(sigle, label)` (WCAG 2.5.3 : le sigle
+ * visible figure dans le nom).
  *
  * Les DEUX accents n'ont plus la même nature — d'où l'anneau PORTÉ PAR
  * L'ENTRÉE, plus par une règle commune : navy est SOMBRE (texte paper,
@@ -353,14 +355,15 @@ function MobileMenuToggle({
  */
 function MaisonMonogramLink({ href, label }: { href: string; label: string }) {
   const m = MAISON_MONOGRAM[label];
+  const sigle = m?.sigle ?? label.slice(0, 2);
   const ring = m?.ring ?? `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`;
   return (
     <Link
       href={href}
-      aria-label={label}
+      aria-label={maisonMonogramName(sigle, label)}
       className={`flex min-h-11 w-14 items-center justify-center font-sans text-[15px] font-black italic uppercase leading-none ${m?.cellClass ?? "bg-paper text-ink hover:bg-ink hover:text-paper"} ${CELL_TRANSITION} ${ring}`}
     >
-      <span aria-hidden="true">{m?.sigle ?? label.slice(0, 2)}</span>
+      <span aria-hidden="true">{sigle}</span>
     </Link>
   );
 }
@@ -527,6 +530,23 @@ function SiteHeaderChrome({
     if (!followFocus.current) return;
     followFocus.current = false;
     (menuOpen ? bottomToggle : topToggle).current?.focus();
+  }, [menuOpen]);
+
+  // Échap referme le menu (APG Disclosure) — écouté sur `document` tant
+  // qu'il est ouvert : le focus est alors dans le panneau. Même exclusion
+  // des champs de saisie que le tiroir des contreparties.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const target = event.target;
+      if (target instanceof Element && target.closest("input, textarea, select")) return;
+      event.preventDefault();
+      followFocus.current = true;
+      setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
 
   return (

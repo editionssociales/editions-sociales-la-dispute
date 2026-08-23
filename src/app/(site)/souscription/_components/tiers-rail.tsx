@@ -216,13 +216,19 @@ export function TiersRail({
   return (
     <aside
       id="paliers"
-      aria-label="Contreparties"
+      aria-labelledby="contreparties-titre"
       className={`border-t-2 border-ink bg-paper scroll-mt-24 lg:sticky lg:top-0 lg:-mt-24 ${RAIL_CONTENT_WIDTH_CLASS} ${RAIL_MAX_HEIGHT_CLASS} lg:self-start lg:overflow-y-auto lg:border-l-2 lg:border-t-0 [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-ink [&::-webkit-scrollbar-track]:bg-paper-2 ${RAIL_PULSE_CLASS}`}
     >
       {/* `lg:pt-14` : réserve du bouton de fermeture du tiroir, fixé au coin
           haut-droit du panneau (`tiers-drawer.tsx`) — sans elle, il couvrirait
           le coin de la première carte au repos. */}
       <div className="px-5 py-4 sm:px-8 sm:py-6 lg:pt-14">
+        <h2
+          id="contreparties-titre"
+          className="mb-4 font-sans text-sm font-extrabold uppercase tracking-[.08em] text-ink"
+        >
+          Contreparties
+        </h2>
         {/* Plus d'ancre « Ou donnez un montant libre ↓ » en tête (retirée
             25/07) : la carte montant libre EST désormais la tête du rail
             (retour client 2026-08-22 : premier choix plutôt que dernier),

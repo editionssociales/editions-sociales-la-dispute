@@ -5,8 +5,10 @@ import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CartProvider } from "@/components/cart/cart-context";
+import { RouteFocus } from "@/components/route-focus";
 import { getReglagesSite } from "@/lib/site-content";
 import { brevoConfigured } from "@/lib/brevo";
+import { sentryIngestOrigin } from "@/lib/sentry-ingest";
 import { FOCUS_RING_DARK } from "@/lib/ui";
 
 const inter = Inter({
@@ -86,6 +88,7 @@ export default async function RootLayout({
     /\/+$/,
     "",
   );
+  const sentryOrigin = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
 
   return (
     <html lang="fr" className={`${inter.variable} h-full antialiased`}>
@@ -98,12 +101,20 @@ export default async function RootLayout({
             #84) — React 19 hisse ces <link> dans <head>. La feuille Adobe
             bloquait le rendu (tierce origine, synchrone, devant Inter ET
             tous les titres) ; `media="print"` la télécharge sans qu'elle
-            soit traitée comme bloquante, puis le script inline (exécution
-            immédiate, aucune attente réseau) la promeut en `media="all"`
-            (technique `loadCSS`, geste réversible — pas d'auto-hébergement,
-            licence Adobe non vérifiée). `<noscript>` couvre le cas sans JS. */}
+            soit traitée comme bloquante. Le script inline (issue #112)
+            refetch la feuille (CORS `*` + cache) et réécrit
+            `font-display:auto` → `swap` avant de l'injecter : on ne
+            contrôle pas le kit Adobe, et un <link> synchrone re-bloquerait
+            le rendu. Si le fetch échoue, repli #84 : promotion `media=all`.
+            `<noscript>` couvre le cas sans JS. */}
         <link rel="preconnect" href="https://use.typekit.net" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://p.typekit.net" crossOrigin="anonymous" />
+        {/* Sentry ingest : le SDK part dans le chemin critique
+            (`instrumentation-client.ts`). Preconnect seulement si le DSN
+            est posé — sinon c'est du bruit (issue #111). */}
+        {sentryOrigin && (
+          <link rel="preconnect" href={sentryOrigin} crossOrigin="anonymous" />
+        )}
         <link
           rel="stylesheet"
           href="https://use.typekit.net/fwz0kkx.css"
@@ -112,7 +123,8 @@ export default async function RootLayout({
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: "document.getElementById('adobe-fonts-css').media='all';",
+            __html:
+              "(function(){var l=document.getElementById('adobe-fonts-css');if(!l)return;fetch(l.href).then(function(r){return r.ok?r.text():Promise.reject();}).then(function(c){var s=document.createElement('style');s.textContent=c.replace(/font-display:\\s*auto/g,'font-display:swap');l.replaceWith(s);}).catch(function(){l.media='all';});})();",
           }}
         />
         <noscript>
@@ -125,8 +137,9 @@ export default async function RootLayout({
           Aller au contenu
         </a>
         <CartProvider>
+          <RouteFocus />
           <SiteHeader />
-          <main id="contenu" className="flex-1">
+          <main id="contenu" tabIndex={-1} className="flex-1 outline-none">
             {children}
           </main>
         </CartProvider>

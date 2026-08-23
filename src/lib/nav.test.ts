@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeSections } from "./nav";
+import { activeSections, maisonMonogramName } from "./nav";
 
 function search(qs: string): URLSearchParams {
   return new URLSearchParams(qs);
@@ -41,5 +41,14 @@ describe("activeSections", () => {
 
   it("allume Agenda sur /rencontres", () => {
     expect(activeSections("/rencontres").agenda).toBe(true);
+  });
+});
+
+describe("maisonMonogramName — WCAG 2.5.3 Label in Name", () => {
+  it("inclut le sigle visible dans le nom accessible, puis le nom complet", () => {
+    expect(maisonMonogramName("LD", "La Dispute")).toBe("LD — La Dispute");
+    expect(maisonMonogramName("ES", "Les Éditions sociales")).toBe(
+      "ES — Les Éditions sociales",
+    );
   });
 });

@@ -109,6 +109,7 @@ export function Cover({
       style={style}
       className={className}
       preload={preload}
+      fetchPriority={preload ? "high" : undefined}
       draggable={draggable}
     />
   );

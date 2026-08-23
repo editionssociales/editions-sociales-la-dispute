@@ -6,6 +6,12 @@ import * as Sentry from "@sentry/nextjs";
 // inliné dans le bundle navigateur — cf. doc Next sur les env vars exposées au
 // client) ; c'est aussi la variable utilisée par la détection automatique du SDK,
 // qu'on documente ici pour rester explicite plutôt que de s'y en remettre.
+//
+// Issue #111 : le SDK reste sur le chemin critique (pageloads +
+// `onRouterTransitionStart`) — pas de lazy-load, pour ne pas rater les
+// erreurs précoces. Le first-load JS de l'accueil contient donc Sentry +
+// header/panier + carrousel ; les polyfills legacy sont coupés via
+// `browserslist` (package.json), pas en retirant le commerce.
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV,

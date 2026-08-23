@@ -344,6 +344,17 @@ describe("Les trois points porteurs de la largeur atteignent leur porteur", () =
       /<aside[\s\S]{0,400}?className=\{`[^`]*\$\{RAIL_CONTENT_WIDTH_CLASS\}[^`]*`\}/,
     );
   });
+
+  it("le rail a un h2 Contreparties avant les h3 paliers (issue #118)", () => {
+    const rail = read("src/app/(site)/souscription/_components/tiers-rail.tsx");
+    const h2 = rail.indexOf("<h2");
+    const h3 = rail.indexOf("<h3>");
+    expect(h2).toBeGreaterThan(0);
+    expect(h3).toBeGreaterThan(h2);
+    expect(rail).toContain("contreparties-titre");
+    expect(rail).toMatch(/<h2[\s\S]{0,200}?Contreparties/);
+    expect(rail).not.toContain('aria-label="Contreparties"');
+  });
 });
 
 // ----------------------------------------------------------- indice d'appel

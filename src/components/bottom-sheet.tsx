@@ -93,6 +93,7 @@ export function BottomSheet({
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLButtonElement>(null);
   // Le geste vit dans un ref (`last` = dernier décalage appliqué) : la
   // décision d'aimantation le lit à la levée du doigt sans passer par l'état,
   // dont les mises à jour sont asynchrones.
@@ -112,18 +113,25 @@ export function BottomSheet({
   /** L'utilisateur a pris la main → le déroulé automatique est annulé. */
   const userActed = useRef(false);
   const panelId = useId();
+  const [announcement, setAnnouncement] = useState("");
 
   // Déroulé automatique différé. `setState` dans un minuteur, pas dans le corps
   // de l'effet : c'est un événement externe (le temps), pas une dérivation du
   // rendu. Un appui ou un glissé avant l'échéance l'emporte — la feuille ne
-  // doit jamais se rouvrir dans le dos de quelqu'un qui vient de la replier.
+  // doit jamais se rouvrir dans le dos. Coupé sous `prefers-reduced-motion`
+  // (issue #114) : l'affordance « Contribuer » suffit. Annonce polie quand
+  // l'auto-ouverture a lieu.
   useEffect(() => {
     if (!mobile) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const id = window.setTimeout(() => {
-      if (!userActed.current) setOpen(true);
+      if (!userActed.current) {
+        setOpen(true);
+        setAnnouncement(`${label} : contreparties dépliées`);
+      }
     }, autoOpenDelayMs);
     return () => window.clearTimeout(id);
-  }, [mobile, autoOpenDelayMs]);
+  }, [mobile, autoOpenDelayMs, label]);
 
   // Réserve la hauteur du bandeau replié en bas du DOCUMENT : le pied de site
   // vit dans le layout, hors de portée d'un espaceur rendu ici — sans ça, ses
@@ -152,6 +160,25 @@ export function BottomSheet({
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [mobile, open]);
+
+  // Échap referme la feuille ouverte (issue #114). Disclosure NON MODAL :
+  // la page derrière reste cliquable et tabulable — pas de `aria-modal`,
+  // pas de piège de focus (le voile n'existe pas). Même exclusion des
+  // champs de saisie que le tiroir desktop.
+  useEffect(() => {
+    if (!mobile || !open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const target = event.target;
+      if (target instanceof Element && target.closest("input, textarea, select")) return;
+      event.preventDefault();
+      userActed.current = true;
+      setOpen(false);
+      handleRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [mobile, open]);
 
   // Chaîne stable (et non le tableau, recréé à chaque rendu de l'appelant) :
@@ -294,6 +321,7 @@ export function BottomSheet({
       style={dragging ? { transform: `translateY(${dragOffset}px)` } : undefined}
     >
       <button
+        ref={handleRef}
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
@@ -323,6 +351,10 @@ export function BottomSheet({
           </span>
         </span>
       </button>
+
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
 
       {/* `inert` replié : le contenu hors écran ne doit être ni focalisable ni
           lu par un lecteur d'écran (il reste dans le DOM, donc indexable). */}

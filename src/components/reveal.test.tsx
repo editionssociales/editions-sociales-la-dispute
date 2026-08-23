@@ -1,5 +1,8 @@
+import type { ReactNode } from "react";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { Reveal } from "./reveal";
 
@@ -23,12 +26,11 @@ describe("Reveal — fail-open sans JS", () => {
     );
 
     expect(html).toContain("Contenu critique");
-    // L'état visible ...
     expect(html).toContain("opacity-100");
     expect(html).toContain("translate-y-0");
-    // ... jamais l'état masqué qu'armerait (à tort) un rendu serveur.
     expect(html).not.toMatch(/\bopacity-0\b/);
     expect(html).not.toMatch(/\btranslate-y-6\b/);
+    expect(html).not.toContain("inert");
   });
 
   it("rendu serveur : même garantie avec un `delay`, qui ne doit pas réintroduire de masquage", () => {
@@ -41,5 +43,94 @@ describe("Reveal — fail-open sans JS", () => {
     expect(html).toContain("Second bloc");
     expect(html).toContain("opacity-100");
     expect(html).not.toMatch(/\bopacity-0\b/);
+  });
+});
+
+let reduceMotion = false;
+let container: HTMLDivElement | null = null;
+let root: Root | null = null;
+const originalGetRect = HTMLElement.prototype.getBoundingClientRect;
+
+beforeAll(() => {
+  class SilentObserver {
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  }
+  Object.defineProperty(window, "IntersectionObserver", {
+    writable: true,
+    value: SilentObserver,
+  });
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      media: query,
+      get matches() {
+        return query === "(prefers-reduced-motion: reduce)" ? reduceMotion : false;
+      },
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent: () => false,
+    }),
+  });
+});
+
+function offscreenRect() {
+  return {
+    top: 2000,
+    bottom: 2200,
+    left: 0,
+    right: 100,
+    width: 100,
+    height: 200,
+    x: 0,
+    y: 2000,
+    toJSON() {},
+  };
+}
+
+function mountReveal(children: ReactNode): HTMLDivElement {
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  act(() => {
+    root!.render(<Reveal>{children}</Reveal>);
+  });
+  return container;
+}
+
+afterEach(() => {
+  if (root) {
+    act(() => {
+      root!.unmount();
+    });
+  }
+  container?.remove();
+  container = null;
+  root = null;
+  reduceMotion = false;
+  HTMLElement.prototype.getBoundingClientRect = originalGetRect;
+});
+
+describe("Reveal — inert hors viewport (issue #117)", () => {
+  it("un lien opacity-0 n'est plus tabulable (`inert` sur l'enveloppe)", () => {
+    Object.defineProperty(window, "innerHeight", { value: 600, configurable: true });
+    HTMLElement.prototype.getBoundingClientRect = () => offscreenRect() as DOMRect;
+    const el = mountReveal(<a href="#cta">Contribuer</a>);
+    const wrap = el.querySelector("a")!.closest("[inert]");
+    expect(wrap).not.toBeNull();
+    expect(wrap!.className).toMatch(/\bopacity-0\b/);
+  });
+
+  it("reduced-motion : jamais d'état masqué post-hydratation", () => {
+    reduceMotion = true;
+    Object.defineProperty(window, "innerHeight", { value: 600, configurable: true });
+    HTMLElement.prototype.getBoundingClientRect = () => offscreenRect() as DOMRect;
+    const el = mountReveal(<a href="#cta">Contribuer</a>);
+    expect(el.querySelector("[inert]")).toBeNull();
+    expect(el.innerHTML).not.toMatch(/\bopacity-0\b/);
   });
 });

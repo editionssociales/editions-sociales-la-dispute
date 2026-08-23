@@ -68,6 +68,7 @@ export function NewsletterForm() {
           type="email"
           required
           placeholder="vous@exemple.fr"
+          autoComplete="email"
           aria-invalid={emailInvalid ? true : undefined}
           aria-describedby={emailInvalid ? `${emailId}-status` : undefined}
           // Bordure transparente PERMANENTE (aucun saut de boîte à l'erreur),
