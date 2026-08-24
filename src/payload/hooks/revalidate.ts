@@ -319,6 +319,38 @@ export const revalidateSouscriptionAfterChange: GlobalAfterChangeHook = ({ req }
   revalidatePath('/souscription')
 }
 
+/**
+ * Purge immédiate de `/souscription` — levier partagé par les hooks de la
+ * collection `virements-souscription` (une contribution par virement change
+ * la jauge et le compteur de contributeur·rices, cf.
+ * `VirementsSouscription.ts`) et par l'import de classeur, qui purge UNE fois
+ * pour tout le run plutôt qu'une fois par ligne écrite
+ * (`virements-import.ts`, même parti pris que `revalidateCatalogueNow`).
+ * Try/catch global, même parti pris que `revalidateCatalogueNow` : hors d'une
+ * requête Next (test Vitest, script `payload run`), l'invariant « static
+ * generation store missing » JETTE — avertir, jamais casser un import qui a
+ * déjà écrit en base ; le filet ISR 24 h rattrape.
+ */
+export function revalidateSouscriptionNow(): void {
+  try {
+    revalidatePath('/souscription')
+  } catch (err) {
+    console.warn('[revalidate] revalidation souscription impossible (hors requête Next ?)', err)
+  }
+}
+
+/** Hook `virements-souscription` (écriture back-office ligne à ligne). */
+export const revalidateSouscriptionCollectionAfterChange: CollectionAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidateSouscriptionNow()
+}
+
+/** Hook `virements-souscription` (suppression back-office). */
+export const revalidateSouscriptionCollectionAfterDelete: CollectionAfterDeleteHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  revalidateSouscriptionNow()
+}
+
 /** Hook `page-contact` : seule la page /contact lit ce global. */
 export const revalidatePageContactAfterChange: GlobalAfterChangeHook = ({ req }) => {
   if (req.context?.disableRevalidate) return

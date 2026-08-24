@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseChargeSearchPage, sumDonations, type DonationCharge } from "./donations-core";
+import { addTotals, parseChargeSearchPage, sumDonations, type DonationCharge } from "./donations-core";
 
 /**
  * `donations.ts` (I/O, `server-only`) n'est volontairement pas importé ici :
@@ -135,5 +135,32 @@ describe("parseChargeSearchPage — parsing de la réponse Stripe charges/search
     expect(() =>
       parseChargeSearchPage({ data: [{ id: "ch_1", amount_captured: "5000" }] }),
     ).toThrow(/amount_captured/);
+  });
+});
+
+/**
+ * Somme des deux sources de contributions (client 2026-08-24) : charges
+ * Stripe + virements bancaires saisis au back-office. La jauge ne distingue
+ * pas le moyen de paiement.
+ */
+describe("addTotals", () => {
+  it("additionne euros ET contributeur·rices des deux sources", () => {
+    expect(
+      addTotals({ collected: 1250, contributors: 31 }, { collected: 300, contributors: 4 }),
+    ).toEqual({ collected: 1550, contributors: 35 });
+  });
+
+  it("aucun virement → total Stripe inchangé", () => {
+    expect(addTotals({ collected: 1250, contributors: 31 }, { collected: 0, contributors: 0 })).toEqual({
+      collected: 1250,
+      contributors: 31,
+    });
+  });
+
+  it("arrondit au centime — les virements sont saisis en euros décimaux, pas en centimes entiers", () => {
+    expect(addTotals({ collected: 0.1, contributors: 1 }, { collected: 0.2, contributors: 1 })).toEqual({
+      collected: 0.3,
+      contributors: 2,
+    });
   });
 });

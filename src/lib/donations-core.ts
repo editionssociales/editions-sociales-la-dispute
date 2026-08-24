@@ -84,3 +84,25 @@ export function sumDonations(charges: DonationCharge[]): {
   const collectedMinor = nets.reduce((sum, net) => sum + net, 0);
   return { collected: collectedMinor / 100, contributors: nets.length };
 }
+
+/** Total d'une source de contributions — euros collectés et nombre de contributions. */
+export interface ContributionTotals {
+  collected: number;
+  contributors: number;
+}
+
+/**
+ * Somme de deux sources de contributions (client 2026-08-24 : dons par carte
+ * + virements bancaires) — les euros s'additionnent, les contributeur·rices
+ * aussi : une même personne comptée deux fois parce qu'elle a donné deux fois
+ * l'est déjà au sein d'une seule source (`sumDonations` compte les charges,
+ * pas les personnes), le mélange des deux sources ne change pas cette règle.
+ * Arrondi au centime — les montants des virements sont saisis en euros
+ * décimaux, jamais en centimes entiers comme les charges Stripe.
+ */
+export function addTotals(a: ContributionTotals, b: ContributionTotals): ContributionTotals {
+  return {
+    collected: Math.round((a.collected + b.collected) * 100) / 100,
+    contributors: a.contributors + b.contributors,
+  };
+}

@@ -19,6 +19,7 @@ import { Orders } from './payload/collections/Orders.ts'
 import { PromoCodes } from './payload/collections/PromoCodes.ts'
 import { Rencontres } from './payload/collections/Rencontres.ts'
 import { Users } from './payload/collections/Users.ts'
+import { VirementsSouscription } from './payload/collections/VirementsSouscription.ts'
 import { attachPoolErrorHandler } from './payload/lib/pool-error-handler.ts'
 import { PageAPropos } from './payload/globals/PageAPropos.ts'
 import { PageContact } from './payload/globals/PageContact.ts'
@@ -84,6 +85,7 @@ export default buildConfig({
   collections: [
     Books,
     Orders,
+    VirementsSouscription,
     Authors,
     BookLabels,
     Media,

@@ -190,9 +190,12 @@ export default async function SouscriptionPage() {
   // Interrupteur de la phase dons (E1) : tant que `STRIPE_SECRET_KEY` est
   // absente, la page reste en iso-rendu (CTA honnêtement désactivés, R7).
   const enabled = stripeEnabled();
-  // `getCampaign2026()` ne fait aucun appel réseau tant que `stripeEnabled()`
+  // `getCampaign2026()` ne fait aucun appel RÉSEAU tant que `stripeEnabled()`
   // est faux (elle jette avant tout fetch, absorbée en `null` — `lib/donations.ts`) :
-  // gratuit à appeler inconditionnellement.
+  // gratuit à appeler inconditionnellement. Elle lit en revanche TOUJOURS les
+  // virements de souscription en base (`lib/virements.ts`, seconde source de
+  // la jauge depuis le 2026-08-24) — une requête Postgres locale de plus, du
+  // même ordre que les deux lectures Payload qui l'accompagnent ci-dessous.
   const [campaign2026, content, releases] = await Promise.all([
     getCampaign2026(),
     getPageSouscription(),

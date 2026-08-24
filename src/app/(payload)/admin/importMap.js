@@ -28,6 +28,7 @@ import { OrderClientCell as OrderClientCell_c85bbcca92e65625b8d3ed60870be711 } f
 import { OrderContentCell as OrderContentCell_0c21c39c4955774236e15eb61138f92c } from '../../../payload/admin/orders/OrderContentCell.tsx'
 import { OrdersFilterChipsPanel as OrdersFilterChipsPanel_54541178fb8cd99cf29cfb7d7e6c24ec } from '../../../payload/admin/orders/OrdersFilterChipsPanel.tsx'
 import { OrderExportPanel as OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0 } from '../../../payload/admin/OrderExportPanel.tsx'
+import { VirementsImportPanel as VirementsImportPanel_416e4ba4045d13f1f6d3d944fededbb4 } from '../../../payload/admin/virements/VirementsImportPanel.tsx'
 import { HighlightLiveCell as HighlightLiveCell_601e17702a673359c1d6db00f11b092b } from '../../../payload/admin/cells/HighlightLiveCell.tsx'
 import { RencontresFilterChipsPanel as RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7 } from '../../../payload/admin/rencontres/RencontresFilterChipsPanel.tsx'
 import { PromoStatusCell as PromoStatusCell_25194799f840adb1e4fb478a2598df32 } from '../../../payload/admin/cells/PromoStatusCell.tsx'
@@ -73,6 +74,7 @@ export const importMap = {
   "/payload/admin/orders/OrderContentCell.tsx#OrderContentCell": OrderContentCell_0c21c39c4955774236e15eb61138f92c,
   "/payload/admin/orders/OrdersFilterChipsPanel.tsx#OrdersFilterChipsPanel": OrdersFilterChipsPanel_54541178fb8cd99cf29cfb7d7e6c24ec,
   "/payload/admin/OrderExportPanel.tsx#OrderExportPanel": OrderExportPanel_1ebdd48e686d1c796bc56af812cbfcf0,
+  "/payload/admin/virements/VirementsImportPanel.tsx#VirementsImportPanel": VirementsImportPanel_416e4ba4045d13f1f6d3d944fededbb4,
   "/payload/admin/cells/HighlightLiveCell.tsx#HighlightLiveCell": HighlightLiveCell_601e17702a673359c1d6db00f11b092b,
   "/payload/admin/rencontres/RencontresFilterChipsPanel.tsx#RencontresFilterChipsPanel": RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7,
   "/payload/admin/cells/PromoStatusCell.tsx#PromoStatusCell": PromoStatusCell_25194799f840adb1e4fb478a2598df32,

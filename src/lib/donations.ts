@@ -2,7 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { stripeEnabled } from "./stripe";
 import { CAMPAIGN_KEY, type Campaign2026, deriveCampaign2026 } from "./donation-tiers";
-import { type DonationCharge, parseChargeSearchPage, sumDonations } from "./donations-core";
+import { addTotals, type DonationCharge, parseChargeSearchPage, sumDonations } from "./donations-core";
+import { getVirementTotals } from "./virements";
 
 /**
  * Jauge 2026 vivante — source de vérité = les **charges** Stripe elles-mêmes
@@ -83,11 +84,20 @@ export const getDonationTotals = cache(async (): Promise<DonationCharge[]> => {
  * l'ouverture (`stripeEnabled()` faux), jauge honnêtement à 0 ; en
  * campagne (clé posée), panne Stripe → compteur remplacé par une mention
  * neutre et barre non rendue, jamais un faux 0.
+ *
+ * DEUX sources depuis le 2026-08-24 (demande client) : les charges Stripe
+ * (dons par carte) ET les virements bancaires saisis au back-office
+ * (`virements.ts`) — « il y a quelques personnes qui nous font des virements
+ * directement sur notre compte pour la souscription ». Somme pure
+ * (`addTotals`), montants ET contributeur·rices : la jauge ne distingue pas
+ * le moyen de paiement, une contribution est une contribution. La panne d'UNE
+ * des deux sources retombe sur la même branche `null` que la panne Stripe —
+ * une jauge amputée d'une source serait un faux total, pas une dégradation.
  */
 export async function getCampaign2026(): Promise<Campaign2026 | null> {
   try {
-    const charges = await getDonationTotals();
-    return deriveCampaign2026(sumDonations(charges));
+    const [charges, virements] = await Promise.all([getDonationTotals(), getVirementTotals()]);
+    return deriveCampaign2026(addTotals(sumDonations(charges), virements));
   } catch (err) {
     console.error("[donations] getCampaign2026 indisponible:", err);
     return null;

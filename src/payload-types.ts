@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     books: Book;
     orders: Order;
+    'virements-souscription': VirementsSouscription;
     authors: Author;
     libelles: Libelle;
     media: Media;
@@ -86,6 +87,7 @@ export interface Config {
   collectionsSelect: {
     books: BooksSelect<false> | BooksSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
+    'virements-souscription': VirementsSouscriptionSelect<false> | VirementsSouscriptionSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     libelles: LibellesSelect<false> | LibellesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -378,7 +380,7 @@ export interface Libelle {
   createdAt: string;
 }
 /**
- * Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé.
+ * Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé. Pour remplacer une image : téléverser un nouveau fichier (jamais l’outil de recadrage en place — l’image modifiée garderait la même adresse et resterait invisible derrière le cache, jusqu’à un an).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
@@ -509,6 +511,56 @@ export interface PromoCode {
   minCart?: number | null;
   expiresAt?: string | null;
   active?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Contributions à la souscription reçues par virement bancaire (hors site) — elles s’ajoutent au montant collecté et au nombre de contributeur·rices affichés sur la page Souscription. Importez le fichier Excel de suivi ci-dessous : le réimporter en entier après chaque ajout ne crée jamais de doublon.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "virements-souscription".
+ */
+export interface VirementsSouscription {
+  id: number;
+  /**
+   * Jour du virement (demandé au client « pour l’analyse plus tard ») — jamais une heure.
+   */
+  date: string;
+  nom: string;
+  /**
+   * En euros, comme les montants des commandes (ex. 50 ou 37,50).
+   */
+  montantEUR: number;
+  /**
+   * Reconnu automatiquement à l’import depuis la colonne « choix de la souscription » (intitulé du palier ou montant) ; « Autre » quand la colonne est remplie sans correspondre à un palier. Jamais deviné depuis le montant versé.
+   */
+  palier?:
+    | (
+        | 'palier-15'
+        | 'palier-35'
+        | 'palier-50'
+        | 'palier-75'
+        | 'palier-100'
+        | 'palier-200'
+        | 'palier-300'
+        | 'palier-500'
+        | 'palier-1000'
+        | 'autre'
+      )
+    | null;
+  /**
+   * Cellule « choix de la souscription » telle qu’elle est écrite dans le classeur — conservée même quand le palier est reconnu.
+   */
+  choixSaisi?: string | null;
+  email?: string | null;
+  /**
+   * Libellé du virement, commentaire de l’équipe — informatif.
+   */
+  reference?: string | null;
+  /**
+   * Empreinte date + nom + montant de la ligne du classeur — c’est elle qui évite les doublons quand le fichier est réimporté. Vide pour une ligne saisie à la main (elle ne sera jamais écrasée par un import).
+   */
+  cleImport?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -673,6 +725,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'orders';
         value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'virements-souscription';
+        value: number | VirementsSouscription;
       } | null)
     | ({
         relationTo: 'authors';
@@ -862,6 +918,22 @@ export interface OrdersSelect<T extends boolean = true> {
   stripePaymentIntentId?: T;
   stockDecremented?: T;
   confirmationSent?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "virements-souscription_select".
+ */
+export interface VirementsSouscriptionSelect<T extends boolean = true> {
+  date?: T;
+  nom?: T;
+  montantEUR?: T;
+  palier?: T;
+  choixSaisi?: T;
+  email?: T;
+  reference?: T;
+  cleImport?: T;
   updatedAt?: T;
   createdAt?: T;
 }

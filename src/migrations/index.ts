@@ -23,6 +23,7 @@ import * as migration_20260821_150000_souscription_recit_sobre from './20260821_
 import * as migration_20260821_150000_editorial_pages from './20260821_150000_editorial_pages';
 import * as migration_20260821_160000_produits_contreparties from './20260821_160000_produits_contreparties';
 import * as migration_20260821_170000_a_paraitre_derive from './20260821_170000_a_paraitre_derive';
+import * as migration_20260824_100000_virements_souscription from './20260824_100000_virements_souscription'
 
 export const migrations = [
   {
@@ -149,5 +150,10 @@ export const migrations = [
     up: migration_20260821_170000_a_paraitre_derive.up,
     down: migration_20260821_170000_a_paraitre_derive.down,
     name: '20260821_170000_a_paraitre_derive',
+  },
+  {
+    up: migration_20260824_100000_virements_souscription.up,
+    down: migration_20260824_100000_virements_souscription.down,
+    name: '20260824_100000_virements_souscription',
   },
 ];

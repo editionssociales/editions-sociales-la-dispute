@@ -47,6 +47,11 @@ describe("shouldMoveRouteFocus — garde catalogue (issue #115)", () => {
   });
 
   it("autorise le déplacement depuis un lien (clic couverture)", () => {
+    // `<a>` brut ASSUMÉ : ce test porte sur la sémantique DOM du focus après
+    // navigation, pas sur le rendu d'un lien applicatif — un `<Link>` de
+    // next/link n'a rien à faire dans un jsdom sans routeur. Règle Next
+    // désactivée ici seulement (elle ne distingue pas un test d'une page).
+    // eslint-disable-next-line @next/next/no-html-link-for-pages
     const el = mount(<a href="/catalogue/editions-sociales/un-livre">Fiche</a>);
     const link = el.querySelector("a")!;
     act(() => {
