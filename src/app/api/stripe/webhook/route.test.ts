@@ -184,7 +184,7 @@ function checkoutSession(overrides: Record<string, unknown> = {}): Record<string
     payment_status: "paid",
     amount_total: 3650,
     payment_intent: "pi_test_order_1",
-    customer_details: { email: "client@exemple.fr" },
+    customer_details: { email: "client@exemple.fr", phone: "+33612345678" },
     collected_information: {
       shipping_details: {
         name: "Jean Dupont",
@@ -376,6 +376,8 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
     expect(orders[0]).toMatchObject({
       status: "paid",
       email: "client@exemple.fr",
+      // Collecté au paiement depuis le 2026-08-24 (client) — recopié tel quel.
+      phone: "+33612345678",
       stripeSessionId: "cs_test_order_1",
       stripePaymentIntentId: "pi_test_order_1",
       shippingMethod: "standard",
@@ -393,6 +395,19 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
     expect(stockUpdates).toEqual([{ id: 12, stock: 3 }]);
     expect(sendOrderConfirmation).toHaveBeenCalledTimes(1);
     expect(revalidateTag).not.toHaveBeenCalled(); // le chemin dons n'est jamais déclenché ici
+  });
+
+  it("session sans téléphone (don, session antérieure au 2026-08-24) → commande créée quand même, téléphone vide", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_order_sans_tel",
+        type: "checkout.session.completed",
+        object: checkoutSession({ customer_details: { email: "client@exemple.fr" } }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(1);
+    expect(orders[0].phone).toBeNull();
   });
 
   it("rejoué (même session) → ne recrée pas la commande, ne décrémente pas deux fois", async () => {

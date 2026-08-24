@@ -166,6 +166,10 @@ function partSessionFacts(
     stripeSessionId: session.id,
     stripePaymentIntentId: paymentIntentId(session),
     email: session.customer_details?.email ?? null,
+    // Collecté par Stripe depuis le 2026-08-24 (`phone_number_collection`,
+    // route checkout) — absent des sessions antérieures et des dons, d'où le
+    // repli `null` plutôt qu'une garantie.
+    phone: session.customer_details?.phone ?? null,
     shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
     lines,
     orderType,
@@ -603,6 +607,11 @@ export async function handleDonationSessionCompleted(
       stripeSessionId: session.id,
       stripePaymentIntentId: paymentIntentId(session),
       email: session.customer_details?.email ?? null,
+      // Le parcours de don ne demande PAS le téléphone (`souscription/
+      // actions.ts` : pas de `phone_number_collection` — un champ de plus se
+      // paierait en conversion pendant la campagne) ; Stripe le remonte donc
+      // seulement si le donateur en a un enregistré, jamais garanti.
+      phone: session.customer_details?.phone ?? null,
       shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
       lines: resolveDonationLines(session.id, decoded, books),
       orderType: "don",

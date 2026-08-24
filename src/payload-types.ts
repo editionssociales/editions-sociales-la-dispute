@@ -431,6 +431,10 @@ export interface Order {
   orderType: 'commande' | 'precommande' | 'don';
   paidAt?: string | null;
   email: string;
+  /**
+   * Collecté par Stripe au paiement depuis le 2026-08-24 (demandé par l'équipe pour l'export des commandes et les livraisons) — vide sur les commandes antérieures, sur les dons et sur tout l’historique WooCommerce.
+   */
+  phone?: string | null;
   shippingAddress: {
     fullName: string;
     addressLine1: string;
@@ -909,6 +913,7 @@ export interface OrdersSelect<T extends boolean = true> {
   orderType?: T;
   paidAt?: T;
   email?: T;
+  phone?: T;
   shippingAddress?:
     | T
     | {

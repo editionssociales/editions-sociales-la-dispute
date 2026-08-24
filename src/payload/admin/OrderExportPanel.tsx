@@ -9,8 +9,10 @@ import styles from './dashboard/dashboard.module.css'
  * fichier ne doit pas changer). Formulaire : `dashboard/OrderExportForm.tsx`
  * (bornes préremplies : aujourd'hui → un mois en arrière).
  *
- * Colonnes des deux profils validées par le client le 13/07
- * (`plan/04-commerce.md`, décision n°5 close) — cf.
+ * Colonnes du profil « compta » validées par le client le 13/07
+ * (`plan/04-commerce.md`, décision n°5 close) ; celles du profil
+ * « préparation » refondues à sa demande le 24/08 (date, adresse éclatée,
+ * nom/prénom, téléphone — verbatim dans `order-export.ts`) — cf.
  * `order-export-handler.ts` pour le détail des profils.
  *
  * `.panel`/`.panelTitle`/`.muted` partagés de `dashboard.module.css` (issue
@@ -25,7 +27,8 @@ export function OrderExportPanel() {
       <OrderExportForm />
       <p className={styles.muted}>
         Plage par défaut : aujourd&apos;hui et un mois en arrière (modifiable / vidable pour
-        toutes les commandes). « Préparation » : statuts « payée »/« préparée ». « Compta » :
+        toutes les commandes). « Préparation » : statuts « payée »/« préparée », une ligne par
+        article, avec date, adresse de livraison éclatée, e-mail et téléphone. « Compta » :
         toutes commandes, TVA 5,5 % ventilée.
       </p>
     </div>

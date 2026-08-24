@@ -173,6 +173,7 @@ function orderCreateData(overrides: Partial<OrderCreateData> = {}): OrderCreateD
     status: "paid",
     orderType: "commande",
     email: "client@exemple.fr",
+    phone: null,
     shippingAddress: ADDRESS,
     billingAddress: ADDRESS,
     lines: [

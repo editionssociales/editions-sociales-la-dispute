@@ -5,6 +5,7 @@ import {
   formatComptaCsv,
   formatPreparationCsv,
   PREPARATION_ORDER_STATUSES,
+  splitFullName,
   type OrderExportRow,
 } from "./order-export.ts";
 
@@ -27,6 +28,7 @@ function order(overrides: Partial<OrderExportRow> = {}): OrderExportRow {
     createdAt: "2026-07-10T14:32:00.000Z",
     status: "paid",
     email: "jeanne@example.org",
+    phone: "+33612345678",
     lines: [
       { bookId: 101, isbn: "9782360830001", title: "Le Capital, livre 1", quantity: 2, unitPriceTTC: 12.5 },
     ],
@@ -64,15 +66,59 @@ describe("PREPARATION_ORDER_STATUSES", () => {
   });
 });
 
+/**
+ * Séparation nom/prénom : heuristique assumée (Stripe ne collecte qu'un champ
+ * « nom complet »), verrouillée ici cas par cas — cf. `splitFullName`.
+ */
+describe("splitFullName", () => {
+  it("« Prénom Nom » — le dernier mot est le nom", () => {
+    expect(splitFullName("Jeanne Dupont")).toEqual({ prenom: "Jeanne", nom: "Dupont" });
+  });
+
+  it("plusieurs prénoms — tout ce qui précède le nom reste prénom", () => {
+    expect(splitFullName("Marie Claire Dupont")).toEqual({ prenom: "Marie Claire", nom: "Dupont" });
+  });
+
+  it("particules reprises avec le nom (jamais coupées)", () => {
+    expect(splitFullName("Simone de Beauvoir")).toEqual({ prenom: "Simone", nom: "de Beauvoir" });
+    expect(splitFullName("Vincent van Gogh")).toEqual({ prenom: "Vincent", nom: "van Gogh" });
+    expect(splitFullName("Marie de La Fontaine")).toEqual({ prenom: "Marie", nom: "de La Fontaine" });
+  });
+
+  it("« NOM Prénom » (usage administratif français) — le mot en capitales est le nom", () => {
+    expect(splitFullName("DUPONT Jeanne")).toEqual({ prenom: "Jeanne", nom: "DUPONT" });
+    expect(splitFullName("DUPONT Marie Claire")).toEqual({ prenom: "Marie Claire", nom: "DUPONT" });
+  });
+
+  it("tout en capitales → pas de signal d'ordre, on retombe sur « Prénom Nom »", () => {
+    expect(splitFullName("JEANNE DUPONT")).toEqual({ prenom: "JEANNE", nom: "DUPONT" });
+  });
+
+  it("un seul mot → tout en nom, jamais un prénom inventé", () => {
+    expect(splitFullName("Jeanne")).toEqual({ prenom: "", nom: "Jeanne" });
+  });
+
+  it("vide ou espaces → deux colonnes vides, jamais d'exception", () => {
+    expect(splitFullName("")).toEqual({ prenom: "", nom: "" });
+    expect(splitFullName("   ")).toEqual({ prenom: "", nom: "" });
+  });
+
+  it("espaces multiples et bords blancs normalisés", () => {
+    expect(splitFullName("  Jeanne   Dupont  ")).toEqual({ prenom: "Jeanne", nom: "Dupont" });
+  });
+});
+
 describe("formatPreparationCsv", () => {
-  it("émet l'en-tête exact du profil AOE décalqué", () => {
+  it("émet l'en-tête demandé par le client le 2026-08-24, dans son ordre", () => {
     const csv = formatPreparationCsv([]);
     expect(csv).toBe(
-      "E-mail du client;Type;Article #;UGS(ISBN);Nom;Quantité;Prix du produit;Code de coupon;Réduction\r\n",
+      "Date de commande;Titre;Quantité;Nom;Prénom;Adresse;Complément d'adresse;Code postal;Ville;Pays;" +
+        "E-mail;Téléphone;N° de commande;Type;UGS(ISBN);Article #;Prix du produit;Code de coupon;Réduction;" +
+        "Nom complet (tel que saisi)\r\n",
     );
   });
 
-  it("une ligne par ligne de commande, type/coupon/remise répétés sur chaque ligne", () => {
+  it("une ligne par ligne de commande, faits de la commande répétés sur chaque ligne", () => {
     const csv = formatPreparationCsv([
       order({
         email: "jeanne@example.org",
@@ -87,9 +133,32 @@ describe("formatPreparationCsv", () => {
     const lines = csv.trim().split("\r\n");
     expect(lines).toHaveLength(3); // en-tête + 2 lignes d'article
     expect(lines[1]).toBe(
-      "jeanne@example.org;Commande;101;9782360830001;Le Capital, livre 1;2;12,50;SOLIDAIRE10;2,50",
+      "10/07/2026;Le Capital, livre 1;2;Dupont;Jeanne;12 rue des Fables;;75020;Paris;FR;" +
+        "jeanne@example.org;+33612345678;CMD-000042;Commande;9782360830001;101;12,50;SOLIDAIRE10;2,50;Jeanne Dupont",
     );
-    expect(lines[2]).toBe("jeanne@example.org;Commande;202;;Sans ISBN;1;8,00;SOLIDAIRE10;2,50");
+    expect(lines[2]).toBe(
+      "10/07/2026;Sans ISBN;1;Dupont;Jeanne;12 rue des Fables;;75020;Paris;FR;" +
+        "jeanne@example.org;+33612345678;CMD-000042;Commande;;202;8,00;SOLIDAIRE10;2,50;Jeanne Dupont",
+    );
+  });
+
+  it("date au jour de PARIS, pas au jour UTC (une commande de 1 h du matin ne recule pas d'un jour)", () => {
+    const csv = formatPreparationCsv([order({ createdAt: "2026-07-10T23:30:00.000Z" })]);
+    // 23h30 UTC le 10 = 1h30 le 11 à Paris — la feuille de préparation doit
+    // dire le 11, sans quoi l'équipe cherche la commande la veille.
+    expect(csv.trim().split("\r\n")[1].startsWith("11/07/2026;")).toBe(true);
+  });
+
+  it("téléphone absent (commande antérieure au 2026-08-24, don, historique Woo) → colonne vide, jamais « null »", () => {
+    const csv = formatPreparationCsv([order({ phone: null })]);
+    expect(csv.trim().split("\r\n")[1]).toContain(";jeanne@example.org;;CMD-000042;");
+  });
+
+  it("complément d'adresse rendu dans sa propre colonne (l'adresse complète, éclatée)", () => {
+    const csv = formatPreparationCsv([
+      order({ shippingAddress: address({ addressLine2: "Bâtiment C, 3e étage" }) }),
+    ]);
+    expect(csv.trim().split("\r\n")[1]).toContain(";12 rue des Fables;Bâtiment C, 3e étage;75020;Paris;FR;");
   });
 
   it("libellé « Précommande » quand orderType = precommande", () => {
@@ -101,11 +170,10 @@ describe("formatPreparationCsv", () => {
         ],
       }),
     ]);
-    const lines = csv.trim().split("\r\n");
-    expect(lines[1]).toBe("jeanne@example.org;Précommande;5;9782000000005;Livre à paraître;1;20,00;;0,00");
+    expect(csv.trim().split("\r\n")[1]).toContain(";CMD-000042;Précommande;9782000000005;5;20,00;");
   });
 
-  it("libellé « Don » quand orderType = don — apparaît normalement (l'export préparation ne change pas)", () => {
+  it("libellé « Don » quand orderType = don — apparaît normalement (un don s'expédie comme une commande)", () => {
     const csv = formatPreparationCsv([
       order({
         orderType: "don",
@@ -114,8 +182,7 @@ describe("formatPreparationCsv", () => {
         ],
       }),
     ]);
-    const lines = csv.trim().split("\r\n");
-    expect(lines[1]).toBe("jeanne@example.org;Don;9;;Contrepartie tote bag;1;50,00;;0,00");
+    expect(csv.trim().split("\r\n")[1]).toContain(";CMD-000042;Don;;9;50,00;");
   });
 
   it("échappe un titre contenant le séparateur (RFC 4180)", () => {

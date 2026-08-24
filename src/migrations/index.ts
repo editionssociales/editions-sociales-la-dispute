@@ -25,6 +25,7 @@ import * as migration_20260821_160000_produits_contreparties from './20260821_16
 import * as migration_20260821_170000_a_paraitre_derive from './20260821_170000_a_paraitre_derive';
 import * as migration_20260824_100000_virements_souscription from './20260824_100000_virements_souscription'
 import * as migration_20260824_110000_ebooks from './20260824_110000_ebooks'
+import * as migration_20260824_120000_commande_telephone from './20260824_120000_commande_telephone'
 
 export const migrations = [
   {
@@ -161,5 +162,10 @@ export const migrations = [
     up: migration_20260824_110000_ebooks.up,
     down: migration_20260824_110000_ebooks.down,
     name: '20260824_110000_ebooks',
+  },
+  {
+    up: migration_20260824_120000_commande_telephone.up,
+    down: migration_20260824_120000_commande_telephone.down,
+    name: '20260824_120000_commande_telephone',
   },
 ];

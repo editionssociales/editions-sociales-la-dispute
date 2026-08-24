@@ -99,6 +99,7 @@ async function fetchOrdersForExport(payload: Payload, opts: FetchOrdersOptions):
     createdAt: order.createdAt,
     status: order.status,
     email: order.email,
+    phone: order.phone ?? null,
     lines: (order.lines ?? []).map((line) => ({
       bookId: typeof line.book === 'number' ? line.book : line.book.id,
       isbn: line.isbnSnapshot ?? null,

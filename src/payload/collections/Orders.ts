@@ -277,6 +277,19 @@ export const Orders: CollectionConfig = {
       access: lockedAfterCreate,
     },
     {
+      name: 'phone',
+      type: 'text',
+      label: 'Téléphone',
+      access: lockedAfterCreate,
+      admin: {
+        description:
+          'Collecté par Stripe au paiement depuis le 2026-08-24 (demandé par ' +
+          "l'équipe pour l'export des commandes et les livraisons) — vide sur " +
+          'les commandes antérieures, sur les dons et sur tout l’historique ' +
+          'WooCommerce.',
+      },
+    },
+    {
       name: 'shippingAddress',
       type: 'group',
       label: 'Adresse de livraison',

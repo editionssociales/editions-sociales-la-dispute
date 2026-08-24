@@ -1,7 +1,8 @@
 /**
  * Formatage pur des deux profils d'export CSV commandes (plan/04-commerce.md
- * §étape 10 ; décision client n°5 encore OUVERTE — colonnes à valider avec la
- * personne compta, cf. corps de la PR). Zéro I/O, zéro Payload : les shapes
+ * §étape 10). Colonnes du profil « préparation » ARBITRÉES par le client le
+ * 2026-08-24 (fil Clara, verbatim repris dans `PREPARATION_HEADER`) ; celles
+ * du profil « compta » restent celles validées le 2026-07-13. Zéro I/O, zéro Payload : les shapes
  * ci-dessous sont des interfaces locales décorrélées de `payload-types.ts`
  * (même découplage que `order-mail.ts`) — l'orchestration (`src/payload/lib/
  * order-export-handler.ts`) fait le mapping depuis les docs Payload.
@@ -19,7 +20,17 @@
  * étanche des deux autres au niveau comptable — `formatComptaCsv` laisse sa
  * colonne de TVA vide pour ces lignes (un don n'est pas une vente) ;
  * `formatPreparationCsv` ne change pas, un don y apparaît normalement.
+ *
+ * Refonte des colonnes « préparation » (client 2026-08-24) : la feuille de
+ * l'équipe porte désormais date, adresse éclatée, nom/prénom séparés et
+ * téléphone. Deux points durs, tous deux nommés là où ils se jouent —
+ * `splitFullName` (Stripe ne collecte qu'un nom complet, la séparation est
+ * une heuristique et la colonne « Nom complet (tel que saisi) » reste la
+ * vérité) et le téléphone (collecté depuis cette même date seulement, donc
+ * vide sur tout l'historique et sur les dons).
  */
+
+import { isoDayParis } from "./format";
 
 /** Même six statuts que `Orders.ts:status` — dupliqué ici en type large (string) pour ne pas coupler ce module pur aux types générés Payload. */
 export type OrderExportStatus = "paid" | "prepared" | "shipped" | "cancelled" | "refunded" | "failed";
@@ -88,6 +99,8 @@ export interface OrderExportRow {
   createdAt: string;
   status: string;
   email: string;
+  /** Collecté par Stripe au paiement depuis le 2026-08-24 (`Orders.phone`) — vide sur tout l'historique et sur les dons. */
+  phone: string | null;
   lines: OrderExportLine[];
   shippingAddress: OrderExportAddress;
   billingAddress: OrderExportAddress;
@@ -143,42 +156,151 @@ function toCsv(header: readonly string[], rows: readonly (readonly string[])[]):
   return lines.join(LINE_BREAK) + LINE_BREAK;
 }
 
+/**
+ * Particules d'un nom de famille — reprises avec le nom qu'elles précèdent
+ * (« de Beauvoir », « van Gogh »). Liste courte et volontairement close :
+ * elle sert à ne pas couper un nom en deux, pas à couvrir l'onomastique
+ * mondiale.
+ */
+const PARTICULES = new Set([
+  "de", "du", "des", "le", "la", "les", "da", "das", "dos", "del", "della", "di",
+  "van", "von", "der", "den", "ter", "ten", "el", "al", "ben", "bin", "mac", "mc", "o",
+]);
+
+export interface SplitName {
+  prenom: string;
+  nom: string;
+}
+
+/**
+ * Sépare un nom complet en prénom / nom (client 2026-08-24 : « nom ; prénom »
+ * en colonnes distinctes de l'export).
+ *
+ * C'est une HEURISTIQUE, et elle est assumée comme telle : Stripe Checkout ne
+ * collecte qu'UN champ « nom complet » — la donnée séparée n'existe nulle
+ * part, il n'y a donc rien à « lire » correctement. Deux règles, dans cet
+ * ordre :
+ *
+ * 1. Premier mot en CAPITALES alors qu'un autre ne l'est pas (« DUPONT
+ *    Marie ») → c'est le nom de famille : usage administratif français
+ *    courant, et le seul cas où l'ordre saisi est explicite.
+ * 2. Sinon, ordre « Prénom Nom » : le dernier mot est le nom, précédé de ses
+ *    particules éventuelles (« Marie de La Fontaine » → nom « de La
+ *    Fontaine »).
+ *
+ * Un seul mot → tout en nom (jamais un prénom inventé). La colonne « Nom
+ * complet (tel que saisi) » de l'export reste la donnée de vérité : en cas de
+ * doute sur une étiquette, c'est elle qui fait foi.
+ */
+export function splitFullName(fullName: string): SplitName {
+  const mots = fullName.trim().split(/\s+/).filter(Boolean);
+  if (mots.length === 0) return { prenom: "", nom: "" };
+  if (mots.length === 1) return { prenom: "", nom: mots[0] };
+
+  const enCapitales = (mot: string) => mot === mot.toLocaleUpperCase("fr") && /\p{L}/u.test(mot);
+  if (enCapitales(mots[0]) && mots.slice(1).some((mot) => !enCapitales(mot))) {
+    return { prenom: mots.slice(1).join(" "), nom: mots[0] };
+  }
+
+  let debutNom = mots.length - 1;
+  while (debutNom > 1 && PARTICULES.has(mots[debutNom - 1].toLocaleLowerCase("fr").replace(/[.'’]/g, ""))) {
+    debutNom--;
+  }
+  return { prenom: mots.slice(0, debutNom).join(" "), nom: mots.slice(debutNom).join(" ") };
+}
+
+/**
+ * Colonnes de l'export « préparation », dans l'ordre demandé par le client le
+ * 2026-08-24 (verbatim : « date de commandes ; titre ; quantité ; nom ;
+ * prénom ; adresse complète de livraison (adresse, cp et ville dans des
+ * colonnes différentes) ; adresse mail ; numéro de téléphone »).
+ *
+ * Les colonnes 1 à 12 SONT cette demande — complément d'adresse et pays
+ * inclus dans « l'adresse complète », sans quoi un envoi en Belgique ou un
+ * « bâtiment C » se perdrait. Les suivantes sont l'ancien profil, conservé
+ * derrière : rien de ce que l'équipe avait n'est retiré (n° de commande,
+ * type, ISBN, référence produit, prix, coupon, remise), et le nom complet
+ * brut ferme la marche comme filet de la séparation nom/prénom.
+ */
 const PREPARATION_HEADER = [
-  "E-mail du client",
-  "Type",
-  "Article #",
-  "UGS(ISBN)",
-  "Nom",
+  "Date de commande",
+  "Titre",
   "Quantité",
+  "Nom",
+  "Prénom",
+  "Adresse",
+  "Complément d'adresse",
+  "Code postal",
+  "Ville",
+  "Pays",
+  "E-mail",
+  "Téléphone",
+  "N° de commande",
+  "Type",
+  "UGS(ISBN)",
+  "Article #",
   "Prix du produit",
   "Code de coupon",
   "Réduction",
+  "Nom complet (tel que saisi)",
 ] as const;
 
 /**
- * Profil « préparation » — décalque des colonnes du profil Advanced Order
- * Export réellement utilisé (plan §étape 10), augmenté d'une colonne « Type »
- * (commande/précommande, client 2026-08-20 — une précommande n'expédie pas au
- * même rythme qu'une commande d'articles déjà parus, l'équipe préparation
- * doit distinguer les deux piles). Une ligne par ligne de commande (le
- * coupon, la remise ET le type, faits au niveau de la commande, sont répétés
- * sur chaque ligne — même aplatissement qu'AOE). L'appelant filtre en amont
- * sur `PREPARATION_ORDER_STATUSES` : ce module ne re-filtre pas.
+ * Jour de la commande à l'heure de PARIS, au format français `JJ/MM/AAAA` —
+ * c'est une feuille de travail humaine, ouverte dans un tableur français.
+ * `isoDayParis` (et non un `slice` de l'ISO UTC) : une commande passée à 1 h
+ * du matin à Paris est datée de la VEILLE en UTC — l'équipe préparation
+ * chercherait sa commande le mauvais jour. Le profil compta, lui, garde sa
+ * date ISO UTC brute : c'est un export machine, aligné sur ce que la compta
+ * a déjà reçu depuis un an, et le changer en cours d'exercice serait une
+ * décision comptable, pas une amélioration de lisibilité.
+ */
+function formatDateFr(createdAt: string): string {
+  const jour = isoDayParis(createdAt);
+  if (!jour) return "";
+  const [annee, mois, jourDuMois] = jour.split("-");
+  return `${jourDuMois}/${mois}/${annee}`;
+}
+
+/**
+ * Profil « préparation » — la feuille de l'équipe pour préparer et expédier.
+ * Colonnes refondues le 2026-08-24 à la demande du client (cf.
+ * `PREPARATION_HEADER`) : elles portent désormais l'adresse de livraison
+ * éclatée, le téléphone et la date, là où le profil d'origine (décalque
+ * Advanced Order Export de WooCommerce) n'avait ni adresse ni date.
+ *
+ * Une ligne par ligne de commande, comme avant : les faits de la commande
+ * (client, adresse, coupon, remise, type) sont répétés sur chacune de ses
+ * lignes — même aplatissement qu'AOE, c'est ce qui rend la feuille triable
+ * par titre pour la préparation. L'appelant filtre en amont sur
+ * `PREPARATION_ORDER_STATUSES` : ce module ne re-filtre pas.
  */
 export function formatPreparationCsv(orders: readonly OrderExportRow[]): string {
-  const rows = orders.flatMap((order) =>
-    order.lines.map((line) => [
-      order.email,
-      orderTypeLabel(order.orderType),
-      String(line.bookId),
-      line.isbn ?? "",
+  const rows = orders.flatMap((order) => {
+    const { prenom, nom } = splitFullName(order.shippingAddress.fullName);
+    return order.lines.map((line) => [
+      formatDateFr(order.createdAt),
       line.title,
       String(line.quantity),
+      nom,
+      prenom,
+      order.shippingAddress.addressLine1,
+      order.shippingAddress.addressLine2 ?? "",
+      order.shippingAddress.postalCode,
+      order.shippingAddress.city,
+      order.shippingAddress.country,
+      order.email,
+      order.phone ?? "",
+      order.number,
+      orderTypeLabel(order.orderType),
+      line.isbn ?? "",
+      String(line.bookId),
       formatAmount(line.unitPriceTTC),
       order.couponCode ?? "",
       formatAmount(order.discountTTC),
-    ]),
-  );
+      order.shippingAddress.fullName,
+    ]);
+  });
   return toCsv(PREPARATION_HEADER, rows);
 }
 

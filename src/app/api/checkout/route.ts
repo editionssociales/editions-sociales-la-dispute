@@ -199,6 +199,13 @@ export async function POST(req: Request): Promise<Response> {
       // ultérieure l'exige (`if_required`, même réglage que les dons).
       customer_creation: "if_required",
       shipping_address_collection: { allowed_countries: ["FR", "BE", "CH"] },
+      // Téléphone (client 2026-08-24, demandé comme colonne de l'export des
+      // commandes — et utile au transporteur). ATTENTION : activé, Stripe
+      // rend le champ OBLIGATOIRE au paiement, il n'y a pas de mode
+      // facultatif. Assumé côté boutique ; volontairement PAS activé sur le
+      // parcours de don/souscription (`souscription/actions.ts`), où chaque
+      // champ de plus se paie en conversion pendant la campagne.
+      phone_number_collection: { enabled: true },
       // Pas de `receipt_email` explicite : l'email n'est connu qu'une fois
       // collecté PAR Stripe pendant le checkout (achat invité, jamais saisi
       // chez nous avant) — comme pour les dons, le reçu Stripe natif suit le

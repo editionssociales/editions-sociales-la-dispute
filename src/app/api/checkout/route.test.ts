@@ -298,6 +298,10 @@ describe("POST /api/checkout — session Stripe (cas nominal)", () => {
     expect(lastSessionBody?.get("shipping_address_collection[allowed_countries][0]")).toBe("FR");
     expect(lastSessionBody?.get("shipping_address_collection[allowed_countries][1]")).toBe("BE");
     expect(lastSessionBody?.get("shipping_address_collection[allowed_countries][2]")).toBe("CH");
+    // Téléphone (client 2026-08-24) : demandé au paiement pour la préparation
+    // des envois et l'export des commandes. Stripe le rend OBLIGATOIRE dès
+    // qu'il est activé — c'est le prix assumé de la colonne.
+    expect(lastSessionBody?.get("phone_number_collection[enabled]")).toBe("true");
 
     expect(lastSessionBody?.get("line_items[0][quantity]")).toBe("2");
     expect(lastSessionBody?.get("line_items[0][price_data][unit_amount]")).toBe("1500");

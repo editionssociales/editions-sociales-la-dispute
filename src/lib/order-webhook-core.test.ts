@@ -22,6 +22,7 @@ function facts(overrides: Partial<OrderSessionFacts> = {}): OrderSessionFacts {
     stripeSessionId: "cs_test_1",
     stripePaymentIntentId: "pi_test_1",
     email: "client@exemple.fr",
+    phone: null,
     shippingAddress: ADDRESS,
     lines: [
       { bookId: 12, titleSnapshot: "Le Capital", isbnSnapshot: "978-1", quantity: 2, unitPriceCents: 1500 },
@@ -44,6 +45,7 @@ describe("buildOrderCreateData", () => {
       status: "paid",
       orderType: "commande",
       email: "client@exemple.fr",
+      phone: null,
       shippingAddress: ADDRESS,
       billingAddress: ADDRESS,
       lines: [
@@ -140,6 +142,7 @@ describe("buildOrderCreateData", () => {
       status: "paid",
       orderType: "don",
       email: "client@exemple.fr",
+      phone: null,
       shippingAddress: ADDRESS,
       billingAddress: ADDRESS,
       lines: [

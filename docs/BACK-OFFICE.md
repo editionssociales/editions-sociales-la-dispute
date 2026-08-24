@@ -192,6 +192,40 @@ optionnel). Le code est automatiquement mis en MAJUSCULES à l'enregistrement
 expiré mais resté « actif » par erreur est signalé sur le tableau de bord
 (vous pouvez le désactiver en un clic depuis là).
 
+## Virements de souscription
+
+Menu de gauche → **Virements (souscription)**. Les contributions reçues par
+virement bancaire — donc en dehors du site — se saisissent ici, et elles
+s'ajoutent aussitôt au montant et au nombre de contributeur·rices affichés
+sur la page Souscription.
+
+Le plus simple est d'importer votre fichier Excel de suivi : panneau
+**Import du fichier de suivi** au-dessus de la liste, colonnes attendues
+**date**, **nom**, **montant**, **choix de la souscription** (l'ordre des
+colonnes n'a pas d'importance ; une colonne e-mail et une colonne notes sont
+acceptées en plus). Réimportez le fichier **entier** après chaque ajout :
+les lignes déjà enregistrées ne sont jamais dupliquées, et l'import ne
+supprime jamais rien. Le rapport vous dit ce qui a été ajouté, mis à jour, et
+quelles lignes n'ont pas pu être lues (avec leur numéro de ligne dans le
+fichier, à corriger puis réimporter).
+
+Vous pouvez aussi ajouter un virement à la main avec le bouton « Créer ».
+
+## Fichiers numériques (ePub)
+
+Menu de gauche → **Fichiers numériques**. Pour qu'un titre soit téléchargeable
+après achat : **Créer** → téléversez l'ePub → choisissez le titre concerné.
+
+À partir de là, toute commande payée qui contient ce titre reçoit un lien de
+téléchargement personnel dans son e-mail de confirmation. Le fichier n'est
+jamais accessible depuis le site sans avoir acheté, et le lien reste valable
+(l'acheteur peut retélécharger son fichier plus tard depuis le même e-mail).
+
+Un seul fichier par titre : pour remplacer un ePub, ouvrez la fiche existante
+et téléversez le nouveau — les liens déjà envoyés continuent de fonctionner et
+donneront le nouveau fichier. Un lien cesse de fonctionner si la commande est
+annulée ou remboursée.
+
 ## Exports comptables
 
 Tableau de bord → panneau **Export compta / préparation**, ou depuis la liste
@@ -199,12 +233,26 @@ des commandes. Deux fichiers téléchargeables (format tableur, ouvrable dans
 Excel) :
 
 - **Export préparation** : les commandes à préparer/expédier (statuts payée
-  et préparée uniquement).
+  et préparée uniquement). Colonnes, dans l'ordre : date de commande, titre,
+  quantité, nom, prénom, adresse, complément, code postal, ville, pays,
+  e-mail, téléphone — puis le n° de commande, le type, l'ISBN, le prix, le
+  coupon et la remise. Une ligne par article commandé.
 - **Export compta** : toutes les commandes sur la période choisie, avec le
   détail de la TVA.
 
 Laissez les dates « Du » / « Au » vides pour tout exporter, ou choisissez une
 période précise.
+
+Deux choses à savoir sur l'export préparation :
+
+- **Le téléphone** n'est demandé au client qu'à partir du 24 août 2026 : la
+  colonne reste vide pour les commandes plus anciennes, pour les dons, et
+  pour l'historique repris de l'ancien site.
+- **Nom et prénom** sont séparés automatiquement à partir du nom que le
+  client a saisi (le paiement ne demande qu'une seule case « nom complet »).
+  La dernière colonne du fichier, « Nom complet (tel que saisi) », montre ce
+  qu'il a réellement écrit : en cas de doute sur une étiquette, c'est elle
+  qui fait foi.
 
 ## En cas de blocage
 

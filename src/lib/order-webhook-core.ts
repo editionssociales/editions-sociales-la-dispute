@@ -48,6 +48,8 @@ export interface OrderSessionFacts {
   stripeSessionId: string;
   stripePaymentIntentId: string | null;
   email: string | null;
+  /** Téléphone collecté par Stripe Checkout (`phone_number_collection`, client 2026-08-24) — `null` tant qu'une passerelle ne le fournit pas (dons, historique). Jamais bloquant : une commande sans téléphone reste une commande. */
+  phone: string | null;
   shippingAddress: OrderAddressFacts | null;
   lines: OrderLineFacts[];
   /** Commande normale ou précommande — cette partie DE la scission (client 2026-08-20), jamais les deux à la fois (`buildOrderCreateData` assemble UNE commande par appel). */
@@ -85,6 +87,7 @@ export interface OrderCreateData {
   status: "paid" | "failed";
   orderType: OrderKind;
   email: string;
+  phone: string | null;
   shippingAddress: OrderAddressFacts;
   billingAddress: OrderAddressFacts;
   lines: {
@@ -138,6 +141,10 @@ export function buildOrderCreateData(
     status,
     orderType: facts.orderType,
     email: facts.email,
+    // Facultatif, contrairement à l'email et à l'adresse : son absence n'a
+    // jamais empêché d'expédier une commande, elle ne doit donc pas faire
+    // refuser l'assemblage.
+    phone: facts.phone,
     shippingAddress: facts.shippingAddress,
     // Dupliquée depuis la livraison : le checkout ne collecte pas d'adresse
     // de facturation distincte (cf. `Orders.ts`, commentaire admin du champ).
