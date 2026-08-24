@@ -194,6 +194,34 @@ export async function findBookFichePaths(ids: number[]): Promise<string[]> {
   });
 }
 
+/**
+ * Parmi les livres d'une commande, ceux qui ont un fichier numérique (client
+ * 2026-08-24) — appelé par le webhook au moment de composer l'e-mail de
+ * confirmation, pour n'y mettre un lien de téléchargement que là où il y a
+ * quelque chose à télécharger. Retourne une liste vide pour la quasi-totalité
+ * des commandes.
+ *
+ * La relation est portée par `ebooks.livre` (jamais par un champ de `books` —
+ * cf. `Ebooks.ts` : une colonne de plus sur `books` casserait le rejeu des
+ * migrations de seed sur base neuve). `select: { livre: true }` + `depth: 0` :
+ * seul l'id du titre est utile ici, le titre AFFICHÉ dans l'e-mail vient du
+ * snapshot de la commande (ce qui a été acheté), jamais d'une relecture.
+ */
+export async function findBookIdsWithEbook(ids: number[]): Promise<number[]> {
+  if (ids.length === 0) return [];
+  const payload = await getPayload({ config });
+  const { docs } = await payload.find({
+    collection: "ebooks",
+    where: { livre: { in: ids } },
+    depth: 0,
+    limit: 0,
+    pagination: false,
+    select: { livre: true },
+    overrideAccess: true,
+  });
+  return docs.flatMap((doc) => (typeof doc.livre === "number" ? [doc.livre] : [doc.livre.id]));
+}
+
 /** `updatedAt` de la commande la plus récemment touchée (création OU passage à `refunded`) — signal `/api/health` (moniteur #8, R8), jamais d'appel réseau Stripe. */
 export async function findLatestOrderUpdatedAt(): Promise<string | null> {
   const payload = await getPayload({ config });

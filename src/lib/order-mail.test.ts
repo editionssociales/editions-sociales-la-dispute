@@ -90,6 +90,50 @@ describe("renderOrderConfirmationEmail — précommande (scission panier, client
   });
 });
 
+describe("renderOrderConfirmationEmail — livre numérique (client 2026-08-24)", () => {
+  const avecFichier: OrderMailPayload = {
+    ...PAYLOAD,
+    downloads: [{ title: "Notes sur Mill", url: "https://ld-es.fr/telechargement/12.7.abc" }],
+  };
+
+  it("bloc de téléchargement rendu en HTML ET en texte, avec le lien", () => {
+    const { html, text } = renderOrderConfirmationEmail(avecFichier);
+    expect(html).toContain("VOTRE EXEMPLAIRE NUMÉRIQUE");
+    expect(html).toContain("https://ld-es.fr/telechargement/12.7.abc");
+    expect(text).toContain("VOTRE EXEMPLAIRE NUMÉRIQUE");
+    expect(text).toContain("https://ld-es.fr/telechargement/12.7.abc");
+  });
+
+  it("aucun fichier → aucun bloc, aucune promesse de téléchargement (cas de la quasi-totalité des commandes)", () => {
+    const { html, text } = renderOrderConfirmationEmail(PAYLOAD);
+    expect(html).not.toContain("EXEMPLAIRE NUMÉRIQUE");
+    expect(html).not.toContain("/telechargement/");
+    expect(text).not.toContain("EXEMPLAIRE NUMÉRIQUE");
+  });
+
+  it("plusieurs fichiers → titre au pluriel, un lien par titre", () => {
+    const { html } = renderOrderConfirmationEmail({
+      ...PAYLOAD,
+      downloads: [
+        { title: "Notes sur Mill", url: "https://ld-es.fr/telechargement/12.7.abc" },
+        { title: "Le Capital", url: "https://ld-es.fr/telechargement/12.9.def" },
+      ],
+    });
+    expect(html).toContain("VOS EXEMPLAIRES NUMÉRIQUES");
+    expect(html).toContain("/telechargement/12.7.abc");
+    expect(html).toContain("/telechargement/12.9.def");
+  });
+
+  it("le titre du fichier est échappé comme le reste (jamais du HTML brut dans un mail)", () => {
+    const { html } = renderOrderConfirmationEmail({
+      ...PAYLOAD,
+      downloads: [{ title: "Marx & <Engels>", url: "https://ld-es.fr/telechargement/1.2.x" }],
+    });
+    expect(html).toContain("Marx &amp; &lt;Engels&gt;");
+    expect(html).not.toContain("<Engels>");
+  });
+});
+
 describe("selectOrderMailer", () => {
   it("BREVO_API_KEY absente → logOrderMailer", () => {
     expect(selectOrderMailer({})).toBe(logOrderMailer);

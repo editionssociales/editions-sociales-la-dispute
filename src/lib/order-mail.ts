@@ -33,6 +33,13 @@ export interface OrderMailLine {
   unitPriceTTC: number;
 }
 
+/** Un livre numérique livré avec la commande — lien signé vers `/telechargement/[token]` (client 2026-08-24). */
+export interface OrderMailDownload {
+  title: string;
+  /** URL absolue (les clients mail n'ont pas de base pour un chemin relatif). */
+  url: string;
+}
+
 export interface OrderMailPayload {
   orderNumber: string;
   email: string;
@@ -50,6 +57,14 @@ export interface OrderMailPayload {
    * inchangé (rétrocompatible avec tout appelant qui ne le pose pas).
    */
   orderType?: "commande" | "precommande";
+  /**
+   * Titres de la commande qui ont un fichier numérique attaché (client
+   * 2026-08-24 : « pour les Notes sur Mill, on pouvait télécharger l'epub
+   * après achat » — arbitrage « un lien par mail », le site n'a pas de compte
+   * client). Absent ou vide = bloc non rendu : la très grande majorité des
+   * commandes n'a rien à télécharger.
+   */
+  downloads?: OrderMailDownload[];
 }
 
 export interface OrderMailer {
@@ -130,6 +145,12 @@ const SHIPPING_NOTE =
   "Votre commande est en cours de préparation ; nous vous informerons dès son expédition.";
 /** Précommande (scission panier, client 2026-08-20) : ne promet pas un délai de préparation qui n'a pas commencé — l'expédition suit la parution, pas la commande. */
 const PREORDER_NOTE = "Précommande — expédiée à parution ; nous vous informerons dès son expédition.";
+/** En-tête du bloc téléchargement — accordé au nombre de fichiers (une commande peut contenir plusieurs titres numériques). */
+const downloadsTitle = (count: number) =>
+  count > 1 ? "VOS EXEMPLAIRES NUMÉRIQUES" : "VOTRE EXEMPLAIRE NUMÉRIQUE";
+/** Promesse tenable : le lien ne périme pas (cf. `ebook-token.ts`, aucune expiration), et il ne dépend pas d'un compte. */
+const DOWNLOADS_NOTE =
+  "Ce lien vous est personnel et reste valable : conservez cet e-mail pour retélécharger votre fichier quand vous voulez.";
 const isPreorderPayload = (payload: OrderMailPayload) => payload.orderType === "precommande";
 const introSentence = (orderNumberMarkup: string, preorder: boolean) =>
   `Nous avons bien reçu votre ${preorder ? "précommande" : "commande"} ${orderNumberMarkup}. Merci de votre confiance.`;
@@ -156,6 +177,13 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
       (payload.discountTTC > 0 ? `\n${DISCOUNT_LABEL} : -${euros(payload.discountTTC)}` : "") +
       `\n${TOTAL_LABEL} : ${euros(payload.totalTTC)}`,
     preorder ? PREORDER_NOTE : SHIPPING_NOTE,
+    ...(payload.downloads?.length
+      ? [
+          `${downloadsTitle(payload.downloads.length)}\n` +
+            payload.downloads.map((d) => `- ${d.title} : ${d.url}`).join("\n") +
+            `\n${DOWNLOADS_NOTE}`,
+        ]
+      : []),
     contactSentence(CONTACT_EMAIL, preorder),
     `Consulter le site : ${SITE_URL}`,
     "Les Éditions sociales × La Dispute",
@@ -177,6 +205,27 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
       strong: true,
       topBorder: true,
     });
+
+  const downloads = payload.downloads ?? [];
+  const downloadsHtml = downloads.length
+    ? `<tr><td style="border:2px solid ${INK};padding:16px;">` +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+      `<tr><td style="padding-bottom:12px;font-family:${FONT_STACK};font-size:13px;font-weight:800;color:${INK};">` +
+      `${downloadsTitle(downloads.length)}</td></tr>` +
+      downloads
+        .map(
+          (download) =>
+            `<tr><td style="padding-bottom:10px;font-family:${FONT_STACK};font-size:14px;line-height:1.5;color:${INK};">` +
+            `${escapeHtml(download.title)}<br />` +
+            `<a href="${escapeHtml(download.url)}" style="font-weight:800;color:${INK};">Télécharger votre exemplaire</a>` +
+            `</td></tr>`,
+        )
+        .join("") +
+      `<tr><td style="font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${MUTED};">${DOWNLOADS_NOTE}</td></tr>` +
+      `</table></td></tr>` +
+      // Respiration sous l'encadré (les autres blocs portent leur propre padding).
+      `<tr><td style="height:20px;line-height:20px;">&nbsp;</td></tr>`
+    : "";
 
   const bodyHtml =
     // Corps.
@@ -207,6 +256,11 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     `<tr><td style="padding:20px 0 20px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${INK};">` +
     (preorder ? PREORDER_NOTE : SHIPPING_NOTE) +
     `</td></tr>` +
+    // Livre(s) numérique(s) — encadré à part, APRÈS la note d'expédition :
+    // c'est la seule partie de la commande qui est déjà disponible, elle ne
+    // doit pas se confondre avec ce qui reste à expédier. Bloc absent quand
+    // la commande n'a aucun fichier attaché (cas de la quasi-totalité).
+    downloadsHtml +
     // Contact.
     `<tr><td style="padding-bottom:24px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${MUTED};">` +
     `Une question sur votre ${preorder ? "précommande" : "commande"} ? Écrivez-nous à ` +

@@ -10,6 +10,7 @@ import {
   createOrder,
   decrementBookStock,
   findBookFichePaths,
+  findBookIdsWithEbook,
   findOrderBySessionId,
   findOrdersByPaymentIntent,
   updateOrder,
@@ -25,7 +26,9 @@ import {
   type OrderSessionFacts,
   type OrderShippingMethod,
 } from "@/lib/order-webhook-core";
-import { selectOrderMailer } from "@/lib/order-mail";
+import { selectOrderMailer, type OrderMailDownload } from "@/lib/order-mail";
+import { signEbookToken } from "@/lib/ebook-token";
+import { SITE_URL } from "@/lib/mail-shell";
 
 /**
  * Orchestration I/O du webhook côté `kind: "order"` (plan §4 étape 9, scission
@@ -208,6 +211,42 @@ async function decrementStock(
  * entre le checkout et le webhook) → `buildOrderCreateData` refuse
  * explicitement (comportement inchangé, remonté en erreur par l'appelant).
  */
+/**
+ * Liens de téléchargement à glisser dans l'e-mail de confirmation (client
+ * 2026-08-24) — un par titre de la commande qui porte un fichier numérique,
+ * signé pour CE couple (commande, livre) : le lien ne vaut que pour cet
+ * achat, et la route revérifie tout au clic (`ebook-download.ts`).
+ *
+ * Fail-soft, comme tout ce qui entoure l'envoi d'e-mail dans ce module : une
+ * lecture en échec ne doit pas faire échouer un webhook dont la commande est
+ * DÉJÀ en base et le stock DÉJÀ décrémenté — la commande part alors sans son
+ * bloc téléchargement (l'équipe peut renvoyer le lien), l'anomalie est
+ * remontée à Sentry. Idem sans `PAYLOAD_SECRET` : impossible de signer, donc
+ * rien à promettre.
+ */
+async function buildOrderDownloads(order: Order): Promise<OrderMailDownload[]> {
+  const secret = process.env.PAYLOAD_SECRET;
+  if (!secret) return [];
+  try {
+    const lines = (order.lines ?? []).map((line) => ({
+      bookId: typeof line.book === "number" ? line.book : line.book.id,
+      // Titre TEL QU'ACHETÉ (snapshot de la commande) — jamais une relecture
+      // de la fiche, qui a pu être renommée entre-temps.
+      title: line.titleSnapshot,
+    }));
+    const avecFichier = new Set(await findBookIdsWithEbook(lines.map((line) => line.bookId)));
+    return lines
+      .filter((line) => avecFichier.has(line.bookId))
+      .map((line) => ({
+        title: line.title,
+        url: `${SITE_URL}/telechargement/${signEbookToken(secret, { orderId: order.id, bookId: line.bookId })}`,
+      }));
+  } catch (err) {
+    Sentry.captureException(err);
+    return [];
+  }
+}
+
 async function createPaidOrderPart(
   session: Stripe.Checkout.Session,
   createdAtEpoch: number,
@@ -272,6 +311,7 @@ async function createPaidOrderPart(
       shippingCostTTC: order.shippingCostTTC,
       discountTTC: order.discountTTC ?? 0,
       totalTTC: order.totalTTC,
+      downloads: await buildOrderDownloads(order),
     });
     await updateOrder(order.id, { confirmationSent: true });
   }

@@ -12,6 +12,7 @@ import sharp from 'sharp'
 import { Authors } from './payload/collections/Authors.ts'
 import { BookLabels } from './payload/collections/BookLabels.ts'
 import { Books } from './payload/collections/Books.ts'
+import { Ebooks } from './payload/collections/Ebooks.ts'
 import { Highlight } from './payload/collections/Highlight.ts'
 import { ImportRuns } from './payload/collections/ImportRuns.ts'
 import { Media } from './payload/collections/Media.ts'
@@ -89,6 +90,7 @@ export default buildConfig({
     Authors,
     BookLabels,
     Media,
+    Ebooks,
     Highlight,
     Rencontres,
     PromoCodes,
@@ -148,6 +150,14 @@ export default buildConfig({
           // hostname exact du store.
           disablePayloadAccessControl: true,
         },
+        // Livres numériques (client 2026-08-24) : Blob AUSSI — sur Vercel le
+        // disque est en lecture seule, sans adaptateur l'upload échouerait.
+        // Mais SANS `disablePayloadAccessControl` : contrairement à `media`,
+        // la lecture de cette collection est restreinte (`Ebooks.ts`), et
+        // `url` doit rester la route Payload gardée, jamais l'URL Blob
+        // publique — le téléchargement des acheteur·euses passe par notre
+        // propre route signée, qui relit le fichier côté serveur.
+        ebooks: true,
       },
       token: process.env.BLOB_READ_WRITE_TOKEN || '',
       clientUploads: true,

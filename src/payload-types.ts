@@ -73,6 +73,7 @@ export interface Config {
     authors: Author;
     libelles: Libelle;
     media: Media;
+    ebooks: Ebook;
     highlight: Highlight;
     rencontres: Rencontre;
     'promo-codes': PromoCode;
@@ -91,6 +92,7 @@ export interface Config {
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     libelles: LibellesSelect<false> | LibellesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    ebooks: EbooksSelect<false> | EbooksSelect<true>;
     highlight: HighlightSelect<false> | HighlightSelect<true>;
     rencontres: RencontresSelect<false> | RencontresSelect<true>;
     'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
@@ -565,6 +567,30 @@ export interface VirementsSouscription {
   createdAt: string;
 }
 /**
+ * Les ePub (ou PDF) envoyés automatiquement aux acheteur·euses après paiement. « Créer » → téléversez le fichier → choisissez le titre concerné : à partir de là, toute commande payée contenant ce titre reçoit un lien de téléchargement personnel dans son e-mail de confirmation. Ces fichiers ne sont jamais listés ni téléchargeables depuis le site public. Pour remplacer un fichier, ouvrez la fiche existante et téléversez le nouveau : les liens déjà envoyés restent valables et pointeront vers le nouveau fichier.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ebooks".
+ */
+export interface Ebook {
+  id: number;
+  /**
+   * Le livre (ou l’article) dont ce fichier est la version numérique. Un seul fichier par titre — pour le remplacer, téléversez le nouveau ici même plutôt que de créer une seconde fiche.
+   */
+  livre: number | Book;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -741,6 +767,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'ebooks';
+        value: number | Ebook;
       } | null)
     | ({
         relationTo: 'highlight';
@@ -965,6 +995,24 @@ export interface LibellesSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   sourceUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ebooks_select".
+ */
+export interface EbooksSelect<T extends boolean = true> {
+  livre?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

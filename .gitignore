@@ -46,6 +46,8 @@ next-env.d.ts
 
 # payload — médias uploadés en local (dev sans Vercel Blob)
 /media
+# fichiers numériques téléversés en dev (stockage local quand Blob n'est pas configuré)
+/ebooks
 
 # payload — rapports + fichiers temporaires de la migration WordPress→Postgres
 scripts/migrate-catalogue/out/
