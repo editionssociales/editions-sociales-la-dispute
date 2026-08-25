@@ -7,13 +7,19 @@ import styles from './dashboard/dashboard.module.css'
  * Panneau « Export CSV » au-dessus de la liste des commandes (slot
  * `beforeListTable` d'`Orders.ts` — la clé d'importMap `chemin#export` de ce
  * fichier ne doit pas changer). Formulaire : `dashboard/OrderExportForm.tsx`
- * (bornes préremplies : aujourd'hui → un mois en arrière).
+ * — deux liens, aucun critère.
  *
  * Colonnes du profil « compta » validées par le client le 13/07
  * (`plan/04-commerce.md`, décision n°5 close) ; celles du profil
  * « préparation » refondues à sa demande le 24/08 (date, adresse éclatée,
  * nom/prénom, téléphone — verbatim dans `order-export.ts`) — cf.
  * `order-export-handler.ts` pour le détail des profils.
+ *
+ * Le panneau n'a plus de critères à lui : l'export porte sur les lignes de
+ * la liste (filtres et recherche compris). C'est la réponse au retour client
+ * « je n'ai pas l'impression que les paramètres sélectionnés soient
+ * maintenus lors de l'export » — plutôt qu'un second endroit où filtrer,
+ * plus aucun : on filtre la liste, on exporte.
  *
  * `.panel`/`.panelTitle`/`.muted` partagés de `dashboard.module.css` (issue
  * #91) — remplacent le style inline qui divergeait de ceux du dashboard
@@ -26,10 +32,12 @@ export function OrderExportPanel() {
       <h3 className={styles.panelTitle}>Export CSV des commandes</h3>
       <OrderExportForm />
       <p className={styles.muted}>
-        Plage par défaut : aujourd&apos;hui et un mois en arrière (modifiable / vidable pour
-        toutes les commandes). « Préparation » : statuts « payée »/« préparée », une ligne par
-        article, avec date, adresse de livraison éclatée, e-mail et téléphone. « Compta » :
-        toutes commandes, TVA 5,5 % ventilée.
+        Ces deux liens exportent <strong>exactement les lignes de la liste ci-dessous</strong>,
+        filtres et recherche compris (toutes les pages, pas seulement celle affichée). Pour
+        n&apos;exporter qu&apos;une partie — un type, un statut, une période, un titre —, filtrez
+        la liste, puis exportez. « Préparation » et « Compta » ne changent que les colonnes :
+        adresse de livraison éclatée, e-mail et téléphone d&apos;un côté ; une ligne par commande
+        avec la TVA 5,5 % ventilée de l&apos;autre.
       </p>
     </div>
   )

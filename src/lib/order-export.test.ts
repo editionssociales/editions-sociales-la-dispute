@@ -4,7 +4,6 @@ import {
   computeVatPart,
   formatComptaCsv,
   formatPreparationCsv,
-  PREPARATION_ORDER_STATUSES,
   splitFullName,
   type OrderExportRow,
 } from "./order-export.ts";
@@ -57,12 +56,6 @@ describe("computeVatPart", () => {
 
   it("un total nul ne ventile rien", () => {
     expect(computeVatPart(0)).toBe(0);
-  });
-});
-
-describe("PREPARATION_ORDER_STATUSES", () => {
-  it("couvre exactement paid/prepared — pas shipped/cancelled/refunded/failed", () => {
-    expect(PREPARATION_ORDER_STATUSES).toEqual(["paid", "prepared"]);
   });
 });
 

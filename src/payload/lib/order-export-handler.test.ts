@@ -11,9 +11,11 @@ import { exportComptaHandler, exportPreparationHandler } from './order-export-ha
  * (le seam I/O nommé) est mocké ; le formatage CSV (`src/lib/order-export.ts`)
  * tourne pour de vrai, c'est un module pur déjà couvert ailleurs.
  *
- * Priorité (issue #69) : les gardes d'accès (`isAdminOrEditor` en tête de
- * handler) et les bornes de date INCLUSIVES de `parseDateBounds`/
- * `normalizeFromBound`/`normalizeToBound`.
+ * Deux priorités : les gardes d'accès (`isAdminOrEditor` en tête de handler)
+ * et le contrat « l'export EST la vue » — les filtres de la liste
+ * back-office (`where[…]`, `search`, tels que Payload les parse dans
+ * `req.query`) sont transmis à la lecture SANS être interprétés, et l'export
+ * n'ajoute aucun critère de son cru.
  */
 
 interface FakeOrder {
@@ -94,18 +96,35 @@ function fakePayload({ orders = [], promoCodes = [] }: FakePayloadOptions = {}) 
     if (opts.collection === 'promo-codes') return { docs: promoCodes }
     return { docs: [] }
   })
-  return { payload: { find } as unknown as Payload, find, findCalls }
+  // `collections.orders.config` : lu par `mergeListSearchAndWhere` (utilitaire
+  // Payload) quand la vue porte une recherche — mêmes champs cherchables que
+  // `Orders.ts:admin.listSearchableFields`.
+  const collections = {
+    orders: { config: { admin: { listSearchableFields: ['shippingAddress.fullName', 'number', 'email'] } } },
+  }
+  const logger = { error: vi.fn() }
+  return { payload: { find, collections, logger } as unknown as Payload, find, findCalls }
 }
 
+/**
+ * `query` reproduit ce que Payload dépose sur la requête après avoir parsé la
+ * query string (qs) : `where[status][equals]=paid` arrive en objet imbriqué,
+ * valeurs en chaînes — c'est cette forme-là que le handler transmet.
+ */
 function req(
   url: string,
-  { user = null, payload }: { user?: { role: string } | null; payload: Payload },
+  {
+    user = null,
+    payload,
+    query = {},
+  }: { user?: { role: string } | null; payload: Payload; query?: Record<string, unknown> },
 ): PayloadRequest {
   const request = new Request(url) as unknown as PayloadRequest
   Object.assign(request, {
     payload,
     user,
     context: {},
+    query,
     searchParams: new URL(url).searchParams,
   })
   return request
@@ -145,85 +164,115 @@ describe('exportPreparationHandler / exportComptaHandler — garde d’accès', 
   })
 })
 
-describe('exportPreparationHandler / exportComptaHandler — bornes de date', () => {
-  it('"from" invalide → 400, jamais de lecture Payload', async () => {
-    const { payload, find } = fakePayload()
-    const res = await exportComptaHandler(
-      req(`${URL_COMPTA}?from=pas-une-date`, { user: { role: 'admin' }, payload }),
-    )
-    expect(res.status).toBe(400)
-    expect(find).not.toHaveBeenCalled()
-    const body = await res.json()
-    expect(body.error).toContain('"from" invalide')
-  })
-
-  it('"to" invalide → 400, jamais de lecture Payload', async () => {
-    const { payload, find } = fakePayload()
-    const res = await exportComptaHandler(
-      req(`${URL_COMPTA}?to=pas-une-date`, { user: { role: 'admin' }, payload }),
-    )
-    expect(res.status).toBe(400)
-    expect(find).not.toHaveBeenCalled()
-    const body = await res.json()
-    expect(body.error).toContain('"to" invalide')
-  })
-
-  it('bornes AAAA-MM-JJ → "from" étendu à minuit UTC, "to" étendu à 23:59:59.999 UTC (borne incluse)', async () => {
+/**
+ * Le contrat central : l'export EST la vue. Les filtres de la liste arrivent
+ * dans `req.query` (Payload les parse depuis l'URL) et sont transmis tels
+ * quels à la lecture — le handler ne les lit pas, ne les complète pas, n'en
+ * ajoute aucun.
+ */
+describe('exportPreparationHandler / exportComptaHandler — les lignes de la vue', () => {
+  it('vue sans filtre → aucune clause `where`, toutes les commandes, sans pagination', async () => {
     const { payload, findCalls } = fakePayload({ orders: [order()] })
-    const res = await exportComptaHandler(
-      req(`${URL_COMPTA}?from=2026-07-01&to=2026-07-31`, { user: { role: 'admin' }, payload }),
-    )
+    const res = await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload }))
     expect(res.status).toBe(200)
     const ordersCall = findCalls.find((c) => c.collection === 'orders')
-    expect(ordersCall?.where).toEqual({
-      and: [
-        { createdAt: { greater_than_equal: '2026-07-01T00:00:00.000Z' } },
-        { createdAt: { less_than_equal: '2026-07-31T23:59:59.999Z' } },
-      ],
-    })
+    expect(ordersCall).toMatchObject({ limit: 0, depth: 0, sort: 'createdAt' })
+    expect(ordersCall).not.toHaveProperty('where')
   })
 
-  it('bornes ISO complètes → transmises SANS normalisation', async () => {
-    const { payload, findCalls } = fakePayload({ orders: [] })
-    const from = '2026-07-01T08:30:00.000Z'
-    const to = '2026-07-31T18:00:00.000Z'
-    await exportComptaHandler(
-      req(`${URL_COMPTA}?from=${from}&to=${to}`, { user: { role: 'admin' }, payload }),
+  it('filtre de la vue transmis VERBATIM, sans interprétation', async () => {
+    const where = { or: [{ and: [{ orderType: { equals: 'don' } }] }] }
+    const { payload, findCalls } = fakePayload({ orders: [order({ orderType: 'don' })] })
+    const res = await exportComptaHandler(
+      req(URL_COMPTA, { user: { role: 'admin' }, payload, query: { where } }),
     )
-    const ordersCall = findCalls.find((c) => c.collection === 'orders')
-    expect(ordersCall?.where).toEqual({
-      and: [
-        { createdAt: { greater_than_equal: from } },
-        { createdAt: { less_than_equal: to } },
+    expect(res.status).toBe(200)
+    expect(findCalls.find((c) => c.collection === 'orders')?.where).toEqual(where)
+  })
+
+  it('même filtre pour les deux profils : mêmes lignes, deux mises en forme', async () => {
+    const where = { status: { equals: 'shipped' } }
+    const prep = fakePayload({ orders: [order({ status: 'shipped' })] })
+    const compta = fakePayload({ orders: [order({ status: 'shipped' })] })
+    await exportPreparationHandler(req(URL_PREP, { user: { role: 'admin' }, payload: prep.payload, query: { where } }))
+    await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload: compta.payload, query: { where } }))
+    expect(prep.findCalls.find((c) => c.collection === 'orders')?.where).toEqual(where)
+    expect(compta.findCalls.find((c) => c.collection === 'orders')?.where).toEqual(where)
+  })
+
+  it('aucun statut imposé : une commande expédiée sort de l’export préparation si la vue la montre', async () => {
+    const { payload } = fakePayload({ orders: [order({ status: 'shipped', number: 'CMD-000009' })] })
+    const res = await exportPreparationHandler(
+      req(URL_PREP, { user: { role: 'admin' }, payload, query: { where: { status: { equals: 'shipped' } } } }),
+    )
+    expect(await res.text()).toContain('CMD-000009')
+  })
+
+  it('recherche de la liste → fusionnée en `or` sur les champs cherchables (comme la liste elle-même)', async () => {
+    const { payload, findCalls } = fakePayload({ orders: [order()] })
+    const res = await exportComptaHandler(
+      req(URL_COMPTA, { user: { role: 'admin' }, payload, query: { search: 'Dupont' } }),
+    )
+    expect(res.status).toBe(200)
+    expect(findCalls.find((c) => c.collection === 'orders')?.where).toEqual({
+      or: [
+        { 'shippingAddress.fullName': { like: 'Dupont' } },
+        { number: { like: 'Dupont' } },
+        { email: { like: 'Dupont' } },
       ],
     })
   })
 
-  it('aucune borne → pas de clause "and" (toutes les commandes du profil)', async () => {
-    const { payload, findCalls } = fakePayload({ orders: [] })
-    await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload }))
-    const ordersCall = findCalls.find((c) => c.collection === 'orders')
-    expect(ordersCall?.where).toEqual({})
+  it('recherche ET filtre → les deux, jamais l’un à la place de l’autre', async () => {
+    const { payload, findCalls } = fakePayload({ orders: [order()] })
+    await exportComptaHandler(
+      req(URL_COMPTA, {
+        user: { role: 'admin' },
+        payload,
+        query: { search: 'Dupont', where: { orderType: { equals: 'commande' } } },
+      }),
+    )
+    const where = findCalls.find((c) => c.collection === 'orders')?.where as Record<string, unknown>
+    expect(where.and).toEqual([
+      { orderType: { equals: 'commande' } },
+      {
+        or: [
+          { 'shippingAddress.fullName': { like: 'Dupont' } },
+          { number: { like: 'Dupont' } },
+          { email: { like: 'Dupont' } },
+        ],
+      },
+    ])
+  })
+
+  it('filtre refusé par Payload (champ inconnu) → 400 qui NOMME le problème, jamais une 500 muette', async () => {
+    const { payload } = fakePayload()
+    payload.find = vi.fn(async () => {
+      throw new Error('The following path cannot be queried: nimportequoi')
+    }) as unknown as Payload['find']
+    const res = await exportComptaHandler(
+      req(URL_COMPTA, { user: { role: 'admin' }, payload, query: { where: { nimportequoi: { equals: 1 } } } }),
+    )
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('cannot be queried')
   })
 })
 
-describe('exportPreparationHandler — profil « préparation »', () => {
-  it('filtre les commandes aux statuts paid/prepared', async () => {
-    const { payload, findCalls } = fakePayload({ orders: [] })
-    await exportPreparationHandler(req(URL_PREP, { user: { role: 'admin' }, payload }))
-    const ordersCall = findCalls.find((c) => c.collection === 'orders')
-    expect(ordersCall?.where).toEqual({
-      and: [{ status: { in: ['paid', 'prepared'] } }],
-    })
-  })
-})
-
-describe('exportComptaHandler — profil « compta »', () => {
-  it('ne filtre PAS par statut (tous statuts)', async () => {
-    const { payload, findCalls } = fakePayload({ orders: [] })
-    await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload }))
-    const ordersCall = findCalls.find((c) => c.collection === 'orders')
-    expect(ordersCall?.where).toEqual({})
+/**
+ * Les deux profils lisaient autrefois des ensembles DIFFÉRENTS (préparation
+ * = statuts payée/préparée, compta = tout). Ils lisent désormais le même :
+ * celui de la vue. C'est le sens de la demande client — « juste exporter
+ * l'ensemble des lignes de la vue » — et ce test le verrouille : aucun des
+ * deux handlers ne rajoute de clause.
+ */
+describe('exportPreparationHandler / exportComptaHandler — aucun filtre propre', () => {
+  it('ni l’un ni l’autre n’impose de statut', async () => {
+    const prep = fakePayload({ orders: [] })
+    const compta = fakePayload({ orders: [] })
+    await exportPreparationHandler(req(URL_PREP, { user: { role: 'admin' }, payload: prep.payload }))
+    await exportComptaHandler(req(URL_COMPTA, { user: { role: 'admin' }, payload: compta.payload }))
+    expect(prep.findCalls.find((c) => c.collection === 'orders')).not.toHaveProperty('where')
+    expect(compta.findCalls.find((c) => c.collection === 'orders')).not.toHaveProperty('where')
   })
 })
 

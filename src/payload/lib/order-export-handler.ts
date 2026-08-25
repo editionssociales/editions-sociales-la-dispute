@@ -1,59 +1,59 @@
-import type { Payload, PayloadHandler, Where } from 'payload'
+import type { Payload, PayloadHandler, PayloadRequest, Where } from 'payload'
+
+import { mergeListSearchAndWhere } from 'payload/shared'
 
 import { isAdminOrEditor } from '../access.ts'
 import {
   formatComptaCsv,
   formatPreparationCsv,
-  PREPARATION_ORDER_STATUSES,
   type OrderExportRow,
 } from '../../lib/order-export.ts'
 
 /**
  * Orchestration I/O des deux exports CSV commandes (cœur pur de formatage
- * dans `src/lib/order-export.ts`, mission « exports compta + livraison de la
- * PR », plan §4 étape 10) — même découpage que `stock-import.ts` vis-à-vis de
- * `stock-import-core.ts`.
+ * dans `src/lib/order-export.ts`) — même découpage que `stock-import.ts`
+ * vis-à-vis de `stock-import-core.ts`.
  *
- * `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`,
- * bornes de dates en paramètres (`from`/`to`, `AAAA-MM-JJ` ou ISO complet) —
- * cf. `src/payload/admin/OrderExportPanel.tsx` pour la vue qui les pose.
+ * `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`
+ * exportent EXACTEMENT les lignes de la vue : le formulaire recopie tels
+ * quels les paramètres de filtre de la liste back-office (`where[…]`,
+ * `search`), ce handler les applique sans les interpréter. Aucun critère
+ * propre, aucune borne implicite — ce que la liste affiche est ce que le CSV
+ * contient, et les deux profils ne sont plus qu'une mise en forme des
+ * colonnes (préparation/expédition vs compta).
+ *
+ * C'est le remplacement d'un système à critères séparés (bornes de dates et
+ * type de commande saisis dans le panneau d'export), dont le client a
+ * signalé qu'il ne suivait justement pas ce qu'il voyait à l'écran. Filtrer
+ * se fait donc à UN seul endroit : la liste elle-même, avec toute la
+ * puissance de ses filtres natifs (statut, type, dates, e-mail…).
+ *
+ * Le `where` vient d'un back-office authentifié (`isAdminOrEditor`) et ne
+ * donne accès à rien de plus que le REST généré de la collection, sous les
+ * mêmes droits ; Payload valide lui-même les champs et opérateurs cités.
  */
 
-interface DateBounds {
-  from?: string
-  to?: string
-}
+/** Tri FIXE, indépendant de celui de la liste : une feuille de préparation se lit dans l'ordre d'arrivée des commandes, et un tableur retrie de toute façon en un clic. */
+const EXPORT_SORT = 'createdAt'
 
-type ParsedBounds = DateBounds | { error: string }
-
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
-
-/** Une borne `AAAA-MM-JJ` (sans heure) est étendue à minuit UTC — début de journée, adapté à `from`. */
-function normalizeFromBound(value: string): string {
-  return DATE_ONLY.test(value) ? `${value}T00:00:00.000Z` : value
-}
-
-/** Une borne `AAAA-MM-JJ` (sans heure) est étendue à 23:59:59.999 UTC — fin de journée INCLUSE, adapté à `to` (sinon une commande du jour même serait exclue par `less_than_equal` à minuit). */
-function normalizeToBound(value: string): string {
-  return DATE_ONLY.test(value) ? `${value}T23:59:59.999Z` : value
-}
-
-/** `req.searchParams` (`from`/`to`) → bornes validées, ou message d'erreur si l'une des deux ne se parse pas en date. */
-function parseDateBounds(searchParams: URLSearchParams): ParsedBounds {
-  const from = searchParams.get('from')
-  const to = searchParams.get('to')
-  if (from && Number.isNaN(Date.parse(from))) {
-    return { error: `Paramètre "from" invalide (attendu AAAA-MM-JJ) : ${from}` }
-  }
-  if (to && Number.isNaN(Date.parse(to))) {
-    return { error: `Paramètre "to" invalide (attendu AAAA-MM-JJ) : ${to}` }
-  }
-  return { from: from ?? undefined, to: to ?? undefined }
-}
-
-interface FetchOrdersOptions extends DateBounds {
-  /** Restreint aux statuts donnés (profil « préparation ») — absent = tous statuts (profil « compta »). */
-  statuses?: readonly string[]
+/**
+ * `where` de la vue + recherche plein texte de la liste, fusionnés comme le
+ * fait la liste elle-même (`mergeListSearchAndWhere`, utilitaire Payload :
+ * la recherche devient un `or` sur `admin.listSearchableFields`, cf.
+ * `Orders.ts`). `undefined` quand la vue n'a aucun filtre — l'export porte
+ * alors sur toutes les commandes, exactement comme la liste.
+ */
+function whereFromView(req: PayloadRequest): Where | undefined {
+  const query = (req.query ?? {}) as { where?: unknown; search?: unknown }
+  const where =
+    query.where && typeof query.where === 'object' ? (query.where as Where) : undefined
+  const search = typeof query.search === 'string' ? query.search : ''
+  if (!search) return where
+  return mergeListSearchAndWhere({
+    collectionConfig: req.payload.collections.orders.config,
+    search,
+    where,
+  })
 }
 
 /**
@@ -63,16 +63,11 @@ interface FetchOrdersOptions extends DateBounds {
  * référencés, plutôt qu'un `depth: 1` qui peuplerait aussi `lines.book` pour
  * rien (295 fiches potentiellement traversées en pure perte).
  */
-async function fetchOrdersForExport(payload: Payload, opts: FetchOrdersOptions): Promise<OrderExportRow[]> {
-  const and: Where[] = []
-  if (opts.from) and.push({ createdAt: { greater_than_equal: normalizeFromBound(opts.from) } })
-  if (opts.to) and.push({ createdAt: { less_than_equal: normalizeToBound(opts.to) } })
-  if (opts.statuses) and.push({ status: { in: opts.statuses as string[] } })
-
+async function fetchOrdersForExport(payload: Payload, where: Where | undefined): Promise<OrderExportRow[]> {
   const { docs } = await payload.find({
     collection: 'orders',
-    where: and.length > 0 ? { and } : {},
-    sort: 'createdAt',
+    ...(where ? { where } : {}),
+    sort: EXPORT_SORT,
     depth: 0,
     limit: 0,
     overrideAccess: true,
@@ -140,24 +135,35 @@ function forbidden(): Response {
   )
 }
 
-/** `GET /api/orders/export/preparation` — profil « préparation » (décalque AOE, statuts `paid`/`prepared` uniquement). */
-export const exportPreparationHandler: PayloadHandler = async (req) => {
-  if (isAdminOrEditor({ req }) !== true) return forbidden()
-
-  const bounds = parseDateBounds(req.searchParams)
-  if ('error' in bounds) return Response.json(bounds, { status: 400 })
-
-  const rows = await fetchOrdersForExport(req.payload, { ...bounds, statuses: PREPARATION_ORDER_STATUSES })
-  return csvResponse(`commandes-preparation-${todayStamp()}.csv`, formatPreparationCsv(rows))
+/**
+ * Un filtre de vue illisible (URL forgée, champ inconnu) fait jeter Payload :
+ * 400 avec son message plutôt qu'une 500 muette — l'équipe voit ce qui
+ * cloche dans son filtre au lieu d'un export vide inexpliqué.
+ */
+function badFilter(req: PayloadRequest, err: unknown): Response {
+  const message = err instanceof Error ? err.message : 'Filtre de liste illisible.'
+  req.payload.logger.error(`[export-commandes] filtre refusé : ${message}`)
+  return Response.json({ error: `Filtre de liste illisible : ${message}` }, { status: 400 })
 }
 
-/** `GET /api/orders/export/compta` — profil « compta » (tous statuts, ventilation TVA). */
+/** `GET /api/orders/export/preparation` — colonnes de préparation/expédition, sur les lignes de la vue. */
+export const exportPreparationHandler: PayloadHandler = async (req) => {
+  if (isAdminOrEditor({ req }) !== true) return forbidden()
+  try {
+    const rows = await fetchOrdersForExport(req.payload, whereFromView(req))
+    return csvResponse(`commandes-preparation-${todayStamp()}.csv`, formatPreparationCsv(rows))
+  } catch (err) {
+    return badFilter(req, err)
+  }
+}
+
+/** `GET /api/orders/export/compta` — colonnes comptables (TVA ventilée), sur les lignes de la vue. */
 export const exportComptaHandler: PayloadHandler = async (req) => {
   if (isAdminOrEditor({ req }) !== true) return forbidden()
-
-  const bounds = parseDateBounds(req.searchParams)
-  if ('error' in bounds) return Response.json(bounds, { status: 400 })
-
-  const rows = await fetchOrdersForExport(req.payload, bounds)
-  return csvResponse(`commandes-compta-${todayStamp()}.csv`, formatComptaCsv(rows))
+  try {
+    const rows = await fetchOrdersForExport(req.payload, whereFromView(req))
+    return csvResponse(`commandes-compta-${todayStamp()}.csv`, formatComptaCsv(rows))
+  } catch (err) {
+    return badFilter(req, err)
+  }
 }

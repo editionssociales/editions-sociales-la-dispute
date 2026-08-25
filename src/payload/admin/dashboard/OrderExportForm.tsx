@@ -1,45 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
-import { defaultExportDateRange } from './derive.ts'
 import styles from './dashboard.module.css'
 
 /**
- * Îlot client d'export CSV des commandes — bornes `AAAA-MM-JJ` préremplies
- * (aujourd'hui Paris → un mois civil en arrière) + deux profils RÉELS,
- * colonnes validées par le client le 13/07 (`plan/04-commerce.md`) :
- * « préparation » (statuts payée/préparée) et « compta » (toutes commandes,
- * TVA 5,5 % ventilée). Liens `GET` directs — cookie Payload.
+ * Îlot client d'export CSV des commandes : deux liens `GET` (cookie Payload)
+ * qui recopient les paramètres de FILTRE de la liste affichée — et rien
+ * d'autre. Ce que la liste montre est ce que le CSV contient ; les deux
+ * profils ne sont qu'une mise en forme des colonnes (préparation/expédition
+ * vs compta, cf. `src/lib/order-export.ts`).
  *
- * Monté sur la liste des commandes (`OrderExportPanel.tsx`) — plus sur la
- * home dashboard.
+ * Remplace un formulaire à critères propres (bornes de dates, puis type de
+ * commande) : le client a signalé que ces critères ne suivaient pas ce qu'il
+ * voyait à l'écran. Filtrer se fait donc à UN endroit, la liste elle-même,
+ * avec ses filtres natifs (statut, type, dates, e-mail…) — il n'y a plus
+ * deux endroits où filtrer, ni rien à maintenir en phase.
+ *
+ * Sont recopiés `where[…]` (filtres et chips) et `search` (recherche) ;
+ * PAS `page`/`limit` — un export porte sur l'ensemble des lignes filtrées,
+ * jamais sur la page affichée — ni `sort`, le tri de l'export étant fixe
+ * (`order-export-handler.ts`).
+ *
+ * Monté sur la liste des commandes (`OrderExportPanel.tsx`).
  */
 export function OrderExportForm() {
-  // Initialiseur paresseux : `defaultExportDateRange(new Date())` ne
-  // s'exécute qu'au montage (une seule fois, un seul appel partagé par les
-  // deux bornes), jamais à chaque rendu — évite à la fois une divergence
-  // serveur/client et une valeur qui change entre deux rendus du même montage.
-  const [defaults] = useState(() => defaultExportDateRange(new Date()))
-  const [from, setFrom] = useState(defaults.from)
-  const [to, setTo] = useState(defaults.to)
+  const search = useSearchParams()
 
   function href(profile: 'preparation' | 'compta'): string {
     const params = new URLSearchParams()
-    if (from) params.set('from', from)
-    if (to) params.set('to', to)
+    for (const [key, value] of search.entries()) {
+      if (key === 'search' || key.startsWith('where')) params.append(key, value)
+    }
     const qs = params.toString()
     return `/api/orders/export/${profile}${qs ? `?${qs}` : ''}`
   }
 
   return (
     <div className={styles.formRow}>
-      <label>
-        Du <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-      </label>
-      <label>
-        Au <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-      </label>
       <a href={href('preparation')}>Export préparation (CSV) →</a>
       <a href={href('compta')}>Export compta (CSV) →</a>
     </div>

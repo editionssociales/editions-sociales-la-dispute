@@ -7,6 +7,10 @@
  * (même découplage que `order-mail.ts`) — l'orchestration (`src/payload/lib/
  * order-export-handler.ts`) fait le mapping depuis les docs Payload.
  *
+ * Les DEUX profils portent sur les mêmes lignes — celles de la vue
+ * back-office, filtrées par la liste elle-même (`order-export-handler.ts`) :
+ * ils ne se distinguent QUE par leurs colonnes, jamais par un filtre propre.
+ *
  * Séparateur `;` et décimale `,` : convention CSV française — Excel/
  * LibreOffice en locale fr_FR ouvrent ce fichier directement (double-clic,
  * sans assistant d'import) sans ambiguïté avec le séparateur décimal.
@@ -62,15 +66,6 @@ const ORDER_TYPE_LABELS: Record<OrderExportOrderType, string> = {
 function orderTypeLabel(orderType: string): string {
   return ORDER_TYPE_LABELS[orderType as OrderExportOrderType] ?? orderType;
 }
-
-/**
- * Statuts couverts par l'export « préparation » — décalque de `processing/
- * on-hold` côté Woo (commandes encaissées, pas encore expédiées : à préparer
- * ou en cours de préparation). `shipped/cancelled/refunded/failed` n'ont plus
- * rien à préparer. Exporté pour que l'orchestration filtre sa requête Payload
- * sur exactement cet ensemble (une seule source de vérité).
- */
-export const PREPARATION_ORDER_STATUSES: readonly OrderExportStatus[] = ["paid", "prepared"];
 
 export interface OrderExportAddress {
   fullName: string;
@@ -272,8 +267,8 @@ function formatDateFr(createdAt: string): string {
  * Une ligne par ligne de commande, comme avant : les faits de la commande
  * (client, adresse, coupon, remise, type) sont répétés sur chacune de ses
  * lignes — même aplatissement qu'AOE, c'est ce qui rend la feuille triable
- * par titre pour la préparation. L'appelant filtre en amont sur
- * `PREPARATION_ORDER_STATUSES` : ce module ne re-filtre pas.
+ * par titre pour la préparation. Aucun filtre ici : les lignes reçues sont
+ * celles de la vue back-office, l'export n'en écarte aucune.
  */
 export function formatPreparationCsv(orders: readonly OrderExportRow[]): string {
   const rows = orders.flatMap((order) => {

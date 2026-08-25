@@ -704,37 +704,6 @@ export function monthsAgoParisMonthStartUtc(now: Date, monthsBack: number): Date
   return parisMonthStartUtc(target.year, target.month)
 }
 
-/* ────────────────────────── Export CSV (bornes de dates) ────────────────────────── */
-
-/** Date civile Paris au format `AAAA-MM-JJ` (valeur d'un `<input type="date">`). */
-export function parisDateYmd(now: Date): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now)
-}
-
-/**
- * Plage d'export par défaut : `to` = aujourd'hui (Paris), `from` = même jour
- * un mois civil plus tôt (jour calé si le mois cible est plus court).
- */
-export function defaultExportDateRange(now: Date): { from: string; to: string } {
-  const to = parisDateYmd(now)
-  const [y, m, d] = to.split('-').map(Number)
-  let year = y
-  let month = m - 1
-  if (month < 1) {
-    month = 12
-    year -= 1
-  }
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
-  const day = Math.min(d, daysInMonth)
-  const from = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-  return { from, to }
-}
-
 /* ────────────────────────── Import routeur (3.7) ────────────────────────── */
 
 /**
