@@ -12,6 +12,7 @@ import {
   fmtEuros,
   fmtEurosAxis,
   humanAge,
+  linesTooltip,
   rollingWindows,
   salesChartGeometry,
   salesStats,
@@ -275,7 +276,10 @@ export async function Dashboard({ payload }: ServerProps) {
                       </a>
                       <span className={styles.rowSubtle}>{order.number}</span>
                     </td>
-                    <td>{summarizeLines(order.lines)}</td>
+                    {/* Infobulle : détail complet des lignes (le résumé condense au-delà de 3). */}
+                    <td title={order.lines.length > 0 ? linesTooltip(order.lines) : undefined}>
+                      {summarizeLines(order.lines)}
+                    </td>
                     <td>
                       {humanAge(order.paidAt ?? order.createdAt, now)}{' '}
                       <span className={styles.tag}>{ORDER_STATUS_LABELS[order.status] ?? order.status}</span>

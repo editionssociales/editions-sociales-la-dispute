@@ -630,6 +630,20 @@ export function summarizeLines(lines: SummarizableLine[], max = 3): string {
   return parts.join(' + ')
 }
 
+/**
+ * Détail COMPLET des lignes pour une infobulle (`title=`) — une ligne par
+ * titre, là où `summarizeLines` condense au-delà de 3 en « N autres »
+ * (demande client 2026-08-26 : une grosse commande était illisible en
+ * liste). Les navigateurs rendent les `\n` d'un attribut `title` comme de
+ * vrais retours à la ligne. Posée PARTOUT où un résumé de lignes s'affiche
+ * (cellule « Contenu » de la liste Commandes, tableau des commandes à
+ * traiter du dashboard), pas seulement quand ça tronque : les titres longs
+ * sont aussi coupés par la largeur de colonne.
+ */
+export function linesTooltip(lines: SummarizableLine[]): string {
+  return lines.map((l) => `${l.quantity}× ${l.titleSnapshot}`).join('\n')
+}
+
 /* ────────────────────────── Raccourci « Ventes du mois » (zone C) ────────────────────────── */
 
 /**

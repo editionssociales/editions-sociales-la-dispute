@@ -1,4 +1,4 @@
-import { summarizeLines } from '../dashboard/derive.ts'
+import { linesTooltip, summarizeLines } from '../dashboard/derive.ts'
 
 /**
  * Cellule "Contenu" de la liste Commandes — résumé compact des lignes
@@ -33,5 +33,7 @@ export function OrderContentCell({ rowData }: OrderContentCellProps) {
       typeof line?.titleSnapshot === 'string' && typeof line?.quantity === 'number',
   )
   const summary = summarizeLines(lines)
-  return <span>{summary || '—'}</span>
+  // Infobulle native : le détail complet au survol (`linesTooltip`), sans
+  // ouvrir la fiche — le résumé ci-dessus condense au-delà de 3 lignes.
+  return <span title={lines.length > 0 ? linesTooltip(lines) : undefined}>{summary || '—'}</span>
 }
