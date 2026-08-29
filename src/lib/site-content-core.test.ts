@@ -340,8 +340,7 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
         },
       ],
     });
-    expect(merged.contreparties).toHaveLength(1);
-    const [carte] = merged.contreparties;
+    const carte = merged.contreparties.find((c) => c.tier.id === "palier-35")!;
     expect(carte.tier.amount).toBe(35);
     expect(carte.tier.title).toBe("Coup de main");
     expect(carte.items).toEqual([{ texte: "Un livre au choix", alternative: false }]);
@@ -382,14 +381,70 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
     ]);
   });
 
-  it("un array rempli remplace entièrement le défaut (pas de fusion partielle)", () => {
+  it("fusion PAR PALIER (demande client 2026-08-29) : une carte surchargée, les 8 autres restent au défaut — plus le tout-ou-rien d'avant", () => {
+    const defaut = mergePageSouscription(null);
     const merged = mergePageSouscription({
       id: 1,
       contreparties: [{ tierId: "palier-15", items: [{ texte: "Un seul lot" }] }],
     });
-    expect(merged.contreparties).toHaveLength(1);
-    expect(merged.contreparties[0].items).toEqual([
-      { texte: "Un seul lot", alternative: false },
+    // Toujours les 9 cartes, dans l'ordre du défaut — jamais réduit à la
+    // seule carte saisie.
+    expect(merged.contreparties).toHaveLength(9);
+    expect(merged.contreparties.map((c) => c.tier.id)).toEqual(
+      defaut.contreparties.map((c) => c.tier.id),
+    );
+    const palier15 = merged.contreparties.find((c) => c.tier.id === "palier-15")!;
+    expect(palier15.items).toEqual([{ texte: "Un seul lot", alternative: false }]);
+    // Les 8 autres cartes n'ont pas bougé par rapport au défaut.
+    for (const carte of merged.contreparties) {
+      if (carte.tier.id === "palier-15") continue;
+      const carteDefaut = defaut.contreparties.find((c) => c.tier.id === carte.tier.id)!;
+      expect(carte.items).toEqual(carteDefaut.items);
+    }
+  });
+
+  it("entrée sans item valide (tous vides) : IGNORÉE, la carte garde son défaut (impossible de la vider par accident)", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      contreparties: [{ tierId: "palier-75", items: [{ texte: "   " }] }],
+    });
+    const palier75 = merged.contreparties.find((c) => c.tier.id === "palier-75")!;
+    const defautPalier75 = mergePageSouscription(null).contreparties.find(
+      (c) => c.tier.id === "palier-75",
+    )!;
+    expect(palier75.items).toEqual(defautPalier75.items);
+  });
+
+  it("tierId dupliqué dans le tableau CMS : la DERNIÈRE entrée gagne (saisie la plus récente en bas du tableau)", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      contreparties: [
+        { tierId: "palier-100", items: [{ texte: "Première saisie, remplacée" }] },
+        { tierId: "palier-100", items: [{ texte: "Saisie la plus récente" }] },
+      ],
+    });
+    const palier100 = merged.contreparties.find((c) => c.tier.id === "palier-100")!;
+    expect(palier100.items).toEqual([{ texte: "Saisie la plus récente", alternative: false }]);
+  });
+
+  it("ordre d'affichage toujours celui du défaut, quel que soit l'ordre de saisie ou le nombre de cartes surchargées au CMS", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      contreparties: [
+        { tierId: "palier-1000", items: [{ texte: "Nouveau lot 1000" }] },
+        { tierId: "palier-50", items: [{ texte: "Nouveau lot 50" }] },
+      ],
+    });
+    expect(merged.contreparties.map((c) => c.tier.id)).toEqual([
+      "palier-50",
+      "palier-15",
+      "palier-35",
+      "palier-75",
+      "palier-100",
+      "palier-200",
+      "palier-300",
+      "palier-500",
+      "palier-1000",
     ]);
   });
 });

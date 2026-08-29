@@ -174,7 +174,7 @@ export const PageSouscription: GlobalConfig = {
               },
               admin: {
                 description:
-                  'Aucune contrepartie = les neuf cartes actuelles. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.',
+                  'Une entrée par palier à modifier : son « Contenu du lot » remplace celui de LA carte de ce palier, les huit autres cartes restant inchangées (rien à faire pour les garder). Une entrée sans aucune ligne saisie est ignorée. Le même palier saisi deux fois : la dernière entrée du tableau l’emporte. L’ordre des neuf cartes sur la page ne dépend jamais de l’ordre de ce tableau. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.',
               },
               fields: [
                 {

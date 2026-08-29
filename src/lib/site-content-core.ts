@@ -377,6 +377,12 @@ function tierObligatoire(id: string): DonationTier {
  * est purement ÉDITORIAL : `DONATION_TIERS`/`CONTREPARTIES_2026` (paiement,
  * résolution de commande) gardent leur ordre croissant verrouillé par leurs
  * propres tests.
+ *
+ * Fusion PAR PALIER (demande client 2026-08-29) : ce tableau fixe aussi
+ * l'ORDRE D'AFFICHAGE définitif — le CMS ne réordonne JAMAIS les cartes, il
+ * ne peut que remplacer les items d'UNE carte déjà présente ici (cf.
+ * `mergePageSouscription`). Un palier absent de ce tableau ne peut donc
+ * jamais apparaître, même saisi côté back-office.
  */
 const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
   contreparties: [
@@ -540,22 +546,37 @@ function mergeRecitSection(
 
 /**
  * Fusion du global `page-souscription` (refonte sobre, 2026-08-21) — champ
- * par champ pour le titre/récit/objectifs (vide = défaut dur ci-dessus) ;
- * `contreparties` garde sa règle propre : un array vide (ou dont toutes les
- * entrées sont invalides) retombe sur les 9 cartes par défaut, un array
- * rempli les remplace entièrement (inchangé).
+ * par champ pour le titre/récit/objectifs (vide = défaut dur ci-dessus).
+ *
+ * `contreparties` fusionne PAR PALIER (demande client 2026-08-29, remplace le
+ * tout-ou-rien précédent — une éditrice qui saisissait UNE carte perdait
+ * silencieusement les 8 autres) : l'ordre d'affichage reste TOUJOURS celui de
+ * `SOUSCRIPTION_DEFAUT` (le CMS ne réordonne jamais) ; une entrée à `tierId`
+ * connu portant AU MOINS UN item non vide remplace les items de LA SEULE
+ * carte de ce palier, les huit autres gardant leur défaut ; une entrée sans
+ * item valide est IGNORÉE (impossible de vider une carte par accident) ; un
+ * `tierId` saisi deux fois : la DERNIÈRE entrée du tableau l'emporte.
  */
 export function mergePageSouscription(
   global: PageSouscription | null | undefined,
 ): PageSouscriptionContent {
-  const contreparties = (global?.contreparties ?? []).flatMap((entry) => {
+  // `Map.set` réécrit une clé déjà posée : itérer dans l'ordre de saisie du
+  // tableau back-office suffit à faire gagner la DERNIÈRE entrée d'un même
+  // palier, sans logique dédiée.
+  const surcharges = new Map<string, ContrepartieItem[]>();
+  for (const entry of global?.contreparties ?? []) {
     const tier = DONATION_TIERS.find((t) => t.id === entry.tierId);
-    if (!tier) return [];
+    if (!tier) continue;
     const items = (entry.items ?? []).flatMap((item) => {
       const texte = item.texte?.trim();
       return texte ? [parseContrepartieItem(texte)] : [];
     });
-    return [{ tier, items }];
+    if (items.length === 0) continue;
+    surcharges.set(tier.id, items);
+  }
+  const contreparties = SOUSCRIPTION_DEFAUT.contreparties.map((carte) => {
+    const items = surcharges.get(carte.tier.id);
+    return items ? { tier: carte.tier, items } : carte;
   });
 
   return {
@@ -578,8 +599,7 @@ export function mergePageSouscription(
         OBJECTIFS_DEFAUT.descriptif100,
       ),
     },
-    contreparties:
-      contreparties.length > 0 ? contreparties : SOUSCRIPTION_DEFAUT.contreparties,
+    contreparties,
   };
 }
 
