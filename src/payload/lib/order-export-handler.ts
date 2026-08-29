@@ -1,70 +1,79 @@
-import type { Payload, PayloadHandler, Where } from 'payload'
+import type { Payload, PayloadHandler, PayloadRequest, Where } from 'payload'
+
+import { mergeListSearchAndWhere } from 'payload/shared'
 
 import { isAdminOrEditor } from '../access.ts'
 import {
   formatComptaCsv,
   formatPreparationCsv,
   parseExportOrderIds,
-  PREPARATION_ORDER_STATUSES,
   type OrderExportRow,
 } from '../../lib/order-export.ts'
 
 /**
  * Orchestration I/O des deux exports CSV commandes (cœur pur de formatage
- * dans `src/lib/order-export.ts`, mission « exports compta + livraison de la
- * PR », plan §4 étape 10) — même découpage que `stock-import.ts` vis-à-vis de
- * `stock-import-core.ts`.
+ * dans `src/lib/order-export.ts`) — même découpage que `stock-import.ts`
+ * vis-à-vis de `stock-import-core.ts`.
  *
- * `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`,
- * soit bornes de dates en paramètres (`from`/`to`, `AAAA-MM-JJ` ou ISO
- * complet), soit `ids` (commandes cochées dans la liste, demande cliente) qui
- * PRIME sur les dates quand il est présent — cf.
- * `src/payload/admin/OrderExportPanel.tsx`/`dashboard/OrderExportForm.tsx`
- * pour la vue qui pose l'un ou l'autre.
+ * `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`
+ * exportent ce que la LISTE désigne, à deux niveaux (fusion de deux demandes
+ * cliente arrivées en parallèle) :
+ *
+ * 1. `ids` (commandes cochées dans la liste, `parseExportOrderIds`) — la
+ *    sélection PRIME : présente, rien d'autre n'est lu. Une commande cochée
+ *    sort dans le fichier quel que soit son statut — cocher est le geste le
+ *    plus explicite qui soit.
+ * 2. Sinon, les paramètres de filtre de la VUE (`where[…]`, `search`),
+ *    recopiés tels quels par le formulaire et appliqués sans être
+ *    interprétés. Aucun critère propre, aucune borne implicite — ce que la
+ *    liste affiche est ce que le CSV contient.
+ *
+ * Les deux profils ne sont qu'une mise en forme des colonnes
+ * (préparation/expédition vs compta) — plus aucune restriction de statut
+ * cachée. Remplace un système à critères séparés (bornes de dates saisies
+ * dans le panneau), dont le client a signalé qu'il ne suivait justement pas
+ * ce qu'il voyait à l'écran : on filtre à UN seul endroit, la liste, et on
+ * coche pour préciser.
+ *
+ * Le `where` vient d'un back-office authentifié (`isAdminOrEditor`) et ne
+ * donne accès à rien de plus que le REST généré de la collection, sous les
+ * mêmes droits ; Payload valide lui-même les champs et opérateurs cités.
  */
 
-interface DateBounds {
-  from?: string
-  to?: string
+/** Tri FIXE, indépendant de celui de la liste : une feuille de préparation se lit dans l'ordre d'arrivée des commandes, et un tableur retrie de toute façon en un clic. */
+const EXPORT_SORT = 'createdAt'
+
+/**
+ * `where` de la vue + recherche plein texte de la liste, fusionnés comme le
+ * fait la liste elle-même (`mergeListSearchAndWhere`, utilitaire Payload :
+ * la recherche devient un `or` sur `admin.listSearchableFields`, cf.
+ * `Orders.ts` — titre de livre compris, `lines.titleSnapshot`). `undefined`
+ * quand la vue n'a aucun filtre — l'export porte alors sur toutes les
+ * commandes, exactement comme la liste.
+ */
+function whereFromView(req: PayloadRequest): Where | undefined {
+  const query = (req.query ?? {}) as { where?: unknown; search?: unknown }
+  const where =
+    query.where && typeof query.where === 'object' ? (query.where as Where) : undefined
+  const search = typeof query.search === 'string' ? query.search : ''
+  if (!search) return where
+  return mergeListSearchAndWhere({
+    collectionConfig: req.payload.collections.orders.config,
+    search,
+    where,
+  })
 }
 
-type ParsedBounds = DateBounds | { error: string }
-
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
-
-/** Une borne `AAAA-MM-JJ` (sans heure) est étendue à minuit UTC — début de journée, adapté à `from`. */
-function normalizeFromBound(value: string): string {
-  return DATE_ONLY.test(value) ? `${value}T00:00:00.000Z` : value
-}
-
-/** Une borne `AAAA-MM-JJ` (sans heure) est étendue à 23:59:59.999 UTC — fin de journée INCLUSE, adapté à `to` (sinon une commande du jour même serait exclue par `less_than_equal` à minuit). */
-function normalizeToBound(value: string): string {
-  return DATE_ONLY.test(value) ? `${value}T23:59:59.999Z` : value
-}
-
-/** `req.searchParams` (`from`/`to`) → bornes validées, ou message d'erreur si l'une des deux ne se parse pas en date. */
-function parseDateBounds(searchParams: URLSearchParams): ParsedBounds {
-  const from = searchParams.get('from')
-  const to = searchParams.get('to')
-  if (from && Number.isNaN(Date.parse(from))) {
-    return { error: `Paramètre "from" invalide (attendu AAAA-MM-JJ) : ${from}` }
-  }
-  if (to && Number.isNaN(Date.parse(to))) {
-    return { error: `Paramètre "to" invalide (attendu AAAA-MM-JJ) : ${to}` }
-  }
-  return { from: from ?? undefined, to: to ?? undefined }
-}
-
-interface FetchOrdersOptions extends DateBounds {
-  /** Restreint aux statuts donnés (profil « préparation ») — absent = tous statuts (profil « compta »). */
-  statuses?: readonly string[]
-  /**
-   * Sélection explicite de commandes (checkboxes de la liste) — PRIME sur
-   * `from`/`to` quand non vide : les dates ne sont alors même pas lues.
-   * Combinée à `statuses` comme le reste (une commande cochée mais non payée
-   * n'apparaît toujours pas dans l'export préparation).
-   */
-  ids?: readonly number[]
+/**
+ * Critère effectif de l'export — la sélection cochée quand il y en a une
+ * (`{ error }` si `ids` est illisible ou au-delà de `MAX_EXPORT_SELECTION` :
+ * jamais un export silencieusement partiel), les filtres de la vue sinon.
+ */
+function resolveExportWhere(req: PayloadRequest): { where: Where | undefined } | { error: string } {
+  const parsed = parseExportOrderIds(req.searchParams.get('ids'))
+  if ('error' in parsed) return parsed
+  if (parsed.ids.length > 0) return { where: { id: { in: parsed.ids } } }
+  return { where: whereFromView(req) }
 }
 
 /**
@@ -74,23 +83,11 @@ interface FetchOrdersOptions extends DateBounds {
  * référencés, plutôt qu'un `depth: 1` qui peuplerait aussi `lines.book` pour
  * rien (295 fiches potentiellement traversées en pure perte).
  */
-async function fetchOrdersForExport(payload: Payload, opts: FetchOrdersOptions): Promise<OrderExportRow[]> {
-  const and: Where[] = []
-  if (opts.ids && opts.ids.length > 0) {
-    // Sélection explicite : PRIME sur les dates, qui ne sont pas ajoutées au
-    // `where` — cocher des commandes hors de la plage affichée ne doit pas
-    // les faire disparaître de l'export.
-    and.push({ id: { in: opts.ids as number[] } })
-  } else {
-    if (opts.from) and.push({ createdAt: { greater_than_equal: normalizeFromBound(opts.from) } })
-    if (opts.to) and.push({ createdAt: { less_than_equal: normalizeToBound(opts.to) } })
-  }
-  if (opts.statuses) and.push({ status: { in: opts.statuses as string[] } })
-
+async function fetchOrdersForExport(payload: Payload, where: Where | undefined): Promise<OrderExportRow[]> {
   const { docs } = await payload.find({
     collection: 'orders',
-    where: and.length > 0 ? { and } : {},
-    sort: 'createdAt',
+    ...(where ? { where } : {}),
+    sort: EXPORT_SORT,
     depth: 0,
     limit: 0,
     overrideAccess: true,
@@ -159,39 +156,38 @@ function forbidden(): Response {
 }
 
 /**
- * `ids` (sélection explicite) PRIME sur `from`/`to` : renvoie directement les
- * options de requête sans même parser les dates dans ce cas — cf.
- * `parseExportOrderIds` pour le contrat (absent/vide = pas de sélection,
- * erreur explicite au-delà de `MAX_EXPORT_SELECTION` ou sur un id invalide).
+ * Un filtre de vue illisible (URL forgée, champ inconnu) fait jeter Payload :
+ * 400 avec son message plutôt qu'une 500 muette — l'équipe voit ce qui
+ * cloche dans son filtre au lieu d'un export vide inexpliqué.
  */
-function resolveFetchOptions(searchParams: URLSearchParams): FetchOrdersOptions | { error: string } {
-  const parsedIds = parseExportOrderIds(searchParams.get('ids'))
-  if ('error' in parsedIds) return parsedIds
-  if (parsedIds.ids.length > 0) return { ids: parsedIds.ids }
-
-  const bounds = parseDateBounds(searchParams)
-  if ('error' in bounds) return bounds
-  return bounds
+function badFilter(req: PayloadRequest, err: unknown): Response {
+  const message = err instanceof Error ? err.message : 'Filtre de liste illisible.'
+  req.payload.logger.error(`[export-commandes] filtre refusé : ${message}`)
+  return Response.json({ error: `Filtre de liste illisible : ${message}` }, { status: 400 })
 }
 
-/** `GET /api/orders/export/preparation` — profil « préparation » (décalque AOE, statuts `paid`/`prepared` uniquement). */
+/** `GET /api/orders/export/preparation` — colonnes de préparation/expédition, sur la sélection cochée ou les lignes de la vue. */
 export const exportPreparationHandler: PayloadHandler = async (req) => {
   if (isAdminOrEditor({ req }) !== true) return forbidden()
-
-  const options = resolveFetchOptions(req.searchParams)
-  if ('error' in options) return Response.json(options, { status: 400 })
-
-  const rows = await fetchOrdersForExport(req.payload, { ...options, statuses: PREPARATION_ORDER_STATUSES })
-  return csvResponse(`commandes-preparation-${todayStamp()}.csv`, formatPreparationCsv(rows))
+  const resolved = resolveExportWhere(req)
+  if ('error' in resolved) return Response.json(resolved, { status: 400 })
+  try {
+    const rows = await fetchOrdersForExport(req.payload, resolved.where)
+    return csvResponse(`commandes-preparation-${todayStamp()}.csv`, formatPreparationCsv(rows))
+  } catch (err) {
+    return badFilter(req, err)
+  }
 }
 
-/** `GET /api/orders/export/compta` — profil « compta » (tous statuts, ventilation TVA). */
+/** `GET /api/orders/export/compta` — colonnes comptables (TVA ventilée), sur la sélection cochée ou les lignes de la vue. */
 export const exportComptaHandler: PayloadHandler = async (req) => {
   if (isAdminOrEditor({ req }) !== true) return forbidden()
-
-  const options = resolveFetchOptions(req.searchParams)
-  if ('error' in options) return Response.json(options, { status: 400 })
-
-  const rows = await fetchOrdersForExport(req.payload, options)
-  return csvResponse(`commandes-compta-${todayStamp()}.csv`, formatComptaCsv(rows))
+  const resolved = resolveExportWhere(req)
+  if ('error' in resolved) return Response.json(resolved, { status: 400 })
+  try {
+    const rows = await fetchOrdersForExport(req.payload, resolved.where)
+    return csvResponse(`commandes-compta-${todayStamp()}.csv`, formatComptaCsv(rows))
+  } catch (err) {
+    return badFilter(req, err)
+  }
 }

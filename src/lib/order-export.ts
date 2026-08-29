@@ -7,6 +7,10 @@
  * (même découplage que `order-mail.ts`) — l'orchestration (`src/payload/lib/
  * order-export-handler.ts`) fait le mapping depuis les docs Payload.
  *
+ * Les DEUX profils portent sur les mêmes lignes — celles de la vue
+ * back-office, filtrées par la liste elle-même (`order-export-handler.ts`) :
+ * ils ne se distinguent QUE par leurs colonnes, jamais par un filtre propre.
+ *
  * Séparateur `;` et décimale `,` : convention CSV française — Excel/
  * LibreOffice en locale fr_FR ouvrent ce fichier directement (double-clic,
  * sans assistant d'import) sans ambiguïté avec le séparateur décimal.
@@ -63,14 +67,6 @@ function orderTypeLabel(orderType: string): string {
   return ORDER_TYPE_LABELS[orderType as OrderExportOrderType] ?? orderType;
 }
 
-/**
- * Statuts couverts par l'export « préparation » — décalque de `processing/
- * on-hold` côté Woo (commandes encaissées, pas encore expédiées : à préparer
- * ou en cours de préparation). `shipped/cancelled/refunded/failed` n'ont plus
- * rien à préparer. Exporté pour que l'orchestration filtre sa requête Payload
- * sur exactement cet ensemble (une seule source de vérité).
- */
-export const PREPARATION_ORDER_STATUSES: readonly OrderExportStatus[] = ["paid", "prepared"];
 
 /**
  * Borne de la sélection explicite (panneau `OrderExportForm.tsx`, demande
@@ -87,8 +83,7 @@ export type ParsedExportOrderIds = { ids: number[] } | { error: string };
 /**
  * Parse le paramètre `ids` (liste d'identifiants de commandes séparés par des
  * virgules, ex. `"12,45,109"`) porté par les deux endpoints d'export quand la
- * cliente coche des commandes dans la liste plutôt que de choisir une plage
- * de dates — cf. `order-export-handler.ts` (l'orchestration I/O) et
+ * cliente coche des commandes dans la liste plutôt que de filtrer la vue — cf. `order-export-handler.ts` (l'orchestration I/O) et
  * `OrderExportForm.tsx` (le panneau qui pose ce paramètre depuis
  * `useSelection()`). Pure et testée ici, comme `splitFullName`/
  * `computeVatPart` : aucune dépendance à `URLSearchParams` ni à Payload — le
@@ -96,7 +91,8 @@ export type ParsedExportOrderIds = { ids: number[] } | { error: string };
  *
  * Absent ou vide : PAS une erreur, `{ ids: [] }` — signale à l'appelant
  * qu'aucune sélection explicite n'a été posée, pour qu'il retombe sur les
- * bornes de dates (`from`/`to`) sans changer de comportement. Un identifiant
+ * filtres de la vue (`where[…]`/`search`, cf. `order-export-handler.ts`)
+ * sans changer de comportement. Un identifiant
  * qui ne se parse pas en entier positif, ou une sélection au-delà de
  * `MAX_EXPORT_SELECTION`, sont en revanche des erreurs EXPLICITES : jamais un
  * export silencieusement partiel.
@@ -331,8 +327,8 @@ function formatDateFr(createdAt: string): string {
  * Une ligne par ligne de commande, comme avant : les faits de la commande
  * (client, adresse, coupon, remise, type) sont répétés sur chacune de ses
  * lignes — même aplatissement qu'AOE, c'est ce qui rend la feuille triable
- * par titre pour la préparation. L'appelant filtre en amont sur
- * `PREPARATION_ORDER_STATUSES` : ce module ne re-filtre pas.
+ * par titre pour la préparation. Aucun filtre ici : les lignes reçues sont
+ * celles de la vue back-office, l'export n'en écarte aucune.
  */
 export function formatPreparationCsv(orders: readonly OrderExportRow[]): string {
   const rows = orders.flatMap((order) => {

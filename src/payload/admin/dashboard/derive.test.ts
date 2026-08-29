@@ -5,7 +5,6 @@ import {
   bucketWeeklyQuantities,
   chartAxisTicks,
   dailySalesBuckets,
-  defaultExportDateRange,
   editionTag,
   everyNthLabels,
   fmtDateFr,
@@ -19,7 +18,6 @@ import {
   monthlyBucketToChartInput,
   monthlySalesBuckets,
   monthsAgoParisMonthStartUtc,
-  parisDateYmd,
   parisMonthBounds,
   pastilleText,
   precommandeQuantityByBook,
@@ -924,26 +922,6 @@ describe('parisMonthBounds — bornes UTC du mois civil de Paris', () => {
   })
 })
 
-describe('defaultExportDateRange — aujourd’hui Paris → un mois en arrière', () => {
-  it('plage simple (milieu de mois)', () => {
-    expect(defaultExportDateRange(new Date('2026-07-20T12:00:00Z'))).toEqual({
-      from: '2026-06-20',
-      to: '2026-07-20',
-    })
-  })
-
-  it('cale le jour si le mois cible est plus court (31 → 28/29)', () => {
-    expect(defaultExportDateRange(new Date('2026-03-31T12:00:00Z'))).toEqual({
-      from: '2026-02-28',
-      to: '2026-03-31',
-    })
-  })
-
-  it('parisDateYmd suit le fuseau Paris (soir UTC peut basculer de jour)', () => {
-    // 2026-07-19 22:30 UTC = 2026-07-20 00:30 à Paris (CEST)
-    expect(parisDateYmd(new Date('2026-07-19T22:30:00Z'))).toBe('2026-07-20')
-  })
-})
 
 /* ────────────────────────── Import routeur (3.7) ────────────────────────── */
 

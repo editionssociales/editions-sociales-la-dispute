@@ -247,30 +247,40 @@ et téléversez le nouveau — les liens déjà envoyés continuent de fonctionn
 donneront le nouveau fichier. Un lien cesse de fonctionner si la commande est
 annulée ou remboursée.
 
-## Exports comptables
+## Exporter les commandes
 
-Tableau de bord → panneau **Export compta / préparation**, ou depuis la liste
-des commandes. Deux fichiers téléchargeables (format tableur, ouvrable dans
-Excel) :
+Ouvrez **Commandes** (menu de gauche) : le panneau **Export CSV des commandes**
+est juste au-dessus de la liste, avec deux liens.
 
-- **Export préparation** : les commandes à préparer/expédier (statuts payée
-  et préparée uniquement). Colonnes, dans l'ordre : date de commande, titre,
-  quantité, nom, prénom, adresse, complément, code postal, ville, pays,
-  e-mail, téléphone — puis le n° de commande, le type, l'ISBN, le prix, le
-  coupon et la remise. Une ligne par article commandé.
-- **Export compta** : toutes les commandes sur la période choisie, avec le
-  détail de la TVA.
+**Ce que vous voyez est ce que vous exportez.** L'export reprend exactement les
+lignes de la liste telle qu'elle est filtrée à l'écran — filtres, chips
+(« À traiter », « Précommandes », « Dons »…) et recherche compris — et pas
+seulement la page affichée : toutes les lignes qui correspondent.
 
-Laissez les dates « Du » / « Au » vides pour tout exporter, ou choisissez une
-période précise.
+Donc, pour n'exporter qu'une partie : **filtrez d'abord la liste, puis
+exportez**. Quelques exemples :
+
+- seulement les dons : chip **Dons**, puis Export ;
+- seulement les commandes à préparer : chip **À traiter**, puis Export ;
+- un mois précis : bouton **Filtres** → « Créé(e) à » → « est postérieur à »
+  le 1er, puis une seconde condition « est antérieur à » la fin du mois ;
+- une personne : tapez son nom dans la recherche, puis Export.
+
+Les deux liens ne changent que **les colonnes** :
+
+- **Export préparation** : une ligne par article commandé — date de commande,
+  titre, quantité, nom, prénom, adresse, complément, code postal, ville, pays,
+  e-mail, téléphone, puis le n° de commande, le type, l'ISBN, le prix, le
+  coupon et la remise.
+- **Export compta** : une ligne par commande, avec le détail de la TVA 5,5 %.
 
 Vous pouvez aussi exporter une **sélection précise** : cochez des commandes
-dans la liste (checkboxes de gauche), les deux liens d'export portent alors
-sur cette sélection et les dates sont ignorées — pratique pour ressortir
-seulement quelques commandes sans changer de période. La case « Tout
-sélectionner » de la liste ne compte pas comme une sélection précise (elle ne
-retient que les commandes de la page affichée) : dans ce cas, l'export
-continue de suivre les dates « Du » / « Au ».
+dans la liste (cases de gauche), les deux liens d'export portent alors sur
+ces commandes-là et rien d'autre — les filtres sont ignorés le temps de la
+sélection. Pratique pour ressortir quelques commandes sans toucher aux
+filtres. La case « Tout sélectionner » n'est pas une sélection précise :
+« tout », c'est l'ensemble de la liste filtrée, et c'est déjà exactement ce
+que les liens exportent sans rien cocher.
 
 Deux choses à savoir sur l'export préparation :
 

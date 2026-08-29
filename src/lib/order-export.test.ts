@@ -6,7 +6,6 @@ import {
   formatPreparationCsv,
   MAX_EXPORT_SELECTION,
   parseExportOrderIds,
-  PREPARATION_ORDER_STATUSES,
   splitFullName,
   type OrderExportRow,
 } from "./order-export.ts";
@@ -65,11 +64,11 @@ describe("computeVatPart", () => {
 /**
  * Sélection explicite de commandes (checkboxes de la liste, panneau
  * `OrderExportForm.tsx`) → paramètre `ids` des deux endpoints d'export,
- * PRIME sur `from`/`to` côté `order-export-handler.ts`. Parsing pur, testé
+ * PRIME sur les filtres de la vue côté `order-export-handler.ts`. Parsing pur, testé
  * ici comme le reste du module.
  */
 describe("parseExportOrderIds", () => {
-  it("absent ou vide → pas d'erreur, liste vide (pas de sélection explicite, l'appelant retombe sur les dates)", () => {
+  it("absent ou vide → pas d'erreur, liste vide (pas de sélection explicite, l'appelant retombe sur les filtres de la vue)", () => {
     expect(parseExportOrderIds(null)).toEqual({ ids: [] });
     expect(parseExportOrderIds(undefined)).toEqual({ ids: [] });
     expect(parseExportOrderIds("")).toEqual({ ids: [] });
@@ -113,12 +112,6 @@ describe("parseExportOrderIds", () => {
   it(`exactement ${MAX_EXPORT_SELECTION} ids → accepté (borne inclusive)`, () => {
     const exactly = Array.from({ length: MAX_EXPORT_SELECTION }, (_, i) => i + 1);
     expect(parseExportOrderIds(exactly.join(","))).toEqual({ ids: exactly });
-  });
-});
-
-describe("PREPARATION_ORDER_STATUSES", () => {
-  it("couvre exactement paid/prepared — pas shipped/cancelled/refunded/failed", () => {
-    expect(PREPARATION_ORDER_STATUSES).toEqual(["paid", "prepared"]);
   });
 });
 

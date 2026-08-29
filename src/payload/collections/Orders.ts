@@ -161,9 +161,11 @@ export const Orders: CollectionConfig = {
   // (`findOrderBySessionId`/`findOrdersByPaymentIntent` du support/export).
   indexes: [{ fields: ['stripeSessionId', 'orderType'], unique: true }],
   // `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`
-  // — deux profils d'export CSV (authentifié admin/éditeur, cf.
-  // `order-export-handler.ts` pour le détail : filtrage, formatage,
-  // en-têtes de réponse).
+  // — deux MISES EN FORME du même ensemble de lignes, désigné par cette
+  // liste : les commandes cochées quand il y en a (`ids`, la sélection
+  // prime), les filtres et la recherche de la vue sinon (recopiés tels quels
+  // par le panneau d'export, cf. `order-export-handler.ts`). Authentifié
+  // admin/éditeur.
   endpoints: [
     {
       path: '/export/preparation',
