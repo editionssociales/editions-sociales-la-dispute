@@ -382,10 +382,15 @@ function tierObligatoire(id: string): DonationTier {
  *
  * EXCEPTION à l'ordre du PDF : le palier 50 € ouvre la liste (demande client
  * 2026-08-27) — juste après la carte « Montant libre », codée en dur en tête
- * de rail dans `tiers-rail.tsx`, et AVANT la proposition à 15 €. Cet ordre
- * est purement ÉDITORIAL : `DONATION_TIERS`/`CONTREPARTIES_2026` (paiement,
- * résolution de commande) gardent leur ordre croissant verrouillé par leurs
- * propres tests.
+ * de rail dans `tiers-rail.tsx`. Réordonné une 2ᵉ fois (demande Clara
+ * 2026-08-30, verbatim « remonter le don de 50 € après montant libre et
+ * faire en gros : libre // 50 // 35 // 15 // 100 et la suite ») : 50, 35, 15,
+ * 100, PUIS la suite croissante (75, 200, 300, 500, 1000) — le 75 €, non cité
+ * par la cliente, ouvre cette « suite » juste après le 100 € plutôt qu'à sa
+ * place croissante d'origine (entre 50 et 100) ; placement le plus proche de
+ * la lettre de la demande, à confirmer avec Clara. Cet ordre est purement
+ * ÉDITORIAL : `DONATION_TIERS`/`CONTREPARTIES_2026` (paiement, résolution de
+ * commande) gardent leur ordre croissant verrouillé par leurs propres tests.
  *
  * Fusion PAR PALIER (demande client 2026-08-29) : ce tableau fixe aussi
  * l'ORDRE D'AFFICHAGE définitif — le CMS ne réordonne JAMAIS les cartes, il
@@ -405,27 +410,27 @@ const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
       ],
     },
     {
-      tier: tierObligatoire("palier-15"),
-      items: ["Une planche de stickers"],
-    },
-    {
       tier: tierObligatoire("palier-35"),
       items: ["Manifeste du parti communiste", "Une planche de stickers"],
     },
     {
-      tier: tierObligatoire("palier-75"),
-      items: [
-        "Les luttes de classes en France",
-        "Le communisme qui vient",
-        "Un tote bag",
-        "Une planche de stickers",
-      ],
+      tier: tierObligatoire("palier-15"),
+      items: ["Une planche de stickers"],
     },
     {
       tier: tierObligatoire("palier-100"),
       items: [
         "Gaza, génocide annoncé",
         "ou Fascisme et dictature",
+        "Un tote bag",
+        "Une planche de stickers",
+      ],
+    },
+    {
+      tier: tierObligatoire("palier-75"),
+      items: [
+        "Les luttes de classes en France",
+        "Le communisme qui vient",
         "Un tote bag",
         "Une planche de stickers",
       ],

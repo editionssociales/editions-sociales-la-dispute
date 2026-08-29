@@ -307,21 +307,21 @@ describe("mergePageContact — global vide ⇒ page /contact actuelle, verbatim"
 });
 
 describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut, verbatim", () => {
-  it("global absent → 9 contreparties, le palier 50 € en tête (demande client 2026-08-27), puis l'ordre croissant", () => {
+  it("global absent → 9 contreparties, ordre Clara 2026-08-30 (50, 35, 15, 100, puis la suite)", () => {
     const merged = mergePageSouscription(null);
     expect(merged.contreparties.map((c) => c.tier.id)).toEqual([
       "palier-50",
-      "palier-15",
       "palier-35",
-      "palier-75",
+      "palier-15",
       "palier-100",
+      "palier-75",
       "palier-200",
       "palier-300",
       "palier-500",
       "palier-1000",
     ]);
     expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      50, 15, 35, 75, 100, 200, 300, 500, 1000,
+      50, 35, 15, 100, 75, 200, 300, 500, 1000,
     ]);
     // Règle « ou » sur les défauts : la bande alternative du PDF (préfixe
     // retiré du texte, flag posé — le rendu repose le « ou »).
@@ -333,10 +333,10 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
     ]);
     // Deux lots verrouillés au hasard (iso-rendu du PDF client « contreparties dans l'ordre »).
     expect(merged.contreparties[1].items).toEqual([
+      { texte: "Manifeste du parti communiste", alternative: false },
       { texte: "Une planche de stickers", alternative: false },
     ]);
     expect(merged.contreparties[2].items).toEqual([
-      { texte: "Manifeste du parti communiste", alternative: false },
       { texte: "Une planche de stickers", alternative: false },
     ]);
   });
@@ -395,7 +395,7 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
       contreparties: [{ tierId: "palier-disparu" as never, items: [] }],
     });
     expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      50, 15, 35, 75, 100, 200, 300, 500, 1000,
+      50, 35, 15, 100, 75, 200, 300, 500, 1000,
     ]);
   });
 
@@ -455,10 +455,10 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
     });
     expect(merged.contreparties.map((c) => c.tier.id)).toEqual([
       "palier-50",
-      "palier-15",
       "palier-35",
-      "palier-75",
+      "palier-15",
       "palier-100",
+      "palier-75",
       "palier-200",
       "palier-300",
       "palier-500",
