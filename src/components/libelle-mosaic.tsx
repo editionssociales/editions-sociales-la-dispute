@@ -15,12 +15,16 @@ import { FOCUS_RING_DARK, FOCUS_RING_LIGHT, invertingCell } from "@/lib/ui";
  * mosaïque en grille avant eux, ils vivent dans l'historique git.
  *
  * ÉTAGES de cases, items triés par nombre de titres DÉCROISSANT (copie
- * locale — l'ordre des facettes reste alphabétique en amont). L'étage i
- * héberge i cases jusqu'à un PLAFOND de quatre (cf. `tierRows`), et la
- * largeur d'une case n'est pas une part égale : elle suit le span horizontal
- * de son propre libellé (cf. `labelSpan`). Les autres métriques décroissent
- * avec le rang, chacune sur sa loi (cf. `tierMetrics`). « Tous les livres »
- * reste une case fine à grand corps, et le compte vit en coin bas-droit.
+ * locale — l'ordre des facettes reste alphabétique en amont, et ne pilote
+ * plus que cet ordre de LECTURE depuis le retour client du 29/08 : la
+ * TAILLE des cases ne dépend plus du nombre de livres, cf. `tierMetrics`).
+ * L'étage i héberge i cases jusqu'à un PLAFOND de quatre (cf. `tierRows`), et
+ * la largeur d'une case n'est pas une part égale : elle suit le span
+ * horizontal de son propre libellé (cf. `labelSpan`). Le corps d'un étage est
+ * le plus grand qui laisse tenir CHAQUE libellé de l'étage (cf.
+ * `tierMetrics`) ; plus de compte de titres affiché (retiré le 29/08, il ne
+ * sert plus qu'au tri `byCount` ci-dessous) ni de hauteur imposée — la case
+ * suit la hauteur de son propre contenu, la rangée celle de sa pire case.
  * Cellule active inversée noir/blanc (`invertingCell`).
  */
 
@@ -32,26 +36,20 @@ export interface LibelleMosaicItem {
 }
 
 /**
- * Case d'un étage — corps et compte hérités de l'étage via variables CSS. Le
- * compte de titres vit en COIN bas-droit et en ABSOLU : dans le flux du
- * libellé, il décalait le centrage d'une case à l'autre.
- *
- * `fixedHeight` : l'étage impose sa hauteur (tous sauf « Tous les livres »).
- * La case perd alors son padding vertical — `py-2` (16px) déborderait à lui
- * seul les étages profonds — et clippe ce qui dépasse.
+ * Case d'un étage — corps hérité de l'étage via variable CSS. Plus de compte
+ * de titres affiché en coin (retiré le 29/08, retour client : « enlever le
+ * compte de livres ») ; plus de hauteur imposée non plus, la case suit la
+ * hauteur de son propre contenu (`tierMetrics` n'a plus de valeur `--th` à
+ * publier, cf. `libelle-mosaic-core.ts`).
  */
 function TierCell({
   href,
   active,
   label,
-  count,
-  fixedHeight,
 }: {
   href: string;
   active: boolean;
   label: string;
-  count: number;
-  fixedHeight: boolean;
 }) {
   const short = truncateWords(label);
   return (
@@ -60,39 +58,16 @@ function TierCell({
       aria-current={active ? "page" : undefined}
       // `basis-0` + `flexGrow` = largeur au PRORATA du span (cf. `labelSpan`).
       style={{ flexGrow: labelSpan(short) }}
-      className={`relative flex min-w-0 shrink basis-0 items-center justify-center overflow-hidden px-3 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${fixedHeight ? "" : "py-2"} ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
+      className={`relative flex min-w-0 shrink basis-0 items-center justify-center overflow-hidden px-3 py-2 text-center transition-colors motion-reduce:transition-none focus-visible:z-[2] ${active ? FOCUS_RING_DARK : FOCUS_RING_LIGHT} ${invertingCell(active)}`}
     >
       {short !== label && <span className="sr-only">{label}</span>}
       <span
         aria-hidden={short === label ? undefined : "true"}
-        // `relative z-[1]` : au corps qu'il porte, le compte du coin mord sur
-        // la fin du libellé — c'est le LIBELLÉ qui passe devant, le chiffre
-        // reste le filigrane de sa case.
-        className="relative z-[1] text-balance font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.05] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs)]"
+        className="text-balance font-sans text-[length:var(--fs-sm)] font-black uppercase leading-[1.05] tracking-[.01em] [overflow-wrap:break-word] lg:text-[length:var(--fs)]"
       >
         {short}
       </span>
-      {/* Nombre NU, sans parenthèses (retour Youri 25/07) : il n'annote plus
-          un libellé au fil du texte, il vit seul dans son coin. Interligne
-          serré — au corps qu'il porte désormais, `leading-none` laisserait un
-          talon de descendante sous le chiffre — et marge d'angle en `em` :
-          elle suit le chiffre, sinon les étages profonds la verraient enfler
-          en proportion d'eux-mêmes. Décoratif (`aria-hidden`) : le compte
-          accessible vit dans le `sr-only` juste après (#86) — la mosaïque
-          étant l'UNIQUE vue des libellés, ce nombre ne doit pas rester muet
-          pour les technologies d'assistance. */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-[.14em] right-[.18em] whitespace-nowrap font-sans text-[length:var(--fsc-sm)] font-bold leading-[.78] opacity-20 lg:text-[length:var(--fsc)]"
-      >
-        {count}
-      </span>
-      <span className="sr-only">
-        , {count} titre{count > 1 ? "s" : ""}
-      </span>
-      {/* Témoin de navigation (vue de destination dynamique) — la case est
-          déjà `relative`, le coin haut-droit reste libre (le compte vit en
-          bas-droit). */}
+      {/* Témoin de navigation (vue de destination dynamique). */}
       <LinkPendingHint />
     </Link>
   );
@@ -124,35 +99,26 @@ export function LibelleMosaic({
   );
   const rows = tierRows(byCount);
 
-  /** Variables CSS d'un étage — corps, compte, et l'épaisseur si imposée. */
+  /** Variables CSS d'un étage — le seul corps, désormais (plus de compte, plus
+   *  d'épaisseur imposée). */
   const tierStyle = (m: ReturnType<typeof tierMetrics>) =>
     ({
       "--fs": `${m.fontLg}px`,
       "--fs-sm": `${m.fontSm}px`,
-      "--fsc": `${m.countLg}px`,
-      "--fsc-sm": `${m.countSm}px`,
-      ...(m.thickLg != null && {
-        "--th": `${m.thickLg}px`,
-        "--th-sm": `${m.thickSm}px`,
-      }),
     }) as CSSProperties;
 
   const tierRow = (row: LibelleMosaicItem[], i: number) => {
-    const m = tierMetrics(i + 1);
+    // Le corps est calé sur le CONTENU de la rangée (nombre de cases, largeur
+    // du libellé le plus large), plus sur son rang — cf. `tierMetrics`.
+    const m = tierMetrics(row.map((item) => item.name));
     return (
-      <div
-        key={i}
-        className={`flex gap-[2px] ${m.thickLg == null ? "" : "h-[var(--th-sm)] lg:h-[var(--th)]"}`}
-        style={tierStyle(m)}
-      >
+      <div key={i} className="flex gap-[2px]" style={tierStyle(m)}>
         {row.map((item) => (
           <TierCell
             key={item.slug ?? "all"}
             href={hrefFor(item.slug)}
             active={isActive(item)}
             label={item.name}
-            count={item.count}
-            fixedHeight={m.thickLg != null}
           />
         ))}
       </div>
@@ -173,19 +139,18 @@ export function LibelleMosaic({
       className={`grid-cols-1 ${className}`}
     >
       {banner ? (
-        // Les étages sont derrière la bascule de la bannière (îlot client,
-        // `mosaic-disclosure`) : cette vue reste serveur, elle ne passe au
-        // client que des noeuds déjà rendus et un objet de style.
+        // Les étages sont TOUJOURS visibles à `lg`+, et derrière la bascule
+        // de la bannière sous `lg` (îlot client, `mosaic-disclosure`) : cette
+        // vue reste serveur, elle ne passe au client que des noeuds déjà
+        // rendus et un objet de style.
         <MosaicDisclosure
-          bannerStyle={tierStyle(tierMetrics(1))}
+          bannerStyle={tierStyle(tierMetrics([banner.name]))}
           bannerActive={isActive(banner)}
           banner={
             <TierCell
               href={hrefFor(banner.slug)}
               active={isActive(banner)}
               label={banner.name}
-              count={banner.count}
-              fixedHeight={false}
             />
           }
         >

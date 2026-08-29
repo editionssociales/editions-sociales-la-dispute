@@ -1,6 +1,6 @@
 /**
  * Arithmétique pure de `libelle-mosaic.tsx` (#77) — étages, métriques et
- * troncature de libellé. Extraite à l'IDENTIQUE (mêmes valeurs, mêmes
+ * garde-fou de libellé. Extraite à l'IDENTIQUE (mêmes valeurs, mêmes
  * formules) pour être testée sans DOM ; le composant reste l'unique
  * consommateur de ce module.
  */
@@ -8,7 +8,8 @@
 /**
  * Nombre maximum de cases sur un même étage (retour Youri 25/07). Au-delà de
  * quatre, la case devient trop étroite pour son corps : le libellé passe à
- * trois lignes ou plus et se fait clipper par la hauteur imposée de l'étage.
+ * trois lignes ou plus — plus jamais clippé (la hauteur d'étage est
+ * intrinsèque, cf. `tierMetrics`), mais visuellement dense.
  */
 const MAX_TIER_CELLS = 4;
 
@@ -30,100 +31,6 @@ export function tierRows<T>(items: T[]): T[][] {
     start += size;
   }
   return rows;
-}
-
-/**
- * Métriques d'un étage — toutes décroissantes avec son RANG, chacune sur sa
- * propre loi (retour Youri 25/07). Desktop et mobile ont des bases propres,
- * le mobile valant la moitié du desktop ; tout est arrondi au dixième.
- *
- * - corps : `BASE / (rang + 1)` → 42-40-30-24-20-17,1 px en desktop.
- *   Le `+ 1` au dénominateur est le point du réglage : il fait décroître le
- *   texte MOINS VITE que l'épaisseur (en `1/rang`), donc les cases s'aplatis-
- *   sent plus qu'elles ne rapetissent — le libellé reste lisible en bas.
- *   SEULE exception, l'étage 1 (« Tous les livres ») porte 30 % de moins
- *   (`TIER1_FONT_RATIO`) : sa case est une bannière pleine largeur, le corps
- *   de formule y était démesuré. La réduction est locale au rang 1 — la
- *   formule des autres étages n'en est jamais affectée.
- * - épaisseur : `BASE / rang`, SAUF ce même étage 1, laissé en hauteur
- *   automatique : c'est la bannière du catalogue, elle se règle sur son
- *   propre corps.
- * - compte en coin : `BASE / (rang + 2)`, la pente la plus douce des trois —
- *   il ne suit plus le corps du libellé sous plafond (ancien `min(9px,
- *   corps)`) mais vit sa vie de chiffre. Le rang 1 porte le MÊME abattement
- *   que le corps, pour que la bannière reste d'un seul bloc. Base assez haute
- *   pour que le nombre passe DEVANT le libellé en taille : c'est le parti pris
- *   du 25/07, le chiffre est le sujet et le libellé sa légende.
- *
- * Imposer la hauteur retire la latitude du padding vertical : les cases des
- * étages 2+ passent en `py-0` + `overflow-hidden`, sinon `py-2` (16px)
- * mangerait à lui seul l'essentiel des étages profonds.
- *
- * Le calage sur le NOMBRE DE CASES (essayé le même jour) est écarté, et le
- * plafond de `MAX_TIER_CELLS` le condamne définitivement : les étages du bas
- * comptent tous quatre cases — 19 libellés donnent 1-2-3-4-4-4-1 — ils
- * seraient donc tous à la même taille, décroissance à plat.
- *
- * Ni plancher ni terme constant AJOUTÉ au numérateur (auparavant
- * `6 + 30/rang`, planchers 10px desktop et 9px mobile) : ils écrasaient la
- * pente en bas, et le plancher mobile bloquait net à 9px dès l'étage 4.
- * Valeurs FRACTIONNAIRES et non entières : sous ~8px, l'arrondi à l'unité
- * remettait des étages à égalité — soit la pente écrasée qu'on vient de
- * corriger. Les cases restent des cibles < 44px sur les étages profonds :
- * entorse à R7 assumée par le client (densité voulue de la vue).
- */
-const FONT_BASE_LG = 120;
-const FONT_BASE_SM = 60;
-const THICK_BASE_LG = 300;
-const THICK_BASE_SM = 150;
-/** 192 et 96 abattus de 10 % (retour Youri 25/07). */
-const COUNT_BASE_LG = 172.8;
-const COUNT_BASE_SM = 86.4;
-/** Abattement du seul rang 1 (« Tous les livres »), −30 % : corps ET compte. */
-const TIER1_FONT_RATIO = 0.7;
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
-
-export function tierMetrics(rank: number) {
-  const abattement = rank === 1 ? TIER1_FONT_RATIO : 1;
-  return {
-    // Corps : en 1/(rang + 1), décroissance plus lente que l'épaisseur.
-    fontLg: round1((FONT_BASE_LG / (rank + 1)) * abattement),
-    fontSm: round1((FONT_BASE_SM / (rank + 1)) * abattement),
-    // Compte : en 1/(rang + 2), la pente la plus douce des trois.
-    countLg: round1((COUNT_BASE_LG / (rank + 2)) * abattement),
-    countSm: round1((COUNT_BASE_SM / (rank + 2)) * abattement),
-    // Étage 1 (« Tous les livres ») : hauteur automatique, jamais imposée.
-    thickLg: rank === 1 ? null : round1(THICK_BASE_LG / rank),
-    thickSm: rank === 1 ? null : round1(THICK_BASE_SM / rank),
-  };
-}
-
-/** Longueur maximale d'un libellé AFFICHÉ (retour Youri 25/07). */
-const MAX_LABEL = 20;
-
-/**
- * Coupe un libellé trop long sur une frontière de MOT : on garde les mots
- * entiers tant qu'on tient dans `MAX_LABEL`, jamais une troncature au milieu
- * d'un mot. La ponctuation de liaison restée en fin de coupe est retirée —
- * « État, droit & institutions » donne « État, droit », pas « État, droit & »,
- * qui annoncerait un mot absent. Repli : un premier mot déjà plus long que la
- * limite est gardé ENTIER (le couper au caractère produirait un fragment
- * illisible).
- *
- * Le nom complet n'est jamais perdu pour autant : la case coupée porte le
- * libellé entier en `sr-only` et masque sa version courte à l'arbre a11y —
- * sinon la troncature dégraderait aussi le nom accessible du lien.
- */
-export function truncateWords(label: string) {
-  if (label.length <= MAX_LABEL) return label;
-  let out = "";
-  for (const word of label.split(" ")) {
-    const next = out ? `${out} ${word}` : word;
-    if (next.length > MAX_LABEL) break;
-    out = next;
-  }
-  return (out || label.split(" ")[0]).replace(/[\s,&·–-]+$/u, "");
 }
 
 /**
@@ -150,4 +57,111 @@ export function labelSpan(label: string) {
     best = Math.min(best, Math.max(left, right));
   }
   return best;
+}
+
+/**
+ * Nombre de lignes qu'un étage laisse à un libellé avant de commencer à
+ * gonfler visiblement sa case — retour client 29/08 : « que les carrés
+ * fassent apparaître le texte en entier », plus question de le tronquer pour
+ * tenir dans une hauteur imposée (cf. `tierMetrics`, qui n'impose plus rien).
+ * Ce n'est PAS un plafond dur : un libellé qui dépasserait cette estimation à
+ * `MAX_LINES + 1` lignes s'étale simplement sur une case un peu plus haute,
+ * jamais clippé — la rangée suit toujours sa pire case.
+ */
+const MAX_LINES = 2;
+
+/**
+ * Constante de calibration d'`estimatedLines`/`tierMetrics` : le nombre de
+ * « caractères × px de corps » qu'une case SEULE sur sa rangée (une seule
+ * case, `cellsInRow` = 1) tient sur une seule ligne. Calée pour que l'étage-
+ * bannière (« Tous les livres », seule sur sa rangée) retrouve un corps
+ * proche de l'ancien réglage (42px) une fois réparti sur `MAX_LINES` lignes —
+ * valeur empirique, pas dérivée d'une mesure DOM.
+ */
+const FONT_FIT_LG = 180;
+/** Même loi que le corps large, depuis sa propre base à moitié (mobile). */
+const FONT_FIT_SM = FONT_FIT_LG / 2;
+
+const floor1 = (n: number) => Math.floor(n * 10) / 10;
+
+/**
+ * Estimation du nombre de lignes que `label` occuperait à un corps `fontPx`,
+ * dans une case qui partage sa rangée avec `cellsInRow` cases — heuristique
+ * par longueur de caractères (`labelSpan`, comme pour la largeur), JAMAIS une
+ * mesure DOM : plus il y a de cases sur la rangée, moins chacune capte de
+ * largeur, donc moins de caractères par ligne à corps égal. Le petit epsilon
+ * absorbe le bruit flottant d'un `floor1` en amont (cf. `tierMetrics`) : sans
+ * lui, un résultat pile égal à `MAX_LINES` pourrait remonter d'un cran par
+ * imprécision binaire.
+ */
+export function estimatedLines(label: string, fontPx: number, cellsInRow: number): number {
+  const charsPerLine = FONT_FIT_LG / (fontPx * Math.max(cellsInRow, 1));
+  return Math.ceil(labelSpan(label) / Math.max(charsPerLine, 1e-6) - 1e-9);
+}
+
+/**
+ * Métriques d'un étage — le corps est désormais DÉCOUPLÉ de la popularité du
+ * libellé (arbitrage client 29/08 : la taille des cases ne doit plus dépendre
+ * du nombre de livres, seul l'ordre de lecture — `byCount`, dans le composant
+ * — en dépend encore). C'est le plus grand corps qui laisse tenir CHAQUE
+ * libellé de l'étage (le plus large, `labelSpan`) dans `MAX_LINES` lignes,
+ * sachant que les `labels.length` cases de la rangée s'en partagent la
+ * largeur (résolution algébrique d'`estimatedLines`, `floor1` pour ne jamais
+ * arrondir AU-DESSUS du corps sûr). Desktop et mobile partagent la même loi
+ * depuis leur propre base (`FONT_FIT_SM` = moitié de `FONT_FIT_LG`).
+ *
+ * Ni plancher ni plafond (même parti pris que l'ancien réglage, cf. historique
+ * ci-dessous) : un étage dense de libellés longs retombe à un corps très fin
+ * plutôt que de clipper ou de tronquer — la hauteur d'étage étant intrinsèque
+ * (`libelle-mosaic.tsx` n'impose plus de hauteur `--th`/`--th-sm`), un
+ * dépassement du budget de lignes agrandit simplement la case.
+ *
+ * Historique : la première version calait corps ET épaisseur sur le seul RANG
+ * de popularité (`BASE/(rang+1)`, `BASE/rang`), avec un compte de titres en
+ * coin (`BASE/(rang+2)`). Le rang pilotait alors une case étroite à hauteur
+ * imposée, tronquant les libellés longs (`truncateWords` à 20 caractères) —
+ * exactement ce que le retour client du 29/08 disqualifie. Le compte de coin
+ * est supprimé du rendu (`libelle-mosaic.tsx`), donc de ces métriques.
+ */
+export function tierMetrics(labels: string[]) {
+  const cells = Math.max(labels.length, 1);
+  const worst = Math.max(...labels.map(labelSpan), 1);
+  return {
+    fontLg: floor1((FONT_FIT_LG * MAX_LINES) / (cells * worst)),
+    fontSm: floor1((FONT_FIT_SM * MAX_LINES) / (cells * worst)),
+  };
+}
+
+/** Plafond d'un mot DÉGÉNÉRÉ — jamais atteint par un intitulé éditorial
+ *  normal (les libellés thématiques du catalogue tiennent tous largement
+ *  en dessous). Relevé très au-dessus de l'ancien seuil d'affichage (20 → 60,
+ *  retour client 29/08 : les libellés doivent apparaître en ENTIER, la
+ *  troncature ne porte plus sur le texte visible) — ce garde-fou ne reste que
+ *  pour un mot unique si long qu'aucun corps raisonnable ne le ferait tenir
+ *  (ex. un intitulé collé sans espace importé par erreur).
+ */
+const MAX_LABEL = 60;
+
+/**
+ * Coupe un libellé DÉGÉNÉRÉ sur une frontière de MOT : au-delà de `MAX_LABEL`
+ * caractères (jamais atteint en usage normal), on garde les mots entiers tant
+ * qu'on tient dans la limite, jamais une troncature au milieu d'un mot. La
+ * ponctuation de liaison restée en fin de coupe est retirée — « État, droit &
+ * institutions » donne « État, droit », pas « État, droit & », qui annoncerait
+ * un mot absent. Repli : un premier mot déjà plus long que la limite est
+ * gardé ENTIER (le couper au caractère produirait un fragment illisible).
+ *
+ * Le nom complet n'est jamais perdu pour autant : la case coupée porte le
+ * libellé entier en `sr-only` et masque sa version courte à l'arbre a11y —
+ * sinon la troncature dégraderait aussi le nom accessible du lien.
+ */
+export function truncateWords(label: string) {
+  if (label.length <= MAX_LABEL) return label;
+  let out = "";
+  for (const word of label.split(" ")) {
+    const next = out ? `${out} ${word}` : word;
+    if (next.length > MAX_LABEL) break;
+    out = next;
+  }
+  return (out || label.split(" ")[0]).replace(/[\s,&·–-]+$/u, "");
 }

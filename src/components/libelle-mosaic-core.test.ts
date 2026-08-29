@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { labelSpan, tierMetrics, tierRows, truncateWords } from "./libelle-mosaic-core";
+import {
+  estimatedLines,
+  labelSpan,
+  tierMetrics,
+  tierRows,
+  truncateWords,
+} from "./libelle-mosaic-core";
 
 /**
  * `tierRows` : répartition en étages 1-2-3-4-4-4… — le plafond de 4 cases
@@ -31,101 +37,6 @@ describe("tierRows", () => {
 });
 
 /**
- * `tierMetrics` : le point fragile de la vue (cf. `src/components/CLAUDE.md`)
- * est l'ORDRE DES PENTES entre les trois métriques — l'épaisseur (`1/rang`)
- * doit décroître PLUS VITE que le corps (`1/(rang+1)`), qui doit décroître
- * PLUS VITE que le compte (`1/(rang+2)`). Un exposant remonté par erreur
- * casse cet ordre sans changer le signe de la pente — d'où des assertions
- * sur le RATIO d'un rang au suivant, pas seulement sur la décroissance.
- */
-describe("tierMetrics", () => {
-  it("valeurs desktop du commentaire (corps 42-40-30-24-20-17,1 px)", () => {
-    expect([1, 2, 3, 4, 5, 6].map((r) => tierMetrics(r).fontLg)).toEqual([
-      42, 40, 30, 24, 20, 17.1,
-    ]);
-  });
-
-  it("épaisseur : hauteur automatique (null) au rang 1, sinon BASE / rang", () => {
-    expect(tierMetrics(1).thickLg).toBeNull();
-    expect(tierMetrics(1).thickSm).toBeNull();
-    expect(tierMetrics(2).thickLg).toBe(150);
-    expect(tierMetrics(3).thickLg).toBe(100);
-    expect(tierMetrics(4).thickLg).toBe(75);
-  });
-
-  it("rang 1 : abattement de 30 % sur le corps ET le compte, jamais au-delà", () => {
-    const tier1 = tierMetrics(1);
-    const tier2 = tierMetrics(2);
-    // Sans abattement le corps du rang 1 vaudrait BASE/(1+1) = 60 ; avec les
-    // 30 % de moins (retour Youri 25/07), il tombe à 42.
-    expect(tier1.fontLg).toBe(42);
-    expect(tier1.countLg).toBe(40.3);
-    // Le rang 2 n'est jamais affecté par l'abattement du rang 1.
-    expect(tier2.fontLg).toBe(40);
-  });
-
-  it("ORDRE DES PENTES : épaisseur décroît plus vite que corps, corps plus vite que compte", () => {
-    for (let rank = 2; rank < 6; rank++) {
-      const a = tierMetrics(rank);
-      const b = tierMetrics(rank + 1);
-      const thickRatio = (b.thickLg as number) / (a.thickLg as number);
-      const fontRatio = b.fontLg / a.fontLg;
-      const countRatio = b.countLg / a.countLg;
-      // Un ratio plus PETIT = une chute plus rapide (b est plus petit que a).
-      expect(thickRatio).toBeLessThan(fontRatio);
-      expect(fontRatio).toBeLessThan(countRatio);
-      // Les trois métriques décroissent strictement (jamais un plancher).
-      expect(thickRatio).toBeLessThan(1);
-      expect(fontRatio).toBeLessThan(1);
-      expect(countRatio).toBeLessThan(1);
-    }
-  });
-
-  it("mobile (Sm) suit la même loi que desktop (Lg), à la moitié de la base", () => {
-    for (let rank = 1; rank <= 6; rank++) {
-      const m = tierMetrics(rank);
-      // « Moitié de la base » vaut AVANT arrondi : chaque métrique est arrondie
-      // au dixième depuis sa propre base, donc Sm peut différer de Lg/2 d'un pas
-      // d'arrondi (rang 5 : countLg = round1(172,8/7) = 24,7 → 12,35, quand
-      // countSm = round1(86,4/7) = 12,3). C'est la loi qui est partagée, pas
-      // le résultat arrondi.
-      // Borne à 0,051 et non 0,05 : l'écart vaut exactement un demi-pas, que le
-      // flottant rend 0,05000000000000071.
-      expect(Math.abs(m.fontSm - m.fontLg / 2)).toBeLessThan(0.051);
-      expect(Math.abs(m.countSm - m.countLg / 2)).toBeLessThan(0.051);
-    }
-  });
-});
-
-/**
- * `truncateWords` : jamais de coupure au milieu d'un mot, ponctuation de
- * liaison retirée en fin de coupe, mot initial déjà trop long gardé entier.
- */
-describe("truncateWords", () => {
-  it("sous la limite : inchangé", () => {
-    expect(truncateWords("Poésie")).toBe("Poésie");
-  });
-
-  it("coupe sur une frontière de mot et retire la ponctuation de liaison finale (exemple du commentaire)", () => {
-    expect(truncateWords("État, droit & institutions")).toBe("État, droit");
-  });
-
-  it("jamais un fragment au milieu d'un mot", () => {
-    const result = truncateWords("Anthropologie politique et sociale contemporaine");
-    for (const word of result.split(" ")) {
-      expect(
-        "Anthropologie politique et sociale contemporaine".includes(word),
-      ).toBe(true);
-    }
-  });
-
-  it("repli : un premier mot déjà plus long que la limite reste entier", () => {
-    const longWord = "Anticonstitutionnellementicoco"; // > 20 caractères
-    expect(truncateWords(longWord)).toBe(longWord);
-  });
-});
-
-/**
  * `labelSpan` : span horizontal proportionnel à la coupure de MOT la plus
  * équilibrée sur deux lignes — jamais la longueur brute pour un libellé à
  * plusieurs mots.
@@ -144,5 +55,106 @@ describe("labelSpan", () => {
     // Coupures possibles de "A B C" : "A"|"B C" (1/3) ou "A B"|"C" (3/1) →
     // best = min(3, 3) = 3, jamais la longueur brute (5).
     expect(labelSpan("A B C")).toBe(3);
+  });
+});
+
+/**
+ * `tierMetrics` : depuis le retour client du 29/08, le corps d'un étage n'est
+ * plus une fonction du RANG de popularité mais du CONTENU réel de la
+ * rangée — nombre de cases et largeur du libellé le plus exigeant
+ * (`labelSpan`). Point fragile : que le corps choisi laisse TOUJOURS tenir
+ * chaque libellé dans le budget de lignes (`estimatedLines`), jamais
+ * l'inverse.
+ */
+describe("tierMetrics", () => {
+  it("dépend du CONTENU, pas de la position : deux rangées de même forme mais de libellés différents donnent des corps différents", () => {
+    const courts = tierMetrics(["Essais", "Poésie"]);
+    const longs = tierMetrics(["Anthropologie politique", "Économie politique"]);
+    expect(longs.fontLg).toBeLessThan(courts.fontLg);
+  });
+
+  it("une seule case sur sa rangée (bannière) obtient un corps plus grand qu'à plusieurs cases, à libellé égal", () => {
+    const seule = tierMetrics(["Histoire"]);
+    const partagee = tierMetrics(["Histoire", "Histoire", "Histoire", "Histoire"]);
+    expect(seule.fontLg).toBeGreaterThan(partagee.fontLg);
+  });
+
+  it("mobile (Sm) suit la même loi que desktop (Lg), à la moitié de la base", () => {
+    const rows = [
+      ["Tous les livres"],
+      ["Essais", "Poésie"],
+      ["Anthropologie politique", "Économie", "Histoire", "Droit"],
+    ];
+    for (const labels of rows) {
+      const m = tierMetrics(labels);
+      // Chaque corps est arrondi (`floor1`) depuis sa PROPRE base — Sm peut
+      // donc différer de Lg/2 d'un pas d'arrondi, jamais plus.
+      expect(Math.abs(m.fontSm - m.fontLg / 2)).toBeLessThan(0.1);
+    }
+  });
+
+  it("INVARIANT : à chaque étage, le libellé le plus exigeant tient dans le budget de lignes au corps calculé (jamais tronqué)", () => {
+    // Rangées réalistes (1 à 4 cases), mêlant libellés courts et longs — y
+    // compris le plus long déjà rencontré dans ce module (`truncateWords`).
+    const rows: string[][] = [
+      ["Tous les livres"],
+      ["Essais"],
+      ["Essais", "Poésie"],
+      ["Histoire", "Philosophie", "Économie"],
+      [
+        "Anthropologie politique et sociale contemporaine",
+        "Théorie critique",
+        "Marxisme",
+        "Écologie politique",
+      ],
+    ];
+    const MAX_LINES = 2;
+    for (const labels of rows) {
+      const { fontLg, fontSm } = tierMetrics(labels);
+      const worst = labels.reduce(
+        (acc, label) => (labelSpan(label) > labelSpan(acc) ? label : acc),
+        labels[0],
+      );
+      expect(estimatedLines(worst, fontLg, labels.length)).toBeLessThanOrEqual(MAX_LINES);
+      expect(estimatedLines(worst, fontSm, labels.length)).toBeLessThanOrEqual(MAX_LINES);
+    }
+  });
+});
+
+/**
+ * `truncateWords` : garde-fou d'un mot DÉGÉNÉRÉ, jamais atteint par un
+ * intitulé éditorial normal (plafond relevé 20 → 60 le 29/08 : la troncature
+ * ne porte plus sur le texte visible d'un libellé ordinaire).
+ */
+describe("truncateWords", () => {
+  it("sous la limite : inchangé", () => {
+    expect(truncateWords("Poésie")).toBe("Poésie");
+  });
+
+  it("un libellé multi-mots de longueur normale reste ENTIER (ne se tronque plus à l'affichage)", () => {
+    const label = "Anthropologie politique et sociale contemporaine";
+    expect(truncateWords(label)).toBe(label);
+  });
+
+  it("coupe sur une frontière de mot et retire la ponctuation de liaison finale, au-delà du plafond dégénéré", () => {
+    const degenere =
+      "État, droit, institutions, pouvoir, société et transformations contemporaines & au-delà";
+    const result = truncateWords(degenere);
+    expect(result.length).toBeLessThan(degenere.length);
+    expect(degenere.startsWith(result.replace(/[\s,&·–-]+$/u, ""))).toBe(true);
+  });
+
+  it("jamais un fragment au milieu d'un mot", () => {
+    const degenere =
+      "État, droit, institutions, pouvoir, société et transformations contemporaines & au-delà";
+    const result = truncateWords(degenere);
+    for (const word of result.split(" ")) {
+      expect(degenere.includes(word)).toBe(true);
+    }
+  });
+
+  it("repli : un premier mot déjà plus long que la limite reste entier", () => {
+    const longWord = "A".repeat(70); // > 60 caractères
+    expect(truncateWords(longWord)).toBe(longWord);
   });
 });
