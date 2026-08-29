@@ -60,6 +60,18 @@ describe("câblage Cover du carrousel", () => {
     expect(src).toContain("nouveautesCoverSizes(i, initialIndex)");
     expect(src).toContain("nouveautesBootstrapScript(initialIndex)");
     expect(src).toContain("NOUVEAUTES_RAIL_ID");
-    expect(src).toContain("scale-[1.12]");
+  });
+
+  it("zoom SSR de la carte centrée : propriété `transform`, jamais l'utilitaire `scale-*`", () => {
+    const src = readFileSync(
+      path.join(process.cwd(), "src/components/nouveautes-carousel.tsx"),
+      "utf8",
+    );
+    // Tailwind v4 : `scale-[…]` émet la propriété CSS autonome `scale`, que
+    // l'inline `style.transform` de `paint()` n'écrase PAS — les deux zooms
+    // COMPOSENT (1,12² sur la carte centrée, constaté en prod 2026-08-29).
+    // Le zoom SSR doit donc passer par la même propriété que `paint()`.
+    expect(src).toContain("[transform:scale(1.12)]");
+    expect(src).not.toMatch(/["'\s]scale-\[/);
   });
 });

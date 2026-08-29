@@ -310,7 +310,7 @@ export function NouveautesCarousel({
                 draggable={false}
                 aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
                 className={`block origin-center will-change-transform ${FOCUS_RING_LIGHT} ${
-                  i === initialIndex ? "scale-[1.12]" : ""
+                  i === initialIndex ? "[transform:scale(1.12)]" : ""
                 }`}
               >
                 {/* Hauteur commune fixée ; la largeur suit le ratio réel de
@@ -318,8 +318,13 @@ export function NouveautesCarousel({
                     drag HTML5 natif entrerait en conflit avec le glissé du rail.
                     Couverture initialement centrée : preload + fetchPriority
                     high (LCP). Les autres restent lazy, `sizes` resserré.
-                    `scale-[1.12]` : même zoom que `paint()` dès le HTML, sans
-                    attendre le JS (LCP déjà à la taille finale). */}
+                    `[transform:scale(1.12)]` : même zoom que `paint()` dès le
+                    HTML (LCP déjà à la taille finale) ET même propriété que
+                    son inline style, qui l'écrase donc à l'hydratation —
+                    jamais l'utilitaire `scale-[…]` : Tailwind v4 émet la
+                    propriété AUTONOME `scale`, qui compose avec le transform
+                    de `paint()` au lieu d'être remplacée (double zoom 1,12²
+                    sur la carte centrée, constaté en prod le 2026-08-29). */}
                 <div className="relative h-[var(--cover-h)] w-fit bg-paper-2 shadow-[8px_8px_0_0_var(--color-ink)] ring-1 ring-ink">
                   <Cover
                     cover={{ url: book.coverUrl, width: book.coverW, height: book.coverH }}
