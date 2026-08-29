@@ -1,5 +1,6 @@
 import { lexicalToHtml } from "./catalogue-pg-map";
 import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
+import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { DONATION_TIERS, type DonationTier } from "./donation-tiers";
 import { EDITION_LIST } from "./editions";
 import type { Accent } from "./format";
@@ -46,14 +47,21 @@ export function richTextToSafeHtml(data: unknown): SafeHtml | null {
 /**
  * Corps éditables des trois pages légales — `null` = onglet vide, la page
  * rend son JSX en dur (chapeau et sections actuels, placeholders compris).
+ * `livraisonDelai` n'est PAS un corps de page : c'est la mention de délai
+ * réutilisée par la fiche produit, le panier, la page de remerciement et les
+ * CGV (batch 3, demande client 2026-08-29) — toujours résolue (jamais
+ * `null`), vide = `DELIVERY_DELAY_RANGE` (`delivery-copy.ts`, qui reste le
+ * défaut dur ET la seule mention lue par le mail de confirmation, module pur
+ * sans I/O — cf. `order-mail.ts`).
  */
 export interface PagesLegalesContent {
   cgv: SafeHtml | null;
   mentionsLegales: SafeHtml | null;
   confidentialite: SafeHtml | null;
+  livraisonDelai: string;
 }
 
-/** Fusion du global `pages-legales` — champ par champ, `null` = défaut dur. */
+/** Fusion du global `pages-legales` — champ par champ, `null`/vide = défaut dur. */
 export function mergePagesLegales(
   global: PagesLegales | null | undefined,
 ): PagesLegalesContent {
@@ -61,6 +69,7 @@ export function mergePagesLegales(
     cgv: richTextToSafeHtml(global?.cgv),
     mentionsLegales: richTextToSafeHtml(global?.mentionsLegales),
     confidentialite: richTextToSafeHtml(global?.confidentialite),
+    livraisonDelai: texteOuDefaut(global?.livraisonDelai, DELIVERY_DELAY_RANGE),
   };
 }
 

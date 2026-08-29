@@ -19,10 +19,23 @@ import { NewTabMark } from "./new-tab-mark";
 const PRICE_CLASS = "font-sans text-3xl font-black leading-none text-ink";
 const STATUS_CLASS = "font-sans text-xl font-black italic text-ink";
 const MICROCOPY_CLASS = "mt-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted";
-/** Fourchette réelle plutôt que promesse d'expédition éclair (demande client 2026-08-26) — source unique `delivery-copy.ts` (espaces insécables comprises). */
-const IN_STOCK_COPY = `En stock — livraison ${DELIVERY_DELAY_RANGE}`;
 
-export function BuyLinksList({ book }: { book: Book }) {
+export function BuyLinksList({
+  book,
+  livraisonDelai = DELIVERY_DELAY_RANGE,
+}: {
+  book: Book;
+  /**
+   * Mention affichée pour un livre en stock — éditable au back-office
+   * (`PagesLegales.livraisonDelai`, batch 3), fusionnée côté serveur par
+   * l'appelant (fiche catalogue/boutique) ; défaut `DELIVERY_DELAY_RANGE`
+   * pour tout appelant qui ne la pose pas (tests compris).
+   */
+  livraisonDelai?: string;
+}) {
+  // Fourchette réelle plutôt que promesse d'expédition éclair (demande client
+  // 2026-08-26) — source unique `delivery-copy.ts`, surchargeable au back-office.
+  const inStockCopy = `En stock — livraison ${livraisonDelai}`;
   // Liens libraires de repli — lus une seule fois, rendus par les CINQ
   // branches de statut sans exception (bug signalé par la cliente,
   // corrigé en plusieurs passes : `upcoming`/`unavailable` les perdaient
@@ -113,7 +126,7 @@ export function BuyLinksList({ book }: { book: Book }) {
       <div>
         {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
         <AddToCartButton id={book.id} className="mt-3 w-full" />
-        <p className={MICROCOPY_CLASS}>{IN_STOCK_COPY}</p>
+        <p className={MICROCOPY_CLASS}>{inStockCopy}</p>
         {secondaryLinks}
       </div>
     );
@@ -140,7 +153,7 @@ export function BuyLinksList({ book }: { book: Book }) {
       )}
       <p className={MICROCOPY_CLASS}>
         {book.status === "available"
-          ? IN_STOCK_COPY
+          ? inStockCopy
           : "En vente chez un libraire partenaire"}
       </p>
       {secondaryLinks}

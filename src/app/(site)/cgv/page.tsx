@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY } from "@/components/legal-section";
-import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { getPagesLegales } from "@/lib/site-content";
 
 // Même recette de sous-titre légal que `confidentialite/page.tsx` : de vrais
@@ -20,7 +19,7 @@ export default async function CgvPage() {
   // Global `pages-legales` (spec « éditeur de contenus ») : onglet rempli =
   // tout le corps (chapeau compris) vient du back-office ; onglet vide = le
   // JSX ci-dessous. Le global reste prioritaire dans les deux cas.
-  const { cgv } = await getPagesLegales();
+  const { cgv, livraisonDelai } = await getPagesLegales();
   return (
     <>
       <Container className="bg-paper py-12 sm:py-16">
@@ -103,7 +102,7 @@ export default async function CgvPage() {
                   Les commandes sont expédiées en France métropolitaine, en
                   Belgique et en Suisse ; les frais de port sont calculés
                   selon le montant du panier et affichés avant paiement. La
-                  livraison intervient en règle générale {DELIVERY_DELAY_RANGE}{" "}
+                  livraison intervient en règle générale {livraisonDelai}{" "}
                   à compter de la confirmation de paiement ; les précommandes
                   sont expédiées à parution de l&apos;ouvrage.
                 </p>

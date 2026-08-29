@@ -7,6 +7,7 @@ import {
   mergeReglagesSite,
   richTextToSafeHtml,
 } from "./site-content-core";
+import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { EDITIONS } from "./editions";
 
 /* -------- fixtures lexical (même forme que catalogue-pg-map.test.ts) -------- */
@@ -87,27 +88,35 @@ describe("richTextToSafeHtml — chaîne lexical → sanitizeCms, vide = null", 
 });
 
 describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut", () => {
-  it("global absent (base indisponible) → tout null", () => {
+  it("global absent (base indisponible) → tout null, délai de livraison par défaut", () => {
     expect(mergePagesLegales(null)).toEqual({
       cgv: null,
       mentionsLegales: null,
       confidentialite: null,
+      livraisonDelai: DELIVERY_DELAY_RANGE,
     });
     expect(mergePagesLegales(undefined)).toEqual({
       cgv: null,
       mentionsLegales: null,
       confidentialite: null,
+      livraisonDelai: DELIVERY_DELAY_RANGE,
     });
   });
 
-  it("document jamais rempli (champs null) → tout null", () => {
+  it("document jamais rempli (champs null) → tout null, délai de livraison par défaut", () => {
     const merged = mergePagesLegales({
       id: 1,
       cgv: null,
       mentionsLegales: null,
       confidentialite: null,
+      livraisonDelai: null,
     });
-    expect(merged).toEqual({ cgv: null, mentionsLegales: null, confidentialite: null });
+    expect(merged).toEqual({
+      cgv: null,
+      mentionsLegales: null,
+      confidentialite: null,
+      livraisonDelai: DELIVERY_DELAY_RANGE,
+    });
   });
 
   it("un onglet rempli ne touche pas les deux autres", () => {
@@ -120,6 +129,15 @@ describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut
     expect(merged.cgv).toBeNull();
     expect(merged.confidentialite).toBeNull();
     expect(merged.mentionsLegales).toContain("SIRET");
+  });
+
+  it("délai de livraison : saisi → surcharge, vide/espaces → défaut dur, indépendant des trois onglets", () => {
+    expect(mergePagesLegales({ id: 1, livraisonDelai: "sous 5 jours ouvrés" }).livraisonDelai).toBe(
+      "sous 5 jours ouvrés",
+    );
+    expect(mergePagesLegales({ id: 1, livraisonDelai: "   " }).livraisonDelai).toBe(
+      DELIVERY_DELAY_RANGE,
+    );
   });
 });
 

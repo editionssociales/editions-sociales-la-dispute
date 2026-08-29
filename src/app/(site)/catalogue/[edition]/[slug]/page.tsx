@@ -11,7 +11,7 @@ import { NewTabMark } from "@/components/new-tab-mark";
 import { FramedGrid } from "@/components/framed-grid";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
-import { getReglagesSite } from "@/lib/site-content";
+import { getPagesLegales, getReglagesSite } from "@/lib/site-content";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
 import { catalogueHref } from "@/lib/browse";
@@ -158,6 +158,7 @@ export default async function BookPage({
   if (!isEditionSlug(edition)) notFound();
   const book = await getBook(edition, slug);
   if (!book) notFound();
+  const { livraisonDelai } = await getPagesLegales();
 
   const editionInfo = EDITIONS[edition];
   const accentBg = ACCENT_BG[editionInfo.accent];
@@ -343,7 +344,7 @@ export default async function BookPage({
           </div>
 
           <div className="mt-6 border-2 border-ink bg-paper p-4">
-            <BuyLinksList book={book} />
+            <BuyLinksList book={book} livraisonDelai={livraisonDelai} />
           </div>
 
           <FramedGrid as="dl" className="mt-6 grid-cols-2">

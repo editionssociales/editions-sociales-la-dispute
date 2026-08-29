@@ -10,7 +10,7 @@ import { FramedGrid } from "@/components/framed-grid";
 import { youTubeEmbedUrl } from "@/lib/video";
 import { formatDateFr } from "@/lib/format";
 import { cmsExcerpt } from "@/lib/cms-html";
-import { getReglagesSite } from "@/lib/site-content";
+import { getPagesLegales, getReglagesSite } from "@/lib/site-content";
 import { FOCUS_RING_LIGHT, PDF_LINK_CLASS } from "@/lib/ui";
 
 /**
@@ -89,6 +89,7 @@ export default async function BoutiqueBookPage({
   const { slug } = await params;
   const book = await getBoutiqueBook(slug);
   if (!book) notFound();
+  const { livraisonDelai } = await getPagesLegales();
 
   const descriptionLd = cmsExcerpt(book.presentation, 300) || undefined;
   const canOffer =
@@ -232,7 +233,7 @@ export default async function BoutiqueBookPage({
           </div>
 
           <div className="mt-6 border-2 border-ink bg-paper p-4">
-            <BuyLinksList book={book} />
+            <BuyLinksList book={book} livraisonDelai={livraisonDelai} />
           </div>
 
           {(book.pages || book.publishedAt) && (
