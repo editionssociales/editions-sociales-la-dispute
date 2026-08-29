@@ -1,19 +1,25 @@
 import type { Book } from "@/lib/types";
 import { canAddToCart } from "@/lib/cart-core";
 import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
-import { formatDateFr, formatPrice } from "@/lib/format";
+import { formatDateFr } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
+import { BookPrice } from "./book-price";
 import { Button } from "./button";
 import { NewTabMark } from "./new-tab-mark";
 
 /**
- * Boîte d'achat unifiée (chantier 2.2) — les 4 statuts (`available`+panier,
- * `available`(défensif)/`external`, `upcoming`, `unavailable`) partagent la
- * même architecture visuelle : info clé en grand → action → microcopie de
- * disponibilité. Rendue dans le conteneur bordé porté par l'appelant
- * (`catalogue/[edition]/[slug]/page.tsx`, `boutique/[slug]/page.tsx` :
- * `border-2 border-ink bg-paper p-4`), jamais ici — cette liste reste
- * réutilisable sans imposer son propre cadre.
+ * Boîte d'achat unifiée (chantier 2.2) — les 5 statuts (`upcoming`,
+ * `preorder`+panier, `unavailable`, `available`+panier, `available`
+ * (défensif)/`external`) partagent la même architecture visuelle : prix →
+ * action → microcopie de disponibilité. Rendue dans le conteneur bordé porté
+ * par l'appelant (`catalogue/[edition]/[slug]/page.tsx`,
+ * `boutique/[slug]/page.tsx` : `border-2 border-ink bg-paper p-4`), jamais
+ * ici — cette liste reste réutilisable sans imposer son propre cadre.
+ *
+ * Le prix est un FAIT du livre (calculé une fois ci-dessous, via `BookPrice`)
+ * et s'affiche donc identiquement dans les 5 branches, y compris `upcoming`
+ * et `unavailable` (rien n'est en vente, mais le prix reste une information
+ * publique) ; seuls le CTA et la microcopie varient avec le statut d'achat.
  */
 
 const PRICE_CLASS = "font-sans text-3xl font-black leading-none text-ink";
@@ -36,6 +42,11 @@ export function BuyLinksList({
   // Fourchette réelle plutôt que promesse d'expédition éclair (demande client
   // 2026-08-26) — source unique `delivery-copy.ts`, surchargeable au back-office.
   const inStockCopy = `En stock — livraison ${livraisonDelai}`;
+  // Calculé UNE fois, rendu par les CINQ branches sans exception (bug signalé
+  // par la cliente : `upcoming`/`unavailable` n'affichaient pas le prix de
+  // leur propre fiche, alors que `available`/`preorder`/`external` le
+  // faisaient déjà) — le prix est un fait du livre, pas une promesse de vente.
+  const priceBlock = <BookPrice price={book.price} className={PRICE_CLASS} />;
   // Liens libraires de repli — lus une seule fois, rendus par les CINQ
   // branches de statut sans exception (bug signalé par la cliente,
   // corrigé en plusieurs passes : `upcoming`/`unavailable` les perdaient
@@ -77,6 +88,7 @@ export function BuyLinksList({
   if (book.status === "upcoming") {
     return (
       <div>
+        {priceBlock}
         <p className={STATUS_CLASS}>
           À paraître{book.publishedAt ? ` le ${formatDateFr(book.publishedAt)}` : ""}
         </p>
@@ -94,7 +106,7 @@ export function BuyLinksList({
   if (book.status === "preorder") {
     return (
       <div>
-        {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
+        {priceBlock}
         <AddToCartButton id={book.id} className="mt-3 w-full" label="Précommander" />
         <p className={MICROCOPY_CLASS}>
           Expédié à parution
@@ -108,6 +120,7 @@ export function BuyLinksList({
   if (book.status === "unavailable") {
     return (
       <div>
+        {priceBlock}
         <p className={STATUS_CLASS}>Indisponible à la vente en ligne</p>
         <p className={MICROCOPY_CLASS}>
           {secondary.length > 0 ? "Consultez nos partenaires libraires ci-dessous" : "Revenez bientôt."}
@@ -124,7 +137,7 @@ export function BuyLinksList({
   if (canAddToCart(book)) {
     return (
       <div>
-        {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
+        {priceBlock}
         <AddToCartButton id={book.id} className="mt-3 w-full" />
         <p className={MICROCOPY_CLASS}>{inStockCopy}</p>
         {secondaryLinks}
@@ -134,12 +147,12 @@ export function BuyLinksList({
 
   // `available` sans panier natif (défensif — jamais atteint par
   // `resolveNativePurchase`, seulement par une fixture de test construite à
-  // la main) et `external` : CTA plein vers `book.permalink`. Le prix est
-  // désormais affiché dans les deux cas (fini le ternaire qui l'excluait
-  // pour `external`, où pourtant `book.price` est souvent connu).
+  // la main) et `external` : CTA plein vers `book.permalink`. Le prix
+  // (`priceBlock`) s'affiche dans les deux cas, `book.price` étant souvent
+  // connu pour `external`.
   return (
     <div>
-      {book.price != null && <p className={PRICE_CLASS}>{formatPrice(book.price)}</p>}
+      {priceBlock}
       {book.permalink && (
         <Button
           href={book.permalink}

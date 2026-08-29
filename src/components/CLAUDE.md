@@ -26,7 +26,7 @@ données ni le routage.
 
 ## Ubiquitous Language
 
-- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid`, `Button`, `PageHero` (titre + chapeau seuls), `LibelleMosaic` (UNIQUE vue des libellés pour /catalogue, étages triés par rang, arithmétique en `libelle-mosaic-core.ts`, cf. code pour détails), `BookPageFallback` (squelette partagé des `loading.tsx` de fiche livre/boutique), `NewTabMark` (glyphe ↗ + `sr-only` de tout lien `target="_blank"`).
+- **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid`, `Button`, `PageHero` (titre + chapeau seuls), `LibelleMosaic` (UNIQUE vue des libellés pour /catalogue, étages triés par rang, arithmétique en `libelle-mosaic-core.ts`, cf. code pour détails), `BookPageFallback` (squelette partagé des `loading.tsx` de fiche livre/boutique), `NewTabMark` (glyphe ↗ + `sr-only` de tout lien `target="_blank"`), `BookPrice` (le prix, FAIT du livre affiché dès qu'il existe — utilisée par `book-card.tsx` et `buy-links.tsx`, y compris hors vente).
 
 ## Decisions
 

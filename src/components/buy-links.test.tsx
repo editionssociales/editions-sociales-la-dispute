@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { Book } from "@/lib/types";
+import { formatPrice } from "@/lib/format";
 import { BuyLinksList } from "./buy-links";
 
 /**
@@ -111,5 +112,53 @@ describe("BuyLinksList — liens libraires secondaires sur tous les statuts", ()
     // + secondaire) : une seule occurrence attendue, celle du CTA principal.
     expect(links.filter((h) => h === PARISLIBRAIRIES_URL)).toHaveLength(1);
     expect(links).toContain(LALIBRAIRIE_URL);
+  });
+});
+
+/**
+ * Lot C — le prix est un FAIT du livre, affiché sur sa propre fiche quel que
+ * soit le statut d'achat (demande client). Avant correction, `upcoming` et
+ * `unavailable` n'affichaient PAS le prix : les deux sont donc verrouillés
+ * ici comme les trois autres statuts, qui l'affichaient déjà.
+ */
+describe("BuyLinksList — le prix s'affiche même hors vente", () => {
+  const FORMATTED_PRICE = formatPrice(20)!;
+
+  it("upcoming : le prix formaté apparaît", () => {
+    const markup = renderToStaticMarkup(<BuyLinksList book={book({ status: "upcoming" })} />);
+    expect(markup).toContain(FORMATTED_PRICE);
+  });
+
+  it("preorder : le prix formaté apparaît", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "preorder", purchaseMode: "cart" })} />,
+    );
+    expect(markup).toContain(FORMATTED_PRICE);
+  });
+
+  it("unavailable : le prix formaté apparaît", () => {
+    const markup = renderToStaticMarkup(<BuyLinksList book={book({ status: "unavailable" })} />);
+    expect(markup).toContain(FORMATTED_PRICE);
+  });
+
+  it("available avec panier natif : le prix formaté apparaît", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "available", purchaseMode: "cart" })} />,
+    );
+    expect(markup).toContain(FORMATTED_PRICE);
+  });
+
+  it("external : le prix formaté apparaît", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "external", purchaseMode: "legacy-link" })} />,
+    );
+    expect(markup).toContain(FORMATTED_PRICE);
+  });
+
+  it("price null : aucun prix affiché (pas de « 0 € »)", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "unavailable", price: null })} />,
+    );
+    expect(markup).not.toContain("€");
   });
 });

@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Book } from "@/lib/types";
 import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
-import { formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
+import { BookPrice } from "./book-price";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
@@ -72,14 +72,16 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
   const cartChip = canAddToCart(book) && <AddToCartButton id={book.id} variant="chip" />;
 
   // Épure minimaliste : la couverture porte déjà titre/auteurs (alt complet
-  // ci-dessus) — la carte n'affiche que le prix en texte visible.
-  const priceBlock = book.price != null && (
-    <p className="min-w-0 truncate font-sans text-sm font-black text-ink">
-      {formatPrice(book.price)}
-    </p>
+  // ci-dessus) — la carte n'affiche que le prix en texte visible, quel que
+  // soit le statut d'achat (`BookPrice` : le prix est un fait du livre).
+  const priceBlock = (
+    <BookPrice
+      price={book.price}
+      className="min-w-0 truncate font-sans text-sm font-black text-ink"
+    />
   );
 
-  const hasFooter = Boolean(priceBlock || statusBadge || cartChip);
+  const hasFooter = Boolean(book.price != null || statusBadge || cartChip);
 
   return (
     // Carte pleine hauteur : le grid parent (`FramedGrid`, `book-grid.tsx`)

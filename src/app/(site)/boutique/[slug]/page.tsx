@@ -92,6 +92,10 @@ export default async function BoutiqueBookPage({
   const { livraisonDelai } = await getPagesLegales();
 
   const descriptionLd = cmsExcerpt(book.presentation, 300) || undefined;
+  // Prix TEXTE visible = fait du livre (toujours affiché, `BuyLinksList`) ;
+  // Offer STRUCTURÉE = promesse de vendabilité pour les moteurs (réservée à
+  // available/external/preorder) — même donnée, deux règles de canal,
+  // distinctes à dessein.
   const canOffer =
     book.price != null &&
     (book.status === "available" || book.status === "external" || book.status === "preorder");
