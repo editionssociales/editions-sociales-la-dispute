@@ -1,5 +1,6 @@
 import { lexicalToHtml } from "./catalogue-pg-map";
 import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
+import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { DONATION_TIERS, type DonationTier } from "./donation-tiers";
 import { EDITION_LIST } from "./editions";
 import type { Accent } from "./format";
@@ -46,14 +47,21 @@ export function richTextToSafeHtml(data: unknown): SafeHtml | null {
 /**
  * Corps éditables des trois pages légales — `null` = onglet vide, la page
  * rend son JSX en dur (chapeau et sections actuels, placeholders compris).
+ * `livraisonDelai` n'est PAS un corps de page : c'est la mention de délai
+ * réutilisée par la fiche produit, le panier, la page de remerciement et les
+ * CGV (batch 3, demande client 2026-08-29) — toujours résolue (jamais
+ * `null`), vide = `DELIVERY_DELAY_RANGE` (`delivery-copy.ts`, qui reste le
+ * défaut dur ET la seule mention lue par le mail de confirmation, module pur
+ * sans I/O — cf. `order-mail.ts`).
  */
 export interface PagesLegalesContent {
   cgv: SafeHtml | null;
   mentionsLegales: SafeHtml | null;
   confidentialite: SafeHtml | null;
+  livraisonDelai: string;
 }
 
-/** Fusion du global `pages-legales` — champ par champ, `null` = défaut dur. */
+/** Fusion du global `pages-legales` — champ par champ, `null`/vide = défaut dur. */
 export function mergePagesLegales(
   global: PagesLegales | null | undefined,
 ): PagesLegalesContent {
@@ -61,6 +69,7 @@ export function mergePagesLegales(
     cgv: richTextToSafeHtml(global?.cgv),
     mentionsLegales: richTextToSafeHtml(global?.mentionsLegales),
     confidentialite: richTextToSafeHtml(global?.confidentialite),
+    livraisonDelai: texteOuDefaut(global?.livraisonDelai, DELIVERY_DELAY_RANGE),
   };
 }
 
@@ -370,17 +379,22 @@ function tierObligatoire(id: string): DonationTier {
  * Les tests verrouillent ces valeurs (iso-rendu). Type réduit au SEUL champ
  * qu'elle couvre (`Pick`) : le récit (titre/sections/objectifs) a son propre
  * bloc de défauts ci-dessous, concerns distincts.
+ *
+ * EXCEPTION à l'ordre du PDF : le palier 50 € ouvre la liste (demande client
+ * 2026-08-27) — juste après la carte « Montant libre », codée en dur en tête
+ * de rail dans `tiers-rail.tsx`, et AVANT la proposition à 15 €. Cet ordre
+ * est purement ÉDITORIAL : `DONATION_TIERS`/`CONTREPARTIES_2026` (paiement,
+ * résolution de commande) gardent leur ordre croissant verrouillé par leurs
+ * propres tests.
+ *
+ * Fusion PAR PALIER (demande client 2026-08-29) : ce tableau fixe aussi
+ * l'ORDRE D'AFFICHAGE définitif — le CMS ne réordonne JAMAIS les cartes, il
+ * ne peut que remplacer les items d'UNE carte déjà présente ici (cf.
+ * `mergePageSouscription`). Un palier absent de ce tableau ne peut donc
+ * jamais apparaître, même saisi côté back-office.
  */
 const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
   contreparties: [
-    {
-      tier: tierObligatoire("palier-15"),
-      items: ["Une planche de stickers"],
-    },
-    {
-      tier: tierObligatoire("palier-35"),
-      items: ["Manifeste du parti communiste", "Une planche de stickers"],
-    },
     {
       tier: tierObligatoire("palier-50"),
       items: [
@@ -389,6 +403,14 @@ const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
         "Un tote bag",
         "Une planche de stickers",
       ],
+    },
+    {
+      tier: tierObligatoire("palier-15"),
+      items: ["Une planche de stickers"],
+    },
+    {
+      tier: tierObligatoire("palier-35"),
+      items: ["Manifeste du parti communiste", "Une planche de stickers"],
     },
     {
       tier: tierObligatoire("palier-75"),
@@ -495,16 +517,16 @@ const RECIT_DEFAUT: Record<
   },
 };
 
-/** Descriptions actuelles des trois paliers de jauge — texte actuel, verbatim. */
+/** Descriptions des trois paliers de jauge — texte de campagne client (livraison 2026-08-29), verbatim. */
 const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = {
   descriptif50:
-    "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+    "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
   descriptif80:
-    "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
-  // TODO(contenu) : phrase possiblement tronquée dans le docx/la maquette (le
-  // point final manque, cf. PDF client) — conservée telle quelle.
+    "Nous arrivons à absorber l’essentiel des dettes de notre ancien distributeur. Nous pouvons ainsi mener à bien certains projets déjà engagés et confirmer l’embauche de Nicolas Vieillescazes.",
+  // Le point final manque aussi dans cette livraison du texte client —
+  // conservé verbatim, comme la version précédente.
   descriptif100:
-    "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+    "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
 };
 
 /** Chaîne saisie si non vide (espaces exclus), sinon `null` (pas de 2ᵉ ligne / pas de section). */
@@ -533,22 +555,37 @@ function mergeRecitSection(
 
 /**
  * Fusion du global `page-souscription` (refonte sobre, 2026-08-21) — champ
- * par champ pour le titre/récit/objectifs (vide = défaut dur ci-dessus) ;
- * `contreparties` garde sa règle propre : un array vide (ou dont toutes les
- * entrées sont invalides) retombe sur les 9 cartes par défaut, un array
- * rempli les remplace entièrement (inchangé).
+ * par champ pour le titre/récit/objectifs (vide = défaut dur ci-dessus).
+ *
+ * `contreparties` fusionne PAR PALIER (demande client 2026-08-29, remplace le
+ * tout-ou-rien précédent — une éditrice qui saisissait UNE carte perdait
+ * silencieusement les 8 autres) : l'ordre d'affichage reste TOUJOURS celui de
+ * `SOUSCRIPTION_DEFAUT` (le CMS ne réordonne jamais) ; une entrée à `tierId`
+ * connu portant AU MOINS UN item non vide remplace les items de LA SEULE
+ * carte de ce palier, les huit autres gardant leur défaut ; une entrée sans
+ * item valide est IGNORÉE (impossible de vider une carte par accident) ; un
+ * `tierId` saisi deux fois : la DERNIÈRE entrée du tableau l'emporte.
  */
 export function mergePageSouscription(
   global: PageSouscription | null | undefined,
 ): PageSouscriptionContent {
-  const contreparties = (global?.contreparties ?? []).flatMap((entry) => {
+  // `Map.set` réécrit une clé déjà posée : itérer dans l'ordre de saisie du
+  // tableau back-office suffit à faire gagner la DERNIÈRE entrée d'un même
+  // palier, sans logique dédiée.
+  const surcharges = new Map<string, ContrepartieItem[]>();
+  for (const entry of global?.contreparties ?? []) {
     const tier = DONATION_TIERS.find((t) => t.id === entry.tierId);
-    if (!tier) return [];
+    if (!tier) continue;
     const items = (entry.items ?? []).flatMap((item) => {
       const texte = item.texte?.trim();
       return texte ? [parseContrepartieItem(texte)] : [];
     });
-    return [{ tier, items }];
+    if (items.length === 0) continue;
+    surcharges.set(tier.id, items);
+  }
+  const contreparties = SOUSCRIPTION_DEFAUT.contreparties.map((carte) => {
+    const items = surcharges.get(carte.tier.id);
+    return items ? { tier: carte.tier, items } : carte;
   });
 
   return {
@@ -571,8 +608,7 @@ export function mergePageSouscription(
         OBJECTIFS_DEFAUT.descriptif100,
       ),
     },
-    contreparties:
-      contreparties.length > 0 ? contreparties : SOUSCRIPTION_DEFAUT.contreparties,
+    contreparties,
   };
 }
 

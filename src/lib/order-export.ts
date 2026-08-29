@@ -72,6 +72,65 @@ function orderTypeLabel(orderType: string): string {
  */
 export const PREPARATION_ORDER_STATUSES: readonly OrderExportStatus[] = ["paid", "prepared"];
 
+/**
+ * Borne de la sélection explicite (panneau `OrderExportForm.tsx`, demande
+ * cliente : relier les checkboxes de la liste aux exports) — au-delà, erreur
+ * claire plutôt qu'un export tronqué en silence (contrat du repo : « no
+ * silent caps »). 500 : largement au-dessus d'une sélection manuelle réaliste
+ * (une page de liste Payload tient sur quelques dizaines de lignes), sous
+ * toute limite de longueur d'URL usuelle pour la liste `ids` en query string.
+ */
+export const MAX_EXPORT_SELECTION = 500;
+
+export type ParsedExportOrderIds = { ids: number[] } | { error: string };
+
+/**
+ * Parse le paramètre `ids` (liste d'identifiants de commandes séparés par des
+ * virgules, ex. `"12,45,109"`) porté par les deux endpoints d'export quand la
+ * cliente coche des commandes dans la liste plutôt que de choisir une plage
+ * de dates — cf. `order-export-handler.ts` (l'orchestration I/O) et
+ * `OrderExportForm.tsx` (le panneau qui pose ce paramètre depuis
+ * `useSelection()`). Pure et testée ici, comme `splitFullName`/
+ * `computeVatPart` : aucune dépendance à `URLSearchParams` ni à Payload — le
+ * paramètre brut est déjà une simple chaîne (ou son absence) côté appelant.
+ *
+ * Absent ou vide : PAS une erreur, `{ ids: [] }` — signale à l'appelant
+ * qu'aucune sélection explicite n'a été posée, pour qu'il retombe sur les
+ * bornes de dates (`from`/`to`) sans changer de comportement. Un identifiant
+ * qui ne se parse pas en entier positif, ou une sélection au-delà de
+ * `MAX_EXPORT_SELECTION`, sont en revanche des erreurs EXPLICITES : jamais un
+ * export silencieusement partiel.
+ */
+export function parseExportOrderIds(raw: string | null | undefined): ParsedExportOrderIds {
+  if (raw == null || raw.trim() === "") {
+    return { ids: [] };
+  }
+
+  const ids: number[] = [];
+  const seen = new Set<number>();
+  for (const part of raw.split(",").map((piece) => piece.trim())) {
+    if (part === "") continue;
+    if (!/^\d+$/.test(part)) {
+      return { error: `Paramètre "ids" invalide (entier positif attendu) : "${part}"` };
+    }
+    const id = Number(part);
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+
+  if (ids.length > MAX_EXPORT_SELECTION) {
+    return {
+      error:
+        `Sélection trop large (${ids.length} commandes) — ` +
+        `${MAX_EXPORT_SELECTION} maximum, affinez la sélection.`,
+    };
+  }
+
+  return { ids };
+}
+
 export interface OrderExportAddress {
   fullName: string;
   addressLine1: string;

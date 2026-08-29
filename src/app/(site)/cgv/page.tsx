@@ -19,7 +19,7 @@ export default async function CgvPage() {
   // Global `pages-legales` (spec « éditeur de contenus ») : onglet rempli =
   // tout le corps (chapeau compris) vient du back-office ; onglet vide = le
   // JSX ci-dessous. Le global reste prioritaire dans les deux cas.
-  const { cgv } = await getPagesLegales();
+  const { cgv, livraisonDelai } = await getPagesLegales();
   return (
     <>
       <Container className="bg-paper py-12 sm:py-16">
@@ -101,12 +101,10 @@ export default async function CgvPage() {
                 <p className={LEGAL_BODY}>
                   Les commandes sont expédiées en France métropolitaine, en
                   Belgique et en Suisse ; les frais de port sont calculés
-                  selon le montant du panier et affichés avant paiement.{" "}
-                  <span className="italic text-ocher-text">
-                    [À COMPLÉTER : transporteur(s) retenu(s) et délais de
-                    livraison indicatifs]
-                  </span>
-                  .
+                  selon le montant du panier et affichés avant paiement. La
+                  livraison intervient en règle générale {livraisonDelai}{" "}
+                  à compter de la confirmation de paiement ; les précommandes
+                  sont expédiées à parution de l&apos;ouvrage.
                 </p>
                 <h3 className={H3_CLASS}>Médiation de la consommation</h3>
                 <p className={LEGAL_BODY}>

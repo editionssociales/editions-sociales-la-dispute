@@ -9,6 +9,7 @@ import { ShelfSpines } from "@/components/cart/shelf-spines";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { BookCover } from "@/lib/cover";
+import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { formatPrice } from "@/lib/format";
 import { centsToEuros } from "@/lib/money";
 import {
@@ -304,7 +305,14 @@ function CartLineRow({
   );
 }
 
-export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
+export function CartView({
+  goodies = [],
+  livraisonDelai = DELIVERY_DELAY_RANGE,
+}: {
+  goodies?: GoodieSuggestion[];
+  /** Éditable au back-office (`PagesLegales.livraisonDelai`, batch 3) — fusionnée côté serveur par `panier/page.tsx`, jamais lue en direct ici. Défaut `DELIVERY_DELAY_RANGE` pour les tests qui ne la posent pas. */
+  livraisonDelai?: string;
+}) {
   const { state, ready, setLineQty, removeFromCart } = useCart();
   const ids = useMemo(() => state.lines.map((l) => l.id), [state.lines]);
   const idsKey = ids.join(",");
@@ -607,6 +615,12 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
                 </option>
               ))}
             </select>
+            {/* Délai annoncé au moment où l'acheteur·se hésite (demande
+                client 2026-08-26) — éditable au back-office (batch 3), reçu
+                en prop depuis `panier/page.tsx`. */}
+            <span className="font-sans text-xs text-muted">
+              Livraison {livraisonDelai} — précommandes expédiées à parution.
+            </span>
           </label>
 
           <div className="flex flex-col gap-2">

@@ -13,7 +13,9 @@ import styles from './dashboard/dashboard.module.css'
  * (`plan/04-commerce.md`, décision n°5 close) ; celles du profil
  * « préparation » refondues à sa demande le 24/08 (date, adresse éclatée,
  * nom/prénom, téléphone — verbatim dans `order-export.ts`) — cf.
- * `order-export-handler.ts` pour le détail des profils.
+ * `order-export-handler.ts` pour le détail des profils. Cocher des commandes
+ * dans la liste (checkboxes) bascule les deux liens sur cette sélection
+ * précise, dates ignorées — cf. `dashboard/OrderExportForm.tsx`.
  *
  * `.panel`/`.panelTitle`/`.muted` partagés de `dashboard.module.css` (issue
  * #91) — remplacent le style inline qui divergeait de ceux du dashboard

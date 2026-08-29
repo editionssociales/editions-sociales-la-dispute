@@ -3,6 +3,7 @@ import { Container } from "@/components/container";
 import { PageHero } from "@/components/page-hero";
 import { getBoutiqueBooks } from "@/lib/catalogue";
 import { canAddToCart } from "@/lib/cart-core";
+import { getPagesLegales } from "@/lib/site-content";
 import { CartView } from "./cart-view";
 
 // `noindex` de PAGE plutôt qu'un `disallow` dans robots.txt (#87) : un
@@ -36,13 +37,14 @@ export default async function PanierPage() {
       price: b.price,
       cover: b.cover,
     }));
+  const { livraisonDelai } = await getPagesLegales();
 
   return (
     <Container className="bg-paper py-12">
       <PageHero title="Votre panier" className="max-w-2xl" />
 
       <div className="mt-6 sm:mt-7">
-        <CartView goodies={goodies} />
+        <CartView goodies={goodies} livraisonDelai={livraisonDelai} />
       </div>
     </Container>
   );

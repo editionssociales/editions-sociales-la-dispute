@@ -630,6 +630,20 @@ export function summarizeLines(lines: SummarizableLine[], max = 3): string {
   return parts.join(' + ')
 }
 
+/**
+ * Détail COMPLET des lignes pour une infobulle — une ligne par titre, là où
+ * `summarizeLines` condense au-delà de 3 en « N autres » (demande client
+ * 2026-08-26 : une grosse commande était illisible en liste). Consommé par
+ * la cellule « Contenu » de la liste Commandes (`OrderContentCell.tsx`,
+ * attribut `data-lignes` + infobulle CSS instantanée de `custom.scss` — le
+ * `title` natif attendait ~1 s, retour client 2026-08-29 ; `pre-line` y rend
+ * les `\n`). PAS sur le tableau du dashboard : son lien de rangée recouvre
+ * les cellules, le survol ne les atteint jamais.
+ */
+export function linesTooltip(lines: SummarizableLine[]): string {
+  return lines.map((l) => `${l.quantity}× ${l.titleSnapshot}`).join('\n')
+}
+
 /* ────────────────────────── Raccourci « Ventes du mois » (zone C) ────────────────────────── */
 
 /**

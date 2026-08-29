@@ -27,6 +27,7 @@ import {
   rollingWindows,
   salesChartGeometry,
   salesStats,
+  linesTooltip,
   sentryErrorEvents,
   sentrySignal,
   splitPromos,
@@ -871,6 +872,19 @@ describe('summarizeLines', () => {
   it('max par défaut à 3', () => {
     const lines = [line('A', 1), line('B', 1), line('C', 1)]
     expect(summarizeLines(lines)).toBe('1× A + 1× B + 1× C')
+  })
+})
+
+describe('linesTooltip', () => {
+  const line = (titleSnapshot: string, quantity: number): SummarizableLine => ({ titleSnapshot, quantity })
+
+  it('aucune ligne : chaîne vide (le consommateur ne pose pas de `title`)', () => {
+    expect(linesTooltip([])).toBe('')
+  })
+
+  it('détail COMPLET, une ligne par titre — jamais de « N autres »', () => {
+    const lines = [line('Titre A', 2), line('Titre B', 1), line('Titre C', 50), line('Titre D', 1)]
+    expect(linesTooltip(lines)).toBe('2× Titre A\n1× Titre B\n50× Titre C\n1× Titre D')
   })
 })
 

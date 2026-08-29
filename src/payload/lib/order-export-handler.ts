@@ -4,6 +4,7 @@ import { isAdminOrEditor } from '../access.ts'
 import {
   formatComptaCsv,
   formatPreparationCsv,
+  parseExportOrderIds,
   PREPARATION_ORDER_STATUSES,
   type OrderExportRow,
 } from '../../lib/order-export.ts'
@@ -15,8 +16,11 @@ import {
  * `stock-import-core.ts`.
  *
  * `GET /api/orders/export/preparation` et `GET /api/orders/export/compta`,
- * bornes de dates en paramètres (`from`/`to`, `AAAA-MM-JJ` ou ISO complet) —
- * cf. `src/payload/admin/OrderExportPanel.tsx` pour la vue qui les pose.
+ * soit bornes de dates en paramètres (`from`/`to`, `AAAA-MM-JJ` ou ISO
+ * complet), soit `ids` (commandes cochées dans la liste, demande cliente) qui
+ * PRIME sur les dates quand il est présent — cf.
+ * `src/payload/admin/OrderExportPanel.tsx`/`dashboard/OrderExportForm.tsx`
+ * pour la vue qui pose l'un ou l'autre.
  */
 
 interface DateBounds {
@@ -54,6 +58,13 @@ function parseDateBounds(searchParams: URLSearchParams): ParsedBounds {
 interface FetchOrdersOptions extends DateBounds {
   /** Restreint aux statuts donnés (profil « préparation ») — absent = tous statuts (profil « compta »). */
   statuses?: readonly string[]
+  /**
+   * Sélection explicite de commandes (checkboxes de la liste) — PRIME sur
+   * `from`/`to` quand non vide : les dates ne sont alors même pas lues.
+   * Combinée à `statuses` comme le reste (une commande cochée mais non payée
+   * n'apparaît toujours pas dans l'export préparation).
+   */
+  ids?: readonly number[]
 }
 
 /**
@@ -65,8 +76,15 @@ interface FetchOrdersOptions extends DateBounds {
  */
 async function fetchOrdersForExport(payload: Payload, opts: FetchOrdersOptions): Promise<OrderExportRow[]> {
   const and: Where[] = []
-  if (opts.from) and.push({ createdAt: { greater_than_equal: normalizeFromBound(opts.from) } })
-  if (opts.to) and.push({ createdAt: { less_than_equal: normalizeToBound(opts.to) } })
+  if (opts.ids && opts.ids.length > 0) {
+    // Sélection explicite : PRIME sur les dates, qui ne sont pas ajoutées au
+    // `where` — cocher des commandes hors de la plage affichée ne doit pas
+    // les faire disparaître de l'export.
+    and.push({ id: { in: opts.ids as number[] } })
+  } else {
+    if (opts.from) and.push({ createdAt: { greater_than_equal: normalizeFromBound(opts.from) } })
+    if (opts.to) and.push({ createdAt: { less_than_equal: normalizeToBound(opts.to) } })
+  }
   if (opts.statuses) and.push({ status: { in: opts.statuses as string[] } })
 
   const { docs } = await payload.find({
@@ -140,14 +158,30 @@ function forbidden(): Response {
   )
 }
 
+/**
+ * `ids` (sélection explicite) PRIME sur `from`/`to` : renvoie directement les
+ * options de requête sans même parser les dates dans ce cas — cf.
+ * `parseExportOrderIds` pour le contrat (absent/vide = pas de sélection,
+ * erreur explicite au-delà de `MAX_EXPORT_SELECTION` ou sur un id invalide).
+ */
+function resolveFetchOptions(searchParams: URLSearchParams): FetchOrdersOptions | { error: string } {
+  const parsedIds = parseExportOrderIds(searchParams.get('ids'))
+  if ('error' in parsedIds) return parsedIds
+  if (parsedIds.ids.length > 0) return { ids: parsedIds.ids }
+
+  const bounds = parseDateBounds(searchParams)
+  if ('error' in bounds) return bounds
+  return bounds
+}
+
 /** `GET /api/orders/export/preparation` — profil « préparation » (décalque AOE, statuts `paid`/`prepared` uniquement). */
 export const exportPreparationHandler: PayloadHandler = async (req) => {
   if (isAdminOrEditor({ req }) !== true) return forbidden()
 
-  const bounds = parseDateBounds(req.searchParams)
-  if ('error' in bounds) return Response.json(bounds, { status: 400 })
+  const options = resolveFetchOptions(req.searchParams)
+  if ('error' in options) return Response.json(options, { status: 400 })
 
-  const rows = await fetchOrdersForExport(req.payload, { ...bounds, statuses: PREPARATION_ORDER_STATUSES })
+  const rows = await fetchOrdersForExport(req.payload, { ...options, statuses: PREPARATION_ORDER_STATUSES })
   return csvResponse(`commandes-preparation-${todayStamp()}.csv`, formatPreparationCsv(rows))
 }
 
@@ -155,9 +189,9 @@ export const exportPreparationHandler: PayloadHandler = async (req) => {
 export const exportComptaHandler: PayloadHandler = async (req) => {
   if (isAdminOrEditor({ req }) !== true) return forbidden()
 
-  const bounds = parseDateBounds(req.searchParams)
-  if ('error' in bounds) return Response.json(bounds, { status: 400 })
+  const options = resolveFetchOptions(req.searchParams)
+  if ('error' in options) return Response.json(options, { status: 400 })
 
-  const rows = await fetchOrdersForExport(req.payload, bounds)
+  const rows = await fetchOrdersForExport(req.payload, options)
   return csvResponse(`commandes-compta-${todayStamp()}.csv`, formatComptaCsv(rows))
 }

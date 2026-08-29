@@ -14,6 +14,7 @@
  */
 import { brevoConfigured, sendTransactionalEmail } from "./brevo";
 import { CONTACT_EMAIL } from "./contact-address";
+import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { formatPrice } from "./format";
 import {
   FONT_STACK,
@@ -130,9 +131,10 @@ function totalsRow(
  * Contrainte clients mail réels : tables + styles inline uniquement, aucune
  * CSS externe ni webfont, largeur max ~560px centrée. DA du site rejouée en
  * dur (mêmes teintes que `globals.css`, mêmes monogrammes que
- * `site-header.tsx`) — aucune promesse de délai de livraison (texte
- * volontairement prudent, l'expédition réelle n'est pas pilotée par ce
- * module).
+ * `site-header.tsx`) — le délai annoncé (`SHIPPING_NOTE`) reprend la
+ * fourchette unique de `delivery-copy.ts` (demande client 2026-08-26) ;
+ * l'expédition réelle n'étant pas pilotée par ce module, la précommande
+ * garde sa phrase SANS délai (`PREORDER_NOTE`).
  */
 /**
  * Phrases partagées entre les rendus HTML et texte brut — une seule source :
@@ -142,7 +144,8 @@ const SHIPPING_LABEL = "Livraison";
 const DISCOUNT_LABEL = "Remise";
 const TOTAL_LABEL = "Total TTC (TVA 5,5 % incluse)";
 const SHIPPING_NOTE =
-  "Votre commande est en cours de préparation ; nous vous informerons dès son expédition.";
+  `Votre commande est en cours de préparation ; comptez ${DELIVERY_DELAY_RANGE} ` +
+  "pour la recevoir. Nous vous informerons dès son expédition.";
 /** Précommande (scission panier, client 2026-08-20) : ne promet pas un délai de préparation qui n'a pas commencé — l'expédition suit la parution, pas la commande. */
 const PREORDER_NOTE = "Précommande — expédiée à parution ; nous vous informerons dès son expédition.";
 /** En-tête du bloc téléchargement — accordé au nombre de fichiers (une commande peut contenir plusieurs titres numériques). */

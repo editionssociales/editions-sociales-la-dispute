@@ -7,6 +7,7 @@ import {
   mergeReglagesSite,
   richTextToSafeHtml,
 } from "./site-content-core";
+import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { EDITIONS } from "./editions";
 
 /* -------- fixtures lexical (même forme que catalogue-pg-map.test.ts) -------- */
@@ -87,27 +88,35 @@ describe("richTextToSafeHtml — chaîne lexical → sanitizeCms, vide = null", 
 });
 
 describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut", () => {
-  it("global absent (base indisponible) → tout null", () => {
+  it("global absent (base indisponible) → tout null, délai de livraison par défaut", () => {
     expect(mergePagesLegales(null)).toEqual({
       cgv: null,
       mentionsLegales: null,
       confidentialite: null,
+      livraisonDelai: DELIVERY_DELAY_RANGE,
     });
     expect(mergePagesLegales(undefined)).toEqual({
       cgv: null,
       mentionsLegales: null,
       confidentialite: null,
+      livraisonDelai: DELIVERY_DELAY_RANGE,
     });
   });
 
-  it("document jamais rempli (champs null) → tout null", () => {
+  it("document jamais rempli (champs null) → tout null, délai de livraison par défaut", () => {
     const merged = mergePagesLegales({
       id: 1,
       cgv: null,
       mentionsLegales: null,
       confidentialite: null,
+      livraisonDelai: null,
     });
-    expect(merged).toEqual({ cgv: null, mentionsLegales: null, confidentialite: null });
+    expect(merged).toEqual({
+      cgv: null,
+      mentionsLegales: null,
+      confidentialite: null,
+      livraisonDelai: DELIVERY_DELAY_RANGE,
+    });
   });
 
   it("un onglet rempli ne touche pas les deux autres", () => {
@@ -120,6 +129,15 @@ describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut
     expect(merged.cgv).toBeNull();
     expect(merged.confidentialite).toBeNull();
     expect(merged.mentionsLegales).toContain("SIRET");
+  });
+
+  it("délai de livraison : saisi → surcharge, vide/espaces → défaut dur, indépendant des trois onglets", () => {
+    expect(mergePagesLegales({ id: 1, livraisonDelai: "sous 5 jours ouvrés" }).livraisonDelai).toBe(
+      "sous 5 jours ouvrés",
+    );
+    expect(mergePagesLegales({ id: 1, livraisonDelai: "   " }).livraisonDelai).toBe(
+      DELIVERY_DELAY_RANGE,
+    );
   });
 });
 
@@ -289,12 +307,12 @@ describe("mergePageContact — global vide ⇒ page /contact actuelle, verbatim"
 });
 
 describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut, verbatim", () => {
-  it("global absent → 9 contreparties dérivées de DONATION_TIERS, dans l'ordre d'affichage", () => {
+  it("global absent → 9 contreparties, le palier 50 € en tête (demande client 2026-08-27), puis l'ordre croissant", () => {
     const merged = mergePageSouscription(null);
     expect(merged.contreparties.map((c) => c.tier.id)).toEqual([
+      "palier-50",
       "palier-15",
       "palier-35",
-      "palier-50",
       "palier-75",
       "palier-100",
       "palier-200",
@@ -303,22 +321,22 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
       "palier-1000",
     ]);
     expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      15, 35, 50, 75, 100, 200, 300, 500, 1000,
-    ]);
-    // Un lot verrouillé au hasard (iso-rendu du PDF client « contreparties dans l'ordre »).
-    expect(merged.contreparties[0].items).toEqual([
-      { texte: "Une planche de stickers", alternative: false },
-    ]);
-    expect(merged.contreparties[1].items).toEqual([
-      { texte: "Manifeste du parti communiste", alternative: false },
-      { texte: "Une planche de stickers", alternative: false },
+      50, 15, 35, 75, 100, 200, 300, 500, 1000,
     ]);
     // Règle « ou » sur les défauts : la bande alternative du PDF (préfixe
     // retiré du texte, flag posé — le rendu repose le « ou »).
-    expect(merged.contreparties[2].items).toEqual([
+    expect(merged.contreparties[0].items).toEqual([
       { texte: "Découvrir l'antifascisme", alternative: false },
       { texte: "Contre l'écologie de guerre", alternative: true },
       { texte: "Un tote bag", alternative: false },
+      { texte: "Une planche de stickers", alternative: false },
+    ]);
+    // Deux lots verrouillés au hasard (iso-rendu du PDF client « contreparties dans l'ordre »).
+    expect(merged.contreparties[1].items).toEqual([
+      { texte: "Une planche de stickers", alternative: false },
+    ]);
+    expect(merged.contreparties[2].items).toEqual([
+      { texte: "Manifeste du parti communiste", alternative: false },
       { texte: "Une planche de stickers", alternative: false },
     ]);
   });
@@ -340,8 +358,7 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
         },
       ],
     });
-    expect(merged.contreparties).toHaveLength(1);
-    const [carte] = merged.contreparties;
+    const carte = merged.contreparties.find((c) => c.tier.id === "palier-35")!;
     expect(carte.tier.amount).toBe(35);
     expect(carte.tier.title).toBe("Coup de main");
     expect(carte.items).toEqual([{ texte: "Un livre au choix", alternative: false }]);
@@ -378,18 +395,74 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
       contreparties: [{ tierId: "palier-disparu" as never, items: [] }],
     });
     expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      15, 35, 50, 75, 100, 200, 300, 500, 1000,
+      50, 15, 35, 75, 100, 200, 300, 500, 1000,
     ]);
   });
 
-  it("un array rempli remplace entièrement le défaut (pas de fusion partielle)", () => {
+  it("fusion PAR PALIER (demande client 2026-08-29) : une carte surchargée, les 8 autres restent au défaut — plus le tout-ou-rien d'avant", () => {
+    const defaut = mergePageSouscription(null);
     const merged = mergePageSouscription({
       id: 1,
       contreparties: [{ tierId: "palier-15", items: [{ texte: "Un seul lot" }] }],
     });
-    expect(merged.contreparties).toHaveLength(1);
-    expect(merged.contreparties[0].items).toEqual([
-      { texte: "Un seul lot", alternative: false },
+    // Toujours les 9 cartes, dans l'ordre du défaut — jamais réduit à la
+    // seule carte saisie.
+    expect(merged.contreparties).toHaveLength(9);
+    expect(merged.contreparties.map((c) => c.tier.id)).toEqual(
+      defaut.contreparties.map((c) => c.tier.id),
+    );
+    const palier15 = merged.contreparties.find((c) => c.tier.id === "palier-15")!;
+    expect(palier15.items).toEqual([{ texte: "Un seul lot", alternative: false }]);
+    // Les 8 autres cartes n'ont pas bougé par rapport au défaut.
+    for (const carte of merged.contreparties) {
+      if (carte.tier.id === "palier-15") continue;
+      const carteDefaut = defaut.contreparties.find((c) => c.tier.id === carte.tier.id)!;
+      expect(carte.items).toEqual(carteDefaut.items);
+    }
+  });
+
+  it("entrée sans item valide (tous vides) : IGNORÉE, la carte garde son défaut (impossible de la vider par accident)", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      contreparties: [{ tierId: "palier-75", items: [{ texte: "   " }] }],
+    });
+    const palier75 = merged.contreparties.find((c) => c.tier.id === "palier-75")!;
+    const defautPalier75 = mergePageSouscription(null).contreparties.find(
+      (c) => c.tier.id === "palier-75",
+    )!;
+    expect(palier75.items).toEqual(defautPalier75.items);
+  });
+
+  it("tierId dupliqué dans le tableau CMS : la DERNIÈRE entrée gagne (saisie la plus récente en bas du tableau)", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      contreparties: [
+        { tierId: "palier-100", items: [{ texte: "Première saisie, remplacée" }] },
+        { tierId: "palier-100", items: [{ texte: "Saisie la plus récente" }] },
+      ],
+    });
+    const palier100 = merged.contreparties.find((c) => c.tier.id === "palier-100")!;
+    expect(palier100.items).toEqual([{ texte: "Saisie la plus récente", alternative: false }]);
+  });
+
+  it("ordre d'affichage toujours celui du défaut, quel que soit l'ordre de saisie ou le nombre de cartes surchargées au CMS", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      contreparties: [
+        { tierId: "palier-1000", items: [{ texte: "Nouveau lot 1000" }] },
+        { tierId: "palier-50", items: [{ texte: "Nouveau lot 50" }] },
+      ],
+    });
+    expect(merged.contreparties.map((c) => c.tier.id)).toEqual([
+      "palier-50",
+      "palier-15",
+      "palier-35",
+      "palier-75",
+      "palier-100",
+      "palier-200",
+      "palier-300",
+      "palier-500",
+      "palier-1000",
     ]);
   });
 });
@@ -425,11 +498,11 @@ describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-0
     });
     expect(merged.objectifs).toEqual({
       descriptif50:
-        "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+        "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
       descriptif80:
-        "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
+        "Nous arrivons à absorber l’essentiel des dettes de notre ancien distributeur. Nous pouvons ainsi mener à bien certains projets déjà engagés et confirmer l’embauche de Nicolas Vieillescazes.",
       descriptif100:
-        "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+        "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
     });
   });
 
@@ -489,11 +562,11 @@ describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-0
       objectifs: { descriptif80: "Nouveau texte pour 80 000 €." },
     });
     expect(merged.objectifs.descriptif50).toBe(
-      "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+      "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
     );
     expect(merged.objectifs.descriptif80).toBe("Nouveau texte pour 80 000 €.");
     expect(merged.objectifs.descriptif100).toBe(
-      "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+      "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
     );
   });
 });

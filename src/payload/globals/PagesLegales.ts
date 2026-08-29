@@ -129,6 +129,15 @@ export const PagesLegales: GlobalConfig = {
           label: 'CGV & dons',
           fields: [
             {
+              name: 'livraisonDelai',
+              type: 'text',
+              label: 'Délai de livraison annoncé',
+              admin: {
+                description:
+                  'Affiché sur la fiche produit, le panier, la page de remerciement et les CGV. Vide = « entre 48 h et 10 jours ». L’e-mail de confirmation de commande garde toujours cette mention par défaut, quoi que vous saisissiez ici.',
+              },
+            },
+            {
               name: 'cgv',
               type: 'richText',
               label: 'Conditions générales & conditions de don',

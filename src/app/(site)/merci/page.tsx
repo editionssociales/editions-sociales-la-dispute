@@ -6,6 +6,7 @@ import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirm
 import { ContactLine } from "@/components/contact-line";
 import { formatPrice } from "@/lib/format";
 import { ACCENT_BG } from "@/lib/accents";
+import { getPagesLegales } from "@/lib/site-content";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 
 /**
@@ -57,7 +58,10 @@ export default async function MerciPage({
   searchParams: Promise<{ session_id?: string }>;
 }) {
   const { session_id: sessionId } = await searchParams;
-  const order = await lookupOrder(sessionId);
+  const [order, { livraisonDelai }] = await Promise.all([
+    lookupOrder(sessionId),
+    getPagesLegales(),
+  ]);
   // Issue sémantique (R3) : paiement confirmé (ou aucune info de session à
   // relire, cas de repli optimiste) = bottle ; confirmation Stripe encore en
   // cours = ocher — même code couleur que `souscription/merci`.
@@ -110,6 +114,16 @@ export default async function MerciPage({
               Référence : {sessionId.slice(-10).toUpperCase()}
             </p>
           )}
+
+          {/* Délai annoncé (demande client 2026-08-26, éditable au back-office
+              depuis le batch 3 — `PagesLegales.livraisonDelai`) — cette page
+              ne sait pas distinguer une précommande (elle ne relit que la
+              session Stripe), d'où la parenthèse : le mail de confirmation,
+              lui, adapte sa phrase commande par commande (`order-mail.ts`,
+              qui garde la constante par défaut, jamais ce champ). */}
+          <p className="mt-4 font-sans text-sm text-muted">
+            Livraison {livraisonDelai} — les précommandes sont expédiées à parution.
+          </p>
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">

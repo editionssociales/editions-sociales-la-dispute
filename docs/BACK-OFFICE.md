@@ -80,7 +80,11 @@ jamais de « vider » une page par erreur.
   pages CGV & dons, Mentions légales et Confidentialité ; pied de page
   (adresse, diffusion) ; liens réseaux sociaux (pied de page seulement —
   jamais en haut de page — s'il y en a au moins un) ; titre et description
-  par défaut utilisés par Google.
+  par défaut utilisés par Google ; dans l'onglet **CGV & dons**, le **délai de
+  livraison annoncé** (vide = « entre 48 h et 10 jours ») — repris sur la
+  fiche produit, le panier, la page de remerciement et les CGV ; l'e-mail de
+  confirmation de commande garde toujours le texte par défaut, quoi que vous
+  saisissiez ici.
 - **Pages des maisons** (groupe **Pages du site** ; pages
   `/editions/editions-sociales` et `/editions/la-dispute`, ex-page À propos) :
   - un onglet **Maisons** avec, pour chaque maison, le nom affiché, le
@@ -113,9 +117,17 @@ jamais de « vider » une page par erreur.
     ne se modifient pas ici** : ils sont calés sur les paliers de la jauge de
     collecte, vous ne touchez que le texte qui les accompagne.
   - **Contreparties** : le contenu des neuf cartes de contreparties (15 à
-    1 000 €) — le lot associé à chaque palier. **Les montants ne se modifient
-    pas ici** non plus : ils sont calés sur les paliers de paiement définis
-    ailleurs, vous ne touchez que le texte qui les accompagne.
+    1 000 €) — le lot associé à chaque palier. Vous n'avez besoin d'ajouter
+    une ligne que pour LE palier que vous voulez changer : son contenu
+    remplace celui de cette seule carte, les huit autres restent affichées
+    telles quelles, sans rien à faire pour les garder. Une ligne ajoutée sans
+    aucun élément saisi ne change rien (impossible de vider une carte par
+    erreur). Si vous ajoutez deux lignes pour le même palier, c'est la
+    dernière qui compte — supprimez l'ancienne si vous vous êtes trompée.
+    L'ordre des neuf cartes sur la page ne dépend jamais de l'ordre dans
+    lequel vous les saisissez ici. **Les montants ne se modifient pas ici**
+    non plus : ils sont calés sur les paliers de paiement définis ailleurs,
+    vous ne touchez que le texte qui les accompagne.
 
 - **Mise en avant** (groupe **Vie du site**, menu **Mises en avant** ;
   bandeau ponctuel sur l'accueil) : donnez un titre, un texte court, des
@@ -155,6 +167,15 @@ Menu de gauche → **Commandes** (visible une fois la vente en ligne ouverte —
 avant cette date, cette page reste vide, c'est normal). Une commande est
 créée automatiquement au paiement ; vous ne créez jamais de commande à la
 main ici.
+
+La recherche en haut de la liste cherche aussi dans les **titres commandés**
+(en plus du numéro de commande, du nom et de l'e-mail) : tapez le titre d'un
+livre pour retrouver toutes les commandes qui le contiennent. La colonne
+« Contenu » résume les lignes (3 titres affichés, « + n autres » au-delà) —
+survolez-la pour voir le détail complet en infobulle.
+
+Dans la fiche d'une commande, la section **Lignes** (juste après l'adresse de
+livraison) liste les articles commandés avec leur prix au moment de la vente.
 
 Le seul champ que vous changez est le **statut** : Payée → Préparée →
 Expédiée, ou Annulée/Remboursée si besoin. Les remboursements se font dans
@@ -242,6 +263,14 @@ Excel) :
 
 Laissez les dates « Du » / « Au » vides pour tout exporter, ou choisissez une
 période précise.
+
+Vous pouvez aussi exporter une **sélection précise** : cochez des commandes
+dans la liste (checkboxes de gauche), les deux liens d'export portent alors
+sur cette sélection et les dates sont ignorées — pratique pour ressortir
+seulement quelques commandes sans changer de période. La case « Tout
+sélectionner » de la liste ne compte pas comme une sélection précise (elle ne
+retient que les commandes de la page affichée) : dans ce cas, l'export
+continue de suivre les dates « Du » / « Au ».
 
 Deux choses à savoir sur l'export préparation :
 

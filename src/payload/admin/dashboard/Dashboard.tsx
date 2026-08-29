@@ -275,6 +275,11 @@ export async function Dashboard({ payload }: ServerProps) {
                       </a>
                       <span className={styles.rowSubtle}>{order.number}</span>
                     </td>
+                    {/* Pas d'infobulle ici : le `::after` du lien de rangée
+                        (`.rowLink`) recouvre tout le `<tr>` — le survol
+                        n'atteint jamais ce `<td>` (seul son ancêtre `<tr>`
+                        est survolé), un `title`/`:hover` y serait muet. La
+                        rangée entière ouvre la fiche, qui est le détail. */}
                     <td>{summarizeLines(order.lines)}</td>
                     <td>
                       {humanAge(order.paidAt ?? order.createdAt, now)}{' '}

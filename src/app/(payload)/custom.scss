@@ -38,3 +38,36 @@
 .collection-list--books .file__filename {
   display: none;
 }
+
+/*
+ * Liste Commandes : cellules « Client » et « Contenu » en LIEN vers la
+ * fiche — Payload n'enveloppe que sa DefaultCell dans le lien de première
+ * colonne, une Cell custom doit rendre le sien (`OrderClientCell` /
+ * `OrderContentCell` ; constat client 2026-08-29 : « plus cliquables nulle
+ * part » depuis le retrait de `number` des colonnes). Infobulle INSTANTANÉE
+ * du détail des lignes (le `title` natif attend ~1 s) : contenu porté par
+ * `data-lignes`, `\n` rendus par `pre-line`. Positionnée sous la cellule :
+ * dans le conteneur défilant de la table, une rangée tout en bas peut la
+ * tronquer — le lien vers la fiche reste le chemin complet.
+ */
+.order-lines-cell {
+  position: relative;
+}
+
+.order-lines-cell[data-lignes]:hover::after {
+  content: attr(data-lignes);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  width: max-content;
+  max-width: 420px;
+  padding: 8px 10px;
+  white-space: pre-line;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--theme-elevation-0, #ffffff);
+  color: var(--theme-elevation-800, #2b2820);
+  border: 1px solid var(--theme-elevation-200, #d5d1c6);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}

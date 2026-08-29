@@ -1303,7 +1303,7 @@ export interface PageSouscription {
     descriptif100?: string | null;
   };
   /**
-   * Aucune contrepartie = les neuf cartes actuelles. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.
+   * Une entrée par palier à modifier : son « Contenu du lot » remplace celui de LA carte de ce palier, les huit autres cartes restant inchangées (rien à faire pour les garder). Une entrée sans aucune ligne saisie est ignorée. Le même palier saisi deux fois : la dernière entrée du tableau l’emporte. L’ordre des neuf cartes sur la page ne dépend jamais de l’ordre de ce tableau. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.
    */
   contreparties?:
     | {
@@ -1468,6 +1468,10 @@ export interface PagesLegales {
      */
     descriptionParDefaut?: string | null;
   };
+  /**
+   * Affiché sur la fiche produit, le panier, la page de remerciement et les CGV. Vide = « entre 48 h et 10 jours ». L’e-mail de confirmation de commande garde toujours cette mention par défaut, quoi que vous saisissiez ici.
+   */
+  livraisonDelai?: string | null;
   /**
    * Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.
    */
@@ -1663,6 +1667,7 @@ export interface PagesLegalesSelect<T extends boolean = true> {
         titreParDefaut?: T;
         descriptionParDefaut?: T;
       };
+  livraisonDelai?: T;
   cgv?: T;
   mentionsLegales?: T;
   confidentialite?: T;
