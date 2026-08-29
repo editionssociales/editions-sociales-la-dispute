@@ -4,6 +4,8 @@ import {
   computeVatPart,
   formatComptaCsv,
   formatPreparationCsv,
+  MAX_EXPORT_SELECTION,
+  parseExportOrderIds,
   PREPARATION_ORDER_STATUSES,
   splitFullName,
   type OrderExportRow,
@@ -57,6 +59,60 @@ describe("computeVatPart", () => {
 
   it("un total nul ne ventile rien", () => {
     expect(computeVatPart(0)).toBe(0);
+  });
+});
+
+/**
+ * Sélection explicite de commandes (checkboxes de la liste, panneau
+ * `OrderExportForm.tsx`) → paramètre `ids` des deux endpoints d'export,
+ * PRIME sur `from`/`to` côté `order-export-handler.ts`. Parsing pur, testé
+ * ici comme le reste du module.
+ */
+describe("parseExportOrderIds", () => {
+  it("absent ou vide → pas d'erreur, liste vide (pas de sélection explicite, l'appelant retombe sur les dates)", () => {
+    expect(parseExportOrderIds(null)).toEqual({ ids: [] });
+    expect(parseExportOrderIds(undefined)).toEqual({ ids: [] });
+    expect(parseExportOrderIds("")).toEqual({ ids: [] });
+    expect(parseExportOrderIds("   ")).toEqual({ ids: [] });
+  });
+
+  it("liste d'entiers séparés par des virgules, dans l'ordre d'apparition", () => {
+    expect(parseExportOrderIds("12,45,109")).toEqual({ ids: [12, 45, 109] });
+  });
+
+  it("espaces autour des virgules et des nombres tolérés", () => {
+    expect(parseExportOrderIds(" 12 , 45 ,109 ")).toEqual({ ids: [12, 45, 109] });
+  });
+
+  it("dédoublonne, en gardant la première occurrence", () => {
+    expect(parseExportOrderIds("12,45,12,45,7")).toEqual({ ids: [12, 45, 7] });
+  });
+
+  it("virgules répétées ou en bordure ignorées (pas de segment vide en erreur)", () => {
+    expect(parseExportOrderIds(",12,,45,")).toEqual({ ids: [12, 45] });
+  });
+
+  it("un identifiant non entier → erreur explicite, jamais un export partiel silencieux", () => {
+    const result = parseExportOrderIds("12,abc,45");
+    expect(result).toHaveProperty("error");
+    expect((result as { error: string }).error).toContain("abc");
+  });
+
+  it("un identifiant négatif ou décimal → erreur (jamais toléré comme un entier positif)", () => {
+    expect(parseExportOrderIds("-1")).toHaveProperty("error");
+    expect(parseExportOrderIds("1.5")).toHaveProperty("error");
+  });
+
+  it(`au-delà de ${MAX_EXPORT_SELECTION} ids → erreur claire, jamais un export tronqué en silence`, () => {
+    const tooMany = Array.from({ length: MAX_EXPORT_SELECTION + 1 }, (_, i) => i + 1).join(",");
+    const result = parseExportOrderIds(tooMany);
+    expect(result).toHaveProperty("error");
+    expect((result as { error: string }).error).toContain(String(MAX_EXPORT_SELECTION));
+  });
+
+  it(`exactement ${MAX_EXPORT_SELECTION} ids → accepté (borne inclusive)`, () => {
+    const exactly = Array.from({ length: MAX_EXPORT_SELECTION }, (_, i) => i + 1);
+    expect(parseExportOrderIds(exactly.join(","))).toEqual({ ids: exactly });
   });
 });
 

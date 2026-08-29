@@ -118,8 +118,14 @@ export const Orders: CollectionConfig = {
     // les chemins pointillés dans un `where` Payload) ; seul le libellé du
     // placeholder de recherche omettra ce champ (`getTextFieldsToBeSearched`
     // compare par `field.name` après aplatissement, jamais par accessor —
-    // cosmétique, recon 2026-08-21).
-    listSearchableFields: ['shippingAddress.fullName', 'number', 'email'],
+    // cosmétique, recon 2026-08-21). `lines.titleSnapshot` (recherche par
+    // titre de livre, demande cliente) : même chemin pointillé À TRAVERS un
+    // champ `array` — vérifié fonctionnel côté requête dans le code du SDK
+    // (`getTableColumnFromPath`, `@payloadcms/drizzle`, `case 'array'` : join
+    // vers la table de l'array puis résolution du reste du chemin), même
+    // omission cosmétique du placeholder que ci-dessus (`flattenTopLevelFields`
+    // ne hisse pas les sous-champs d'un `array`, contrairement à un `group`).
+    listSearchableFields: ['shippingAddress.fullName', 'number', 'email', 'lines.titleSnapshot'],
     description:
       'Commandes du commerce natif — créées par le webhook Stripe, suivies ' +
       'ici (statut de préparation/expédition uniquement). Un panier mixte ' +
@@ -297,36 +303,10 @@ export const Orders: CollectionConfig = {
       fields: addressFields(),
     },
     {
-      // Champ `ui` dédié plutôt qu'un chemin imbriqué
-      // `shippingAddress.fullName` dans `defaultColumns` ou qu'un Cell posé
-      // sur le groupe `shippingAddress` lui-même : les deux donneraient un
-      // EN-TÊTE DE COLONNE dérivé du libellé du champ (« Nom complet » ou
-      // « Adresse de livraison > Nom complet »), jamais « Client » — voir
-      // `OrderClientCell.tsx`.
-      type: 'ui',
-      name: 'clientResume',
-      label: 'Client',
-      admin: {
-        components: {
-          Cell: '/payload/admin/orders/OrderClientCell.tsx#OrderClientCell',
-        },
-      },
-    },
-    {
-      // Champ `ui` dédié plutôt qu'un Cell posé sur `lines` lui-même : la
-      // colonne doit s'intituler « Contenu » alors que la section du
-      // formulaire garde son libellé « Lignes » — voir
-      // `OrderContentCell.tsx`.
-      type: 'ui',
-      name: 'contenuResume',
-      label: 'Contenu',
-      admin: {
-        components: {
-          Cell: '/payload/admin/orders/OrderContentCell.tsx#OrderContentCell',
-        },
-      },
-    },
-    {
+      // Remonté juste après l'adresse de livraison (retour client : la
+      // cliente ne trouvait pas ce champ 8ᵉ, après les résumés `ui`) — reste
+      // AVANT `clientResume`/`contenuResume`, qui n'en sont que des synthèses
+      // de colonne de liste.
       name: 'lines',
       type: 'array',
       label: 'Lignes',
@@ -372,6 +352,36 @@ export const Orders: CollectionConfig = {
           label: 'Prix unitaire TTC (€)',
         },
       ],
+    },
+    {
+      // Champ `ui` dédié plutôt qu'un chemin imbriqué
+      // `shippingAddress.fullName` dans `defaultColumns` ou qu'un Cell posé
+      // sur le groupe `shippingAddress` lui-même : les deux donneraient un
+      // EN-TÊTE DE COLONNE dérivé du libellé du champ (« Nom complet » ou
+      // « Adresse de livraison > Nom complet »), jamais « Client » — voir
+      // `OrderClientCell.tsx`.
+      type: 'ui',
+      name: 'clientResume',
+      label: 'Client',
+      admin: {
+        components: {
+          Cell: '/payload/admin/orders/OrderClientCell.tsx#OrderClientCell',
+        },
+      },
+    },
+    {
+      // Champ `ui` dédié plutôt qu'un Cell posé sur `lines` lui-même : la
+      // colonne doit s'intituler « Contenu » alors que la section du
+      // formulaire garde son libellé « Lignes » — voir
+      // `OrderContentCell.tsx`.
+      type: 'ui',
+      name: 'contenuResume',
+      label: 'Contenu',
+      admin: {
+        components: {
+          Cell: '/payload/admin/orders/OrderContentCell.tsx#OrderContentCell',
+        },
+      },
     },
     {
       name: 'shippingMethod',
