@@ -1286,17 +1286,29 @@ export interface PageSouscription {
     } | null;
   };
   /**
-   * Les montants et intitulés des trois paliers restent calés sur la jauge de collecte — seule la description qui les accompagne se modifie ici.
+   * Les MONTANTS des trois paliers restent calés sur la jauge de collecte (ils la pilotent) — le titre court et la description qui l’accompagnent se modifient ici.
    */
   objectifs?: {
+    /**
+     * Vide = « On sauve les meubles ».
+     */
+    titre50?: string | null;
     /**
      * Vide = texte actuel.
      */
     descriptif50?: string | null;
     /**
+     * Vide = « On résiste ».
+     */
+    titre80?: string | null;
+    /**
      * Vide = texte actuel.
      */
     descriptif80?: string | null;
+    /**
+     * Vide = « On construit ».
+     */
+    titre100?: string | null;
     /**
      * Vide = texte actuel.
      */
@@ -1326,6 +1338,26 @@ export interface PageSouscription {
               id?: string | null;
             }[]
           | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Rail de visuels défilant en clôture de la page (photos, logos, messages de soutien…). CONTRAIREMENT au tableau Contreparties ci-dessus (dont l’ordre ne pilote jamais l’affichage), L’ORDRE DE SAISIE ICI EST L’ORDRE D’AFFICHAGE — glissez les entrées pour réordonner. Aucun visuel saisi = section absente de la page (rien à activer/désactiver).
+   */
+  soutiens?:
+    | {
+        /**
+         * Photo, logo ou visuel de soutien.
+         */
+        image: number | Media;
+        /**
+         * Optionnel — sert aussi de texte alternatif de l’image.
+         */
+        legende?: string | null;
+        /**
+         * Optionnel — URL complète (https://…) vers laquelle le visuel renvoie.
+         */
+        lien?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -1568,8 +1600,11 @@ export interface PageSouscriptionSelect<T extends boolean = true> {
   objectifs?:
     | T
     | {
+        titre50?: T;
         descriptif50?: T;
+        titre80?: T;
         descriptif80?: T;
+        titre100?: T;
         descriptif100?: T;
       };
   contreparties?:
@@ -1582,6 +1617,14 @@ export interface PageSouscriptionSelect<T extends boolean = true> {
               texte?: T;
               id?: T;
             };
+        id?: T;
+      };
+  soutiens?:
+    | T
+    | {
+        image?: T;
+        legende?: T;
+        lien?: T;
         id?: T;
       };
   updatedAt?: T;

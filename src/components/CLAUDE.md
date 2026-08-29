@@ -27,6 +27,7 @@ données ni le routage.
 ## Ubiquitous Language
 
 - **Primitive partagée** : composant serveur (zéro `"use client"`), réutilisable arbre serveur/client — `FramedGrid`, `Button`, `PageHero` (titre + chapeau seuls), `LibelleMosaic` (UNIQUE vue des libellés pour /catalogue, étages triés par rang, arithmétique en `libelle-mosaic-core.ts`, cf. code pour détails), `BookPageFallback` (squelette partagé des `loading.tsx` de fiche livre/boutique), `NewTabMark` (glyphe ↗ + `sr-only` de tout lien `target="_blank"`), `BookPrice` (le prix, FAIT du livre affiché dès qu'il existe — utilisée par `book-card.tsx` et `buy-links.tsx`, y compris hors vente).
+- **`ScrollRail`** (`scroll-rail.tsx`, lot D3) : SEULE primitive partagée client de ce dossier (drag-to-scroll souris, snap, flèches optionnelles, effet de profondeur en option) — générique sur une liste `{ key, node, label? }`, sans rien connaître du contenu des cartes. Comportement par carte posé par DÉLÉGATION D'ÉVÉNEMENT sur le `<ul>` (suppression du clic post-drag, recentrage au focus clavier), jamais par clonage de `node` : un `onClick`/`onFocus` injecté par `cloneElement`, fermé sur les refs du rail, se lit comme « lire une ref pendant le rendu » pour `react-hooks/refs` (React Compiler). Deux adaptateurs : `nouveautes-carousel.tsx` (accueil/`/catalogue?upcoming=1`, id singleton + bootstrap LCP + effet de profondeur, DOM inchangé à l'octet) et `souscription/_components/soutiens-rail.tsx` (rail plat, sans effet de profondeur).
 
 ## Decisions
 

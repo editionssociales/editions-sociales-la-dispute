@@ -9,15 +9,17 @@ import { revalidateSouscriptionAfterChange } from '../hooks/revalidate.ts'
  * en plus du bloc `contreparties` (inchangé, cf. plus bas), le récit devient
  * éditable — titre de l'ask, quatre sections narratives NOMMÉES ET FIXES
  * (`danger`/`guerre`/`maisons`/`appel` — couleurs et ordre figés par le
- * design, donc pas un `array`) et les trois descriptions des paliers de
- * jauge. Séparation stricte présentation / mécanique de paiement partout :
- * les contreparties référencent un palier de `DONATION_TIERS`
- * (`src/lib/donation-tiers.ts`) par un select dont les options sont dérivées
- * de la table importée, et les descriptions d'objectifs ne portent JAMAIS le
- * montant ni l'intitulé du palier (dérivés de `CAMPAIGN_2026_PALIERS`,
- * `src/lib/donation-tiers.ts`) — texte d'accompagnement uniquement. Chaque
- * champ vide retombe sur le texte actuel codé en dur
- * (`src/lib/site-content-core.ts`) — iso-rendu strict à global vide.
+ * design, donc pas un `array`), les trois descriptions ET titres courts des
+ * paliers de jauge (2026-08-30), et la section « Ils et elles nous
+ * soutiennent » (`soutiens`, lot D3). Séparation stricte présentation /
+ * mécanique de paiement partout : les contreparties référencent un palier de
+ * `DONATION_TIERS` (`src/lib/donation-tiers.ts`) par un select dont les
+ * options sont dérivées de la table importée, et les objectifs de jauge ne
+ * portent JAMAIS le MONTANT du palier (dérivé de `CAMPAIGN_2026_PALIERS`,
+ * `src/lib/donation-tiers.ts`, qui pilote la jauge) — seuls son titre court
+ * et sa description l'accompagnent, tous deux éditables. Chaque champ vide
+ * retombe sur le texte actuel codé en dur (`src/lib/site-content-core.ts`)
+ * — iso-rendu strict à global vide.
  *
  * Onglets sans `name` (même pattern que `PageAPropos`/`PagesLegales`) : les
  * champs qu'ils contiennent écrivent directement sur le document, chemin de
@@ -136,9 +138,15 @@ export const PageSouscription: GlobalConfig = {
               label: 'Objectifs de la jauge',
               admin: {
                 description:
-                  'Les montants et intitulés des trois paliers restent calés sur la jauge de collecte — seule la description qui les accompagne se modifie ici.',
+                  'Les MONTANTS des trois paliers restent calés sur la jauge de collecte (ils la pilotent) — le titre court et la description qui l’accompagnent se modifient ici.',
               },
               fields: [
+                {
+                  name: 'titre50',
+                  type: 'text',
+                  label: 'Titre — 50 000 €',
+                  admin: { description: 'Vide = « On sauve les meubles ».' },
+                },
                 {
                   name: 'descriptif50',
                   type: 'textarea',
@@ -146,10 +154,22 @@ export const PageSouscription: GlobalConfig = {
                   admin: { description: 'Vide = texte actuel.' },
                 },
                 {
+                  name: 'titre80',
+                  type: 'text',
+                  label: 'Titre — 80 000 €',
+                  admin: { description: 'Vide = « On résiste ».' },
+                },
+                {
                   name: 'descriptif80',
                   type: 'textarea',
                   label: 'Description — 80 000 €',
                   admin: { description: 'Vide = texte actuel.' },
+                },
+                {
+                  name: 'titre100',
+                  type: 'text',
+                  label: 'Titre — 100 000 €',
+                  admin: { description: 'Vide = « On construit ».' },
                 },
                 {
                   name: 'descriptif100',
@@ -204,6 +224,63 @@ export const PageSouscription: GlobalConfig = {
                       label: 'Texte',
                     },
                   ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Soutiens',
+          fields: [
+            {
+              name: 'soutiens',
+              type: 'array',
+              label: 'Ils et elles nous soutiennent',
+              labels: {
+                singular: 'Visuel',
+                plural: 'Visuels',
+              },
+              admin: {
+                description:
+                  'Rail de visuels défilant en clôture de la page (photos, logos, messages de soutien…). CONTRAIREMENT au tableau Contreparties ci-dessus (dont l’ordre ne pilote jamais l’affichage), L’ORDRE DE SAISIE ICI EST L’ORDRE D’AFFICHAGE — glissez les entrées pour réordonner. Aucun visuel saisi = section absente de la page (rien à activer/désactiver).',
+              },
+              fields: [
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'image',
+                      type: 'upload',
+                      relationTo: 'media',
+                      required: true,
+                      label: 'Image',
+                      displayPreview: true,
+                      filterOptions: {
+                        mimeType: { contains: 'image' },
+                      },
+                      admin: {
+                        width: '50%',
+                        description: 'Photo, logo ou visuel de soutien.',
+                      },
+                    },
+                    {
+                      name: 'legende',
+                      type: 'text',
+                      label: 'Légende',
+                      admin: {
+                        width: '50%',
+                        description: 'Optionnel — sert aussi de texte alternatif de l’image.',
+                      },
+                    },
+                  ],
+                },
+                {
+                  name: 'lien',
+                  type: 'text',
+                  label: 'Lien',
+                  admin: {
+                    description: 'Optionnel — URL complète (https://…) vers laquelle le visuel renvoie.',
+                  },
                 },
               ],
             },

@@ -8,7 +8,9 @@ import {
   richTextToSafeHtml,
 } from "./site-content-core";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
+import { CAMPAIGN_2026_PALIERS } from "./donation-tiers";
 import { EDITIONS } from "./editions";
+import type { Media } from "../payload-types";
 
 /* -------- fixtures lexical (même forme que catalogue-pg-map.test.ts) -------- */
 
@@ -503,6 +505,11 @@ describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-0
         "Nous arrivons à absorber l’essentiel des dettes de notre ancien distributeur. Nous pouvons ainsi mener à bien certains projets déjà engagés et confirmer l’embauche de Nicolas Vieillescazes.",
       descriptif100:
         "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
+      // Titres courts (2026-08-30) : défaut = les intitulés ACTUELS du code
+      // (`CAMPAIGN_2026_PALIERS`), jamais lus en dur ici — la table fait foi.
+      titre50: CAMPAIGN_2026_PALIERS[0].label,
+      titre80: CAMPAIGN_2026_PALIERS[1].label,
+      titre100: CAMPAIGN_2026_PALIERS[2].label,
     });
   });
 
@@ -568,5 +575,99 @@ describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-0
     expect(merged.objectifs.descriptif100).toBe(
       "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
     );
+  });
+
+  it("titre court d'un palier de jauge éditable (2026-08-30) : surcharge indépendante des deux autres et de la description", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      objectifs: { titre80: "On tient bon" },
+    });
+    expect(merged.objectifs.titre50).toBe(CAMPAIGN_2026_PALIERS[0].label);
+    expect(merged.objectifs.titre80).toBe("On tient bon");
+    expect(merged.objectifs.titre100).toBe(CAMPAIGN_2026_PALIERS[2].label);
+    // La description voisine n'a pas bougé.
+    expect(merged.objectifs.descriptif80).toBe(
+      "Nous arrivons à absorber l’essentiel des dettes de notre ancien distributeur. Nous pouvons ainsi mener à bien certains projets déjà engagés et confirmer l’embauche de Nicolas Vieillescazes.",
+    );
+  });
+});
+
+describe("mergePageSouscription — soutiens (lot D3, 2026-08-30) : contrat de vide DIFFÉRENT des autres champs", () => {
+  const media = (overrides: Partial<Media> = {}): Media => ({
+    id: 1,
+    url: "https://blob.example/soutien.jpg",
+    width: 400,
+    height: 300,
+    updatedAt: "",
+    createdAt: "",
+    ...overrides,
+  });
+
+  it("global absent ou tableau vide → AUCUN visuel, pas de défaut (contrat « Highlight »)", () => {
+    expect(mergePageSouscription(null).soutiens).toEqual([]);
+    expect(mergePageSouscription({ id: 1, soutiens: [] }).soutiens).toEqual([]);
+  });
+
+  it("entrée complète → image/légende/lien résolus, légende reprise comme alt", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      soutiens: [
+        { image: media(), legende: "Un·e libraire soutien", lien: "https://exemple.org" },
+      ],
+    });
+    expect(merged.soutiens).toEqual([
+      {
+        image: {
+          url: "https://blob.example/soutien.jpg",
+          width: 400,
+          height: 300,
+          alt: "Un·e libraire soutien",
+        },
+        legende: "Un·e libraire soutien",
+        lien: "https://exemple.org",
+      },
+    ]);
+  });
+
+  it("légende et lien facultatifs : absents → null, alt vide (décoratif)", () => {
+    const merged = mergePageSouscription({ id: 1, soutiens: [{ image: media() }] });
+    expect(merged.soutiens[0].legende).toBeNull();
+    expect(merged.soutiens[0].lien).toBeNull();
+    expect(merged.soutiens[0].image.alt).toBe("");
+  });
+
+  it("relation image non peuplée (simple id, profondeur insuffisante) → entrée filtrée", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      // Forme brute possible d'une relation Payload non peuplée.
+      soutiens: [{ image: 1 as unknown as Media }],
+    });
+    expect(merged.soutiens).toEqual([]);
+  });
+
+  it("image peuplée mais incomplète (dimensions manquantes) → entrée filtrée, les autres restent", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      soutiens: [
+        { image: media({ width: null, height: null }) },
+        { image: media({ id: 2, url: "https://blob.example/second.jpg" }) },
+      ],
+    });
+    expect(merged.soutiens).toHaveLength(1);
+    expect(merged.soutiens[0].image.url).toBe("https://blob.example/second.jpg");
+  });
+
+  it("ordre de saisie du tableau CMS PRÉSERVÉ (contrat inverse de `contreparties`, dont l'ordre CMS ne pilote rien)", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      soutiens: [
+        { image: media({ id: 10, url: "https://blob.example/dix.jpg" }) },
+        { image: media({ id: 20, url: "https://blob.example/vingt.jpg" }) },
+      ],
+    });
+    expect(merged.soutiens.map((s) => s.image.url)).toEqual([
+      "https://blob.example/dix.jpg",
+      "https://blob.example/vingt.jpg",
+    ]);
   });
 });

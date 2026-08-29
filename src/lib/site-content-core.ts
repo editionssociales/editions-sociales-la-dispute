@@ -1,11 +1,12 @@
 import { lexicalToHtml } from "./catalogue-pg-map";
 import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
-import { DONATION_TIERS, type DonationTier } from "./donation-tiers";
+import { CAMPAIGN_2026_PALIERS, DONATION_TIERS, type DonationTier } from "./donation-tiers";
 import { EDITION_LIST } from "./editions";
 import type { Accent } from "./format";
 import type { EditionSlug } from "./types";
 import type {
+  Media,
   PageAPropos,
   PageContact,
   PageSouscription,
@@ -334,18 +335,39 @@ export interface RecitSectionContent {
   corps: SafeHtml | null;
 }
 
-/** Les trois descriptions des paliers de jauge — montants/intitulés dérivés de `CAMPAIGN_2026_PALIERS`, jamais du CMS. */
+/**
+ * Les trois cartes de paliers de jauge — descriptions ET titres courts
+ * éditables (`descriptif*`/`titre*`, demande client 2026-08-30 : le titre
+ * était le seul champ resté en dur alors que sa description voisine l'était
+ * déjà) ; le MONTANT, lui, reste dérivé de `CAMPAIGN_2026_PALIERS`, jamais du
+ * CMS — c'est lui qui pilote la jauge.
+ */
 export interface ObjectifsSouscriptionContent {
   descriptif50: string;
   descriptif80: string;
   descriptif100: string;
+  titre50: string;
+  titre80: string;
+  titre100: string;
+}
+
+/**
+ * Un visuel de la section « Ils et elles nous soutiennent » (lot D3,
+ * 2026-08-30) — image TOUJOURS exploitable (url/largeur/hauteur présentes,
+ * cf. `mergeSoutiens`), légende et lien facultatifs.
+ */
+export interface SoutienVisuel {
+  image: { url: string; width: number; height: number; alt: string };
+  legende: string | null;
+  lien: string | null;
 }
 
 /**
  * Contenu éditable de `/souscription` (refonte sobre, 2026-08-21) : titre de
  * l'ask, quatre sections du récit (`danger`/`guerre`/`maisons`/`appel` —
  * couleurs et ordre figés par le design, PAS un tableau), descriptions des
- * paliers de jauge, et les neuf cartes de contreparties (inchangées).
+ * paliers de jauge, les neuf cartes de contreparties (inchangées), et les
+ * visuels de soutien (lot D3, contrat de vide DIFFÉRENT — cf. `mergeSoutiens`).
  */
 export interface PageSouscriptionContent {
   titre: {
@@ -361,6 +383,7 @@ export interface PageSouscriptionContent {
   };
   objectifs: ObjectifsSouscriptionContent;
   contreparties: ContrepartieSouscription[];
+  soutiens: SoutienVisuel[];
 }
 
 /** Palier obligatoire des contenus par défaut — jette au chargement du module si l'id sort de la table. */
@@ -522,7 +545,13 @@ const RECIT_DEFAUT: Record<
   },
 };
 
-/** Descriptions des trois paliers de jauge — texte de campagne client (livraison 2026-08-29), verbatim. */
+/**
+ * Descriptions des trois paliers de jauge — texte de campagne client
+ * (livraison 2026-08-29), verbatim. Titres courts (2026-08-30) : les
+ * intitulés ACTUELS du code, ceux de `CAMPAIGN_2026_PALIERS`
+ * (`donation-tiers.ts`) — un champ vide au CMS y retombe donc exactement, le
+ * même contrat que les descriptions.
+ */
 const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = {
   descriptif50:
     "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
@@ -532,6 +561,9 @@ const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = {
   // conservé verbatim, comme la version précédente.
   descriptif100:
     "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
+  titre50: CAMPAIGN_2026_PALIERS[0].label,
+  titre80: CAMPAIGN_2026_PALIERS[1].label,
+  titre100: CAMPAIGN_2026_PALIERS[2].label,
 };
 
 /** Chaîne saisie si non vide (espaces exclus), sinon `null` (pas de 2ᵉ ligne / pas de section). */
@@ -556,6 +588,43 @@ function mergeRecitSection(
     titreItalique: texteOuDefautNullable(groupe?.titreItalique, defaut.titreItalique),
     corps: richTextToSafeHtml(groupe?.corps),
   };
+}
+
+/** Un champ relation Payload est-il peuplé (objet) plutôt que renvoyé comme simple id ? — même garde que `rencontres.ts`. */
+function isMediaPopulated(value: number | Media | null | undefined): value is Media {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * Fusion de la section « Ils et elles nous soutiennent » (lot D3, 2026-08-30)
+ * — DEUXIÈME contrat de vide de ce module (le seul avec les textes ci-dessus,
+ * qui eux retombent sur un défaut dur) : une entrée SANS image exploitable
+ * (relation non peuplée, ou `url`/`width`/`height` manquants) est filtrée,
+ * AUCUN DÉFAUT DE REPLI — tableau vide au final ⇒ section ABSENTE du rendu
+ * (contrat « Highlight », cf. `highlight.ts` : rien n'est inventé pour un
+ * contenu 100 % visuel). L'ORDRE DE SAISIE du tableau CMS est ici l'ordre
+ * d'affichage (à l'inverse de `contreparties`, dont l'ordre CMS ne pilote
+ * jamais la page) — pas de réordonnancement ici.
+ */
+function mergeSoutiens(global: PageSouscription | null | undefined): SoutienVisuel[] {
+  return (global?.soutiens ?? []).flatMap((entry) => {
+    const image = entry.image;
+    if (!isMediaPopulated(image) || !image.url || !image.width || !image.height) return [];
+    const legende = entry.legende?.trim() || null;
+    const lien = entry.lien?.trim() || null;
+    return [
+      {
+        image: {
+          url: image.url,
+          width: image.width,
+          height: image.height,
+          alt: legende ?? "",
+        },
+        legende,
+        lien,
+      },
+    ];
+  });
 }
 
 /**
@@ -612,8 +681,12 @@ export function mergePageSouscription(
         global?.objectifs?.descriptif100,
         OBJECTIFS_DEFAUT.descriptif100,
       ),
+      titre50: texteOuDefaut(global?.objectifs?.titre50, OBJECTIFS_DEFAUT.titre50),
+      titre80: texteOuDefaut(global?.objectifs?.titre80, OBJECTIFS_DEFAUT.titre80),
+      titre100: texteOuDefaut(global?.objectifs?.titre100, OBJECTIFS_DEFAUT.titre100),
     },
     contreparties,
+    soutiens: mergeSoutiens(global),
   };
 }
 

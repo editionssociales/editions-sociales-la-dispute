@@ -19,6 +19,7 @@ import { BottomSheet } from "@/components/bottom-sheet";
 import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
 import { HeroShelf, MobileShelf } from "./_components/shelf";
 import { TiersDrawer } from "./_components/tiers-drawer";
+import { SoutiensRail } from "./_components/soutiens-rail";
 
 /**
  * Page /souscription — refonte SOBRE (maquette client PDF, 2026-08-21,
@@ -37,9 +38,10 @@ import { TiersDrawer } from "./_components/tiers-drawer";
  * étagère 3D à sa droite, demande alignée à droite) → quatre sections narratives (UN SEUL pattern répété :
  * bandeau de titre à l'accent de la section + corps en prose sobre — gras et
  * surlignage inline pour toute emphase, aucun autre effet) → trois cartes de
- * paliers de jauge (remplacent l'escalier typographique) → CTA final →
- * rail sticky des contreparties (`#paliers`, hors du corps de texte, cf.
- * `_components/tiers-rail.tsx`/`tiers-drawer.tsx`, INCHANGÉS).
+ * paliers de jauge (remplacent l'escalier typographique) → preuve sociale
+ * (`_components/soutiens-rail.tsx`, lot D3, ABSENTE si aucun visuel saisi)
+ * → CTA final → rail sticky des contreparties (`#paliers`, hors du corps de
+ * texte, cf. `_components/tiers-rail.tsx`/`tiers-drawer.tsx`, INCHANGÉS).
  *
  * Ce qui disparaît avec la refonte : la section vidéo conditionnelle (`CAMPAIGN_VIDEO_URL`
  * n'a jamais cessé d'être `null` — `src/lib/video.ts` reste en place,
@@ -275,9 +277,17 @@ export default async function SouscriptionPage() {
     content.objectifs.descriptif80,
     content.objectifs.descriptif100,
   ];
+  // Titres courts éditables (2026-08-30) — vide au CMS retombe sur
+  // `CAMPAIGN_2026_PALIERS[i].label` (fusion faite dans `mergePageSouscription`),
+  // jamais lu directement ici : seul le MONTANT vient encore de la table.
+  const objectifTitres = [
+    content.objectifs.titre50,
+    content.objectifs.titre80,
+    content.objectifs.titre100,
+  ];
   const OBJECTIFS = CAMPAIGN_2026_PALIERS.map((p, i) => ({
     value: p.value,
-    titre: p.label,
+    titre: objectifTitres[i],
     desc: objectifDescriptions[i],
     ...OBJECTIF_PRESENTATION[i],
   }));
@@ -630,8 +640,7 @@ export default async function SouscriptionPage() {
             palier, montant à la MÊME taille pour les trois, sommet (100k)
             seul inversé (`bg-ink text-paper`). Pas de titre de section
             au-dessus, la jauge d'ouverture porte déjà « Objectif ». Clôt la
-            section : dernière de la colonne, le CTA final butait sinon
-            directement sur le pied de page. */}
+            colonne : dernière section avant le pied de page. */}
         <section className="mt-12 pb-16 sm:mt-16 sm:pb-24">
           <Container>
             <Reveal>
@@ -660,7 +669,17 @@ export default async function SouscriptionPage() {
                 ))}
               </div>
             </Reveal>
+          </Container>
 
+          {/* 5 ▪ Preuve sociale (lot D3, 2026-08-30) — juste AVANT la demande
+              finale (retour Clara : « un espace pour une catégorie avec des
+              visuels qui défilent »), hors du `<Container>` : le rail bleed
+              en pleine largeur, même traitement que `NouveautesCarousel`
+              (accueil). Absente du DOM si aucun visuel n'est saisi
+              (`mergeSoutiens`, contrat de vide propre à cette section). */}
+          <SoutiensRail soutiens={content.soutiens} />
+
+          <Container>
             {/* CTA final : renvoie simplement à l'ancre unique du rail — le
                 montant libre vit en tête du rail, pas ici. */}
             <Reveal>
