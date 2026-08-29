@@ -27,6 +27,7 @@ import * as migration_20260824_100000_virements_souscription from './20260824_10
 import * as migration_20260824_110000_ebooks from './20260824_110000_ebooks'
 import * as migration_20260824_120000_commande_telephone from './20260824_120000_commande_telephone'
 import * as migration_20260829_090000_livraison_delai_editable from './20260829_090000_livraison_delai_editable'
+import * as migration_20260830_090000_souscription_soutiens_titres_jauge from './20260830_090000_souscription_soutiens_titres_jauge'
 
 export const migrations = [
   {
@@ -173,5 +174,10 @@ export const migrations = [
     up: migration_20260829_090000_livraison_delai_editable.up,
     down: migration_20260829_090000_livraison_delai_editable.down,
     name: '20260829_090000_livraison_delai_editable',
+  },
+  {
+    up: migration_20260830_090000_souscription_soutiens_titres_jauge.up,
+    down: migration_20260830_090000_souscription_soutiens_titres_jauge.down,
+    name: '20260830_090000_souscription_soutiens_titres_jauge',
   },
 ];
