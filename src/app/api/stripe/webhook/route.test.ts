@@ -115,6 +115,12 @@ vi.mock("@/lib/order-mail", () => ({
   selectOrderMailer: () => ({ sendOrderConfirmation }),
 }));
 
+// `getPagesLegales()` (batch livraison éditable) — fixture fixe, la fusion
+// pure par défaut est déjà couverte par `site-content-core.test.ts`.
+vi.mock("@/lib/site-content", () => ({
+  getPagesLegales: async () => ({ livraisonDelai: "3 à 5 jours ouvrés (test)" }),
+}));
+
 const sendDonationThanks = vi.fn(async () => {});
 vi.mock("@/lib/donation-mail", () => ({
   logDonationMailer: { sendDonationThanks },
@@ -394,6 +400,12 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
     // Stock 5 → 3 (décrément de 2, la quantité de la ligne).
     expect(stockUpdates).toEqual([{ id: 12, stock: 3 }]);
     expect(sendOrderConfirmation).toHaveBeenCalledTimes(1);
+    // Délai de livraison éditable (`PagesLegales.livraisonDelai`) lu via
+    // `getPagesLegales()` et transmis au mail — cf. `order-mail.test.ts` pour
+    // le rendu du mail lui-même.
+    expect(sendOrderConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ livraisonDelai: "3 à 5 jours ouvrés (test)" }),
+    );
     expect(revalidateTag).not.toHaveBeenCalled(); // le chemin dons n'est jamais déclenché ici
   });
 

@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 
 /**
  * `order-mail.ts` testé à travers son interface réelle : `logOrderMailer` ne
@@ -57,6 +58,21 @@ describe("renderOrderConfirmationEmail — pur", () => {
     const { html } = renderOrderConfirmationEmail(PAYLOAD);
     expect(html).toContain("ES-2026-042");
     expect(html).toContain("25,00");
+  });
+});
+
+describe("renderOrderConfirmationEmail — délai de livraison éditable (PagesLegales.livraisonDelai)", () => {
+  it("livraisonDelai personnalisé apparaît dans le corps du mail (HTML et texte)", () => {
+    const custom = { ...PAYLOAD, livraisonDelai: "3 à 5 jours ouvrés" };
+    const { html, text } = renderOrderConfirmationEmail(custom);
+    expect(html).toContain("comptez 3 à 5 jours ouvrés");
+    expect(text).toContain("comptez 3 à 5 jours ouvrés");
+  });
+
+  it("livraisonDelai absent → défaut DELIVERY_DELAY_RANGE (rétrocompatible)", () => {
+    const { html, text } = renderOrderConfirmationEmail(PAYLOAD);
+    expect(html).toContain(`comptez ${DELIVERY_DELAY_RANGE}`);
+    expect(text).toContain(`comptez ${DELIVERY_DELAY_RANGE}`);
   });
 });
 

@@ -66,6 +66,15 @@ export interface OrderMailPayload {
    * commandes n'a rien à télécharger.
    */
   downloads?: OrderMailDownload[];
+  /**
+   * Mention de délai affichée dans la note d'expédition — éditable au
+   * back-office (`PagesLegales.livraisonDelai`, batch 3), transmise par
+   * l'appelant (`order-handler.ts` via `getPagesLegales()`) : ce module reste
+   * PUR (aucune lecture Payload), même patron prop+défaut que
+   * `BuyLinksList`/`CartView`. Défaut `DELIVERY_DELAY_RANGE` pour tout
+   * appelant qui ne la pose pas (tests compris).
+   */
+  livraisonDelai?: string;
 }
 
 export interface OrderMailer {
@@ -131,10 +140,11 @@ function totalsRow(
  * Contrainte clients mail réels : tables + styles inline uniquement, aucune
  * CSS externe ni webfont, largeur max ~560px centrée. DA du site rejouée en
  * dur (mêmes teintes que `globals.css`, mêmes monogrammes que
- * `site-header.tsx`) — le délai annoncé (`SHIPPING_NOTE`) reprend la
- * fourchette unique de `delivery-copy.ts` (demande client 2026-08-26) ;
- * l'expédition réelle n'étant pas pilotée par ce module, la précommande
- * garde sa phrase SANS délai (`PREORDER_NOTE`).
+ * `site-header.tsx`) — le délai annoncé (`buildShippingNote`) reprend
+ * `payload.livraisonDelai` (éditable au back-office, `PagesLegales.livraisonDelai`,
+ * transmis par le webhook), avec `DELIVERY_DELAY_RANGE` en défaut pour tout
+ * appelant qui ne le pose pas ; l'expédition réelle n'étant pas pilotée par
+ * ce module, la précommande garde sa phrase SANS délai (`PREORDER_NOTE`).
  */
 /**
  * Phrases partagées entre les rendus HTML et texte brut — une seule source :
@@ -143,9 +153,13 @@ function totalsRow(
 const SHIPPING_LABEL = "Livraison";
 const DISCOUNT_LABEL = "Remise";
 const TOTAL_LABEL = "Total TTC (TVA 5,5 % incluse)";
-const SHIPPING_NOTE =
-  `Votre commande est en cours de préparation ; comptez ${DELIVERY_DELAY_RANGE} ` +
-  "pour la recevoir. Nous vous informerons dès son expédition.";
+/** Délai éditable (`payload.livraisonDelai`, défaut `DELIVERY_DELAY_RANGE`) — même patron que `BuyLinksList`/`CartView`. */
+function buildShippingNote(livraisonDelai: string): string {
+  return (
+    `Votre commande est en cours de préparation ; comptez ${livraisonDelai} ` +
+    "pour la recevoir. Nous vous informerons dès son expédition."
+  );
+}
 /** Précommande (scission panier, client 2026-08-20) : ne promet pas un délai de préparation qui n'a pas commencé — l'expédition suit la parution, pas la commande. */
 const PREORDER_NOTE = "Précommande — expédiée à parution ; nous vous informerons dès son expédition.";
 /** En-tête du bloc téléchargement — accordé au nombre de fichiers (une commande peut contenir plusieurs titres numériques). */
@@ -179,7 +193,7 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
       `\n${SHIPPING_LABEL} : ${euros(payload.shippingCostTTC)}` +
       (payload.discountTTC > 0 ? `\n${DISCOUNT_LABEL} : -${euros(payload.discountTTC)}` : "") +
       `\n${TOTAL_LABEL} : ${euros(payload.totalTTC)}`,
-    preorder ? PREORDER_NOTE : SHIPPING_NOTE,
+    preorder ? PREORDER_NOTE : buildShippingNote(payload.livraisonDelai ?? DELIVERY_DELAY_RANGE),
     ...(payload.downloads?.length
       ? [
           `${downloadsTitle(payload.downloads.length)}\n` +
@@ -257,7 +271,7 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     // 2026-08-20) : bandeau dédié, jamais le texte de préparation habituel
     // (rien n'est « en préparation » avant la parution).
     `<tr><td style="padding:20px 0 20px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${INK};">` +
-    (preorder ? PREORDER_NOTE : SHIPPING_NOTE) +
+    (preorder ? PREORDER_NOTE : buildShippingNote(payload.livraisonDelai ?? DELIVERY_DELAY_RANGE)) +
     `</td></tr>` +
     // Livre(s) numérique(s) — encadré à part, APRÈS la note d'expédition :
     // c'est la seule partie de la commande qui est déjà disponible, elle ne

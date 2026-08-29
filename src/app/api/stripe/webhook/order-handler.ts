@@ -29,6 +29,7 @@ import {
 import { selectOrderMailer, type OrderMailDownload } from "@/lib/order-mail";
 import { signEbookToken } from "@/lib/ebook-token";
 import { SITE_URL } from "@/lib/mail-shell";
+import { getPagesLegales } from "@/lib/site-content";
 
 /**
  * Orchestration I/O du webhook côté `kind: "order"` (plan §4 étape 9, scission
@@ -303,6 +304,11 @@ async function createPaidOrderPart(
   }
 
   if (!order.confirmationSent) {
+    // `livraisonDelai` : mention éditable au back-office (`PagesLegales.livraisonDelai`,
+    // batch 3) — `getPagesLegales()` est mémoïsée par `cache()` (site-content.ts) et
+    // dégrade seule sur son défaut si Payload est indisponible, donc lue ici sans
+    // filet supplémentaire (même confiance que le reste du site : fiche, panier, CGV).
+    const { livraisonDelai } = await getPagesLegales();
     await selectOrderMailer().sendOrderConfirmation({
       orderNumber: order.number ?? order.stripeSessionId,
       orderType,
@@ -316,6 +322,7 @@ async function createPaidOrderPart(
       discountTTC: order.discountTTC ?? 0,
       totalTTC: order.totalTTC,
       downloads: await buildOrderDownloads(order),
+      livraisonDelai,
     });
     await updateOrder(order.id, { confirmationSent: true });
   }
@@ -570,7 +577,10 @@ function recapAddressFromOrder(order: Order): DonationMailRecap["shippingAddress
  * `stockDecremented`/`confirmationSent`) : un rejeu Stripe reprend l'effet
  * manquant sans jamais recréer la commande ni renvoyer un effet déjà posé.
  * JAMAIS `sendOrderConfirmation` (mail boutique) pour un don — uniquement
- * `selectDonationMailer().sendDonationThanks`.
+ * `selectDonationMailer().sendDonationThanks`, dont le récap (`DonationMailRecap`,
+ * `donation-mail.ts`) n'affiche QUE l'adresse de livraison, jamais de note de
+ * délai : le port d'une contrepartie est offert, il n'y a rien à chiffrer —
+ * `livraisonDelai` (batch éditable, `PagesLegales`) ne s'y transmet donc pas.
  *
  * `opts` — réservé au backfill (`scripts/backfill-dons-contreparties.ts`) ;
  * `route.ts` ne les passe jamais, le webhook garde son comportement
