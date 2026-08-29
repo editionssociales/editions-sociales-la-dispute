@@ -289,12 +289,12 @@ describe("mergePageContact — global vide ⇒ page /contact actuelle, verbatim"
 });
 
 describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut, verbatim", () => {
-  it("global absent → 9 contreparties dérivées de DONATION_TIERS, dans l'ordre d'affichage", () => {
+  it("global absent → 9 contreparties, le palier 50 € en tête (demande client 2026-08-27), puis l'ordre croissant", () => {
     const merged = mergePageSouscription(null);
     expect(merged.contreparties.map((c) => c.tier.id)).toEqual([
+      "palier-50",
       "palier-15",
       "palier-35",
-      "palier-50",
       "palier-75",
       "palier-100",
       "palier-200",
@@ -303,22 +303,22 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
       "palier-1000",
     ]);
     expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      15, 35, 50, 75, 100, 200, 300, 500, 1000,
-    ]);
-    // Un lot verrouillé au hasard (iso-rendu du PDF client « contreparties dans l'ordre »).
-    expect(merged.contreparties[0].items).toEqual([
-      { texte: "Une planche de stickers", alternative: false },
-    ]);
-    expect(merged.contreparties[1].items).toEqual([
-      { texte: "Manifeste du parti communiste", alternative: false },
-      { texte: "Une planche de stickers", alternative: false },
+      50, 15, 35, 75, 100, 200, 300, 500, 1000,
     ]);
     // Règle « ou » sur les défauts : la bande alternative du PDF (préfixe
     // retiré du texte, flag posé — le rendu repose le « ou »).
-    expect(merged.contreparties[2].items).toEqual([
+    expect(merged.contreparties[0].items).toEqual([
       { texte: "Découvrir l'antifascisme", alternative: false },
       { texte: "Contre l'écologie de guerre", alternative: true },
       { texte: "Un tote bag", alternative: false },
+      { texte: "Une planche de stickers", alternative: false },
+    ]);
+    // Deux lots verrouillés au hasard (iso-rendu du PDF client « contreparties dans l'ordre »).
+    expect(merged.contreparties[1].items).toEqual([
+      { texte: "Une planche de stickers", alternative: false },
+    ]);
+    expect(merged.contreparties[2].items).toEqual([
+      { texte: "Manifeste du parti communiste", alternative: false },
       { texte: "Une planche de stickers", alternative: false },
     ]);
   });
@@ -378,7 +378,7 @@ describe("mergePageSouscription — global vide ⇒ 9 contreparties par défaut,
       contreparties: [{ tierId: "palier-disparu" as never, items: [] }],
     });
     expect(merged.contreparties.map((c) => c.tier.amount)).toEqual([
-      15, 35, 50, 75, 100, 200, 300, 500, 1000,
+      50, 15, 35, 75, 100, 200, 300, 500, 1000,
     ]);
   });
 
@@ -425,11 +425,11 @@ describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-0
     });
     expect(merged.objectifs).toEqual({
       descriptif50:
-        "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+        "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
       descriptif80:
-        "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
+        "Nous arrivons à absorber l’essentiel des dettes de notre ancien distributeur. Nous pouvons ainsi mener à bien certains projets déjà engagés et confirmer l’embauche de Nicolas Vieillescazes.",
       descriptif100:
-        "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+        "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
     });
   });
 
@@ -489,11 +489,11 @@ describe("mergePageSouscription — titre/récit/objectifs (refonte sobre 2026-0
       objectifs: { descriptif80: "Nouveau texte pour 80 000 €." },
     });
     expect(merged.objectifs.descriptif50).toBe(
-      "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+      "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
     );
     expect(merged.objectifs.descriptif80).toBe("Nouveau texte pour 80 000 €.");
     expect(merged.objectifs.descriptif100).toBe(
-      "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+      "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
     );
   });
 });

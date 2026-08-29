@@ -370,17 +370,16 @@ function tierObligatoire(id: string): DonationTier {
  * Les tests verrouillent ces valeurs (iso-rendu). Type réduit au SEUL champ
  * qu'elle couvre (`Pick`) : le récit (titre/sections/objectifs) a son propre
  * bloc de défauts ci-dessous, concerns distincts.
+ *
+ * EXCEPTION à l'ordre du PDF : le palier 50 € ouvre la liste (demande client
+ * 2026-08-27) — juste après la carte « Montant libre », codée en dur en tête
+ * de rail dans `tiers-rail.tsx`, et AVANT la proposition à 15 €. Cet ordre
+ * est purement ÉDITORIAL : `DONATION_TIERS`/`CONTREPARTIES_2026` (paiement,
+ * résolution de commande) gardent leur ordre croissant verrouillé par leurs
+ * propres tests.
  */
 const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
   contreparties: [
-    {
-      tier: tierObligatoire("palier-15"),
-      items: ["Une planche de stickers"],
-    },
-    {
-      tier: tierObligatoire("palier-35"),
-      items: ["Manifeste du parti communiste", "Une planche de stickers"],
-    },
     {
       tier: tierObligatoire("palier-50"),
       items: [
@@ -389,6 +388,14 @@ const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
         "Un tote bag",
         "Une planche de stickers",
       ],
+    },
+    {
+      tier: tierObligatoire("palier-15"),
+      items: ["Une planche de stickers"],
+    },
+    {
+      tier: tierObligatoire("palier-35"),
+      items: ["Manifeste du parti communiste", "Une planche de stickers"],
     },
     {
       tier: tierObligatoire("palier-75"),
@@ -495,16 +502,16 @@ const RECIT_DEFAUT: Record<
   },
 };
 
-/** Descriptions actuelles des trois paliers de jauge — texte actuel, verbatim. */
+/** Descriptions des trois paliers de jauge — texte de campagne client (livraison 2026-08-29), verbatim. */
 const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = {
   descriptif50:
-    "Ce premier palier nous permet de préserver nos emplois et de continuer notre activité.",
+    "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
   descriptif80:
-    "Nous pouvons absorber l’essentiel de la perte, mener à bien les projets déjà engagés et confirmer l’arrivée de Nicolas Vieillescazes dans l’équipe.",
-  // TODO(contenu) : phrase possiblement tronquée dans le docx/la maquette (le
-  // point final manque, cf. PDF client) — conservée telle quelle.
+    "Nous arrivons à absorber l’essentiel des dettes de notre ancien distributeur. Nous pouvons ainsi mener à bien certains projets déjà engagés et confirmer l’embauche de Nicolas Vieillescazes.",
+  // Le point final manque aussi dans cette livraison du texte client —
+  // conservé verbatim, comme la version précédente.
   descriptif100:
-    "Nous pouvons investir dans une toute nouvelle collection et continuer à faire vivre nos maisons",
+    "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
 };
 
 /** Chaîne saisie si non vide (espaces exclus), sinon `null` (pas de 2ᵉ ligne / pas de section). */
