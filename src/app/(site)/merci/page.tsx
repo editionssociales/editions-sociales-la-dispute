@@ -4,6 +4,7 @@ import { Button } from "@/components/button";
 import { PageHero } from "@/components/page-hero";
 import { ClearCartOnConfirmation } from "@/components/cart/clear-cart-on-confirmation";
 import { ContactLine } from "@/components/contact-line";
+import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { formatPrice } from "@/lib/format";
 import { ACCENT_BG } from "@/lib/accents";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
@@ -110,6 +111,15 @@ export default async function MerciPage({
               Référence : {sessionId.slice(-10).toUpperCase()}
             </p>
           )}
+
+          {/* Délai annoncé (demande client 2026-08-26, source unique
+              `delivery-copy.ts`) — cette page ne sait pas distinguer une
+              précommande (elle ne relit que la session Stripe), d'où la
+              parenthèse : le mail de confirmation, lui, adapte sa phrase
+              commande par commande (`order-mail.ts`). */}
+          <p className="mt-4 font-sans text-sm text-muted">
+            Livraison {DELIVERY_DELAY_RANGE} — les précommandes sont expédiées à parution.
+          </p>
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">

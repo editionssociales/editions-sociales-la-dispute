@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/container";
 import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY } from "@/components/legal-section";
+import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { getPagesLegales } from "@/lib/site-content";
 
 // Même recette de sous-titre légal que `confidentialite/page.tsx` : de vrais
@@ -101,12 +102,10 @@ export default async function CgvPage() {
                 <p className={LEGAL_BODY}>
                   Les commandes sont expédiées en France métropolitaine, en
                   Belgique et en Suisse ; les frais de port sont calculés
-                  selon le montant du panier et affichés avant paiement.{" "}
-                  <span className="italic text-ocher-text">
-                    [À COMPLÉTER : transporteur(s) retenu(s) et délais de
-                    livraison indicatifs]
-                  </span>
-                  .
+                  selon le montant du panier et affichés avant paiement. La
+                  livraison intervient en règle générale {DELIVERY_DELAY_RANGE}{" "}
+                  à compter de la confirmation de paiement ; les précommandes
+                  sont expédiées à parution de l&apos;ouvrage.
                 </p>
                 <h3 className={H3_CLASS}>Médiation de la consommation</h3>
                 <p className={LEGAL_BODY}>

@@ -9,6 +9,7 @@ import { ShelfSpines } from "@/components/cart/shelf-spines";
 import { FramedGrid } from "@/components/framed-grid";
 import { Button } from "@/components/button";
 import { BookCover } from "@/lib/cover";
+import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { formatPrice } from "@/lib/format";
 import { centsToEuros } from "@/lib/money";
 import {
@@ -607,6 +608,11 @@ export function CartView({ goodies = [] }: { goodies?: GoodieSuggestion[] }) {
                 </option>
               ))}
             </select>
+            {/* Délai annoncé au moment où l'acheteur·se hésite (demande
+                client 2026-08-26) — source unique `delivery-copy.ts`. */}
+            <span className="font-sans text-xs text-muted">
+              Livraison {DELIVERY_DELAY_RANGE} — précommandes expédiées à parution.
+            </span>
           </label>
 
           <div className="flex flex-col gap-2">

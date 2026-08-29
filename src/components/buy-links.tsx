@@ -1,5 +1,6 @@
 import type { Book } from "@/lib/types";
 import { canAddToCart } from "@/lib/cart-core";
+import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { formatDateFr, formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { Button } from "./button";
@@ -18,8 +19,8 @@ import { NewTabMark } from "./new-tab-mark";
 const PRICE_CLASS = "font-sans text-3xl font-black leading-none text-ink";
 const STATUS_CLASS = "font-sans text-xl font-black italic text-ink";
 const MICROCOPY_CLASS = "mt-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted";
-/** Espace insécable entre la valeur et son unité (typographie française). */
-const IN_STOCK_COPY = "En stock — expédié sous 48 h";
+/** Fourchette réelle plutôt que promesse d'expédition éclair (demande client 2026-08-26) — source unique `delivery-copy.ts` (espaces insécables comprises). */
+const IN_STOCK_COPY = `En stock — livraison ${DELIVERY_DELAY_RANGE}`;
 
 export function BuyLinksList({ book }: { book: Book }) {
   // Liens libraires de repli — lus une seule fois, rendus par les CINQ
