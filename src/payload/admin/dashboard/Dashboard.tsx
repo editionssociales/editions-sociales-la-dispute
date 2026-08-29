@@ -12,7 +12,6 @@ import {
   fmtEuros,
   fmtEurosAxis,
   humanAge,
-  linesTooltip,
   rollingWindows,
   salesChartGeometry,
   salesStats,
@@ -276,10 +275,12 @@ export async function Dashboard({ payload }: ServerProps) {
                       </a>
                       <span className={styles.rowSubtle}>{order.number}</span>
                     </td>
-                    {/* Infobulle : détail complet des lignes (le résumé condense au-delà de 3). */}
-                    <td title={order.lines.length > 0 ? linesTooltip(order.lines) : undefined}>
-                      {summarizeLines(order.lines)}
-                    </td>
+                    {/* Pas d'infobulle ici : le `::after` du lien de rangée
+                        (`.rowLink`) recouvre tout le `<tr>` — le survol
+                        n'atteint jamais ce `<td>` (seul son ancêtre `<tr>`
+                        est survolé), un `title`/`:hover` y serait muet. La
+                        rangée entière ouvre la fiche, qui est le détail. */}
+                    <td>{summarizeLines(order.lines)}</td>
                     <td>
                       {humanAge(order.paidAt ?? order.createdAt, now)}{' '}
                       <span className={styles.tag}>{ORDER_STATUS_LABELS[order.status] ?? order.status}</span>

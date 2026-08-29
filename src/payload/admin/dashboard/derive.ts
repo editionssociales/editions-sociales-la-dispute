@@ -631,14 +631,14 @@ export function summarizeLines(lines: SummarizableLine[], max = 3): string {
 }
 
 /**
- * Détail COMPLET des lignes pour une infobulle (`title=`) — une ligne par
- * titre, là où `summarizeLines` condense au-delà de 3 en « N autres »
- * (demande client 2026-08-26 : une grosse commande était illisible en
- * liste). Les navigateurs rendent les `\n` d'un attribut `title` comme de
- * vrais retours à la ligne. Posée PARTOUT où un résumé de lignes s'affiche
- * (cellule « Contenu » de la liste Commandes, tableau des commandes à
- * traiter du dashboard), pas seulement quand ça tronque : les titres longs
- * sont aussi coupés par la largeur de colonne.
+ * Détail COMPLET des lignes pour une infobulle — une ligne par titre, là où
+ * `summarizeLines` condense au-delà de 3 en « N autres » (demande client
+ * 2026-08-26 : une grosse commande était illisible en liste). Consommé par
+ * la cellule « Contenu » de la liste Commandes (`OrderContentCell.tsx`,
+ * attribut `data-lignes` + infobulle CSS instantanée de `custom.scss` — le
+ * `title` natif attendait ~1 s, retour client 2026-08-29 ; `pre-line` y rend
+ * les `\n`). PAS sur le tableau du dashboard : son lien de rangée recouvre
+ * les cellules, le survol ne les atteint jamais.
  */
 export function linesTooltip(lines: SummarizableLine[]): string {
   return lines.map((l) => `${l.quantity}× ${l.titleSnapshot}`).join('\n')
