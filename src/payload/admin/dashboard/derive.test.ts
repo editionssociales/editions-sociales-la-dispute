@@ -17,7 +17,6 @@ import {
   importSignal,
   monthlyBucketToChartInput,
   monthlySalesBuckets,
-  monthsAgoParisMonthStartUtc,
   parisMonthBounds,
   pastilleText,
   precommandeQuantityByBook,
@@ -451,22 +450,9 @@ describe('everyNthLabels — indices de libellés d’axe X répartis', () => {
 
 /* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
 
-describe('monthsAgoParisMonthStartUtc — borne basse mensuelle Paris', () => {
-  it('12 mois avant août 2026 : 1er août 2025 minuit Paris (CEST, UTC-2)', () => {
-    const start = monthsAgoParisMonthStartUtc(new Date('2026-08-30T12:00:00Z'), 12)
-    expect(start.toISOString()).toBe('2025-07-31T22:00:00.000Z')
-  })
-
-  it('12 mois avant janvier 2026 : bascule d’année sur janvier 2025 (CET, UTC-1)', () => {
-    const start = monthsAgoParisMonthStartUtc(new Date('2026-01-15T12:00:00Z'), 12)
-    expect(start.toISOString()).toBe('2024-12-31T23:00:00.000Z')
-  })
-
-  it('0 mois en arrière : 1er du mois courant', () => {
-    const start = monthsAgoParisMonthStartUtc(new Date('2026-08-30T12:00:00Z'), 0)
-    expect(start.toISOString()).toBe('2026-07-31T22:00:00.000Z')
-  })
-})
+// `monthsAgoParisMonthStartUtc` a déménagé dans `src/lib/format.ts`
+// (2026-08-29, partage avec `catalogue-core.ts:isRecentRelease`) — ses cas
+// vivent désormais dans `src/lib/format.test.ts`.
 
 describe('monthlySalesBuckets — seaux mensuels (mois civil Paris)', () => {
   it('13 seaux par défaut, du plus ancien au plus récent, mois courant inclus', () => {

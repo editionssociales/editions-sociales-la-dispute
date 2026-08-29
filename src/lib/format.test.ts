@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isoDayParis, joinNomsFr, parisMidnightUtc } from "./format";
+import { isoDayParis, joinNomsFr, monthsAgoParisMonthStartUtc, parisMidnightUtc } from "./format";
 
 /**
  * `isoDayParis` ramène un instant au jour civil français — verrouille les
@@ -48,6 +48,28 @@ describe("parisMidnightUtc", () => {
     const borneJPlus1 = new Date(parisMidnightUtc("2026-06-24")).getTime();
     expect(saisieAdminJourJ).toBeGreaterThanOrEqual(borneJ);
     expect(saisieAdminJourJ).toBeLessThan(borneJPlus1);
+  });
+});
+
+/**
+ * `monthsAgoParisMonthStartUtc` — déplacé depuis
+ * `payload/admin/dashboard/derive.ts` (2026-08-29, partagé avec
+ * `catalogue-core.ts:isRecentRelease`), cas repris tels quels.
+ */
+describe("monthsAgoParisMonthStartUtc — borne basse mensuelle Paris", () => {
+  it("12 mois avant août 2026 : 1er août 2025 minuit Paris (CEST, UTC-2)", () => {
+    const start = monthsAgoParisMonthStartUtc(new Date("2026-08-30T12:00:00Z"), 12);
+    expect(start.toISOString()).toBe("2025-07-31T22:00:00.000Z");
+  });
+
+  it("12 mois avant janvier 2026 : bascule d’année sur janvier 2025 (CET, UTC-1)", () => {
+    const start = monthsAgoParisMonthStartUtc(new Date("2026-01-15T12:00:00Z"), 12);
+    expect(start.toISOString()).toBe("2024-12-31T23:00:00.000Z");
+  });
+
+  it("0 mois en arrière : 1er du mois courant", () => {
+    const start = monthsAgoParisMonthStartUtc(new Date("2026-08-30T12:00:00Z"), 0);
+    expect(start.toISOString()).toBe("2026-07-31T22:00:00.000Z");
   });
 });
 

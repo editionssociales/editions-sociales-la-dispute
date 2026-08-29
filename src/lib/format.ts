@@ -97,6 +97,59 @@ export function parisMidnightUtc(day: string): string {
   return `${day}T00:00:00Z`;
 }
 
+/**
+ * Année/mois civil (1-12) **à l'heure de Paris** d'un instant — le seul point
+ * de passage pour dériver un mois civil d'un timestamp (dashboard
+ * `/admin/ventes` : `parisMonthBounds`, `monthlySalesBuckets` ; catalogue :
+ * `monthsAgoParisMonthStartUtc`, sous-jacent à `isRecentRelease` du carrousel
+ * accueil) : jamais un `slice(0, 7)` sur l'ISO UTC, qui glisserait sur le mois
+ * précédent pour tout instant tombé après 22h/23h UTC (soir Paris déjà dans le
+ * mois suivant). Déplacé depuis `payload/admin/dashboard/derive.ts`
+ * (2026-08-29) pour être partagé avec `catalogue-core.ts`.
+ */
+export function parisYearMonth(instant: Date): { year: number; month: number } {
+  const fmt = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "numeric",
+  });
+  const parts = fmt.formatToParts(instant);
+  return {
+    year: Number(parts.find((p) => p.type === "year")?.value),
+    month: Number(parts.find((p) => p.type === "month")?.value), // 1-12
+  };
+}
+
+/** Minuit Paris du 1ᵉʳ du mois (1-12), en UTC. */
+export function parisMonthStartUtc(year: number, month: number): Date {
+  const offsetHours = month >= 4 && month <= 10 ? 2 : 1;
+  return new Date(Date.UTC(year, month - 1, 1, -offsetHours));
+}
+
+/**
+ * Décale un couple année/mois civil (1-12) de `delta` mois (négatif = en
+ * arrière) — arithmétique entière sur un total de mois depuis l'an 0, modulo
+ * toujours ramené en `[1, 12]` (le double `% 12` garde le résultat positif
+ * même pour un `delta` négatif qui ferait chuter `total` sous 0).
+ */
+export function shiftYearMonth(year: number, month: number, delta: number): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 };
+}
+
+/**
+ * Instant UTC (minuit civil Paris) du 1ᵉʳ jour du mois situé `monthsBack` mois
+ * avant le mois civil Paris de `now` — borne basse partagée par
+ * `readSalesHistory` (`data.ts`, fenêtre I/O ~13 mois), `monthlySalesBuckets`
+ * (série de seaux mensuels) et `isRecentRelease` (`catalogue-core.ts`, fenêtre
+ * « nouveautés » de l'accueil).
+ */
+export function monthsAgoParisMonthStartUtc(now: Date, monthsBack: number): Date {
+  const { year, month } = parisYearMonth(now);
+  const target = shiftYearMonth(year, month, -monthsBack);
+  return parisMonthStartUtc(target.year, target.month);
+}
+
 const PRICE_FR = new Intl.NumberFormat("fr-FR", {
   style: "currency",
   currency: "EUR",

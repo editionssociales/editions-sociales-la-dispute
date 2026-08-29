@@ -1,4 +1,10 @@
-import { isoDayParis } from '../../../lib/format.ts'
+import {
+  isoDayParis,
+  monthsAgoParisMonthStartUtc,
+  parisMonthStartUtc,
+  parisYearMonth,
+  shiftYearMonth,
+} from '../../../lib/format.ts'
 import { isPromoExpired } from '../../../lib/promo-core.ts'
 
 /**
@@ -667,56 +673,10 @@ export function parisMonthBounds(now: Date): { start: Date; end: Date; label: st
   return { start: startUtc, end: endUtc, label }
 }
 
-/**
- * Année/mois civil (1-12) **à l'heure de Paris** d'un instant — le seul point
- * de passage pour dériver un mois civil d'un timestamp dans ce fichier
- * (`parisMonthBounds`, `monthlySalesBuckets`, `monthsAgoParisMonthStartUtc`) :
- * jamais un `slice(0, 7)` sur l'ISO UTC, qui glisserait sur le mois précédent
- * pour tout instant tombé après 22h/23h UTC (soir Paris déjà dans le mois
- * suivant).
- */
-function parisYearMonth(instant: Date): { year: number; month: number } {
-  const fmt = new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: 'numeric',
-  })
-  const parts = fmt.formatToParts(instant)
-  return {
-    year: Number(parts.find((p) => p.type === 'year')?.value),
-    month: Number(parts.find((p) => p.type === 'month')?.value), // 1-12
-  }
-}
-
-/** Minuit Paris du 1ᵉʳ du mois (1-12), en UTC. */
-function parisMonthStartUtc(year: number, month: number): Date {
-  const offsetHours = month >= 4 && month <= 10 ? 2 : 1
-  return new Date(Date.UTC(year, month - 1, 1, -offsetHours))
-}
-
-/**
- * Décale un couple année/mois civil (1-12) de `delta` mois (négatif = en
- * arrière) — arithmétique entière sur un total de mois depuis l'an 0, modulo
- * toujours ramené en `[1, 12]` (le double `% 12` garde le résultat positif
- * même pour un `delta` négatif qui ferait chuter `total` sous 0).
- */
-function shiftYearMonth(year: number, month: number, delta: number): { year: number; month: number } {
-  const total = year * 12 + (month - 1) + delta
-  return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 }
-}
-
-/**
- * Instant UTC (minuit civil Paris) du 1ᵉʳ jour du mois situé `monthsBack` mois
- * avant le mois civil Paris de `now` — borne basse partagée par
- * `readSalesHistory` (`data.ts`, fenêtre I/O ~13 mois) et `monthlySalesBuckets`
- * (série de seaux) : la lecture Postgres et l'agrégation portent ainsi
- * exactement sur la même fenêtre, sans dupliquer l'arithmétique de mois.
- */
-export function monthsAgoParisMonthStartUtc(now: Date, monthsBack: number): Date {
-  const { year, month } = parisYearMonth(now)
-  const target = shiftYearMonth(year, month, -monthsBack)
-  return parisMonthStartUtc(target.year, target.month)
-}
+// `parisYearMonth`/`parisMonthStartUtc`/`shiftYearMonth`/
+// `monthsAgoParisMonthStartUtc` ont déménagé dans `../../../lib/format.ts`
+// (2026-08-29) — partagées avec `catalogue-core.ts:isRecentRelease` (fenêtre
+// « nouveautés » de l'accueil), même famille qu'`isoDayParis`/`parisMidnightUtc`.
 
 /* ────────────────────────── Import routeur (3.7) ────────────────────────── */
 
