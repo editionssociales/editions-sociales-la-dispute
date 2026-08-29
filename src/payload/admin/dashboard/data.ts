@@ -117,21 +117,31 @@ export async function readSalesWindow(payload: Payload, now: Date): Promise<Sale
 export type SalesHistoryData = { state: 'ok'; rows: SalesHistoryRow[] } | { state: 'na' }
 
 /**
- * Lecture UNIQUE des ventes ~13 mois civils Paris (mois courant + 12
- * précédents, `monthsAgoParisMonthStartUtc(now, 12)`, `derive.ts`) — nourrira
- * à elle seule la future page `/admin/ventes` (KPIs multi-fenêtres, seaux
- * mensuels, top titres : `derive.ts:windowSalesStats`/`monthlySalesBuckets`/
- * `topTitles`), jamais une requête Payload par usage — même principe que
- * `readSalesWindow` ci-dessus, sur une fenêtre plus large et avec un besoin
- * différent en aval (agrégation par titre plutôt que par livre).
+ * Profondeur de `readSalesHistory` (mois civils Paris, EN PLUS du mois
+ * courant) — nommée plutôt qu'un `12` répété : `VentesPage.tsx` (panneau
+ * « Analyse libre ») la réutilise pour détecter si une borne de début choisie
+ * par l'équipe précède l'historique réellement chargé (avertissement
+ * « résultats partiels » plutôt qu'un total silencieusement amputé).
+ */
+export const SALES_HISTORY_MONTHS_BACK = 12
+
+/**
+ * Lecture UNIQUE des ventes ~13 mois civils Paris (mois courant +
+ * `SALES_HISTORY_MONTHS_BACK` précédents) — nourrit à elle seule la page
+ * `/admin/ventes` (KPIs multi-fenêtres, seaux mensuels, top titres, panneau
+ * « Analyse libre » : `derive.ts:windowSalesStats`/`monthlySalesBuckets`/
+ * `topTitles`/`rangeLineStats`/`filterLinesByTitle`), jamais une requête
+ * Payload par usage — même principe que `readSalesWindow` ci-dessus, sur une
+ * fenêtre plus large et avec un besoin différent en aval (agrégation par
+ * titre plutôt que par livre).
  *
  * Mêmes statuts vendus que `readSalesWindow` (`paid`/`prepared`/`shipped`,
  * jamais `refunded`/`cancelled`/`failed`) et même convention de borne
  * (`paidAt` à défaut `createdAt`). AUCUN filtre `orderType` ici (les dons ont
  * aussi un statut `paid`/`prepared`/`shipped`) — l'étanchéité comptable
  * dons/ventes est appliquée en aval, dans les dérivations pures
- * (`windowSalesStats`/`monthlySalesBuckets`/`topTitles`), pas dans cette
- * lecture partagée.
+ * (`windowSalesStats`/`monthlySalesBuckets`/`topTitles`/`rangeLineStats`), pas
+ * dans cette lecture partagée.
  *
  * Select API (issue #68) : `lines` gardé ENTIER plutôt qu'une sélection
  * imbriquée (`lines: { quantity: true, titleSnapshot: true, unitPriceTTC:
@@ -145,7 +155,7 @@ export type SalesHistoryData = { state: 'ok'; rows: SalesHistoryRow[] } | { stat
  * `number`/adresse/Stripe) reste le vrai levier de coût.
  */
 export async function readSalesHistory(payload: Payload, now: Date): Promise<SalesHistoryData> {
-  const start = monthsAgoParisMonthStartUtc(now, 12)
+  const start = monthsAgoParisMonthStartUtc(now, SALES_HISTORY_MONTHS_BACK)
   try {
     const { docs } = await payload.find({
       collection: 'orders',

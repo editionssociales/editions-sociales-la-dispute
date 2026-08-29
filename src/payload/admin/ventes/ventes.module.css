@@ -17,3 +17,41 @@
   flex: 1 1 320px;
   min-width: 0;
 }
+
+/* ── Analyse libre : formulaire GET (période + titre) et résultats ── */
+
+.filterForm {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-elevation-500, #6b675e);
+}
+
+.filterField input {
+  font: inherit;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--theme-elevation-800, #2b2820);
+  padding: 6px 8px;
+  border: 1px solid var(--theme-border-color, #e4e1d8);
+  border-radius: 4px;
+  background: var(--theme-elevation-0, #ffffff);
+}
+
+.analysisResult {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

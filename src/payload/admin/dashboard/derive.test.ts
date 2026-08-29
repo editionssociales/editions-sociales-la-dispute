@@ -7,6 +7,7 @@ import {
   dailySalesBuckets,
   editionTag,
   everyNthLabels,
+  filterLinesByTitle,
   fmtDateFr,
   fmtDateTimeFr,
   fmtDayMonthFr,
@@ -17,10 +18,13 @@ import {
   importSignal,
   monthlyBucketToChartInput,
   monthlySalesBuckets,
+  parisDayRangeMs,
   parisMonthBounds,
   pastilleText,
   precommandeQuantityByBook,
   quantitySoldByBook,
+  rangeLineStats,
+  rangeSalesStats,
   rollingWindows,
   salesChartGeometry,
   salesStats,
@@ -34,6 +38,7 @@ import {
   stockSignal,
   summarizeLines,
   topTitles,
+  topTitlesInRange,
   urgentStockRows,
   windowSalesStats,
   worstState,
@@ -634,6 +639,273 @@ describe('topTitles — agrégation par titre sur une fenêtre glissante', () =>
 
   it('aucune ligne dans la fenêtre : liste vide', () => {
     expect(topTitles([], now, { days: 30, max: 10 })).toEqual([])
+  })
+})
+
+/* ────────────────────────── Ventes — analyse libre (bornes absolues + filtre titre) ────────────────────────── */
+
+describe('rangeSalesStats — bornes absolues [fromMs, toMs], les deux incluses', () => {
+  const fromMs = new Date('2026-08-01T00:00:00Z').getTime()
+  const toMs = new Date('2026-08-31T23:59:59.999Z').getTime()
+
+  it('une commande dans la plage alimente ca/nbCommandes/nbExemplaires', () => {
+    const rows = [
+      salesRow({
+        createdAt: '2026-08-15T12:00:00Z',
+        totalTTC: 42,
+        lines: [{ quantity: 2, book: 1 }, { quantity: 3, book: 2 }],
+      }),
+    ]
+    const stats = rangeSalesStats(rows, { fromMs, toMs })
+    expect(stats.ca).toBe(42)
+    expect(stats.nbCommandes).toBe(1)
+    expect(stats.nbExemplaires).toBe(5)
+  })
+
+  it('borne basse incluse : une commande exactement à fromMs compte', () => {
+    const row = salesRow({ createdAt: new Date(fromMs).toISOString(), totalTTC: 10 })
+    expect(rangeSalesStats([row], { fromMs, toMs }).ca).toBe(10)
+  })
+
+  it('borne haute incluse : une commande exactement à toMs compte', () => {
+    const row = salesRow({ createdAt: new Date(toMs).toISOString(), totalTTC: 10 })
+    expect(rangeSalesStats([row], { fromMs, toMs }).ca).toBe(10)
+  })
+
+  it('juste avant fromMs : exclue', () => {
+    const row = salesRow({ createdAt: new Date(fromMs - 1).toISOString(), totalTTC: 999 })
+    expect(rangeSalesStats([row], { fromMs, toMs }).ca).toBe(0)
+  })
+
+  it('juste après toMs : exclue', () => {
+    const row = salesRow({ createdAt: new Date(toMs + 1).toISOString(), totalTTC: 999 })
+    expect(rangeSalesStats([row], { fromMs, toMs }).ca).toBe(0)
+  })
+
+  it('étanchéité comptable : un don est exclu', () => {
+    const row = salesRow({ createdAt: '2026-08-15T12:00:00Z', totalTTC: 500, orderType: 'don' })
+    expect(rangeSalesStats([row], { fromMs, toMs }).ca).toBe(0)
+  })
+
+  it('caPrecommande isole le CA des commandes orderType precommande', () => {
+    const rows = [
+      salesRow({ createdAt: '2026-08-15T12:00:00Z', totalTTC: 30, orderType: 'commande' }),
+      salesRow({ createdAt: '2026-08-15T12:00:00Z', totalTTC: 15, orderType: 'precommande' }),
+    ]
+    const stats = rangeSalesStats(rows, { fromMs, toMs })
+    expect(stats.ca).toBe(45)
+    expect(stats.caPrecommande).toBe(15)
+  })
+
+  it('windowSalesStats délègue à rangeSalesStats : fenêtre courante ET précédente correctement bornées', () => {
+    const now = new Date('2026-08-30T12:00:00Z')
+    const rows = [
+      salesRow({ createdAt: now.toISOString(), totalTTC: 100 }),
+      // -40 j tombe dans la fenêtre PRÉCÉDENTE [-60j, -30j[ pour days=30.
+      salesRow({ createdAt: new Date(now.getTime() - 40 * DAY_MS).toISOString(), totalTTC: 50 }),
+      salesRow({ createdAt: now.toISOString(), totalTTC: 999, orderType: 'don' }),
+    ]
+    const stats = windowSalesStats(rows, 30, now)
+    expect(stats.ca).toBe(100)
+    expect(stats.deltaPct).toBeCloseTo(100) // (100 - 50) / 50 * 100
+  })
+})
+
+describe('topTitlesInRange — bornes absolues [fromMs, toMs]', () => {
+  const fromMs = new Date('2026-08-01T00:00:00Z').getTime()
+  const toMs = new Date('2026-08-31T23:59:59.999Z').getTime()
+
+  it('agrège exemplaires/CA des lignes dans la plage', () => {
+    const rows = [
+      historyRow({
+        createdAt: '2026-08-15T12:00:00Z',
+        lines: [{ quantity: 2, titleSnapshot: 'Livre A', unitPriceTTC: 10 }],
+      }),
+    ]
+    expect(topTitlesInRange(rows, { fromMs, toMs }, { max: 10 })).toEqual([
+      { title: 'Livre A', exemplaires: 2, ca: 20 },
+    ])
+  })
+
+  it('une ligne hors plage (avant fromMs ou après toMs) est ignorée', () => {
+    const rows = [
+      historyRow({
+        createdAt: new Date(fromMs - 1).toISOString(),
+        lines: [{ quantity: 9, titleSnapshot: 'Hors plage', unitPriceTTC: 10 }],
+      }),
+      historyRow({
+        createdAt: new Date(toMs + 1).toISOString(),
+        lines: [{ quantity: 9, titleSnapshot: 'Hors plage', unitPriceTTC: 10 }],
+      }),
+    ]
+    expect(topTitlesInRange(rows, { fromMs, toMs }, { max: 10 })).toEqual([])
+  })
+
+  it('topTitles délègue à topTitlesInRange([now-days, now]) : résultats identiques', () => {
+    const now = new Date('2026-08-30T12:00:00Z')
+    const rows = [
+      historyRow({
+        createdAt: now.toISOString(),
+        lines: [{ quantity: 4, titleSnapshot: 'A', unitPriceTTC: 5 }],
+      }),
+    ]
+    expect(topTitles(rows, now, { days: 30, max: 10 })).toEqual(
+      topTitlesInRange(rows, { fromMs: now.getTime() - 30 * DAY_MS, toMs: now.getTime() }, { max: 10 }),
+    )
+  })
+})
+
+describe('filterLinesByTitle — substring insensible casse/accents, ligne par ligne', () => {
+  it('requête vide : aucun filtre, rows inchangé', () => {
+    const rows = [historyRow({ lines: [{ quantity: 1, titleSnapshot: 'Le Capital', unitPriceTTC: 10 }] })]
+    expect(filterLinesByTitle(rows, '')).toBe(rows)
+    expect(filterLinesByTitle(rows, '   ')).toBe(rows)
+  })
+
+  it('substring insensible à la casse', () => {
+    const rows = [historyRow({ lines: [{ quantity: 1, titleSnapshot: 'Le Capital', unitPriceTTC: 10 }] })]
+    expect(filterLinesByTitle(rows, 'capital')).toHaveLength(1)
+    expect(filterLinesByTitle(rows, 'CAPITAL')).toHaveLength(1)
+  })
+
+  it('insensible aux accents (« idéologie » retrouve « Idéologie »/« ideologie »)', () => {
+    const rows = [historyRow({ lines: [{ quantity: 1, titleSnapshot: 'L’Idéologie allemande', unitPriceTTC: 10 }] })]
+    expect(filterLinesByTitle(rows, 'ideologie')).toHaveLength(1)
+    expect(filterLinesByTitle(rows, 'idéologie')).toHaveLength(1)
+  })
+
+  it('un panier mixte ne garde que les lignes correspondantes, pas la commande entière', () => {
+    const rows = [
+      historyRow({
+        lines: [
+          { quantity: 2, titleSnapshot: 'Le Capital', unitPriceTTC: 10 },
+          { quantity: 5, titleSnapshot: 'Autre titre', unitPriceTTC: 3 },
+        ],
+      }),
+    ]
+    const [filtered] = filterLinesByTitle(rows, 'capital')
+    expect(filtered.lines).toEqual([{ quantity: 2, titleSnapshot: 'Le Capital', unitPriceTTC: 10 }])
+  })
+
+  it('une commande sans aucune ligne correspondante est écartée', () => {
+    const rows = [historyRow({ lines: [{ quantity: 1, titleSnapshot: 'Autre titre', unitPriceTTC: 10 }] })]
+    expect(filterLinesByTitle(rows, 'capital')).toEqual([])
+  })
+
+  it('aucune correspondance sur aucune commande : liste vide', () => {
+    const rows = [
+      historyRow({ lines: [{ quantity: 1, titleSnapshot: 'A', unitPriceTTC: 1 }] }),
+      historyRow({ lines: [{ quantity: 1, titleSnapshot: 'B', unitPriceTTC: 1 }] }),
+    ]
+    expect(filterLinesByTitle(rows, 'introuvable')).toEqual([])
+  })
+})
+
+describe('rangeLineStats — statistiques bornées calculées à partir des lignes (hors totalTTC)', () => {
+  const now = new Date('2026-08-30T12:00:00Z')
+  const bounds = { fromMs: new Date('2026-08-01T00:00:00Z').getTime(), toMs: now.getTime() }
+
+  it('ca = Σ quantity × unitPriceTTC (hors port), pas totalTTC de la commande', () => {
+    const rows = [
+      historyRow({
+        createdAt: now.toISOString(),
+        totalTTC: 999, // inclurait le port — ne doit PAS être utilisé ici
+        lines: [{ quantity: 2, titleSnapshot: 'A', unitPriceTTC: 10 }],
+      }),
+    ]
+    const stats = rangeLineStats(rows, bounds)
+    expect(stats.ca).toBe(20)
+    expect(stats.nbExemplaires).toBe(2)
+    expect(stats.nbCommandes).toBe(1)
+  })
+
+  it('nbCommandes compte les commandes distinctes, pas les lignes', () => {
+    const rows = [
+      historyRow({
+        createdAt: now.toISOString(),
+        lines: [
+          { quantity: 1, titleSnapshot: 'A', unitPriceTTC: 10 },
+          { quantity: 1, titleSnapshot: 'A', unitPriceTTC: 10 },
+        ],
+      }),
+    ]
+    expect(rangeLineStats(rows, bounds).nbCommandes).toBe(1)
+  })
+
+  it('étanchéité comptable : un don est exclu', () => {
+    const rows = [
+      historyRow({
+        createdAt: now.toISOString(),
+        orderType: 'don',
+        lines: [{ quantity: 1, titleSnapshot: 'Contrepartie', unitPriceTTC: 0 }],
+      }),
+    ]
+    expect(rangeLineStats(rows, bounds)).toEqual({ ca: 0, nbCommandes: 0, nbExemplaires: 0 })
+  })
+
+  it('composition bornes + titre : filterLinesByTitle puis rangeLineStats ne compte QUE le titre recherché', () => {
+    const rows = [
+      historyRow({
+        createdAt: now.toISOString(),
+        lines: [
+          { quantity: 2, titleSnapshot: 'Le Capital', unitPriceTTC: 10 },
+          { quantity: 5, titleSnapshot: 'Autre titre', unitPriceTTC: 3 },
+        ],
+      }),
+      historyRow({
+        createdAt: '2020-01-01T00:00:00Z', // hors bornes
+        lines: [{ quantity: 99, titleSnapshot: 'Le Capital', unitPriceTTC: 10 }],
+      }),
+    ]
+    const scoped = filterLinesByTitle(rows, 'capital')
+    const stats = rangeLineStats(scoped, bounds)
+    expect(stats.ca).toBe(20)
+    expect(stats.nbExemplaires).toBe(2)
+    expect(stats.nbCommandes).toBe(1)
+  })
+
+  it('arrondi euros : pas de bruit flottant', () => {
+    const rows = [
+      historyRow({ createdAt: now.toISOString(), lines: [{ quantity: 3, titleSnapshot: 'A', unitPriceTTC: 9.99 }] }),
+    ]
+    expect(rangeLineStats(rows, bounds).ca).toBe(29.97)
+  })
+})
+
+describe('parisDayRangeMs — plage de jours calendaires (AAAA-MM-JJ) → bornes absolues', () => {
+  it('un seul jour : bornes du début à la fin de CE jour à Paris (CEST, UTC+2)', () => {
+    const bounds = parisDayRangeMs('2026-07-14', '2026-07-14')
+    expect(bounds).not.toBeNull()
+    expect(new Date(bounds!.fromMs).toISOString()).toBe('2026-07-13T22:00:00.000Z')
+    // Fin de journée = 1 ms avant minuit Paris du lendemain.
+    expect(new Date(bounds!.toMs).toISOString()).toBe('2026-07-14T21:59:59.999Z')
+  })
+
+  it('plage de plusieurs jours : toDay compte pour sa journée entière', () => {
+    const bounds = parisDayRangeMs('2026-08-01', '2026-08-31')
+    expect(bounds).not.toBeNull()
+    expect(new Date(bounds!.fromMs).toISOString()).toBe('2026-07-31T22:00:00.000Z')
+    expect(new Date(bounds!.toMs).toISOString()).toBe('2026-08-31T21:59:59.999Z')
+  })
+
+  it('changement d’année : le lendemain de toDay (31/12) est calculé par arithmétique calendaire (Date.UTC), pas un 32/12 invalide', () => {
+    const bounds = parisDayRangeMs('2026-12-31', '2026-12-31')
+    expect(bounds).not.toBeNull()
+    expect(new Date(bounds!.fromMs).toISOString()).toBe('2026-12-30T23:00:00.000Z')
+    expect(new Date(bounds!.toMs).toISOString()).toBe('2026-12-31T22:59:59.999Z')
+  })
+
+  it('fromDay illisible : null, jamais un NaN silencieux', () => {
+    expect(parisDayRangeMs('pas une date', '2026-08-31')).toBeNull()
+  })
+
+  it('toDay au mauvais format : null', () => {
+    expect(parisDayRangeMs('2026-08-01', '31/08/2026')).toBeNull()
+  })
+
+  it('borne haute toujours ≥ borne basse pour fromDay === toDay', () => {
+    const bounds = parisDayRangeMs('2026-01-01', '2026-01-01')
+    expect(bounds!.toMs).toBeGreaterThan(bounds!.fromMs)
   })
 })
 

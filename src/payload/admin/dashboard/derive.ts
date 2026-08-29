@@ -1,6 +1,7 @@
 import {
   isoDayParis,
   monthsAgoParisMonthStartUtc,
+  parisMidnightUtc,
   parisMonthStartUtc,
   parisYearMonth,
   shiftYearMonth,
@@ -29,13 +30,16 @@ import { isPromoExpired } from '../../../lib/promo-core.ts'
  * restant est le raccourci « Ventes du mois » de `Dashboard.tsx`, qui n'a pas
  * encore été réécrit par la vague 2 (fichier hors périmètre de cet agent).
  *
- * Ce fichier nourrit aussi le futur détail `/admin/ventes` (KPIs
- * multi-fenêtres, seaux mensuels, top titres) : `windowSalesStats`
- * (généralisation de `salesStats` à une largeur de fenêtre paramétrable),
- * `monthlySalesBuckets`/`monthlyBucketToChartInput` et `topTitles`, sur la
- * lecture ~13 mois `readSalesHistory` (`data.ts`) — distincte de
- * `readSalesWindow` (60 j, home). Rendu et endpoint I/O hors périmètre de cet
- * agent (vue pas encore écrite à la date de ce commit).
+ * Ce fichier nourrit aussi le détail `/admin/ventes` (KPIs multi-fenêtres,
+ * seaux mensuels, top titres, panneau « Analyse libre ») : `windowSalesStats`/
+ * `topTitles` (fenêtre relative à `now`) délèguent respectivement à
+ * `rangeSalesStats`/`topTitlesInRange` (bornes ABSOLUES `[fromMs, toMs]`,
+ * cas général dont une fenêtre relative n'est qu'un cas particulier),
+ * `monthlySalesBuckets`/`monthlyBucketToChartInput`, et le trio
+ * `filterLinesByTitle`/`rangeLineStats`/`parisDayRangeMs` du panneau
+ * « Analyse libre » (période + titre au choix, calculés EN MÉMOIRE sur la
+ * lecture ~13 mois `readSalesHistory`, `data.ts`) — distincte de
+ * `readSalesWindow` (60 j, home).
  */
 
 /** État d'un signal/panneau — `na` = non calculable (gris), jamais converti en vert. */
@@ -122,49 +126,81 @@ interface WindowStatsRow {
 }
 
 /**
- * Statistiques de ventes en fenêtre glissante de `days` jours vs `days` jours
- * précédents — généralisation de l'ancien corps de `salesStats` (désormais un
- * simple appel `windowSalesStats(rows, 30, now)`, cf. plus bas) à une largeur
- * de fenêtre paramétrable (KPIs multi-fenêtres de la future page
- * `/admin/ventes` : 7/30/90 j…). Étanchéité comptable DURE dons/ventes
- * (CLAUDE.md racine, `orderType: "don"` jamais dans un agrégat de CA/TVA) :
- * un don est écarté ICI, pas seulement dans le `where` du lecteur I/O — la
- * garantie tient même si un autre appelant réutilise cette fonction sur des
- * lignes non pré-filtrées. Fenêtre courante = `paidAt ?? createdAt` ∈
- * [now-days, now] ; précédente = [now-2×days, now-days[ (borne haute
- * exclusive — un ordre pile à la borne ne compte qu'une fois, dans la fenêtre
- * courante). `deltaPct` à `null` si la fenêtre précédente est à 0 (jamais une
- * division par zéro/`Infinity`).
+ * Bornes ABSOLUES `[fromMs, toMs]` (les DEUX incluses) d'une fenêtre de
+ * rapport — la forme générale dont un `days` relatif à `now` (`rollingWindows`,
+ * `windowSalesStats`) n'est qu'un cas particulier (`fromMs: now-days`,
+ * `toMs: now`). Introduites pour le panneau « Analyse libre » de
+ * `/admin/ventes` (période choisie par l'équipe, pas seulement 30/90/365 j) —
+ * `parisDayRangeMs` (plus bas) construit ces bornes à partir de deux dates
+ * `AAAA-MM-JJ` saisies.
  */
-export function windowSalesStats<T extends WindowStatsRow>(rows: T[], days: number, now: Date): SalesStats {
-  const start = new Date(now.getTime() - days * DAY_MS)
-  const startPrev = new Date(now.getTime() - 2 * days * DAY_MS)
-  const tStart = start.getTime()
-  const tPrev = startPrev.getTime()
-  const tNow = now.getTime()
+export interface RangeBounds {
+  fromMs: number
+  toMs: number
+}
 
+export interface RangeSalesStats {
+  ca: number
+  nbCommandes: number
+  nbExemplaires: number
+  caPrecommande: number
+}
+
+/**
+ * Statistiques de ventes bornées par un intervalle ABSOLU `[fromMs, toMs]`
+ * (les deux bornes incluses) — variante générale dont `windowSalesStats`
+ * (fenêtre relative à `now`, plus bas) délègue le calcul de sa fenêtre
+ * courante ET de sa fenêtre précédente. Même étanchéité comptable DURE
+ * dons/ventes que le reste du fichier (un don est écarté ICI, pas seulement
+ * dans le `where` du lecteur I/O) et même convention de date (`paidAt` à
+ * défaut `createdAt`). Pas de `deltaPct` ici : une période « libre » choisie
+ * par l'équipe n'a pas de « période précédente » canonique (contrairement à
+ * une fenêtre glissante 30/90/365 j) — cette notion reste propre à
+ * `windowSalesStats`.
+ */
+export function rangeSalesStats<T extends WindowStatsRow>(rows: T[], bounds: RangeBounds): RangeSalesStats {
+  const { fromMs, toMs } = bounds
   let ca = 0
   let nbCommandes = 0
   let nbExemplaires = 0
   let caPrecommande = 0
-  let caPrev = 0
 
   for (const row of rows) {
     if (row.orderType === 'don') continue
     const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at)) continue
-    if (at >= tStart && at <= tNow) {
-      ca += row.totalTTC
-      nbCommandes += 1
-      nbExemplaires += row.lines.reduce((sum, l) => sum + l.quantity, 0)
-      if (row.orderType === 'precommande') caPrecommande += row.totalTTC
-    } else if (at >= tPrev && at < tStart) {
-      caPrev += row.totalTTC
-    }
+    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+    ca += row.totalTTC
+    nbCommandes += 1
+    nbExemplaires += row.lines.reduce((sum, l) => sum + l.quantity, 0)
+    if (row.orderType === 'precommande') caPrecommande += row.totalTTC
   }
 
-  const deltaPct = caPrev === 0 ? null : ((ca - caPrev) / caPrev) * 100
-  return { ca, nbCommandes, nbExemplaires, caPrecommande, deltaPct }
+  return { ca, nbCommandes, nbExemplaires, caPrecommande }
+}
+
+/**
+ * Statistiques de ventes en fenêtre glissante de `days` jours vs `days` jours
+ * précédents — généralisation de l'ancien corps de `salesStats` (désormais un
+ * simple appel `windowSalesStats(rows, 30, now)`, cf. plus bas) à une largeur
+ * de fenêtre paramétrable (KPIs multi-fenêtres de la page `/admin/ventes` :
+ * 30/90/365 j). Cas particulier de `rangeSalesStats` : fenêtre courante =
+ * `[now-days, now]`, précédente = `[now-2×days, now-days[` (borne haute
+ * EXCLUSIVE côté précédente — un ordre pile à la borne ne compte qu'une fois,
+ * dans la fenêtre courante ; obtenue via `toMs: tStart - 1`, équivalent pour
+ * des timestamps entiers en ms comme ceux issus de `Date.parse`). `deltaPct`
+ * à `null` si la fenêtre précédente est à 0 (jamais une division par
+ * zéro/`Infinity`).
+ */
+export function windowSalesStats<T extends WindowStatsRow>(rows: T[], days: number, now: Date): SalesStats {
+  const tNow = now.getTime()
+  const tStart = tNow - days * DAY_MS
+  const tPrev = tNow - 2 * days * DAY_MS
+
+  const current = rangeSalesStats(rows, { fromMs: tStart, toMs: tNow })
+  const { ca: caPrev } = rangeSalesStats(rows, { fromMs: tPrev, toMs: tStart - 1 })
+
+  const deltaPct = caPrev === 0 ? null : ((current.ca - caPrev) / caPrev) * 100
+  return { ...current, deltaPct }
 }
 
 /**
@@ -399,32 +435,31 @@ export interface TopTitleRow {
 }
 
 /**
- * Top titres vendus sur une fenêtre glissante de `days` jours (page
- * `/admin/ventes`) — agrégation des lignes par `titleSnapshot` (clé
- * Woo-safe : un produit disparu du catalogue partage la fiche de repli
- * `archive-boutique-woo`, mais conserve son vrai titre en snapshot, donc reste
- * distinct des autres titres archivés dans ce top). `ca` = Σ quantity ×
- * unitPriceTTC (euros), arrondi au centime (évite le bruit de l'arithmétique
- * flottante, ex. 3 × 9,99 = 29,970000000000002). Tri exemplaires décroissant
- * puis CA décroissant (départage), tronqué à `max`. Dons EXCLUS : vue
- * « vendus », une contrepartie de don a un prix de ligne à 0 € qui
- * fausserait le CA par titre sans rien apporter au classement par
- * exemplaires. `now` explicite (et non un défaut interne) pour rester une
- * fonction pure testable, comme le reste de ce fichier.
+ * Top titres vendus sur un intervalle ABSOLU `[fromMs, toMs]` (les deux
+ * bornes incluses) — variante générale dont `topTitles` (fenêtre relative à
+ * `now`, plus bas) est un cas particulier. Agrégation des lignes par
+ * `titleSnapshot` (clé Woo-safe : un produit disparu du catalogue partage la
+ * fiche de repli `archive-boutique-woo`, mais conserve son vrai titre en
+ * snapshot, donc reste distinct des autres titres archivés dans ce top). `ca`
+ * = Σ quantity × unitPriceTTC (euros), arrondi au centime (évite le bruit de
+ * l'arithmétique flottante, ex. 3 × 9,99 = 29,970000000000002). Tri
+ * exemplaires décroissant puis CA décroissant (départage), tronqué à `max`.
+ * Dons EXCLUS : vue « vendus », une contrepartie de don a un prix de ligne à
+ * 0 € qui fausserait le CA par titre sans rien apporter au classement par
+ * exemplaires.
  */
-export function topTitles(
+export function topTitlesInRange(
   rows: SalesHistoryRow[],
-  now: Date,
-  { days, max }: { days: number; max: number },
+  bounds: RangeBounds,
+  { max }: { max: number },
 ): TopTitleRow[] {
-  const start = now.getTime() - days * DAY_MS
-  const tNow = now.getTime()
+  const { fromMs, toMs } = bounds
   const byTitle = new Map<string, { exemplaires: number; ca: number }>()
 
   for (const row of rows) {
     if (row.orderType === 'don') continue
     const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at) || at < start || at > tNow) continue
+    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
     for (const line of row.lines) {
       const entry = byTitle.get(line.titleSnapshot) ?? { exemplaires: 0, ca: 0 }
       entry.exemplaires += line.quantity
@@ -437,6 +472,132 @@ export function topTitles(
     .map(([title, { exemplaires, ca }]) => ({ title, exemplaires, ca: Math.round(ca * 100) / 100 }))
     .sort((a, b) => b.exemplaires - a.exemplaires || b.ca - a.ca)
     .slice(0, max)
+}
+
+/**
+ * Top titres vendus sur une fenêtre glissante de `days` jours (bandeau
+ * « Titres les plus vendus » de `/admin/ventes`) — cas particulier de
+ * `topTitlesInRange` avec `[now-days, now]`. `now` explicite (et non un
+ * défaut interne) pour rester une fonction pure testable, comme le reste de
+ * ce fichier.
+ */
+export function topTitles(
+  rows: SalesHistoryRow[],
+  now: Date,
+  { days, max }: { days: number; max: number },
+): TopTitleRow[] {
+  const tNow = now.getTime()
+  return topTitlesInRange(rows, { fromMs: tNow - days * DAY_MS, toMs: tNow }, { max })
+}
+
+/* ────────────────────────── Ventes — analyse libre (panneau bornes + titre, page /admin/ventes) ────────────────────────── */
+
+/**
+ * Normalise pour une recherche insensible à la casse/aux accents (NFD,
+ * diacritiques retirés, minuscules) — `src/lib/accents.ts` ne l'offre PAS
+ * (fichier homonyme dédié à la palette de couleurs des couvertures, sans
+ * rapport) : normalisation locale à ce module, même motif que
+ * `virements-import-core.ts:normalizeLabel`.
+ */
+function normalizeForSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+/**
+ * Filtre pur substring insensible à la casse/aux accents sur `titleSnapshot`
+ * (panneau « Analyse libre » de `/admin/ventes`) — ne garde, DANS CHAQUE
+ * commande, que les LIGNES dont le titre correspond (une commande devient
+ * partiellement filtrée plutôt que tout-ou-rien : un panier mixte ne fait
+ * ainsi pas fuiter les exemplaires/CA d'un AUTRE titre dans le résultat d'une
+ * recherche par titre) ; une commande qui n'a plus aucune ligne après filtre
+ * est écartée. Requête vide (après `trim`) : aucun filtre, `rows` revient
+ * inchangé (comportement neutre — bornes seules).
+ */
+export function filterLinesByTitle<L extends { titleSnapshot: string }, T extends { lines: L[] }>(
+  rows: T[],
+  query: string,
+): T[] {
+  const q = normalizeForSearch(query.trim())
+  if (!q) return rows
+  return rows
+    .map((row): T => ({
+      ...row,
+      lines: row.lines.filter((line) => normalizeForSearch(line.titleSnapshot).includes(q)),
+    }))
+    .filter((row) => row.lines.length > 0)
+}
+
+export interface RangeLineStats {
+  ca: number
+  nbCommandes: number
+  nbExemplaires: number
+}
+
+/**
+ * Statistiques bornées calculées à partir des LIGNES (pas `totalTTC`) —
+ * dédiées au panneau « Analyse libre » : contrairement à `rangeSalesStats`
+ * (CA = `totalTTC` de la commande ENTIÈRE, cohérent avec le bandeau KPI
+ * 30/90/365 j), cette variante reste correcte après un filtre par titre qui
+ * ne garde que CERTAINES lignes d'une commande (`filterLinesByTitle`) — un
+ * `totalTTC` de commande entière fausserait alors le CA attribué au titre
+ * recherché (panier mixte). `ca` = Σ quantity × unitPriceTTC, arrondi au
+ * centime (méthode de `topTitlesInRange`, donc HORS frais de port) —
+ * volontairement DIFFÉRENT du CA du bandeau KPI : deux vues distinctes,
+ * chacune cohérente avec elle-même, jamais mélangées. `nbCommandes` compte
+ * les commandes DISTINCTES ayant au moins une ligne dans la plage (une
+ * commande à plusieurs lignes du même titre ne compte qu'une fois). Même
+ * étanchéité comptable dons/ventes que le reste du fichier.
+ */
+export function rangeLineStats(rows: SalesHistoryRow[], bounds: RangeBounds): RangeLineStats {
+  const { fromMs, toMs } = bounds
+  let ca = 0
+  let nbCommandes = 0
+  let nbExemplaires = 0
+
+  for (const row of rows) {
+    if (row.orderType === 'don') continue
+    const at = Date.parse(row.paidAt ?? row.createdAt)
+    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+    if (row.lines.length === 0) continue
+    nbCommandes += 1
+    for (const line of row.lines) {
+      nbExemplaires += line.quantity
+      ca += line.quantity * line.unitPriceTTC
+    }
+  }
+
+  return { ca: Math.round(ca * 100) / 100, nbCommandes, nbExemplaires }
+}
+
+/**
+ * Convertit une plage de jours CALENDAIRES saisie (`AAAA-MM-JJ`, panneau
+ * « Analyse libre ») en `RangeBounds` — `fromDay` compte pour sa journée
+ * ENTIÈRE à Paris (minuit Paris de `fromDay`) jusqu'à la dernière milliseconde
+ * avant minuit Paris du LENDEMAIN de `toDay` (donc `toDay` compte aussi pour
+ * sa journée entière). Le lendemain de `toDay` est obtenu par arithmétique
+ * CALENDAIRE pure (`Date.UTC` gère l'overflow de fin de mois/année), jamais un
+ * ajout de 24 h qui glisserait autour d'un changement d'heure. `null` si l'une
+ * des deux dates est invalide (jamais un `NaN` silencieux) — l'appelant
+ * (`VentesPage.tsx`) affiche alors une erreur de saisie plutôt qu'un calcul
+ * hasardeux.
+ */
+export function parisDayRangeMs(fromDay: string, toDay: string): RangeBounds | null {
+  const fromMs = Date.parse(parisMidnightUtc(fromDay))
+  if (Number.isNaN(fromMs)) return null
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(toDay)
+  if (!match) return null
+  const [, yearStr, monthStr, dayStr] = match
+  const nextDay = new Date(Date.UTC(Number(yearStr), Number(monthStr) - 1, Number(dayStr) + 1))
+    .toISOString()
+    .slice(0, 10)
+  const toMsExclusive = Date.parse(parisMidnightUtc(nextDay))
+  if (Number.isNaN(toMsExclusive)) return null
+
+  return { fromMs, toMs: toMsExclusive - 1 }
 }
 
 /* ────────────────────────── Vélocité stock (précommandes + rupture) ────────────────────────── */
