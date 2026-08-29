@@ -1,4 +1,5 @@
 import { sanitizeCms } from "./cms-html";
+import { isoDayParis, monthsAgoParisMonthStartUtc } from "./format";
 import { assessSellability, isUpcoming } from "./sellability";
 import { frenchTypo } from "./typo-fr";
 import { type CommerceInfo, type RawBook } from "./catalogue-source";
@@ -201,6 +202,45 @@ export function queryBooks(all: Book[], filters: BookFilters = {}): Book[] {
 
 export function newReleases(books: Book[], limit = 8): Book[] {
   return books.slice(0, limit);
+}
+
+/**
+ * Fenêtre « nouveautés » de l'accueil : mois civil Paris courant + les 2
+ * précédents (retour client 2026-08-29 — en septembre : septembre, août,
+ * juillet). Un livre « à paraître » (même publié le mois courant) n'est
+ * jamais une nouveauté : il reste dans sa section propre.
+ */
+export function isRecentRelease(publishedAt: string | null, now: Date): boolean {
+  if (publishedAt == null) return false;
+  if (isUpcoming(publishedAt, now)) return false;
+  const windowStart = isoDayParis(monthsAgoParisMonthStartUtc(now, 2));
+  return windowStart != null && publishedAt >= windowStart;
+}
+
+/**
+ * Plancher de la vitrine « nouveautés » — jamais de vitrine vide un mois
+ * creux (arbitrage produit, révisable) : si la fenêtre des 3 mois ne fournit
+ * pas au moins `RECENT_MIN` titres, on complète avec les parutions les plus
+ * récentes HORS fenêtre, toujours PARUES (jamais un à-paraître réintroduit),
+ * jusqu'à `min(limit, RECENT_MIN)`.
+ */
+const RECENT_MIN = 6;
+
+/**
+ * Nouveautés de l'accueil : `books` doit déjà être trié « recent »
+ * (`queryBooks(..., { sort: "recent" })`) — l'ordre est préservé par le
+ * filtre, le plancher pioche donc déjà dans les parutions les plus récentes.
+ */
+export function recentReleases(books: Book[], limit: number, now: Date): Book[] {
+  const inWindow = books.filter((b) => isRecentRelease(b.publishedAt, now));
+  const floor = Math.min(limit, RECENT_MIN);
+  if (inWindow.length >= floor) return inWindow.slice(0, limit);
+
+  const seen = new Set(inWindow.map((b) => b.id));
+  const fallback = books.filter(
+    (b) => !seen.has(b.id) && b.publishedAt != null && !isUpcoming(b.publishedAt, now),
+  );
+  return [...inWindow, ...fallback.slice(0, floor - inWindow.length)].slice(0, limit);
 }
 
 export function countByEdition(books: Book[], edition?: EditionSlug): number {

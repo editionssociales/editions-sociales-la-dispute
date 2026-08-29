@@ -10,6 +10,7 @@ import {
   computeFacets,
   newReleases,
   queryBooks,
+  recentReleases,
 } from "./catalogue-core";
 import type { Book, BookDetail, BookFilters, EditionSlug, Facet } from "./types";
 
@@ -92,9 +93,10 @@ export const getAllBooks = cache(async (): Promise<Book[]> => {
  * 2026-08-20, les goodies (`origin: "boutique"`) ne doivent JAMAIS apparaître
  * dans ces vues, uniquement sur leurs surfaces propres (fiche
  * `/boutique/[slug]`, suggestions « Nos goodies » du panier, sitemap).
- * Seul point d'entrée de `getBooks`/`getFacets` (donc de `getNewReleases` et
- * `catalogueView`, dérivés des deux) — `getAllBooks` reste inchangé pour le
- * panier/checkout, qui doivent valider des lignes goodies.
+ * Seul point d'entrée de `getBooks`/`getFacets` (donc de `getNewReleases`,
+ * `getRecentReleases` et `catalogueView`, dérivés des deux) — `getAllBooks`
+ * reste inchangé pour le panier/checkout, qui doivent valider des lignes
+ * goodies.
  */
 async function getCatalogueBooks(): Promise<Book[]> {
   const all = await getAllBooks();
@@ -108,6 +110,16 @@ export async function getBooks(filters: BookFilters = {}): Promise<Book[]> {
 
 export async function getNewReleases(limit = 8): Promise<Book[]> {
   return newReleases(await getBooks({ sort: "recent" }), limit);
+}
+
+/**
+ * Nouveautés de l'accueil (retour client 2026-08-29) : fenêtre mois civil
+ * Paris courant + 2 précédents, à-paraître exclu (reste dans sa section
+ * propre) — `getNewReleases` reste INCHANGÉ, encore utilisé par l'étagère
+ * décorative de `/souscription`.
+ */
+export async function getRecentReleases(limit = 8): Promise<Book[]> {
+  return recentReleases(await getBooks({ sort: "recent" }), limit, new Date());
 }
 
 export async function getFacets(

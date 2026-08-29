@@ -4,7 +4,9 @@ import {
   buildNativeCatalogue,
   computeFacets,
   countByEdition,
+  isRecentRelease,
   queryBooks,
+  recentReleases,
   resolveNativePurchase,
   toBook,
 } from "./catalogue-core";
@@ -418,5 +420,77 @@ describe("buildNativeBookDetail", () => {
     expect(detail.edition).toBeNull();
     expect(detail.origin).toBe("boutique");
     expect(detail.status).toBe("available");
+  });
+});
+
+/* -------- nouveautés accueil (fenêtre 3 mois, retour client 2026-08-29) -------- */
+
+describe("isRecentRelease — fenêtre mois civil Paris courant + 2 précédents", () => {
+  // En septembre 2026 : fenêtre = juillet + août + septembre.
+  const now = new Date("2026-09-15T10:00:00Z");
+
+  it("1er juillet (borne basse) → inclus", () => {
+    expect(isRecentRelease("2026-07-01", now)).toBe(true);
+  });
+
+  it("30 juin (juste avant la borne) → exclu", () => {
+    expect(isRecentRelease("2026-06-30", now)).toBe(false);
+  });
+
+  it("mi-septembre (mois courant) → inclus", () => {
+    expect(isRecentRelease("2026-09-10", now)).toBe(true);
+  });
+
+  it("à-paraître exclu même si sa date tombe dans le mois courant", () => {
+    expect(isRecentRelease("2026-09-20", now)).toBe(false);
+  });
+
+  it("publishedAt null → exclu", () => {
+    expect(isRecentRelease(null, now)).toBe(false);
+  });
+});
+
+describe("recentReleases — vitrine accueil, plancher jamais vide", () => {
+  const now = new Date("2026-09-15T10:00:00Z");
+
+  const book = (id: number, publishedAt: string | null) =>
+    toBook(
+      "editions-sociales",
+      rawBook({ id, slug: `nouveaute-${id}`, title: `Nouveauté ${id}`, publishedAt }),
+    );
+
+  it("fenêtre riche (≥ 6) : strictement les livres de la fenêtre, rien hors fenêtre", () => {
+    const books = [
+      book(1, "2026-09-10"),
+      book(2, "2026-08-15"),
+      book(3, "2026-07-05"),
+      book(4, "2026-07-01"),
+      book(5, "2026-08-01"),
+      book(6, "2026-09-01"),
+      book(7, "2026-01-01"), // hors fenêtre — ne doit jamais apparaître
+    ];
+    const result = recentReleases(books, 12, now);
+    expect(result.map((b) => b.id).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("fenêtre pauvre : complète au plancher (6) avec des parutions plus anciennes, jamais un à-paraître", () => {
+    const books = [
+      book(1, "2026-09-01"), // seul livre dans la fenêtre
+      book(2, "2026-01-01"),
+      book(3, "2025-12-01"),
+      book(4, "2025-11-01"),
+      book(5, "2025-10-01"),
+      book(6, "2025-09-01"),
+      book(99, "2099-01-01"), // à-paraître : jamais réintroduit, même pour compléter le plancher
+    ];
+    const result = recentReleases(books, 12, now);
+    expect(result).toHaveLength(6);
+    expect(result.map((b) => b.id)).toContain(1);
+    expect(result.map((b) => b.id)).not.toContain(99);
+  });
+
+  it("respecte `limit` même quand la fenêtre en fournirait davantage", () => {
+    const books = [book(1, "2026-09-01"), book(2, "2026-08-01"), book(3, "2026-07-01")];
+    expect(recentReleases(books, 2, now)).toHaveLength(2);
   });
 });

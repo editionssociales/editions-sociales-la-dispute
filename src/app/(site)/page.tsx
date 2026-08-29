@@ -4,7 +4,7 @@ import { Button } from "@/components/button";
 import { Reveal } from "@/components/reveal";
 import { NouveautesCarousel } from "@/components/nouveautes-carousel";
 import { getActiveHighlight } from "@/lib/highlight";
-import { getNewReleases } from "@/lib/catalogue";
+import { getRecentReleases } from "@/lib/catalogue";
 import { toNouveauteBooks } from "@/lib/nouveaute-book";
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ const HIGHLIGHT_EDGE: Record<string, string> = {
 
 export default async function HomePage() {
   const [releases, highlight] = await Promise.all([
-    getNewReleases(12),
+    getRecentReleases(12),
     getActiveHighlight(),
   ]);
   const books = toNouveauteBooks(releases);
