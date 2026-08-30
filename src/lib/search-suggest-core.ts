@@ -207,11 +207,12 @@ export interface SearchSuggestions {
 }
 
 /**
- * Budget d'affichage : ~10 lignes, les titres prennent la place que les deux
- * autres groupes (bornés bas) ne consomment pas — un dropdown reste un
- * raccourci, la vue exhaustive est la grille en dessous.
+ * Bornes d'affichage par groupe — TROIS titres seulement (retour
+ * 2026-08-30) : le dropdown est un raccourci, pas la liste des résultats (la
+ * grille en dessous l'est, à la validation) — plafonner les titres garde les
+ * groupes Auteurs et Libellés visibles d'un coup d'œil, sans dérouler.
  */
-const SUGGESTION_BUDGET = 10;
+const MAX_TITLE_SUGGESTIONS = 3;
 const MAX_AUTHOR_SUGGESTIONS = 3;
 const MAX_LIBELLE_SUGGESTIONS = 2;
 
@@ -293,7 +294,7 @@ export function querySuggestions(
     scopedBooks,
     tokens,
     (b) => ({ main: b.title, others: b.others }),
-    SUGGESTION_BUDGET - authors.length - libelles.length,
+    MAX_TITLE_SUGGESTIONS,
   );
 
   const toTerm = (kind: "author" | "libelle") => (term: PreparedTerm): SuggestedTerm => ({

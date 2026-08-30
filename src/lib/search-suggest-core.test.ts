@@ -143,7 +143,9 @@ describe("querySuggestions", () => {
     expect(querySuggestions(PREPARED, "  ").count).toBe(0);
   });
 
-  it("budget d'affichage : ~10 lignes, les titres prennent le reste", () => {
+  it("bornes par groupe : 3 titres, 3 auteurs, 2 libellés au plus", () => {
+    // Trois titres SEULEMENT quel que soit le nombre d'appariements (retour
+    // 2026-08-30) : les groupes Auteurs et Libellés restent sous le pli.
     const many = buildSuggestionIndexData([
       ...Array.from({ length: 14 }, (_, i) =>
         book({
@@ -156,9 +158,9 @@ describe("querySuggestions", () => {
       ),
     ]);
     const result = querySuggestions(prepareSuggestionIndex(many), "essa");
+    expect(result.titles).toHaveLength(3);
     expect(result.authors).toHaveLength(3);
     expect(result.libelles).toHaveLength(0);
-    expect(result.titles).toHaveLength(7);
-    expect(result.count).toBe(10);
+    expect(result.count).toBe(6);
   });
 });

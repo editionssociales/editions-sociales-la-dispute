@@ -363,10 +363,12 @@ export function CatalogueSearchBox({
                     prefetch={active ? null : false}
                     onClick={() => onPick(option.kind)}
                     onPointerMove={() => setActiveId(option.id)}
-                    // Corps 12px : l'uniformisation de la section de filtres
-                    // (9e passe 2026-08-30) vaut aussi pour la liste que le
-                    // champ déploie.
-                    className={`relative flex w-full items-baseline px-3.5 py-2 font-sans text-[12px] transition-colors motion-reduce:transition-none ${
+                    // Corps 14px, PLUS GROS que les cellules de la barre
+                    // (12px uniformisés, 9e passe) : la liste se lit, elle
+                    // ne se scanne pas — dérogation explicite du retour
+                    // 2026-08-30 (« augmente la police »), les en-têtes de
+                    // groupe restant au petit corps.
+                    className={`relative flex w-full items-baseline px-3.5 py-2 font-sans text-[14px] transition-colors motion-reduce:transition-none ${
                       active ? "bg-ink text-paper" : "text-ink"
                     }`}
                   >
