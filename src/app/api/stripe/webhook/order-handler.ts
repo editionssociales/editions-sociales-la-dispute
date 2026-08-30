@@ -3,8 +3,8 @@ import type Stripe from "stripe";
 import type { Order } from "@/payload-types";
 import { decodeCheckoutLines, type CheckoutBookLookup, type DecodedCheckoutLine } from "@/lib/checkout-core";
 import { getCommerceBookRecords } from "@/lib/commerce-source";
-import { getContrepartieBooksByIds, type ContrepartieBook } from "@/lib/contreparties";
-import { selectDonationMailer, type DonationMailRecap } from "@/lib/donation-mail";
+import { getContrepartieBooksByIds } from "@/lib/contreparties";
+import { selectDonationMailer } from "@/lib/donation-mail";
 import { DONATION_TIERS } from "@/lib/donation-tiers";
 import {
   createOrder,
@@ -17,10 +17,13 @@ import {
 } from "@/lib/order-source";
 import { revalidateCatalogueNow } from "@/payload/hooks/revalidate.ts";
 import {
+  addressFromStripe,
   buildOrderCreateData,
   computePartTotalCents,
-  type OrderAddressFacts,
-  type OrderCountry,
+  metadataCents,
+  metadataPromoCodeId,
+  recapAddressFromOrder,
+  resolveDonationLines,
   type OrderKind,
   type OrderLineFacts,
   type OrderSessionFacts,
@@ -61,43 +64,6 @@ import { getPagesLegales } from "@/lib/site-content";
  * non vide devient une commande indépendante, avec sa PROPRE idempotence
  * (`stripeSessionId` + `orderType`, cf. `Orders.ts`/`order-source.ts`).
  */
-
-const ORDER_COUNTRIES: readonly OrderCountry[] = ["FR", "BE", "CH"];
-
-/** Restreint un code pays Stripe à l'ensemble vendu — `shipping_address_collection` ne devrait jamais renvoyer autre chose, repli défensif sur FR sinon. */
-function toOrderCountry(country: string | null): OrderCountry {
-  return (ORDER_COUNTRIES as readonly string[]).includes(country ?? "")
-    ? (country as OrderCountry)
-    : "FR";
-}
-
-/** Parse un montant en centimes posé en `metadata` Stripe — `0` si absent/non fini (metadata corrompue), jamais `NaN` stocké. */
-function metadataCents(value: string | undefined): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-/** Parse l'id de code promo posé en `metadata` — `null` si absent/non fini. */
-function metadataPromoCodeId(value: string | undefined): number | null {
-  if (!value) return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Adresse Stripe (`collected_information.shipping_details`) → faits `Orders` — `null` si absente (anomalie sur une session complétée). */
-function addressFromStripe(
-  shipping: Stripe.Checkout.Session.CollectedInformation.ShippingDetails | null | undefined,
-): OrderAddressFacts | null {
-  if (!shipping?.address) return null;
-  return {
-    fullName: shipping.name,
-    addressLine1: shipping.address.line1 ?? "",
-    addressLine2: shipping.address.line2 ?? undefined,
-    postalCode: shipping.address.postal_code ?? "",
-    city: shipping.address.city ?? "",
-    country: toOrderCountry(shipping.address.country),
-  };
-}
 
 function paymentIntentId(session: Stripe.Checkout.Session | Stripe.Charge): string | null {
   const pi = "payment_intent" in session ? session.payment_intent : null;
@@ -516,52 +482,6 @@ export async function markOrderRefunded(charge: Stripe.Charge): Promise<{ found:
 /* ------------------------------ dons avec contrepartie (client 2026-08-21) ------------------------------ */
 
 /**
- * Joint les lignes de contrepartie décodées (`donLines`) au titre/ISBN relus
- * fraîchement — même esprit que `resolveOrderParts`, MAIS un id introuvable
- * (fiche supprimée entre le checkout et le webhook) n'est JAMAIS omis ici :
- * contrairement au commerce, la contrepartie a été PROMISE au donateur au
- * paiement — la commande doit toujours refléter ce qui est dû, avec un
- * titre de repli plutôt qu'une ligne disparue. Signalé à Sentry (warning)
- * pour investigation, sans jamais bloquer la création de la commande.
- */
-function resolveDonationLines(
-  sessionId: string,
-  decoded: DecodedCheckoutLine[],
-  books: Map<number, ContrepartieBook>,
-): OrderLineFacts[] {
-  return decoded.map((l) => {
-    const book = books.get(l.id);
-    if (!book) {
-      Sentry.captureMessage("Webhook Stripe (don) : article de contrepartie introuvable — titre de repli", {
-        level: "warning",
-        extra: { sessionId, bookId: l.id },
-      });
-    }
-    return {
-      bookId: l.id,
-      titleSnapshot: book?.title ?? `Article #${l.id}`,
-      isbnSnapshot: book?.isbn ?? null,
-      quantity: l.qty,
-      unitPriceCents: l.unitPriceCents, // toujours 0 — contrat partagé avec la server action de don
-    };
-  });
-}
-
-/** `Order.shippingAddress`/`billingAddress` (déjà posées, identiques) → adresse du récap mail — `undefined` seulement si la commande n'en porte aucune (anomalie, ne devrait jamais arriver pour un don : tous les paliers 2026 collectent une adresse). */
-function recapAddressFromOrder(order: Order): DonationMailRecap["shippingAddress"] {
-  const a = order.shippingAddress;
-  if (!a) return undefined;
-  return {
-    fullName: a.fullName,
-    addressLine1: a.addressLine1,
-    addressLine2: a.addressLine2 ?? undefined,
-    postalCode: a.postalCode,
-    city: a.city,
-    country: a.country,
-  };
-}
-
-/**
  * `checkout.session.completed` / `checkout.session.async_payment_succeeded`
  * pour un don AVEC contrepartie (`session.metadata.donLines`, posée par la
  * server action de don — contrat partagé `encodeCheckoutLines`/
@@ -612,7 +532,16 @@ export async function handleDonationSessionCompleted(
   if (!order) {
     // `resolveDonationLines` (et son éventuel warning Sentry) UNIQUEMENT à la
     // création — un rejeu (`order` déjà trouvé) ne reconstruit pas les lignes,
-    // évitant un warning en double pour la même anomalie.
+    // évitant un warning en double pour la même anomalie. Le cœur pur RETOURNE
+    // les ids introuvables (`order-webhook-core.ts`) ; le signalement Sentry
+    // reste ici, côté I/O — même découpage que `contreparties-core.ts`.
+    const { lines, missingBookIds } = resolveDonationLines(decoded, books);
+    for (const bookId of missingBookIds) {
+      Sentry.captureMessage("Webhook Stripe (don) : article de contrepartie introuvable — titre de repli", {
+        level: "warning",
+        extra: { sessionId: session.id, bookId },
+      });
+    }
     const facts: OrderSessionFacts = {
       stripeSessionId: session.id,
       stripePaymentIntentId: paymentIntentId(session),
@@ -623,7 +552,7 @@ export async function handleDonationSessionCompleted(
       // seulement si le donateur en a un enregistré, jamais garanti.
       phone: session.customer_details?.phone ?? null,
       shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
-      lines: resolveDonationLines(session.id, decoded, books),
+      lines,
       orderType: "don",
       shippingMethod: "offert",
       shippingCostCents: 0,

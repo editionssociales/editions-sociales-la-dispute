@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { Order } from "@/payload-types";
 import {
+  addressFromStripe,
   buildOrderCreateData,
   computePartTotalCents,
   computeStockAfterDecrement,
+  metadataCents,
+  metadataPromoCodeId,
+  recapAddressFromOrder,
+  resolveDonationLines,
+  toOrderCountry,
+  type DonationBookFacts,
   type OrderAddressFacts,
   type OrderLineFacts,
   type OrderSessionFacts,
@@ -214,5 +222,176 @@ describe("computeStockAfterDecrement", () => {
     it("allowNegative: false explicite → même comportement que le défaut (plancher 0)", () => {
       expect(computeStockAfterDecrement(2, 5, { allowNegative: false })).toBe(0);
     });
+  });
+});
+
+describe("toOrderCountry", () => {
+  it.each(["FR", "BE", "CH"] as const)("%s (pays vendu) reporté tel quel", (country) => {
+    expect(toOrderCountry(country)).toBe(country);
+  });
+  it("pays hors FR/BE/CH → repli défensif FR (shipping_address_collection ne devrait jamais le produire)", () => {
+    expect(toOrderCountry("DE")).toBe("FR");
+  });
+  it("null → repli FR", () => {
+    expect(toOrderCountry(null)).toBe("FR");
+  });
+  it("chaîne vide → repli FR", () => {
+    expect(toOrderCountry("")).toBe("FR");
+  });
+});
+
+describe("metadataCents", () => {
+  it("montant en centimes lu tel quel", () => {
+    expect(metadataCents("650")).toBe(650);
+  });
+  it("zéro explicite reste zéro", () => {
+    expect(metadataCents("0")).toBe(0);
+  });
+  it("metadata absente → 0, jamais NaN stocké", () => {
+    expect(metadataCents(undefined)).toBe(0);
+  });
+  it("metadata illisible (corrompue) → 0", () => {
+    expect(metadataCents("abc")).toBe(0);
+  });
+});
+
+describe("metadataPromoCodeId", () => {
+  it("id lu tel quel", () => {
+    expect(metadataPromoCodeId("7")).toBe(7);
+  });
+  it("metadata absente → null", () => {
+    expect(metadataPromoCodeId(undefined)).toBeNull();
+  });
+  it("chaîne vide (checkout sans code promo) → null", () => {
+    expect(metadataPromoCodeId("")).toBeNull();
+  });
+  it("metadata illisible → null", () => {
+    expect(metadataPromoCodeId("abc")).toBeNull();
+  });
+});
+
+describe("addressFromStripe", () => {
+  const STRIPE_ADDRESS = {
+    line1: "1 rue Paul Lafargue",
+    line2: null,
+    city: "Paris",
+    postal_code: "75001",
+    country: "FR",
+    state: null,
+  };
+
+  it("adresse complète → faits Orders (line2 nulle devient undefined)", () => {
+    expect(addressFromStripe({ name: "Jean Dupont", address: STRIPE_ADDRESS })).toEqual({
+      fullName: "Jean Dupont",
+      addressLine1: "1 rue Paul Lafargue",
+      addressLine2: undefined,
+      postalCode: "75001",
+      city: "Paris",
+      country: "FR",
+    });
+  });
+
+  it("shipping_details absent (anomalie sur une session complétée) → null", () => {
+    expect(addressFromStripe(null)).toBeNull();
+    expect(addressFromStripe(undefined)).toBeNull();
+  });
+
+  it("adresse partielle (champs nuls côté Stripe) → chaînes vides, jamais un champ inventé", () => {
+    expect(
+      addressFromStripe({
+        name: "Jean Dupont",
+        address: { line1: null, line2: null, city: null, postal_code: null, country: null, state: null },
+      }),
+    ).toEqual({
+      fullName: "Jean Dupont",
+      addressLine1: "",
+      addressLine2: undefined,
+      postalCode: "",
+      city: "",
+      country: "FR", // pays absent → même repli défensif que toOrderCountry
+    });
+  });
+
+  it("line2 renseignée reportée fidèlement", () => {
+    const result = addressFromStripe({
+      name: "Jean Dupont",
+      address: { ...STRIPE_ADDRESS, line2: "Bâtiment B" },
+    });
+    expect(result?.addressLine2).toBe("Bâtiment B");
+  });
+
+  it("pays hors zone vendue → repli FR (même règle que toOrderCountry)", () => {
+    const result = addressFromStripe({
+      name: "Jean Dupont",
+      address: { ...STRIPE_ADDRESS, country: "DE" },
+    });
+    expect(result?.country).toBe("FR");
+  });
+});
+
+describe("resolveDonationLines", () => {
+  const BOOKS = new Map<number, DonationBookFacts>([
+    [21, { title: "Tote bag", isbn: null }],
+    [22, { title: "Planche de stickers", isbn: "978-9" }],
+  ]);
+
+  it("joint titre/ISBN relus fraîchement, prix toujours reporté tel quel (0 en contrepartie)", () => {
+    const { lines, missingBookIds } = resolveDonationLines(
+      [
+        { id: 21, qty: 1, unitPriceCents: 0 },
+        { id: 22, qty: 2, unitPriceCents: 0 },
+      ],
+      BOOKS,
+    );
+    expect(lines).toEqual([
+      { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
+      { bookId: 22, titleSnapshot: "Planche de stickers", isbnSnapshot: "978-9", quantity: 2, unitPriceCents: 0 },
+    ]);
+    expect(missingBookIds).toEqual([]);
+  });
+
+  it("contrepartie disparue → titre de repli, JAMAIS une ligne omise (elle a été promise au donateur), id retourné à l'appelant", () => {
+    const { lines, missingBookIds } = resolveDonationLines(
+      [
+        { id: 99, qty: 1, unitPriceCents: 0 },
+        { id: 21, qty: 1, unitPriceCents: 0 },
+      ],
+      BOOKS,
+    );
+    expect(lines).toEqual([
+      { bookId: 99, titleSnapshot: "Article #99", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
+      { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
+    ]);
+    expect(missingBookIds).toEqual([99]);
+  });
+
+  it("aucune ligne décodée → vide des deux côtés", () => {
+    expect(resolveDonationLines([], BOOKS)).toEqual({ lines: [], missingBookIds: [] });
+  });
+});
+
+describe("recapAddressFromOrder", () => {
+  it("adresse de la commande → adresse du récap mail (line2 nulle devient undefined)", () => {
+    expect(recapAddressFromOrder({ shippingAddress: { ...ADDRESS } })).toEqual({
+      fullName: "Jean Dupont",
+      addressLine1: "1 rue Paul Lafargue",
+      addressLine2: undefined,
+      postalCode: "75001",
+      city: "Paris",
+      country: "FR",
+    });
+  });
+
+  it("line2 renseignée reportée fidèlement", () => {
+    const recap = recapAddressFromOrder({
+      shippingAddress: { ...ADDRESS, addressLine2: "Bâtiment B" },
+    });
+    expect(recap?.addressLine2).toBe("Bâtiment B");
+  });
+
+  it("commande sans adresse (anomalie — jamais pour un don 2026) → undefined, jamais un bloc adresse inventé", () => {
+    expect(
+      recapAddressFromOrder({ shippingAddress: undefined as unknown as Order["shippingAddress"] }),
+    ).toBeUndefined();
   });
 });
