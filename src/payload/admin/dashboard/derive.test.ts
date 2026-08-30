@@ -31,6 +31,7 @@ import {
   linesTooltip,
   sentryErrorEvents,
   sentrySignal,
+  soldRowsInRange,
   splitPromos,
   STOCK_SEUIL_FALLBACK,
   stockOutlook,
@@ -643,6 +644,46 @@ describe('topTitles — agrégation par titre sur une fenêtre glissante', () =>
 })
 
 /* ────────────────────────── Ventes — analyse libre (bornes absolues + filtre titre) ────────────────────────── */
+
+describe('soldRowsInRange — garde partagée (dons exclus, bornes [fromMs, toMs] incluses)', () => {
+  const fromMs = new Date('2026-08-01T00:00:00Z').getTime()
+  const toMs = new Date('2026-08-31T23:59:59.999Z').getTime()
+
+  it('borne basse incluse : une row exactement à fromMs est gardée', () => {
+    const row = salesRow({ createdAt: new Date(fromMs).toISOString() })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([row])
+  })
+
+  it('borne haute incluse : une row exactement à toMs est gardée', () => {
+    const row = salesRow({ createdAt: new Date(toMs).toISOString() })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([row])
+  })
+
+  it('juste avant fromMs ou juste après toMs : écartée', () => {
+    const before = salesRow({ createdAt: new Date(fromMs - 1).toISOString() })
+    const after = salesRow({ createdAt: new Date(toMs + 1).toISOString() })
+    expect(soldRowsInRange([before, after], { fromMs, toMs })).toEqual([])
+  })
+
+  it('date invalide (paidAt/createdAt illisible) : écartée, jamais un NaN qui glisserait dans les bornes', () => {
+    const row = salesRow({ createdAt: 'pas-une-date' })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([])
+  })
+
+  it('étanchéité comptable : un don dans la plage est exclu', () => {
+    const row = salesRow({ createdAt: '2026-08-15T12:00:00Z', orderType: 'don' })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([])
+  })
+
+  it('paidAt prime sur createdAt quand présent', () => {
+    // createdAt hors plage, paidAt dans la plage → gardée.
+    const row = salesRow({
+      createdAt: new Date(fromMs - 10 * DAY_MS).toISOString(),
+      paidAt: new Date(fromMs).toISOString(),
+    })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([row])
+  })
+})
 
 describe('rangeSalesStats — bornes absolues [fromMs, toMs], les deux incluses', () => {
   const fromMs = new Date('2026-08-01T00:00:00Z').getTime()

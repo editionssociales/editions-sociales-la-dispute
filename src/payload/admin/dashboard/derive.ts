@@ -147,28 +147,57 @@ export interface RangeSalesStats {
 }
 
 /**
+ * Forme minimale que garde `soldRowsInRange` — les trois champs qui portent
+ * la garde de vente (date + étanchéité comptable), rien de plus : satisfaite
+ * à la fois par `WindowStatsRow` et `SalesHistoryRow`.
+ */
+interface GuardedRow {
+  paidAt: string | null
+  createdAt: string
+  orderType: string
+}
+
+/**
+ * Garde commune à `rangeSalesStats`/`topTitlesInRange`/`rangeLineStats` —
+ * extraite pour ne plus recopier trois fois le même bloc. Écarte les dons
+ * (étanchéité comptable DURE dons/ventes : un don est exclu ICI, pas
+ * seulement dans le `where` du lecteur I/O) et les rows hors intervalle
+ * ABSOLU `[fromMs, toMs]` (les deux bornes INCLUSES), date de référence
+ * `paidAt` à défaut `createdAt`. Une date illisible (`Date.parse` → `NaN`)
+ * est écartée elle aussi, jamais un `NaN` qui glisserait silencieusement dans
+ * les bornes. Retourne les rows retenues, ordre préservé — chaque appelant
+ * garde son propre calcul métier (totalTTC, lignes…).
+ */
+export function soldRowsInRange<T extends GuardedRow>(rows: T[], bounds: RangeBounds): T[] {
+  const { fromMs, toMs } = bounds
+  const kept: T[] = []
+  for (const row of rows) {
+    if (row.orderType === 'don') continue
+    const at = Date.parse(row.paidAt ?? row.createdAt)
+    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+    kept.push(row)
+  }
+  return kept
+}
+
+/**
  * Statistiques de ventes bornées par un intervalle ABSOLU `[fromMs, toMs]`
  * (les deux bornes incluses) — variante générale dont `windowSalesStats`
  * (fenêtre relative à `now`, plus bas) délègue le calcul de sa fenêtre
  * courante ET de sa fenêtre précédente. Même étanchéité comptable DURE
- * dons/ventes que le reste du fichier (un don est écarté ICI, pas seulement
- * dans le `where` du lecteur I/O) et même convention de date (`paidAt` à
- * défaut `createdAt`). Pas de `deltaPct` ici : une période « libre » choisie
- * par l'équipe n'a pas de « période précédente » canonique (contrairement à
- * une fenêtre glissante 30/90/365 j) — cette notion reste propre à
- * `windowSalesStats`.
+ * dons/ventes que le reste du fichier et même convention de date, portées
+ * par `soldRowsInRange` (plus haut). Pas de `deltaPct` ici : une période
+ * « libre » choisie par l'équipe n'a pas de « période précédente » canonique
+ * (contrairement à une fenêtre glissante 30/90/365 j) — cette notion reste
+ * propre à `windowSalesStats`.
  */
 export function rangeSalesStats<T extends WindowStatsRow>(rows: T[], bounds: RangeBounds): RangeSalesStats {
-  const { fromMs, toMs } = bounds
   let ca = 0
   let nbCommandes = 0
   let nbExemplaires = 0
   let caPrecommande = 0
 
-  for (const row of rows) {
-    if (row.orderType === 'don') continue
-    const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+  for (const row of soldRowsInRange(rows, bounds)) {
     ca += row.totalTTC
     nbCommandes += 1
     nbExemplaires += row.lines.reduce((sum, l) => sum + l.quantity, 0)
@@ -453,13 +482,9 @@ export function topTitlesInRange(
   bounds: RangeBounds,
   { max }: { max: number },
 ): TopTitleRow[] {
-  const { fromMs, toMs } = bounds
   const byTitle = new Map<string, { exemplaires: number; ca: number }>()
 
-  for (const row of rows) {
-    if (row.orderType === 'don') continue
-    const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+  for (const row of soldRowsInRange(rows, bounds)) {
     for (const line of row.lines) {
       const entry = byTitle.get(line.titleSnapshot) ?? { exemplaires: 0, ca: 0 }
       entry.exemplaires += line.quantity
@@ -552,15 +577,11 @@ export interface RangeLineStats {
  * étanchéité comptable dons/ventes que le reste du fichier.
  */
 export function rangeLineStats(rows: SalesHistoryRow[], bounds: RangeBounds): RangeLineStats {
-  const { fromMs, toMs } = bounds
   let ca = 0
   let nbCommandes = 0
   let nbExemplaires = 0
 
-  for (const row of rows) {
-    if (row.orderType === 'don') continue
-    const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+  for (const row of soldRowsInRange(rows, bounds)) {
     if (row.lines.length === 0) continue
     nbCommandes += 1
     for (const line of row.lines) {
