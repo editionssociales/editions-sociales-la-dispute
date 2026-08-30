@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { LinkPendingHint } from "./link-pending-hint";
+import { MosaicClamp } from "./mosaic-clamp";
 import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /**
@@ -13,8 +14,10 @@ import { FOCUS_RING_LIGHT } from "@/lib/ui";
  * devient son premier mot (premier au tri par count, il porte le retour au
  * catalogue complet et l'état actif quand aucun libellé n'est filtré).
  * Tous les libellés au même corps et à la même graisse : la hiérarchie ne
- * passe plus par la taille, seulement par l'ordre de lecture. Le paragraphe
- * reflow naturellement en mobile — aucun repli, composant 100 % serveur.
+ * passe plus par la taille, seulement par l'ordre de lecture. Composant
+ * serveur, avec un SEUL îlot client : le repli mobile à deux lignes
+ * (`mosaic-clamp.tsx`, 3e passe du même retour — sous `sm` seules les deux
+ * premières lignes sont visibles, une flèche déplie le reste).
  *
  * Deux exigences client NON NÉGOCIABLES (retour prototype 2026-08-30) :
  * AUCUN compte de livres affiché — le `count` de l'item ne sert plus qu'à
@@ -98,15 +101,18 @@ export function LibelleMosaic({
 
   return (
     <nav aria-label={ariaLabel} className={className}>
-      {/* Le paragraphe-manifeste. Justifié à `sm`+ SEULEMENT (vérif visuelle
-          2026-08-30 : à ~343px de colonne, peu de mots par ligne — les
-          espaces s'étirent en trous ; en drapeau gauche le gris typographique
-          reste régulier). Les espaces réels (cf. les `{" "}` ci-dessous —
-          sans eux le justifié n'a aucun point d'élasticité) absorbent la
-          ligne. `[overflow-wrap:break-word]` : garde-fou d'un mot dégénéré
-          importé sans espace. L'interligne large espace les lignes et fait,
-          avec le `py-1` des liens, les cibles tactiles. */}
-      <p className="font-sans text-[15px] font-black uppercase leading-[2.1] tracking-[.02em] text-ink [overflow-wrap:break-word] sm:text-justify sm:text-[16px] lg:text-[17px]">
+      <MosaicClamp>
+      {/* Le paragraphe-manifeste, JUSTIFIÉ à toutes les largeurs (6e passe
+          du retour client 2026-08-30 — le drapeau gauche mobile des passes
+          précédentes est abandonné, bloc plein assumé). Les espaces réels
+          (cf. les `{" "}` ci-dessous — sans eux le justifié n'a aucun point
+          d'élasticité) absorbent la ligne. `[overflow-wrap:break-word]` :
+          garde-fou d'un mot dégénéré importé sans espace. L'interligne
+          large espace les lignes et fait, avec le `py-1` des liens, les
+          cibles tactiles. Corps mobile 11,6px, interlettrage resserré sous
+          `sm` — COUPLÉ au seuil de `mosaic-clamp.tsx` (2 lignes de
+          24,4px). */}
+      <p className="font-sans text-justify text-[11.6px] font-black uppercase leading-[2.1] tracking-[.01em] text-ink [overflow-wrap:break-word] sm:text-[16px] sm:tracking-[.02em] lg:text-[17px]">
         {byCount.map((item, i) => (
           <Fragment key={item.slug ?? "tous"}>
             {i > 0 && (
@@ -145,6 +151,7 @@ export function LibelleMosaic({
           </Fragment>
         ))}
       </p>
+      </MosaicClamp>
     </nav>
   );
 }

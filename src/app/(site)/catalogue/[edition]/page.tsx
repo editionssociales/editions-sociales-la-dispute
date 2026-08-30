@@ -12,6 +12,7 @@ import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
 import { LibelleMosaic } from "@/components/libelle-mosaic";
+import { MosaicClampProvider, MosaicClampToggle } from "@/components/mosaic-clamp";
 import { parseBookFilters } from "@/lib/parse-filters";
 import { catalogueHref } from "@/lib/browse";
 import { EDITIONS, isEditionSlug } from "@/lib/editions";
@@ -84,8 +85,9 @@ async function EditionCatalogueBody({
       {/* Provider de transition partagé — même montage que `catalogue/page.tsx`
           (cf. `catalogue-transition.tsx`). */}
       <CatalogueTransitionProvider>
-        {/* Index-manifeste en slot sous la recherche — même montage que
-            `catalogue/page.tsx` (2e passe du 2026-08-30). */}
+        {/* Index-manifeste en slot sous la recherche, repli mobile via le
+            provider — même montage que `catalogue/page.tsx`. */}
+        <MosaicClampProvider>
         <CatalogueFilters
           libelles={facets.libelles}
           authors={facets.authors}
@@ -107,10 +109,15 @@ async function EditionCatalogueBody({
         />
 
         <CatalogueTransitionZone>
-          <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
-            <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
-              {total} {isUpcoming ? "titres à paraître" : "résultats"}
-            </span>
+          {/* Même montage que `catalogue/page.tsx` : collé au manifeste en
+              mobile, flèche du repli centrée sur la ligne de résultats. */}
+          <div className="relative mt-0 sm:mt-6">
+            <div className="flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">
+              <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
+                {total} {isUpcoming ? "titres à paraître" : "résultats"}
+              </span>
+            </div>
+            <MosaicClampToggle className="absolute left-1/2 top-[10px] -translate-x-1/2" />
           </div>
 
           <div className="mt-4">
@@ -119,6 +126,7 @@ async function EditionCatalogueBody({
 
           <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
         </CatalogueTransitionZone>
+        </MosaicClampProvider>
       </CatalogueTransitionProvider>
     </Container>
   );

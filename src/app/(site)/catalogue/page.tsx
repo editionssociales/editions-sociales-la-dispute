@@ -11,6 +11,7 @@ import { CatalogueFallback } from "@/components/catalogue-fallback";
 import { Container } from "@/components/container";
 import { Pagination } from "@/components/pagination";
 import { LibelleMosaic } from "@/components/libelle-mosaic";
+import { MosaicClampProvider, MosaicClampToggle } from "@/components/mosaic-clamp";
 import { NouveautesCarousel } from "@/components/nouveautes-carousel";
 import { toNouveauteBooks } from "@/lib/nouveaute-book";
 import { parseBookFilters } from "@/lib/parse-filters";
@@ -111,6 +112,10 @@ async function CatalogueBody({
           + grille + pagination, LES sous-arbres qui changent — s'estompe
           pendant qu'elles sont en vol. Enfants serveur passés en children. */}
       <CatalogueTransitionProvider>
+        {/* Provider du repli mobile de l'index-manifeste : le panneau vit
+            dans le slot ci-dessous, sa flèche dans la ligne de résultats —
+            cf. `mosaic-clamp.tsx`. */}
+        <MosaicClampProvider>
         <CatalogueFilters
           libelles={facets.libelles}
           authors={facets.authors}
@@ -131,18 +136,26 @@ async function CatalogueBody({
         />
 
         <CatalogueTransitionZone>
-          {/* Live region (issue #86b) : le fallback de chargement (`CatalogueFallback`)
-              annonce déjà « Chargement du catalogue… » côté AT — mais jamais le
-              RÉSULTAT du filtrage une fois la vue rendue. `aria-live="polite"`
-              fait lire le total à chaque changement de filtre/page (navigation
-              interne, pas de rechargement complet). */}
-          <div
-            className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]"
-            aria-live="polite"
-          >
-            <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
-              {total} résultats
-            </span>
+          {/* Collé au manifeste en mobile (mt-0 — 5e passe 2026-08-30 :
+              zéro espace vide au-dessus du filet), aéré à sm+. La flèche du
+              repli mobile vit ICI, centrée sur la ligne de résultats sous le
+              filet — en FRÈRE de la live region, jamais dedans (son
+              aria-label change à chaque bascule, la région l'annoncerait). */}
+          <div className="relative mt-0 sm:mt-6">
+            {/* Live region (issue #86b) : le fallback de chargement (`CatalogueFallback`)
+                annonce déjà « Chargement du catalogue… » côté AT — mais jamais le
+                RÉSULTAT du filtrage une fois la vue rendue. `aria-live="polite"`
+                fait lire le total à chaque changement de filtre/page (navigation
+                interne, pas de rechargement complet). */}
+            <div
+              className="flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]"
+              aria-live="polite"
+            >
+              <span className="font-sans text-[13px] font-bold uppercase tracking-[.03em] text-ink">
+                {total} résultats
+              </span>
+            </div>
+            <MosaicClampToggle className="absolute left-1/2 top-[10px] -translate-x-1/2" />
           </div>
 
           <div className="mt-4">
@@ -151,6 +164,7 @@ async function CatalogueBody({
 
           <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
         </CatalogueTransitionZone>
+        </MosaicClampProvider>
       </CatalogueTransitionProvider>
     </Container>
   );

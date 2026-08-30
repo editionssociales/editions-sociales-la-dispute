@@ -98,26 +98,43 @@ function ChevronGlyph() {
  * `opacity-0`, et `has-[…:focus-visible]` garde la sémantique clavier que
  * `focus-within` perdrait (il s'allumerait aussi au clic souris).
  */
+/**
+ * `display` à VALEURS FERMÉES (même parade que `Button.display`, § Decisions
+ * du scope doc : un `hidden` passé en className perdrait contre le `flex` de
+ * la recette de base, Tailwind v4 ordonnant les utilitaires par valeur) —
+ * `hiddenMobile` masque la cellule sous `sm` (5e passe 2026-08-30 : la liste
+ * Auteur quitte l'écran téléphone, les chips continuent d'afficher un filtre
+ * auteur déjà actif).
+ */
+const SELECT_CELL_DISPLAY = {
+  flex: "flex",
+  hiddenMobile: "hidden sm:flex",
+} as const;
+
 function SelectCell({
   label,
   ariaLabel,
   value,
   onChange,
   children,
+  display = "flex",
+  className = "",
 }: {
   label: string;
   ariaLabel: string;
   value: string;
   onChange: (value: string) => void;
   children: ReactNode;
+  display?: keyof typeof SELECT_CELL_DISPLAY;
+  className?: string;
 }) {
   return (
     <div
       // `min-w-0` : depuis l'empilement mobile, la cellule vit dans un track
-      // compressible (`grid-cols-2` = minmax(0,1fr)) — sans lui, l'item grid
-      // refuse de descendre sous son min-content et déborde de son track
-      // (même garde que le `<label>` de recherche voisin).
-      className={`relative flex min-h-11 min-w-0 cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px]`}
+      // compressible — sans lui, l'item grid refuse de descendre sous son
+      // min-content et déborde de son track (même garde que le `<label>` de
+      // recherche voisin).
+      className={`relative ${SELECT_CELL_DISPLAY[display]} min-h-11 min-w-0 cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px] ${className}`}
     >
       <span
         aria-hidden="true"
@@ -169,11 +186,21 @@ function HouseTag({
   active,
   activeClass,
   onClick,
+  dense = false,
+  className = "",
   children,
 }: {
   active: boolean;
   activeClass: string;
   onClick: () => void;
+  /**
+   * Recette compacte à VALEUR FERMÉE (jamais une surcharge par className,
+   * piège d'ordre v4) : corps 11px et padding réduit pour la rangée mobile
+   * partagée avec le Tri (5e passe 2026-08-30) — « Éditions sociales » +
+   * « La Dispute » + « Tri » doivent tenir sur ~335px.
+   */
+  dense?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
@@ -181,11 +208,15 @@ function HouseTag({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`min-h-11 whitespace-nowrap px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none ${CELL_TEXT} ${
+      className={`min-h-11 whitespace-nowrap py-2.5 text-left transition-colors motion-reduce:transition-none ${
+        dense
+          ? "px-2 text-[11px] font-bold uppercase tracking-[.02em] text-ink"
+          : `px-3.5 ${CELL_TEXT}`
+      } ${
         active
           ? activeClass
           : `bg-paper text-ink hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`
-      }`}
+      } ${className}`}
     >
       {children}
     </button>
@@ -291,41 +322,47 @@ export function CatalogueFilters({
         // maison est d'une autre nature que les libellés (identité de
         // collection), il ne doit pas se noyer en fin du rail de puces.
         // Compact d'office : le flux flex de `FramedGrid` est `w-fit`.
-        <FramedGrid
-          flow="flex"
-          role="group"
-          aria-label="Filtrer par maison"
-          className="items-stretch"
-        >
-          {EDITION_LIST.map((e) => (
-            <HouseTag
-              key={e.slug}
-              activeClass={HOUSE_TAG_ACTIVE[e.accent]}
-              active={activeEdition === e.slug}
-              onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
-            >
-              {e.shortName}
-            </HouseTag>
-          ))}
-        </FramedGrid>
+        // FORME DESKTOP seulement (5e passe 2026-08-30) : sous `sm`, les
+        // maisons vivent dans la rangée du Tri, ci-dessous. Le masquage vit
+        // sur un WRAPPER — un `hidden` passé à FramedGrid perdrait contre le
+        // `flex` de sa base (piège d'ordre v4, § Decisions du scope doc).
+        <div className="hidden sm:block">
+          <FramedGrid
+            flow="flex"
+            role="group"
+            aria-label="Filtrer par maison"
+            className="items-stretch"
+          >
+            {EDITION_LIST.map((e) => (
+              <HouseTag
+                key={e.slug}
+                activeClass={HOUSE_TAG_ACTIVE[e.accent]}
+                active={activeEdition === e.slug}
+                onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
+              >
+                {e.shortName}
+              </HouseTag>
+            ))}
+          </FramedGrid>
+        </div>
       )}
 
-      {/* Recherche + auteurs + tri : toujours visibles, jamais dans le rail
-          de puces ci-dessus (elles ne défilent jamais). À `sm`+, grille
-          explicite `1fr auto auto` plutôt qu'un flex : les trois champs
-          tiennent SUR UNE SEULE LIGNE par construction, les deux cellules de
-          choix se règlent sur leur libellé fixe et la recherche absorbe tout
-          l'espace restant. En dessous de `sm` (2026-08-30 — le bloc n'avait
-          AUCUNE classe responsive et débordait) : la recherche prend sa
-          propre rangée (`col-span-2`), Auteur et Tri se partagent la
-          seconde — composé sur LE MÊME élément grille, jamais un wrapper
-          intercalé qui casserait le mortier de 2px. */}
+      {/* Recherche + tri (+ auteurs à `sm`+) : toujours visibles, jamais
+          dans le rail de puces (elles ne défilent jamais). À `sm`+, grille
+          explicite `1fr auto auto` : recherche + Auteur + Tri sur UNE ligne
+          par construction. En dessous de `sm` (5e passe 2026-08-30, une
+          ligne de moins avant les livres) : la recherche prend sa rangée
+          (`col-span-3`), puis maisons + Tri se partagent la seconde
+          (`auto auto 1fr` — les maisons denses à leur min-content, le Tri
+          absorbe le reste) et la liste Auteur disparaît — composé sur LE
+          MÊME élément grille, jamais un wrapper intercalé qui casserait le
+          mortier de 2px. */}
       <FramedGrid
         role="group"
         aria-label="Recherche et tri du catalogue"
-        className={`grid-cols-2 items-stretch sm:grid-cols-[1fr_auto_auto] ${showHouseGroup ? "mt-[2px]" : ""}`}
+        className={`grid-cols-[auto_auto_1fr] items-stretch sm:grid-cols-[1fr_auto_auto] ${showHouseGroup ? "sm:mt-[2px]" : ""}`}
       >
-        <label className="col-span-2 flex min-h-11 min-w-0 items-center bg-paper px-3.5 sm:col-span-1">
+        <label className="col-span-3 flex min-h-11 min-w-0 items-center bg-paper px-3.5 sm:col-span-1">
           <span className="sr-only">Rechercher</span>
           <input
             type="search"
@@ -347,9 +384,28 @@ export function CatalogueFilters({
           />
         </label>
 
+        {/* Les maisons rejoignent la rangée du Tri SOUS `sm` — rendues une
+            SECONDE fois ici plutôt que déplacées : le groupe encadré du
+            dessus reste la forme desktop, et une seule des deux instances
+            existe à la fois dans l'arbre a11y (display:none sort l'autre). */}
+        {showHouseGroup &&
+          EDITION_LIST.map((e) => (
+            <HouseTag
+              key={e.slug}
+              dense
+              className="sm:hidden"
+              activeClass={HOUSE_TAG_ACTIVE[e.accent]}
+              active={activeEdition === e.slug}
+              onClick={() => setFilter("edition", activeEdition === e.slug ? "" : e.slug)}
+            >
+              {e.shortName}
+            </HouseTag>
+          ))}
+
         <SelectCell
           label="Auteur"
           ariaLabel="Auteur"
+          display="hiddenMobile"
           value={filters.author ?? ""}
           onChange={(v) => setFilter("author", v)}
         >
@@ -364,6 +420,9 @@ export function CatalogueFilters({
         <SelectCell
           label="Tri"
           ariaLabel="Trier"
+          // Édition verrouillée (pas de maisons) : le Tri occupe seul sa
+          // rangée mobile.
+          className={showHouseGroup ? "" : "col-span-3 sm:col-span-1"}
           value={filters.sort ?? "recent"}
           onChange={(v) => setFilter("sort", v)}
         >
