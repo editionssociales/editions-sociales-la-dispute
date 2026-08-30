@@ -105,7 +105,11 @@ function SelectCell({
 }) {
   return (
     <div
-      className={`relative flex min-h-11 cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px]`}
+      // `min-w-0` : depuis l'empilement mobile, la cellule vit dans un track
+      // compressible (`grid-cols-2` = minmax(0,1fr)) — sans lui, l'item grid
+      // refuse de descendre sous son min-content et déborde de son track
+      // (même garde que le `<label>` de recherche voisin).
+      className={`relative flex min-h-11 min-w-0 cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px]`}
     >
       <span
         aria-hidden="true"
@@ -298,17 +302,21 @@ export function CatalogueFilters({
       )}
 
       {/* Recherche + auteurs + tri : toujours visibles, jamais dans le rail
-          de puces ci-dessus (elles ne défilent jamais). Grille explicite
-          `1fr auto auto` plutôt qu'un flex : les trois champs tiennent SUR
-          UNE SEULE LIGNE par construction (jamais de retour à la ligne à
-          négocier), les deux cellules de choix se règlent sur leur libellé
-          fixe et la recherche absorbe tout l'espace restant. */}
+          de puces ci-dessus (elles ne défilent jamais). À `sm`+, grille
+          explicite `1fr auto auto` plutôt qu'un flex : les trois champs
+          tiennent SUR UNE SEULE LIGNE par construction, les deux cellules de
+          choix se règlent sur leur libellé fixe et la recherche absorbe tout
+          l'espace restant. En dessous de `sm` (2026-08-30 — le bloc n'avait
+          AUCUNE classe responsive et débordait) : la recherche prend sa
+          propre rangée (`col-span-2`), Auteur et Tri se partagent la
+          seconde — composé sur LE MÊME élément grille, jamais un wrapper
+          intercalé qui casserait le mortier de 2px. */}
       <FramedGrid
         role="group"
         aria-label="Recherche et tri du catalogue"
-        className={`grid-cols-[1fr_auto_auto] items-stretch ${showHouseGroup ? "mt-[2px]" : ""}`}
+        className={`grid-cols-2 items-stretch sm:grid-cols-[1fr_auto_auto] ${showHouseGroup ? "mt-[2px]" : ""}`}
       >
-        <label className="flex min-h-11 min-w-0 items-center bg-paper px-3.5">
+        <label className="col-span-2 flex min-h-11 min-w-0 items-center bg-paper px-3.5 sm:col-span-1">
           <span className="sr-only">Rechercher</span>
           <input
             type="search"
