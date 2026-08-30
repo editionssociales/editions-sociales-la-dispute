@@ -113,6 +113,18 @@ export function invertingCell(active: boolean): string {
 }
 
 /**
+ * Typo des cellules de la barre de filtres du catalogue — partagée par
+ * `catalogue-filters.tsx` (recherche, sélecteurs, maisons) et
+ * `catalogue-search-box.tsx` (le champ extrait avec sa complétion), qui
+ * composent la MÊME grille encadrée : la promouvoir ici évite qu'un des deux
+ * fichiers dérive tout seul. Corps 12px depuis la 9e passe du 2026-08-30
+ * (« uniformise les tailles de polices dans la section de tri ») — même
+ * corps que les chips de filtres actifs et que les options du dropdown de
+ * complétion.
+ */
+export const FILTER_CELL_TEXT = "text-[12px] font-bold uppercase tracking-[.03em] text-ink";
+
+/**
  * Lien pastille « PDF » (table des matières, extrait choisi) — recette
  * partagée par la fiche livre boutique et la fiche livre catalogue
  * (`boutique/[slug]/page.tsx`, `catalogue/[edition]/[slug]/page.tsx`), sinon

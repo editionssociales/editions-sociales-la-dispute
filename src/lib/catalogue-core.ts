@@ -1,5 +1,6 @@
 import { sanitizeCms } from "./cms-html";
 import { isoDayParis, monthsAgoParisMonthStartUtc } from "./format";
+import { matchesSearchQuery } from "./search-text";
 import { assessSellability, isUpcoming } from "./sellability";
 import { frenchTypo } from "./typo-fr";
 import { type CommerceInfo, type RawBook } from "./catalogue-source";
@@ -164,10 +165,15 @@ function matches(book: Book, filters: BookFilters, key: FilterKey): boolean {
       return !filters.author || book.authors.some((a) => a.slug === filters.author);
     case "q": {
       if (!filters.q) return true;
-      const needle = filters.q.toLowerCase();
-      return (
-        book.title.toLowerCase().includes(needle) ||
-        book.authors.some((a) => a.name.toLowerCase().includes(needle))
+      // Règle d'appariement UNIQUE (`search-text`) : pliage accents/casse/
+      // espaces typographiques + jetons en ET — PARTAGÉE avec la complétion
+      // de la barre de recherche (`search-suggest-core`), sinon le dropdown
+      // trouverait « État » quand la grille afficherait 0 résultat. Les
+      // libellés comptent parmi les champs : chercher un thème au clavier
+      // montre ses livres, comme le fait la suggestion de libellé.
+      return matchesSearchQuery(
+        [book.title, ...book.authors.map((a) => a.name), ...book.libelles.map((l) => l.name)],
+        filters.q,
       );
     }
     case "upcoming":

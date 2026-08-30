@@ -9,14 +9,22 @@ import { EDITION_LIST } from "@/lib/editions";
 import { serializeBookFilters } from "@/lib/parse-filters";
 import {
   activeChips,
+  catalogueHref,
   clearFilters,
   readFilters,
   withFilter,
   withoutFilter,
   type FilterField,
 } from "@/lib/browse";
-import { FOCUS_RING_DARK, FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import type { SuggestionKind } from "@/lib/search-suggest-core";
+import {
+  FILTER_CELL_TEXT,
+  FOCUS_RING_DARK,
+  FOCUS_RING_HOVER_DARK,
+  FOCUS_RING_LIGHT,
+} from "@/lib/ui";
 import type { Accent } from "@/lib/format";
+import { CatalogueSearchBox } from "@/components/catalogue-search-box";
 import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
 
@@ -52,14 +60,12 @@ const SORT_LABELS: Record<BookSort, string> = {
 };
 const SORTS = BOOK_SORTS.map((s) => ({ value: s, label: SORT_LABELS[s] }));
 
-/**
- * Grille brutaliste : le quadrillage noir vient du fond noir du conteneur
- * qui transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
- * par-dessus (recette « grille encadrée », voir AGENTS.md).
- */
-// 12px depuis la 9e passe du 2026-08-30 (« uniformise les tailles de polices
-// dans la section de tri ») — même corps que les chips de filtres actifs.
-const CELL_TEXT = "text-[12px] font-bold uppercase tracking-[.03em] text-ink";
+// Grille brutaliste : le quadrillage noir vient du fond noir du conteneur qui
+// transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
+// par-dessus (recette « grille encadrée », voir AGENTS.md). La typo des
+// cellules est `FILTER_CELL_TEXT` (`src/lib/ui.ts`, 12px — 9e passe du
+// 2026-08-30), partagée avec la cellule de recherche extraite
+// (`catalogue-search-box.tsx`).
 
 /**
  * Chevron de menu déroulant. Rendu en SVG et NON par un glyphe (▾) : Effra ne
@@ -136,7 +142,7 @@ function SelectCell({
       // compressible — sans lui, l'item grid refuse de descendre sous son
       // min-content et déborde de son track (même garde que le `<label>` de
       // recherche voisin).
-      className={`relative ${SELECT_CELL_DISPLAY[display]} min-h-11 min-w-0 cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px] ${className}`}
+      className={`relative ${SELECT_CELL_DISPLAY[display]} min-h-11 min-w-0 cursor-pointer items-center bg-paper ${FILTER_CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px] ${className}`}
     >
       <span
         aria-hidden="true"
@@ -197,9 +203,10 @@ function HouseTag({
   onClick: () => void;
   /**
    * Recette compacte à VALEUR FERMÉE (jamais une surcharge par className,
-   * piège d'ordre v4) : corps 11px et padding réduit pour la rangée mobile
-   * partagée avec le Tri (5e passe 2026-08-30) — « Éditions sociales » +
-   * « La Dispute » + « Tri » doivent tenir sur ~335px.
+   * piège d'ordre v4) : corps 12px (uniformisation 9e passe 2026-08-30) et
+   * padding réduit pour la rangée mobile partagée avec le Tri (5e passe) —
+   * « Éditions sociales » + « La Dispute » + « Trier par » doivent tenir
+   * sur ~335px (vérifié : 335/335).
    */
   dense?: boolean;
   className?: string;
@@ -213,7 +220,7 @@ function HouseTag({
       className={`min-h-11 whitespace-nowrap py-2.5 text-left transition-colors motion-reduce:transition-none ${
         dense
           ? "px-2 text-[12px] font-bold uppercase tracking-[.02em] text-ink"
-          : `px-3.5 ${CELL_TEXT}`
+          : `px-3.5 ${FILTER_CELL_TEXT}`
       } ${
         active
           ? activeClass
@@ -288,16 +295,59 @@ export function CatalogueFilters({
 
   const setFilter = (field: FilterField, value: string) => pushFilters(withFilter(filters, field, value));
 
-  /** Annule un anti-rebond de recherche en attente et resynchronise le champ. */
-  const resetSearchField = (value: string) => {
+  /** Annule un anti-rebond de recherche en attente (le champ, lui, ne bouge pas). */
+  const cancelPendingSearch = () => {
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
       searchTimeout.current = null;
     }
     setDebouncing(false);
+  };
+
+  /** Annule un anti-rebond de recherche en attente et resynchronise le champ. */
+  const resetSearchField = (value: string) => {
+    cancelPendingSearch();
     setQuery(value);
     setLastPushed(value);
   };
+
+  /** La frappe : miroir local immédiat, poussée d'URL anti-rebondie (#86). */
+  const handleSearchChange = (next: string) => {
+    setQuery(next);
+    setLastPushed(next);
+    setDebouncing(true);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      searchTimeout.current = null;
+      setDebouncing(false);
+      setFilter("q", next);
+    }, 300);
+  };
+
+  /** Entrée sans suggestion active : la recherche part TOUT DE SUITE. */
+  const commitSearch = () => {
+    cancelPendingSearch();
+    setFilter("q", query);
+  };
+
+  /**
+   * Une suggestion vient d'être suivie (son `<Link>` navigue déjà) :
+   * l'anti-rebond en vol pousserait `?q=` PAR-DESSUS cette navigation — il
+   * est annulé dans tous les cas. Pour un filtre auteur/libellé, le champ se
+   * vide aussi : l'URL cible ne porte pas de `q`, le garde-fou de resynchro
+   * (`lastPushed`) doit suivre.
+   */
+  const handleSuggestionPick = (kind: SuggestionKind) => {
+    if (kind === "title") cancelPendingSearch();
+    else resetSearchField("");
+  };
+
+  /**
+   * Cible d'une suggestion auteur/libellé : le filtre remplace la recherche
+   * (même algèbre que `pushFilters`, en `href` pour rester un vrai lien).
+   */
+  const suggestionFilterHref = (field: "author" | "libelle") => (slug: string) =>
+    catalogueHref(withFilter(withoutFilter(filters, "q"), field, slug), pathname);
 
   const removeFilter = (param: string) => {
     if (param === "q") resetSearchField("");
@@ -374,27 +424,21 @@ export function CatalogueFilters({
         aria-label="Recherche et tri du catalogue"
         className={`grid-cols-[1fr_1fr_auto] items-stretch sm:grid-cols-[1fr_auto_auto] ${showHouseGroup ? "sm:mt-[2px]" : ""}`}
       >
-        <label className="col-span-3 flex min-h-11 min-w-0 items-center bg-paper px-3.5 sm:col-span-1">
-          <span className="sr-only">Rechercher</span>
-          <input
-            type="search"
-            value={query}
-            placeholder="Titre, auteur…"
-            onChange={(e) => {
-              const next = e.target.value;
-              setQuery(next);
-              setLastPushed(next);
-              setDebouncing(true);
-              if (searchTimeout.current) clearTimeout(searchTimeout.current);
-              searchTimeout.current = setTimeout(() => {
-                searchTimeout.current = null;
-                setDebouncing(false);
-                setFilter("q", next);
-              }, 300);
-            }}
-            className={`w-full min-w-0 bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-ink/40 ${CELL_TEXT} ${FOCUS_RING_LIGHT}`}
-          />
-        </label>
+        {/* La cellule de recherche vit dans son propre fichier depuis la
+            complétion (combobox + dropdown, `catalogue-search-box.tsx`) —
+            l'état de la requête et l'anti-rebond restent ICI, la boîte ne
+            reçoit que la valeur et les gestes. `min-w-0` : cellule d'un track
+            compressible (même garde que les `SelectCell` voisines). */}
+        <CatalogueSearchBox
+          className="col-span-3 sm:col-span-1"
+          value={query}
+          lockedEdition={lockedEdition}
+          onValueChange={handleSearchChange}
+          onCommit={commitSearch}
+          onPick={handleSuggestionPick}
+          hrefForAuthor={suggestionFilterHref("author")}
+          hrefForLibelle={suggestionFilterHref("libelle")}
+        />
 
         {/* Les maisons rejoignent la rangée du Tri SOUS `sm` — rendues une
             SECONDE fois ici plutôt que déplacées : le groupe encadré du

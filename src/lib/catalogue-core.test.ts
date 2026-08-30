@@ -122,6 +122,22 @@ describe("queryBooks (filtre + tri)", () => {
     expect(queryBooks(CATALOGUE, { q: "capital" }).map((b) => b.slug)).toEqual(["capital"]);
   });
 
+  it("recherche pliée (règle unique `search-text`, partagée avec la complétion)", () => {
+    // Accents/casse/apostrophe typographique pliés (« L’Idéologie »).
+    expect(queryBooks(CATALOGUE, { q: "IDEOLOGIE" }).map((b) => b.slug)).toEqual(["ideologie"]);
+    // Jetons en ET, croisés entre champs : auteur + titre.
+    expect(queryBooks(CATALOGUE, { q: "marx capital" }).map((b) => b.slug)).toEqual(["capital"]);
+    // Le nom d'auteur seul reste couvert…
+    expect(queryBooks(CATALOGUE, { q: "dorlin" }).map((b) => b.slug)).toEqual(["genre"]);
+    // …et les libellés entrent dans le champ de `q` : chercher un thème
+    // montre ses livres, comme la suggestion de libellé du dropdown.
+    expect(
+      queryBooks(CATALOGUE, { q: "geme" })
+        .map((b) => b.slug)
+        .sort(),
+    ).toEqual(["capital", "ideologie"]);
+  });
+
   it("filtre les à-paraître", () => {
     expect(queryBooks(CATALOGUE, { upcoming: true }).map((b) => b.slug)).toEqual(["avenir"]);
   });

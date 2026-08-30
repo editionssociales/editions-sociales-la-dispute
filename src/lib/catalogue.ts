@@ -12,6 +12,7 @@ import {
   queryBooks,
   recentReleases,
 } from "./catalogue-core";
+import { buildSuggestionIndexData, type SuggestionIndexData } from "./search-suggest-core";
 import type { Book, BookDetail, BookFilters, EditionSlug, Facet } from "./types";
 
 export type { CatalogueView } from "./browse";
@@ -126,6 +127,17 @@ export async function getFacets(
   filters: BookFilters = {},
 ): Promise<{ libelles: Facet[]; authors: Facet[]; total: number }> {
   return computeFacets(await getCatalogueBooks(), filters);
+}
+
+/**
+ * Index de complétion de la barre de recherche (titres/auteurs/libellés) —
+ * projection légère du MÊME jeu caché que la grille (`getCatalogueBooks`,
+ * donc goodies exclus et fraîcheur alignée sur le tag `catalogue`). Servi par
+ * `GET /api/catalogue/suggestions`, chargé par le client au premier focus du
+ * champ puis filtré en mémoire à chaque frappe (`search-suggest-core`).
+ */
+export async function getSearchSuggestions(): Promise<SuggestionIndexData> {
+  return buildSuggestionIndexData(await getCatalogueBooks());
 }
 
 /** Vue catalogue complète (livres paginés + facettes) pour une page donnée. */
