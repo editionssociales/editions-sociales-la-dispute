@@ -19,6 +19,7 @@ import { getCampaign2026 } from '../../../lib/donations.ts'
 import { isoDayParis, monthsAgoParisMonthStartUtc, parisMidnightUtc } from '../../../lib/format.ts'
 import { getActiveHighlight } from '../../../lib/highlight.ts'
 import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
+import { nonWooPendingOrdersWhere, soldOrdersWhere } from './orders-where.ts'
 
 /**
  * Lecteurs I/O du dashboard `/admin` (refonte : bandeau KPI → graphique
@@ -41,6 +42,10 @@ import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
  * Les dérivations pures (états, seuils, bornes) vivent dans `derive.ts` ; le
  * rendu dans `Dashboard.tsx` (home) et `../health/HealthPage.tsx`/
  * `../stock/StockPage.tsx` (vues admin-only, hors périmètre de cet agent).
+ * Les `Where` Payload partagés par plusieurs lecteurs (statuts « vendus »,
+ * exclusion de l'historique Woo) vivent dans `orders-where.ts` — UNE seule
+ * définition de chacune de ces deux notions, testée dans
+ * `orders-where.test.ts`.
  *
  * NB requêtes commandes : `orders.status` est indexé (migration
  * `20260717_150000_orders_status_index`).
@@ -51,15 +56,14 @@ import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
 export type SalesWindowData = { state: 'ok'; rows: SalesWindowRow[] } | { state: 'na' }
 
 /**
- * Commandes vendues des 60 derniers jours (statuts `paid`/`prepared`/
- * `shipped` — jamais `refunded`/`cancelled`/`failed`, l'historique Woo porte
- * ~45 k€ d'annulées avec `totalTTC` non nul). `paidAt` à défaut `createdAt`
- * pour la borne (les deux posés au même moment en pratique par le webhook,
- * même convention que l'ancien `readWorkOrders`). AUCUN filtre `orderType`
- * ici (les dons ont aussi un statut `paid`/`prepared`/`shipped`) — l'étanchéité
- * comptable dons/ventes est appliquée en aval, dans les dérivations pures
- * (`salesStats`/`dailySalesBuckets`), pas dans cette lecture partagée par la
- * vélocité stock qui, elle, compte les dons (cf. `quantitySoldByBook`).
+ * Commandes vendues des 60 derniers jours — statuts et convention de borne
+ * (`paidAt` à défaut `createdAt`) portés par `soldOrdersWhere` (`orders-
+ * where.ts`), UNIQUE définition partagée avec `readSalesHistory`/
+ * `readPreorderTotals`. AUCUN filtre `orderType` ici (les dons ont aussi un
+ * statut `paid`/`prepared`/`shipped`) — l'étanchéité comptable dons/ventes
+ * est appliquée en aval, dans les dérivations pures (`salesStats`/
+ * `dailySalesBuckets`), pas dans cette lecture partagée par la vélocité
+ * stock qui, elle, compte les dons (cf. `quantitySoldByBook`).
  *
  * Select API (issue #68) : `lines` entier plutôt qu'une sélection imbriquée
  * (`lines: { quantity: true, book: true }`) — Payload ne garantit pas le
@@ -72,22 +76,7 @@ export async function readSalesWindow(payload: Payload, now: Date): Promise<Sale
   try {
     const { docs } = await payload.find({
       collection: 'orders',
-      where: {
-        and: [
-          {
-            or: [
-              { paidAt: { greater_than_equal: start60.toISOString() } },
-              {
-                and: [
-                  { paidAt: { exists: false } },
-                  { createdAt: { greater_than_equal: start60.toISOString() } },
-                ],
-              },
-            ],
-          },
-          { status: { in: ['paid', 'prepared', 'shipped'] } },
-        ],
-      },
+      where: soldOrdersWhere(start60.toISOString()),
       select: { paidAt: true, createdAt: true, totalTTC: true, orderType: true, lines: true },
       sort: 'createdAt',
       depth: 0,
@@ -135,11 +124,10 @@ export const SALES_HISTORY_MONTHS_BACK = 12
  * fenêtre plus large et avec un besoin différent en aval (agrégation par
  * titre plutôt que par livre).
  *
- * Mêmes statuts vendus que `readSalesWindow` (`paid`/`prepared`/`shipped`,
- * jamais `refunded`/`cancelled`/`failed`) et même convention de borne
- * (`paidAt` à défaut `createdAt`). AUCUN filtre `orderType` ici (les dons ont
- * aussi un statut `paid`/`prepared`/`shipped`) — l'étanchéité comptable
- * dons/ventes est appliquée en aval, dans les dérivations pures
+ * Même `soldOrdersWhere` (`orders-where.ts`) que `readSalesWindow` — mêmes
+ * statuts vendus, même convention de borne. AUCUN filtre `orderType` ici (les
+ * dons ont aussi un statut `paid`/`prepared`/`shipped`) — l'étanchéité
+ * comptable dons/ventes est appliquée en aval, dans les dérivations pures
  * (`windowSalesStats`/`monthlySalesBuckets`/`topTitles`/`rangeLineStats`), pas
  * dans cette lecture partagée.
  *
@@ -159,22 +147,7 @@ export async function readSalesHistory(payload: Payload, now: Date): Promise<Sal
   try {
     const { docs } = await payload.find({
       collection: 'orders',
-      where: {
-        and: [
-          {
-            or: [
-              { paidAt: { greater_than_equal: start.toISOString() } },
-              {
-                and: [
-                  { paidAt: { exists: false } },
-                  { createdAt: { greater_than_equal: start.toISOString() } },
-                ],
-              },
-            ],
-          },
-          { status: { in: ['paid', 'prepared', 'shipped'] } },
-        ],
-      },
+      where: soldOrdersWhere(start.toISOString()),
       select: { paidAt: true, createdAt: true, totalTTC: true, orderType: true, lines: true },
       depth: 0,
       limit: 0,
@@ -222,15 +195,8 @@ export type WorkOrdersData =
  * réel de la file, potentiellement supérieur). Décision client (plus de
  * police des flux) : exclut désormais l'historique Woo ET les précommandes.
  *
- * - Historique Woo : `number` natif est TOUJOURS préfixé `CMD-######`
- *   (`order-number.ts:formatOrderNumber`) ; un numéro Woo importé est
- *   purement numérique (`number` = n° Woo brut, jamais `CMD-*`, cf. CLAUDE.md
- *   racine). Filtre choisi : `number: { contains: 'CMD' }` — `contains` sur
- *   Postgres se traduit en `ILIKE '%CMD%'` (`@payloadcms/drizzle:
- *   operatorMap`), donc en substring simple, contrairement à l'opérateur
- *   `like` qui découpe la valeur en mots ; pas besoin d'un second filtre
- *   `stripeSessionId not_like 'woo-'` — les 535 commandes `paid` de
- *   l'historique n'ont jamais ce préfixe.
+ * - Historique Woo + statuts `paid`/`prepared` : `nonWooPendingOrdersWhere`
+ *   (`orders-where.ts`), même définition que `readPendingPreorders`.
  * - Précommandes (`orderType: 'precommande'`) : rien à expédier avant
  *   parution — comptées à part par `readPendingPreorders`.
  */
@@ -239,11 +205,7 @@ export async function readWorkOrders(payload: Payload): Promise<WorkOrdersData> 
     const { docs, totalDocs } = await payload.find({
       collection: 'orders',
       where: {
-        and: [
-          { status: { in: ['paid', 'prepared'] } },
-          { orderType: { not_equals: 'precommande' } },
-          { number: { contains: 'CMD' } },
-        ],
+        and: [...nonWooPendingOrdersWhere(), { orderType: { not_equals: 'precommande' } }],
       },
       // Select API (issue #68) : la ligne de travail n'affiche que ces
       // champs — pas les coordonnées client complètes, les identifiants
@@ -295,18 +257,14 @@ export type PendingPreordersData = { state: 'ok'; count: number } | { state: 'na
 /**
  * Précommandes payées/préparées — comptage seul (bloc « En cours »), jamais
  * dans la file de travail : rien à expédier avant la parution du titre.
- * Mêmes filtres anti-historique-Woo que `readWorkOrders`.
+ * Même `nonWooPendingOrdersWhere` (`orders-where.ts`) que `readWorkOrders`.
  */
 export async function readPendingPreorders(payload: Payload): Promise<PendingPreordersData> {
   try {
     const { totalDocs } = await payload.count({
       collection: 'orders',
       where: {
-        and: [
-          { orderType: { equals: 'precommande' } },
-          { status: { in: ['paid', 'prepared'] } },
-          { number: { contains: 'CMD' } },
-        ],
+        and: [{ orderType: { equals: 'precommande' } }, ...nonWooPendingOrdersWhere()],
       },
       overrideAccess: true,
     })
@@ -623,7 +581,8 @@ export type PreorderTotalsData = { state: 'ok'; totalByBook: Map<number, number>
  * fenêtre temporelle — complète `precommandeQuantityByBook` (`derive.ts`,
  * fenêtre glissante 30 j) qui SOUS-COMPTE une campagne de précommande ouverte
  * avant la fenêtre : ce lecteur ne fenêtre rien, juste `orderType:
- * 'precommande'` sur les 3 statuts vendus, somme vie entière de la campagne.
+ * 'precommande'` sur les statuts vendus (`soldOrdersWhere()` sans borne,
+ * `orders-where.ts`), somme vie entière de la campagne.
  * Nourrit l'affichage « N précommandes payées » du bloc « Prochaines
  * parutions » (`Dashboard.tsx`), qui retombe sur `UpcomingBookRow.precommandesPayees`
  * (fenêtré 30 j, déjà zéro-safe) si ce lecteur est `na` — jamais un zéro
@@ -642,10 +601,7 @@ export async function readPreorderTotals(payload: Payload): Promise<PreorderTota
     const { docs } = await payload.find({
       collection: 'orders',
       where: {
-        and: [
-          { orderType: { equals: 'precommande' } },
-          { status: { in: ['paid', 'prepared', 'shipped'] } },
-        ],
+        and: [{ orderType: { equals: 'precommande' } }, soldOrdersWhere()],
       },
       select: { lines: true },
       depth: 0,
