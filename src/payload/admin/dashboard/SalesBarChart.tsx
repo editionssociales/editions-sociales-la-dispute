@@ -1,3 +1,4 @@
+import type { SalesBarChartBar, SalesBarChartTick, SalesBarChartXLabel } from './derive.ts'
 import styles from './dashboard.module.css'
 
 /**
@@ -9,11 +10,12 @@ import styles from './dashboard.module.css'
  * par barre (lent, quasi inutilisable sur des barres fines).
  *
  * RSC purement présentationnel : AUCUNE logique métier — tout arrive en props
- * déjà calculées (`chartAxisTicks`/`everyNthLabels`/`salesChartGeometry`,
- * `derive.ts`). Zéro dépendance, zéro JavaScript client (pas de `'use
- * client'`, pas de hooks) : le survol par barre est intégralement porté par
- * CSS pur (`.barGroup:hover .barDetail`, `dashboard.module.css`) — même motif
- * que le lien étendu `.rowExpandable` de `Dashboard.tsx`, sans JS non plus.
+ * déjà calculées (`chartAxisTicks`/`everyNthLabels`/`salesChartGeometry`/
+ * `buildChartXLabels`, `derive.ts`). Zéro dépendance, zéro JavaScript client
+ * (pas de `'use client'`, pas de hooks) : le survol par barre est
+ * intégralement porté par CSS pur (`.barGroup:hover .barDetail`,
+ * `dashboard.module.css`) — même motif que le lien étendu `.rowExpandable`
+ * de `Dashboard.tsx`, sans JS non plus.
  *
  * Anatomie par barre (`<g class="barGroup">`) :
  *   1. un rect de CAPTURE invisible, pleine hauteur/largeur de colonne (pas
@@ -30,27 +32,6 @@ import styles from './dashboard.module.css'
  *      tactile), conservé en plus du texte visuel.
  *
  */
-
-export interface SalesBarChartBar {
-  x: number
-  y: number
-  w: number
-  h: number
-  /** Clé stable de la barre (jour `AAAA-MM-JJ` ou mois `AAAA-MM`) — clé de `details`. */
-  key: string
-}
-
-export interface SalesBarChartTick {
-  value: number
-  /** Libellé déjà formaté (`fmtEurosAxis`) — ce composant ne formate rien. */
-  label: string
-}
-
-export interface SalesBarChartXLabel {
-  x: number
-  label: string
-  anchor: 'start' | 'middle' | 'end'
-}
 
 export interface SalesBarChartDims {
   width: number
@@ -71,34 +52,6 @@ export interface SalesBarChartProps {
   /** Texte de survol par barre (clé = `bar.key`) — une barre sans entrée n'affiche ni détail ni `<title>`. */
   details: Map<string, string>
   ariaLabel: string
-}
-
-/**
- * Construit les `xLabels` (libellés sous l'axe) à partir d'indices de barres
- * DÉJÀ répartis (`everyNthLabels`, `derive.ts`) — factorisé ici plutôt que
- * dupliqué dans les 3 call-sites (`Dashboard.tsx`, quotidien + mensuel de
- * `../ventes/VentesPage.tsx`) : même géométrie partout (premier libellé ancré
- * au bord gauche du graphique, dernier au bord droit, les autres centrés sur
- * leur colonne — jamais de texte qui déborde du `viewBox`). Le TEXTE du
- * libellé reste au choix de l'appelant (`labelFor`, ex. `fmtDayMonthFr` pour
- * un axe quotidien, `bucket.label` pour un axe mensuel) : ce composant ne
- * formate rien.
- */
-export function buildChartXLabels(
-  bars: { x: number; w: number }[],
-  indices: number[],
-  width: number,
-  labelFor: (index: number) => string,
-): SalesBarChartXLabel[] {
-  const last = bars.length - 1
-  return indices
-    .filter((i) => bars[i] !== undefined)
-    .map((i) => {
-      if (i === 0) return { x: 0, label: labelFor(i), anchor: 'start' as const }
-      if (i === last) return { x: width, label: labelFor(i), anchor: 'end' as const }
-      const bar = bars[i]
-      return { x: bar.x + bar.w / 2, label: labelFor(i), anchor: 'middle' as const }
-    })
 }
 
 export function SalesBarChart({ bars, dims, ticks, axisMax, xLabels, details, ariaLabel }: SalesBarChartProps) {

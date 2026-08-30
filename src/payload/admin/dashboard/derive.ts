@@ -7,12 +7,6 @@ import {
   shiftYearMonth,
 } from '../../../lib/format.ts'
 import { isPromoExpired } from '../../../lib/promo-core.ts'
-import {
-  buildChartXLabels,
-  type SalesBarChartBar,
-  type SalesBarChartTick,
-  type SalesBarChartXLabel,
-} from './SalesBarChart.tsx'
 
 /**
  * Cœur pur du tableau de bord `/admin` (refonte home : bandeau KPI →
@@ -377,6 +371,60 @@ export function everyNthLabels(keys: string[], target = 5): number[] {
   return [...indices].sort((a, b) => a - b)
 }
 
+/**
+ * Props géométriques d'une barre du graphique ventes, prêtes pour
+ * `<SalesBarChart>` (`SalesBarChart.tsx`) — construites par `buildSalesChart`
+ * plus bas.
+ */
+export interface SalesBarChartBar {
+  x: number
+  y: number
+  w: number
+  h: number
+  /** Clé stable de la barre (jour `AAAA-MM-JJ` ou mois `AAAA-MM`) — clé de `details`. */
+  key: string
+}
+
+export interface SalesBarChartTick {
+  value: number
+  /** Libellé déjà formaté (`fmtEurosAxis`) — `SalesBarChart.tsx` ne formate rien. */
+  label: string
+}
+
+export interface SalesBarChartXLabel {
+  x: number
+  label: string
+  anchor: 'start' | 'middle' | 'end'
+}
+
+/**
+ * Construit les `xLabels` (libellés sous l'axe) à partir d'indices de barres
+ * DÉJÀ répartis (`everyNthLabels`, plus haut) — factorisé ici plutôt que
+ * dupliqué dans les 3 call-sites (`Dashboard.tsx`, quotidien + mensuel de
+ * `../ventes/VentesPage.tsx`) : même géométrie partout (premier libellé ancré
+ * au bord gauche du graphique, dernier au bord droit, les autres centrés sur
+ * leur colonne — jamais de texte qui déborde du `viewBox`). Le TEXTE du
+ * libellé reste au choix de l'appelant (`labelFor`, ex. `fmtDayMonthFr` pour
+ * un axe quotidien, `bucket.label` pour un axe mensuel) : `SalesBarChart.tsx`
+ * ne formate rien.
+ */
+export function buildChartXLabels(
+  bars: { x: number; w: number }[],
+  indices: number[],
+  width: number,
+  labelFor: (index: number) => string,
+): SalesBarChartXLabel[] {
+  const last = bars.length - 1
+  return indices
+    .filter((i) => bars[i] !== undefined)
+    .map((i) => {
+      if (i === 0) return { x: 0, label: labelFor(i), anchor: 'start' as const }
+      if (i === last) return { x: width, label: labelFor(i), anchor: 'end' as const }
+      const bar = bars[i]
+      return { x: bar.x + bar.w / 2, label: labelFor(i), anchor: 'middle' as const }
+    })
+}
+
 export interface SalesChartData {
   bars: SalesBarChartBar[]
   ticks: SalesBarChartTick[]
@@ -387,7 +435,7 @@ export interface SalesChartData {
 }
 
 export interface SalesChartOptions {
-  /** Libellé sous l'axe X pour l'indice `i` (`buildChartXLabels`, `SalesBarChart.tsx`) — ex. `fmtDayMonthFr(dailyBuckets[i].day)` (quotidien) ou `monthlyBuckets[i].label` (mensuel) : ferme sur le tableau d'ORIGINE, pas sur `buckets`. */
+  /** Libellé sous l'axe X pour l'indice `i` (`buildChartXLabels`, plus haut) — ex. `fmtDayMonthFr(dailyBuckets[i].day)` (quotidien) ou `monthlyBuckets[i].label` (mensuel) : ferme sur le tableau d'ORIGINE, pas sur `buckets`. */
   labelFor: (index: number) => string
   /**
    * Texte de survol/infobulle par barre — reçoit le seau ADAPTÉ (`{day, ca}`)
@@ -406,7 +454,7 @@ export interface SalesChartOptions {
  * `chartAxisTicks` (grille rondes) → `salesChartGeometry` (barres à
  * l'échelle de `axisMax`, JAMAIS du maximum brut de la série — cf. le
  * commentaire de `salesChartGeometry`, l'invariant que ce pipeline garantit)
- * → `everyNthLabels` + `buildChartXLabels` (`SalesBarChart.tsx`) → un
+ * → `everyNthLabels` + `buildChartXLabels` (plus haut) → un
  * `fmtEurosAxis` par graduation → une `Map` de détails par barre. Consolidé
  * depuis les 3 sites qui recomposaient ce pipeline à la main (`Dashboard.tsx`,
  * quotidien + mensuel de `../ventes/VentesPage.tsx`).
