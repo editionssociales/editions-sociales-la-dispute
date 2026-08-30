@@ -57,7 +57,9 @@ const SORTS = BOOK_SORTS.map((s) => ({ value: s, label: SORT_LABELS[s] }));
  * qui transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
  * par-dessus (recette « grille encadrée », voir AGENTS.md).
  */
-const CELL_TEXT = "text-[13px] font-bold uppercase tracking-[.03em] text-ink";
+// 12px depuis la 9e passe du 2026-08-30 (« uniformise les tailles de polices
+// dans la section de tri ») — même corps que les chips de filtres actifs.
+const CELL_TEXT = "text-[12px] font-bold uppercase tracking-[.03em] text-ink";
 
 /**
  * Chevron de menu déroulant. Rendu en SVG et NON par un glyphe (▾) : Effra ne
@@ -210,7 +212,7 @@ function HouseTag({
       aria-pressed={active}
       className={`min-h-11 whitespace-nowrap py-2.5 text-left transition-colors motion-reduce:transition-none ${
         dense
-          ? "px-2 text-[11px] font-bold uppercase tracking-[.02em] text-ink"
+          ? "px-2 text-[12px] font-bold uppercase tracking-[.02em] text-ink"
           : `px-3.5 ${CELL_TEXT}`
       } ${
         active
@@ -428,8 +430,8 @@ export function CatalogueFilters({
         </SelectCell>
 
         <SelectCell
-          label="Tri"
-          ariaLabel="Trier"
+          label="Trier par"
+          ariaLabel="Trier par"
           // Édition verrouillée (pas de maisons) : le Tri occupe seul sa
           // rangée mobile.
           className={showHouseGroup ? "" : "col-span-3 sm:col-span-1"}
