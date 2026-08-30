@@ -3,17 +3,14 @@ import type { ServerProps } from 'payload'
 import { Pill } from '@payloadcms/ui'
 
 import {
-  chartAxisTicks,
+  buildSalesChart,
   dailySalesBuckets,
   editionTag,
-  everyNthLabels,
   fmtDateFr,
   fmtDayMonthFr,
   fmtEuros,
-  fmtEurosAxis,
   humanAge,
   rollingWindows,
-  salesChartGeometry,
   salesStats,
   summarizeLines,
   urgentStockRows,
@@ -35,7 +32,7 @@ import {
 import styles from './dashboard.module.css'
 import { PromoDeactivateButton } from './PromoDeactivateButton.tsx'
 import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
-import { buildChartXLabels, SalesBarChart } from './SalesBarChart.tsx'
+import { SalesBarChart } from './SalesBarChart.tsx'
 
 /**
  * Slot `beforeDashboard` du dashboard `/admin` (home — design v4, refonte
@@ -125,29 +122,21 @@ export async function Dashboard({ payload }: ServerProps) {
   const ventes = salesWindow.state === 'ok' ? salesStats(salesWindow.rows, now) : null
   const dailyBuckets = salesWindow.state === 'ok' ? dailySalesBuckets(salesWindow.rows, now) : null
   const chartMax = dailyBuckets ? Math.max(0, ...dailyBuckets.map((b) => b.ca)) : 0
-  // Grille/barres à la même échelle (`axisMax`, jamais le maximum brut de la
-  // série) — cf. le commentaire de `salesChartGeometry` (`derive.ts`).
-  const chartAxis = chartAxisTicks(chartMax)
-  const chartBars = dailyBuckets
-    ? salesChartGeometry(dailyBuckets, { width: CHART_WIDTH, height: CHART_BAR_AREA_HEIGHT }, chartAxis.axisMax)
-    : []
+  const chart = dailyBuckets
+    ? buildSalesChart(
+        dailyBuckets,
+        { width: CHART_WIDTH, height: CHART_BAR_AREA_HEIGHT },
+        {
+          labelFor: (i) => fmtDayMonthFr(dailyBuckets[i].day),
+          // « 12 août — 148,50 € » (jour + mois SANS année, réutilisé tel
+          // quel par `../ventes/VentesPage.tsx`, cf. `derive.ts`).
+          detailFor: (b) => `${fmtDayMonthFr(b.day)} — ${fmtEuros(b.ca)}`,
+          xLabelTarget: CHART_X_LABEL_TARGET,
+        },
+      )
+    : null
   const chartFirstDay = dailyBuckets?.[0]?.day ?? null
   const chartLastDay = dailyBuckets?.[dailyBuckets.length - 1]?.day ?? null
-  const chartTicks = chartAxis.ticks.map((value) => ({ value, label: fmtEurosAxis(value) }))
-  const chartLabelIndices = dailyBuckets
-    ? everyNthLabels(
-        dailyBuckets.map((b) => b.day),
-        CHART_X_LABEL_TARGET,
-      )
-    : []
-  const chartXLabels = dailyBuckets
-    ? buildChartXLabels(chartBars, chartLabelIndices, CHART_WIDTH, (i) => fmtDayMonthFr(dailyBuckets[i].day))
-    : []
-  // Détail au survol par barre — « 12 août — 148,50 € » (jour + mois SANS
-  // année, réutilisé tel quel par `../ventes/VentesPage.tsx`, cf. `derive.ts`).
-  const chartDetails = new Map(
-    (dailyBuckets ?? []).map((b) => [b.day, `${fmtDayMonthFr(b.day)} — ${fmtEuros(b.ca)}`]),
-  )
 
   // Carte KPI ventes → liste des commandes filtrée sur la même borne 30 j
   // (dons exclus, même étanchéité comptable que `salesStats`), motif hérité
@@ -218,17 +207,17 @@ export async function Dashboard({ payload }: ServerProps) {
           </Pill>
         ) : (
           <SalesBarChart
-            bars={chartBars.map((bar) => ({ x: bar.x, y: bar.y, w: bar.w, h: bar.h, key: bar.day }))}
+            bars={chart!.bars}
             dims={{
               width: CHART_WIDTH,
               height: CHART_HEIGHT,
               topPadding: CHART_TOP_PADDING,
               barAreaHeight: CHART_BAR_AREA_HEIGHT,
             }}
-            ticks={chartTicks}
-            axisMax={chartAxis.axisMax}
-            xLabels={chartXLabels}
-            details={chartDetails}
+            ticks={chart!.ticks}
+            axisMax={chart!.axisMax}
+            xLabels={chart!.xLabels}
+            details={chart!.details}
             ariaLabel={`Ventes par jour, du ${fmtDateFr(chartFirstDay ?? '')} au ${fmtDateFr(
               chartLastDay ?? '',
             )}, maximum ${fmtEuros(chartMax)}`}

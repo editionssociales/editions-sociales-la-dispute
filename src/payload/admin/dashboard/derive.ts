@@ -7,6 +7,12 @@ import {
   shiftYearMonth,
 } from '../../../lib/format.ts'
 import { isPromoExpired } from '../../../lib/promo-core.ts'
+import {
+  buildChartXLabels,
+  type SalesBarChartBar,
+  type SalesBarChartTick,
+  type SalesBarChartXLabel,
+} from './SalesBarChart.tsx'
 
 /**
  * Cœur pur du tableau de bord `/admin` (refonte home : bandeau KPI →
@@ -369,6 +375,70 @@ export function everyNthLabels(keys: string[], target = 5): number[] {
     indices.add(Math.round(i * step))
   }
   return [...indices].sort((a, b) => a - b)
+}
+
+export interface SalesChartData {
+  bars: SalesBarChartBar[]
+  ticks: SalesBarChartTick[]
+  axisMax: number
+  xLabels: SalesBarChartXLabel[]
+  /** Texte de survol/infobulle par barre (clé = `bucket.day`) — prêt pour la prop `details` de `<SalesBarChart>`. */
+  details: Map<string, string>
+}
+
+export interface SalesChartOptions {
+  /** Libellé sous l'axe X pour l'indice `i` (`buildChartXLabels`, `SalesBarChart.tsx`) — ex. `fmtDayMonthFr(dailyBuckets[i].day)` (quotidien) ou `monthlyBuckets[i].label` (mensuel) : ferme sur le tableau d'ORIGINE, pas sur `buckets`. */
+  labelFor: (index: number) => string
+  /**
+   * Texte de survol/infobulle par barre — reçoit le seau ADAPTÉ (`{day, ca}`)
+   * ET son indice, même motif que `labelFor` : c'est ainsi que le détail
+   * MENSUEL accède à `nbCommandes` (porté par `MonthlySalesBucket`, absent de
+   * `DailySalesBucket`) en fermant sur le tableau mensuel d'origine via `i`.
+   */
+  detailFor: (bucket: DailySalesBucket, index: number) => string
+  /** Cible de `everyNthLabels` (nombre de libellés d'axe X visés). */
+  xLabelTarget?: number
+}
+
+/**
+ * Pipeline complet du graphique ventes — seaux en entrée, props PRÊTES pour
+ * `<SalesBarChart>` en sortie (`bars`/`ticks`/`axisMax`/`xLabels`/`details`) :
+ * `chartAxisTicks` (grille rondes) → `salesChartGeometry` (barres à
+ * l'échelle de `axisMax`, JAMAIS du maximum brut de la série — cf. le
+ * commentaire de `salesChartGeometry`, l'invariant que ce pipeline garantit)
+ * → `everyNthLabels` + `buildChartXLabels` (`SalesBarChart.tsx`) → un
+ * `fmtEurosAxis` par graduation → une `Map` de détails par barre. Consolidé
+ * depuis les 3 sites qui recomposaient ce pipeline à la main (`Dashboard.tsx`,
+ * quotidien + mensuel de `../ventes/VentesPage.tsx`).
+ *
+ * `buckets` est toujours la forme `{day, ca}` (mensuel : adapté au préalable
+ * par l'appelant via `monthlyBucketToChartInput`) — `labelFor`/`detailFor`
+ * reçoivent l'INDICE, pas seulement le seau, pour fermer sur le tableau
+ * d'ORIGINE (`MonthlySalesBucket[]`, qui porte `nbCommandes`) exactement
+ * comme les 3 sites le faisaient déjà pour `labelFor` avant cette extraction.
+ * Chaque site garde à part son propre `chartMax` BRUT (`Math.max(0,
+ * ...buckets.map(b => b.ca))`, PAS l'`axisMax` arrondi calculé ici) pour son
+ * `ariaLabel` — ce n'est pas une prop de `<SalesBarChart>`, donc pas recalculé
+ * dans ce pipeline.
+ */
+export function buildSalesChart(
+  buckets: DailySalesBucket[],
+  dims: { width: number; height: number },
+  opts: SalesChartOptions,
+): SalesChartData {
+  const rawMax = Math.max(0, ...buckets.map((b) => b.ca))
+  const axis = chartAxisTicks(rawMax)
+  const geometry = salesChartGeometry(buckets, dims, axis.axisMax)
+  const bars: SalesBarChartBar[] = geometry.map((bar) => ({ x: bar.x, y: bar.y, w: bar.w, h: bar.h, key: bar.day }))
+  const ticks: SalesBarChartTick[] = axis.ticks.map((value) => ({ value, label: fmtEurosAxis(value) }))
+  const labelIndices = everyNthLabels(
+    buckets.map((b) => b.day),
+    opts.xLabelTarget,
+  )
+  const xLabels = buildChartXLabels(bars, labelIndices, dims.width, opts.labelFor)
+  const details = new Map(buckets.map((b, i) => [b.day, opts.detailFor(b, i)]))
+
+  return { bars, ticks, axisMax: axis.axisMax, xLabels, details }
 }
 
 /* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
