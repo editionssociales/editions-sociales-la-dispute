@@ -223,10 +223,11 @@ export function TiersRail({
           haut-droit du panneau (`tiers-drawer.tsx`) — sans elle, il couvrirait
           le coin de la première carte au repos. */}
       <div className="px-5 py-4 sm:px-8 sm:py-6 lg:pt-14">
-        <h2
-          id="contreparties-titre"
-          className="mb-4 font-sans text-sm font-extrabold uppercase tracking-[.08em] text-ink"
-        >
+        {/* Surtitre retiré du rendu visuel (retour client 2026-08-30) — l'`h2`
+            reste le nom accessible de l'aside (`aria-labelledby`), juste
+            escamoté (`sr-only`) : sans lui, plus de marge au-dessus de la
+            carte montant libre, qui devient le premier élément visible. */}
+        <h2 id="contreparties-titre" className="sr-only">
           Contreparties
         </h2>
         {/* Plus d'ancre « Ou donnez un montant libre ↓ » en tête (retirée
