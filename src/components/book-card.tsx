@@ -91,8 +91,7 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
     // descendant : la puce panier est un vrai `<button>`
     // (`cart/add-to-cart-button.tsx`), et un `<a>` exclut tout descendant
     // interactif (HTML Living Standard, règle `nested-interactive` d'axe-core
-    // — même grammaire que la case « Tous les livres »/bascule de
-    // `mosaic-disclosure.tsx`, jamais un élément à la fois lien et bouton).
+    // — jamais un élément à la fois lien et bouton).
     // Le lien continue de couvrir la couverture (titre porté par son `alt`) ;
     // le frère qui suit, poussé en bas par la croissance du lien, garde le
     // rendu visuel inchangé.

@@ -37,7 +37,7 @@ export type { BookHoverCardData };
  * Pattern ARIA « tooltip riche » (WCAG 1.4.13) : `role="tooltip"` + `id`
  * (`useId`), `aria-describedby` posé sur le déclencheur SEULEMENT quand la
  * carte est ouverte. PAS de `aria-expanded` — ce n'est pas un déroulé
- * (`mosaic-disclosure.tsx`). AUCUN élément interactif dans la carte (règle
+ * (grammaire du header mobile, `site-header.tsx`). AUCUN élément interactif dans la carte (règle
  * nested-interactive, cf. commentaire de `book-card.tsx`) : pas de lien
  * « voir la fiche ».
  *

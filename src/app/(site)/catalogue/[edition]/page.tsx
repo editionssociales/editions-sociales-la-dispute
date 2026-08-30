@@ -65,8 +65,9 @@ async function EditionCatalogueBody({
   // conservé), même logique que « Tout effacer » côté filtres.
   const resetHref = catalogueHref({ sort: filters.sort }, basePath);
 
-  // Ordre alphabétique des libellés (getFacets) — mosaïque « désordonnée »
-  // assumée, tailles pondérées sans tri (arbitrage client 22/07).
+  // Ordre alphabétique des libellés (getFacets) — l'index-manifeste trie sa
+  // propre copie par count pour l'ordre de LECTURE (cf. `libelle-mosaic.tsx`,
+  // arbitrage client 2026-08-30).
   // « Tous les livres » reste épinglée en tête (pas un vrai libellé).
   const libelleItems: { name: string; slug: string | null; count: number }[] = [
     { name: "Tous les livres", slug: null, count: facets.total },
@@ -96,7 +97,9 @@ async function EditionCatalogueBody({
           className="mt-6 sm:mt-7"
         />
 
-        <div className="mt-6">
+        {/* Accolé au manifeste (mt-3, arbitrage 2026-08-30) — même montage
+            que `catalogue/page.tsx`. */}
+        <div className="mt-3">
           <CatalogueFilters
             libelles={facets.libelles}
             authors={facets.authors}

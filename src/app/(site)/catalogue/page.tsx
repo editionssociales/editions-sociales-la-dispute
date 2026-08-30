@@ -100,10 +100,10 @@ async function CatalogueBody({
           rôle visuellement. */}
       <h1 className="sr-only">Le catalogue par libellés</h1>
 
-      {/* Même vue de libellés que /catalogue/[edition] (« cases variables »,
-          vue unique depuis l'arbitrage client 25/07) ; les étiquettes de
-          libellés des filtres ci-dessous sont masquées, cette vue couvre
-          déjà ce rôle. */}
+      {/* Même vue de libellés que /catalogue/[edition] (« index-manifeste »,
+          vue unique — arbitrage client 2026-08-30, remplace les « cases
+          variables » du 25/07) ; les étiquettes de libellés des filtres
+          ci-dessous sont masquées, cette vue couvre déjà ce rôle. */}
       {/* Provider de transition partagé (`catalogue-transition.tsx`) : les
           filtres y démarrent leurs navigations, la zone ci-dessous — compteur
           + grille + pagination, LES sous-arbres qui changent — s'estompe
@@ -121,7 +121,9 @@ async function CatalogueBody({
           ariaLabel="Libellés du catalogue"
         />
 
-        <div className="mt-6">
+        {/* Accolé au manifeste (mt-3, arbitrage 2026-08-30) : recherche et
+            maisons travaillent au contact direct des libellés. */}
+        <div className="mt-3">
           <CatalogueFilters
             libelles={facets.libelles}
             authors={facets.authors}

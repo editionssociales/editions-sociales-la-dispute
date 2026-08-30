@@ -6,8 +6,8 @@ import { BuyLinksList } from "./buy-links";
 
 /**
  * Verrouille le bug signalé par la cliente (`src/components/CLAUDE.md` ne le
- * documente pas encore explicitement, mais suit le même esprit que
- * `mosaic-disclosure.test.tsx`) : les liens libraires secondaires
+ * documente pas encore explicitement, mais suit le même esprit de verrou par
+ * test que `button-display.test.tsx`) : les liens libraires secondaires
  * (ParisLibrairies/LaLibrairie) doivent apparaître sur les CINQ statuts, y
  * compris `preorder` et le panier natif (`canAddToCart`) — les deux branches
  * qui les perdaient encore avant cette correction.
