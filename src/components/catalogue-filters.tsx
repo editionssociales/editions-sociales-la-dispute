@@ -361,14 +361,16 @@ export function CatalogueFilters({
           par construction. En dessous de `sm` (5e passe 2026-08-30, une
           ligne de moins avant les livres) : la recherche prend sa rangée
           (`col-span-3`), puis maisons + Tri se partagent la seconde
-          (`auto auto 1fr` — les maisons denses à leur min-content, le Tri
-          absorbe le reste) et la liste Auteur disparaît — composé sur LE
-          MÊME élément grille, jamais un wrapper intercalé qui casserait le
-          mortier de 2px. */}
+          (`1fr 1fr auto`, 8e passe — le Tri à la largeur de son CONTENU,
+          les deux maisons se répartissent le reste ; `1fr` valant
+          `minmax(auto,1fr)`, une maison ne descend jamais sous son
+          min-content, la répartition s'ajuste) et la liste Auteur
+          disparaît — composé sur LE MÊME élément grille, jamais un wrapper
+          intercalé qui casserait le mortier de 2px. */}
       <FramedGrid
         role="group"
         aria-label="Recherche et tri du catalogue"
-        className={`grid-cols-[auto_auto_1fr] items-stretch sm:grid-cols-[1fr_auto_auto] ${showHouseGroup ? "sm:mt-[2px]" : ""}`}
+        className={`grid-cols-[1fr_1fr_auto] items-stretch sm:grid-cols-[1fr_auto_auto] ${showHouseGroup ? "sm:mt-[2px]" : ""}`}
       >
         <label className="col-span-3 flex min-h-11 min-w-0 items-center bg-paper px-3.5 sm:col-span-1">
           <span className="sr-only">Rechercher</span>
