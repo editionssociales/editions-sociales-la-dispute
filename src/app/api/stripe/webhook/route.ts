@@ -1,9 +1,13 @@
 import * as Sentry from "@sentry/nextjs";
 import { revalidateTag } from "next/cache";
 import type Stripe from "stripe";
-import { selectDonationMailer } from "@/lib/donation-mail";
 import { getStripe } from "@/lib/stripe";
-import { handleDonationSessionCompleted, handleOrderWebhookEvent, markOrderRefunded } from "./order-handler";
+import {
+  handleBareDonationSessionCompleted,
+  handleDonationSessionCompleted,
+  handleOrderWebhookEvent,
+  markOrderRefunded,
+} from "./order-handler";
 
 /**
  * Premier route handler du repo — POST, dynamique par nature (hors ISR).
@@ -102,27 +106,17 @@ export async function POST(req: Request) {
         // anomalie côté dons : la majorité des remboursements de dons n'ont
         // toujours pas de commande associée).
         await markOrderRefunded(event.data.object as Stripe.Charge);
+      } else if ((event.data.object as Stripe.Checkout.Session).metadata?.donLines) {
+        // Don AVEC contrepartie — commande `orderType: "don"` + décrément
+        // + mail enrichi, idempotents par effet (`order-handler.ts`).
+        // JAMAIS le mailer simple pour ce chemin.
+        await handleDonationSessionCompleted(event.data.object as Stripe.Checkout.Session);
       } else {
-        const session = event.data.object as Stripe.Checkout.Session;
-        // Paiement réellement confirmé — jamais pour un moyen différé encore
-        // en attente (`checkout.session.completed` peut se présenter en
-        // `payment_status !== "paid"`, `async_payment_succeeded` relaiera
-        // l'event le jour où il se confirme, même logique que côté commande).
-        if (session.payment_status === "paid") {
-          if (session.metadata?.donLines) {
-            // Don AVEC contrepartie — commande `orderType: "don"` + décrément
-            // + mail enrichi, idempotents par effet (`order-handler.ts`).
-            // JAMAIS le mailer simple ci-dessous pour ce chemin.
-            await handleDonationSessionCompleted(session);
-          } else if (session.customer_details?.email) {
-            // Don à montant libre (ou palier antérieur à la feature) — chemin
-            // historique, `sendDonationThanks` ne jette jamais (contrat
-            // `DonationMailer`) — best effort assumé, cf. docblock de fichier.
-            await selectDonationMailer().sendDonationThanks({
-              email: session.customer_details.email,
-            });
-          }
-        }
+        // Don à montant libre (ou palier antérieur à la feature) — chemin
+        // historique, best effort assumé, cf. docblock de fichier. Toute la
+        // décision (paiement confirmé, email présent) vit dans la fonction
+        // sœur, comme pour les autres branches.
+        await handleBareDonationSessionCompleted(event.data.object as Stripe.Checkout.Session);
       }
       revalidateTag("donations", "max"); // Next 16 : signature à 2 arguments
     }

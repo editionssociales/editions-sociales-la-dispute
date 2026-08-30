@@ -53,6 +53,9 @@ import { getPagesLegales } from "@/lib/site-content";
  * (`donation-mail.ts`, jamais `order-mail.ts`). `markOrderRefunded` est
  * exportée pour la même raison : `route.ts` la réutilise côté dons pour
  * `charge.refunded`, la fonction étant déjà agnostique du type de commande.
+ * `handleBareDonationSessionCompleted` (2026-08-30) complète la symétrie :
+ * le don SANS contrepartie (montant libre) décide ici aussi — `route.ts`
+ * n'est plus qu'un dispatcher, un appel par branche.
  *
  * SCISSION : le checkout (`/api/checkout`) pose DEUX groupes de metadata
  * (`lines` pour la commande normale, `preorderLines` pour la précommande) —
@@ -653,6 +656,28 @@ export async function handleDonationSessionCompleted(
     },
     skipConfirmationMail: opts?.skipThanksMail,
   });
+}
+
+/**
+ * `checkout.session.completed` / `checkout.session.async_payment_succeeded`
+ * pour un don SANS contrepartie (montant libre, ou palier antérieur à la
+ * feature) — fonction sœur de `handleDonationSessionCompleted`, pour que
+ * `route.ts` reste un dispatcher uniforme (un appel par branche, décision
+ * ici). SANS changer la sémantique du chemin historique : don sec = ZÉRO
+ * écriture Payload (la jauge lit les charges Stripe directement, cf.
+ * `donations.ts`), juste le remerciement simple — best-effort SANS
+ * idempotence garantie (aucune ligne où marquer « déjà envoyé », un rejeu
+ * Stripe peut renvoyer le mail — contrat documenté, `donation-mail.ts`).
+ * Ne fait rien si le paiement n'est pas confirmé (moyen différé en attente,
+ * `async_payment_succeeded` relaiera) ou sans email ; JAMAIS ce chemin pour
+ * un don avec `donLines` (garde défensive — `route.ts` aiguille déjà).
+ */
+export async function handleBareDonationSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  if (session.payment_status !== "paid") return;
+  if (session.metadata?.donLines) return; // don AVEC contrepartie — l'autre chemin, jamais le mailer simple
+  if (!session.customer_details?.email) return;
+  // `sendDonationThanks` ne jette jamais (contrat `DonationMailer`).
+  await selectDonationMailer().sendDonationThanks({ email: session.customer_details.email });
 }
 
 export interface OrderWebhookResult {
