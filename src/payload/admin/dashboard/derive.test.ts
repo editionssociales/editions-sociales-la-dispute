@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bannerHidden,
   bucketWeeklyQuantities,
+  buildSalesChart,
   chartAxisTicks,
   dailySalesBuckets,
   editionTag,
@@ -31,6 +32,7 @@ import {
   linesTooltip,
   sentryErrorEvents,
   sentrySignal,
+  soldRowsInRange,
   splitPromos,
   STOCK_SEUIL_FALLBACK,
   stockOutlook,
@@ -453,6 +455,74 @@ describe('everyNthLabels — indices de libellés d’axe X répartis', () => {
   })
 })
 
+describe('buildSalesChart — pipeline complet (seaux → props prêtes pour <SalesBarChart>)', () => {
+  const buckets: DailySalesBucket[] = [
+    { day: '2026-07-01', ca: 10 },
+    { day: '2026-07-02', ca: 148.5 },
+  ]
+
+  it('composition : barres et grille partagent le même axisMax', () => {
+    const chart = buildSalesChart(
+      buckets,
+      { width: 300, height: 100 },
+      { labelFor: (i) => buckets[i].day, detailFor: (b) => b.day, xLabelTarget: 5 },
+    )
+    // axisMax vient de chartAxisTicks(148.5) → pas 50, axisMax 150 (cf. sa
+    // propre suite) — la géométrie des barres DOIT être mise à l'échelle de
+    // cette même valeur, jamais du maximum brut (148.5).
+    expect(chart.axisMax).toBe(150)
+    expect(chart.ticks.map((t) => t.value)).toEqual([0, 50, 100, 150])
+    expect(chart.ticks[chart.ticks.length - 1].value).toBe(chart.axisMax)
+    // La barre la plus haute (148.5) ne touche jamais la pleine hauteur
+    // puisque axisMax (150) > 148.5 — sinon elle dépasserait la dernière
+    // ligne de grille (invariant garanti par salesChartGeometry(…, axisMax)).
+    expect(chart.bars[1].h).toBeCloseTo((148.5 / 150) * 100)
+    expect(chart.bars[1].h).toBeLessThan(100)
+  })
+
+  it('bars/ticks/xLabels/details ont la forme attendue par <SalesBarChart> (clé = day)', () => {
+    const single: DailySalesBucket[] = [{ day: '2026-07-01', ca: 10 }]
+    const chart = buildSalesChart(
+      single,
+      { width: 100, height: 50 },
+      { labelFor: () => 'libellé', detailFor: (b, i) => `détail ${i} — ${b.day}`, xLabelTarget: 5 },
+    )
+    expect(chart.bars).toEqual([{ x: 0, y: 0, w: 100, h: 50, key: '2026-07-01' }])
+    expect(chart.xLabels).toEqual([{ x: 0, label: 'libellé', anchor: 'start' }])
+    expect(chart.details.get('2026-07-01')).toBe('détail 0 — 2026-07-01')
+  })
+
+  it('detailFor reçoit (bucket adapté, indice) — permet de fermer sur un tableau d’origine distinct (cas mensuel/nbCommandes)', () => {
+    const monthly = [
+      { month: '2026-07', label: 'juillet 2026', ca: 10, nbCommandes: 2 },
+      { month: '2026-08', label: 'août 2026', ca: 40, nbCommandes: 7 },
+    ]
+    const adapted = monthly.map(monthlyBucketToChartInput)
+    const chart = buildSalesChart(
+      adapted,
+      { width: 200, height: 100 },
+      {
+        labelFor: (i) => monthly[i].label,
+        detailFor: (b, i) => `${monthly[i].label} — ${b.ca} · ${monthly[i].nbCommandes} commandes`,
+        xLabelTarget: 5,
+      },
+    )
+    expect(chart.details.get('2026-08')).toBe('août 2026 — 40 · 7 commandes')
+  })
+
+  it('seaux tous à 0 : axisMax à 0, aucune barre de hauteur NaN', () => {
+    const flat: DailySalesBucket[] = [{ day: '2026-07-01', ca: 0 }]
+    const chart = buildSalesChart(
+      flat,
+      { width: 100, height: 50 },
+      { labelFor: () => '', detailFor: () => '', xLabelTarget: 5 },
+    )
+    expect(chart.axisMax).toBe(0)
+    expect(chart.bars[0].h).toBe(0)
+    expect(Number.isNaN(chart.bars[0].h)).toBe(false)
+  })
+})
+
 /* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
 
 // `monthsAgoParisMonthStartUtc` a déménagé dans `src/lib/format.ts`
@@ -643,6 +713,46 @@ describe('topTitles — agrégation par titre sur une fenêtre glissante', () =>
 })
 
 /* ────────────────────────── Ventes — analyse libre (bornes absolues + filtre titre) ────────────────────────── */
+
+describe('soldRowsInRange — garde partagée (dons exclus, bornes [fromMs, toMs] incluses)', () => {
+  const fromMs = new Date('2026-08-01T00:00:00Z').getTime()
+  const toMs = new Date('2026-08-31T23:59:59.999Z').getTime()
+
+  it('borne basse incluse : une row exactement à fromMs est gardée', () => {
+    const row = salesRow({ createdAt: new Date(fromMs).toISOString() })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([row])
+  })
+
+  it('borne haute incluse : une row exactement à toMs est gardée', () => {
+    const row = salesRow({ createdAt: new Date(toMs).toISOString() })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([row])
+  })
+
+  it('juste avant fromMs ou juste après toMs : écartée', () => {
+    const before = salesRow({ createdAt: new Date(fromMs - 1).toISOString() })
+    const after = salesRow({ createdAt: new Date(toMs + 1).toISOString() })
+    expect(soldRowsInRange([before, after], { fromMs, toMs })).toEqual([])
+  })
+
+  it('date invalide (paidAt/createdAt illisible) : écartée, jamais un NaN qui glisserait dans les bornes', () => {
+    const row = salesRow({ createdAt: 'pas-une-date' })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([])
+  })
+
+  it('étanchéité comptable : un don dans la plage est exclu', () => {
+    const row = salesRow({ createdAt: '2026-08-15T12:00:00Z', orderType: 'don' })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([])
+  })
+
+  it('paidAt prime sur createdAt quand présent', () => {
+    // createdAt hors plage, paidAt dans la plage → gardée.
+    const row = salesRow({
+      createdAt: new Date(fromMs - 10 * DAY_MS).toISOString(),
+      paidAt: new Date(fromMs).toISOString(),
+    })
+    expect(soldRowsInRange([row], { fromMs, toMs })).toEqual([row])
+  })
+})
 
 describe('rangeSalesStats — bornes absolues [fromMs, toMs], les deux incluses', () => {
   const fromMs = new Date('2026-08-01T00:00:00Z').getTime()

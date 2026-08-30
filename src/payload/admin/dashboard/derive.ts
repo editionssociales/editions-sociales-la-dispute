@@ -147,28 +147,57 @@ export interface RangeSalesStats {
 }
 
 /**
+ * Forme minimale que garde `soldRowsInRange` — les trois champs qui portent
+ * la garde de vente (date + étanchéité comptable), rien de plus : satisfaite
+ * à la fois par `WindowStatsRow` et `SalesHistoryRow`.
+ */
+interface GuardedRow {
+  paidAt: string | null
+  createdAt: string
+  orderType: string
+}
+
+/**
+ * Garde commune à `rangeSalesStats`/`topTitlesInRange`/`rangeLineStats` —
+ * extraite pour ne plus recopier trois fois le même bloc. Écarte les dons
+ * (étanchéité comptable DURE dons/ventes : un don est exclu ICI, pas
+ * seulement dans le `where` du lecteur I/O) et les rows hors intervalle
+ * ABSOLU `[fromMs, toMs]` (les deux bornes INCLUSES), date de référence
+ * `paidAt` à défaut `createdAt`. Une date illisible (`Date.parse` → `NaN`)
+ * est écartée elle aussi, jamais un `NaN` qui glisserait silencieusement dans
+ * les bornes. Retourne les rows retenues, ordre préservé — chaque appelant
+ * garde son propre calcul métier (totalTTC, lignes…).
+ */
+export function soldRowsInRange<T extends GuardedRow>(rows: T[], bounds: RangeBounds): T[] {
+  const { fromMs, toMs } = bounds
+  const kept: T[] = []
+  for (const row of rows) {
+    if (row.orderType === 'don') continue
+    const at = Date.parse(row.paidAt ?? row.createdAt)
+    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+    kept.push(row)
+  }
+  return kept
+}
+
+/**
  * Statistiques de ventes bornées par un intervalle ABSOLU `[fromMs, toMs]`
  * (les deux bornes incluses) — variante générale dont `windowSalesStats`
  * (fenêtre relative à `now`, plus bas) délègue le calcul de sa fenêtre
  * courante ET de sa fenêtre précédente. Même étanchéité comptable DURE
- * dons/ventes que le reste du fichier (un don est écarté ICI, pas seulement
- * dans le `where` du lecteur I/O) et même convention de date (`paidAt` à
- * défaut `createdAt`). Pas de `deltaPct` ici : une période « libre » choisie
- * par l'équipe n'a pas de « période précédente » canonique (contrairement à
- * une fenêtre glissante 30/90/365 j) — cette notion reste propre à
- * `windowSalesStats`.
+ * dons/ventes que le reste du fichier et même convention de date, portées
+ * par `soldRowsInRange` (plus haut). Pas de `deltaPct` ici : une période
+ * « libre » choisie par l'équipe n'a pas de « période précédente » canonique
+ * (contrairement à une fenêtre glissante 30/90/365 j) — cette notion reste
+ * propre à `windowSalesStats`.
  */
 export function rangeSalesStats<T extends WindowStatsRow>(rows: T[], bounds: RangeBounds): RangeSalesStats {
-  const { fromMs, toMs } = bounds
   let ca = 0
   let nbCommandes = 0
   let nbExemplaires = 0
   let caPrecommande = 0
 
-  for (const row of rows) {
-    if (row.orderType === 'don') continue
-    const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+  for (const row of soldRowsInRange(rows, bounds)) {
     ca += row.totalTTC
     nbCommandes += 1
     nbExemplaires += row.lines.reduce((sum, l) => sum + l.quantity, 0)
@@ -342,6 +371,124 @@ export function everyNthLabels(keys: string[], target = 5): number[] {
   return [...indices].sort((a, b) => a - b)
 }
 
+/**
+ * Props géométriques d'une barre du graphique ventes, prêtes pour
+ * `<SalesBarChart>` (`SalesBarChart.tsx`) — construites par `buildSalesChart`
+ * plus bas.
+ */
+export interface SalesBarChartBar {
+  x: number
+  y: number
+  w: number
+  h: number
+  /** Clé stable de la barre (jour `AAAA-MM-JJ` ou mois `AAAA-MM`) — clé de `details`. */
+  key: string
+}
+
+export interface SalesBarChartTick {
+  value: number
+  /** Libellé déjà formaté (`fmtEurosAxis`) — `SalesBarChart.tsx` ne formate rien. */
+  label: string
+}
+
+export interface SalesBarChartXLabel {
+  x: number
+  label: string
+  anchor: 'start' | 'middle' | 'end'
+}
+
+/**
+ * Construit les `xLabels` (libellés sous l'axe) à partir d'indices de barres
+ * DÉJÀ répartis (`everyNthLabels`, plus haut) — factorisé ici plutôt que
+ * dupliqué dans les 3 call-sites (`Dashboard.tsx`, quotidien + mensuel de
+ * `../ventes/VentesPage.tsx`) : même géométrie partout (premier libellé ancré
+ * au bord gauche du graphique, dernier au bord droit, les autres centrés sur
+ * leur colonne — jamais de texte qui déborde du `viewBox`). Le TEXTE du
+ * libellé reste au choix de l'appelant (`labelFor`, ex. `fmtDayMonthFr` pour
+ * un axe quotidien, `bucket.label` pour un axe mensuel) : `SalesBarChart.tsx`
+ * ne formate rien.
+ */
+export function buildChartXLabels(
+  bars: { x: number; w: number }[],
+  indices: number[],
+  width: number,
+  labelFor: (index: number) => string,
+): SalesBarChartXLabel[] {
+  const last = bars.length - 1
+  return indices
+    .filter((i) => bars[i] !== undefined)
+    .map((i) => {
+      if (i === 0) return { x: 0, label: labelFor(i), anchor: 'start' as const }
+      if (i === last) return { x: width, label: labelFor(i), anchor: 'end' as const }
+      const bar = bars[i]
+      return { x: bar.x + bar.w / 2, label: labelFor(i), anchor: 'middle' as const }
+    })
+}
+
+export interface SalesChartData {
+  bars: SalesBarChartBar[]
+  ticks: SalesBarChartTick[]
+  axisMax: number
+  xLabels: SalesBarChartXLabel[]
+  /** Texte de survol/infobulle par barre (clé = `bucket.day`) — prêt pour la prop `details` de `<SalesBarChart>`. */
+  details: Map<string, string>
+}
+
+export interface SalesChartOptions {
+  /** Libellé sous l'axe X pour l'indice `i` (`buildChartXLabels`, plus haut) — ex. `fmtDayMonthFr(dailyBuckets[i].day)` (quotidien) ou `monthlyBuckets[i].label` (mensuel) : ferme sur le tableau d'ORIGINE, pas sur `buckets`. */
+  labelFor: (index: number) => string
+  /**
+   * Texte de survol/infobulle par barre — reçoit le seau ADAPTÉ (`{day, ca}`)
+   * ET son indice, même motif que `labelFor` : c'est ainsi que le détail
+   * MENSUEL accède à `nbCommandes` (porté par `MonthlySalesBucket`, absent de
+   * `DailySalesBucket`) en fermant sur le tableau mensuel d'origine via `i`.
+   */
+  detailFor: (bucket: DailySalesBucket, index: number) => string
+  /** Cible de `everyNthLabels` (nombre de libellés d'axe X visés). */
+  xLabelTarget?: number
+}
+
+/**
+ * Pipeline complet du graphique ventes — seaux en entrée, props PRÊTES pour
+ * `<SalesBarChart>` en sortie (`bars`/`ticks`/`axisMax`/`xLabels`/`details`) :
+ * `chartAxisTicks` (grille rondes) → `salesChartGeometry` (barres à
+ * l'échelle de `axisMax`, JAMAIS du maximum brut de la série — cf. le
+ * commentaire de `salesChartGeometry`, l'invariant que ce pipeline garantit)
+ * → `everyNthLabels` + `buildChartXLabels` (plus haut) → un
+ * `fmtEurosAxis` par graduation → une `Map` de détails par barre. Consolidé
+ * depuis les 3 sites qui recomposaient ce pipeline à la main (`Dashboard.tsx`,
+ * quotidien + mensuel de `../ventes/VentesPage.tsx`).
+ *
+ * `buckets` est toujours la forme `{day, ca}` (mensuel : adapté au préalable
+ * par l'appelant via `monthlyBucketToChartInput`) — `labelFor`/`detailFor`
+ * reçoivent l'INDICE, pas seulement le seau, pour fermer sur le tableau
+ * d'ORIGINE (`MonthlySalesBucket[]`, qui porte `nbCommandes`) exactement
+ * comme les 3 sites le faisaient déjà pour `labelFor` avant cette extraction.
+ * Chaque site garde à part son propre `chartMax` BRUT (`Math.max(0,
+ * ...buckets.map(b => b.ca))`, PAS l'`axisMax` arrondi calculé ici) pour son
+ * `ariaLabel` — ce n'est pas une prop de `<SalesBarChart>`, donc pas recalculé
+ * dans ce pipeline.
+ */
+export function buildSalesChart(
+  buckets: DailySalesBucket[],
+  dims: { width: number; height: number },
+  opts: SalesChartOptions,
+): SalesChartData {
+  const rawMax = Math.max(0, ...buckets.map((b) => b.ca))
+  const axis = chartAxisTicks(rawMax)
+  const geometry = salesChartGeometry(buckets, dims, axis.axisMax)
+  const bars: SalesBarChartBar[] = geometry.map((bar) => ({ x: bar.x, y: bar.y, w: bar.w, h: bar.h, key: bar.day }))
+  const ticks: SalesBarChartTick[] = axis.ticks.map((value) => ({ value, label: fmtEurosAxis(value) }))
+  const labelIndices = everyNthLabels(
+    buckets.map((b) => b.day),
+    opts.xLabelTarget,
+  )
+  const xLabels = buildChartXLabels(bars, labelIndices, dims.width, opts.labelFor)
+  const details = new Map(buckets.map((b, i) => [b.day, opts.detailFor(b, i)]))
+
+  return { bars, ticks, axisMax: axis.axisMax, xLabels, details }
+}
+
 /* ────────────────────────── Ventes — historique 13 mois (page /admin/ventes) ────────────────────────── */
 
 /**
@@ -453,13 +600,9 @@ export function topTitlesInRange(
   bounds: RangeBounds,
   { max }: { max: number },
 ): TopTitleRow[] {
-  const { fromMs, toMs } = bounds
   const byTitle = new Map<string, { exemplaires: number; ca: number }>()
 
-  for (const row of rows) {
-    if (row.orderType === 'don') continue
-    const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+  for (const row of soldRowsInRange(rows, bounds)) {
     for (const line of row.lines) {
       const entry = byTitle.get(line.titleSnapshot) ?? { exemplaires: 0, ca: 0 }
       entry.exemplaires += line.quantity
@@ -552,15 +695,11 @@ export interface RangeLineStats {
  * étanchéité comptable dons/ventes que le reste du fichier.
  */
 export function rangeLineStats(rows: SalesHistoryRow[], bounds: RangeBounds): RangeLineStats {
-  const { fromMs, toMs } = bounds
   let ca = 0
   let nbCommandes = 0
   let nbExemplaires = 0
 
-  for (const row of rows) {
-    if (row.orderType === 'don') continue
-    const at = Date.parse(row.paidAt ?? row.createdAt)
-    if (Number.isNaN(at) || at < fromMs || at > toMs) continue
+  for (const row of soldRowsInRange(rows, bounds)) {
     if (row.lines.length === 0) continue
     nbCommandes += 1
     for (const line of row.lines) {

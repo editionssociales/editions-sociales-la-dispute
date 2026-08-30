@@ -166,28 +166,42 @@ function badFilter(req: PayloadRequest, err: unknown): Response {
   return Response.json({ error: `Filtre de liste illisible : ${message}` }, { status: 400 })
 }
 
-/** `GET /api/orders/export/preparation` — colonnes de préparation/expédition, sur la sélection cochée ou les lignes de la vue. */
-export const exportPreparationHandler: PayloadHandler = async (req) => {
-  if (isAdminOrEditor({ req }) !== true) return forbidden()
-  const resolved = resolveExportWhere(req)
-  if ('error' in resolved) return Response.json(resolved, { status: 400 })
-  try {
-    const rows = await fetchOrdersForExport(req.payload, resolved.where)
-    return csvResponse(`commandes-preparation-${todayStamp()}.csv`, formatPreparationCsv(rows))
-  } catch (err) {
-    return badFilter(req, err)
+/**
+ * Fabrique des deux handlers d'export — même garde, même résolution du
+ * critère (`ids` cochés puis vue), même relecture, seuls le préfixe du nom
+ * de fichier et la mise en forme CSV distinguent réellement les profils.
+ * Exportée pour le test : le comportement commun aux deux profils se
+ * verrouille une fois, sur un handler construit ici, plutôt que deux fois
+ * sur chaque export réel.
+ */
+export function createOrderExportHandler({
+  filenamePrefix,
+  formatCsv,
+}: {
+  filenamePrefix: string
+  formatCsv: (orders: readonly OrderExportRow[]) => string
+}): PayloadHandler {
+  return async (req) => {
+    if (isAdminOrEditor({ req }) !== true) return forbidden()
+    const resolved = resolveExportWhere(req)
+    if ('error' in resolved) return Response.json(resolved, { status: 400 })
+    try {
+      const rows = await fetchOrdersForExport(req.payload, resolved.where)
+      return csvResponse(`${filenamePrefix}-${todayStamp()}.csv`, formatCsv(rows))
+    } catch (err) {
+      return badFilter(req, err)
+    }
   }
 }
 
+/** `GET /api/orders/export/preparation` — colonnes de préparation/expédition, sur la sélection cochée ou les lignes de la vue. */
+export const exportPreparationHandler: PayloadHandler = createOrderExportHandler({
+  filenamePrefix: 'commandes-preparation',
+  formatCsv: formatPreparationCsv,
+})
+
 /** `GET /api/orders/export/compta` — colonnes comptables (TVA ventilée), sur la sélection cochée ou les lignes de la vue. */
-export const exportComptaHandler: PayloadHandler = async (req) => {
-  if (isAdminOrEditor({ req }) !== true) return forbidden()
-  const resolved = resolveExportWhere(req)
-  if ('error' in resolved) return Response.json(resolved, { status: 400 })
-  try {
-    const rows = await fetchOrdersForExport(req.payload, resolved.where)
-    return csvResponse(`commandes-compta-${todayStamp()}.csv`, formatComptaCsv(rows))
-  } catch (err) {
-    return badFilter(req, err)
-  }
-}
+export const exportComptaHandler: PayloadHandler = createOrderExportHandler({
+  filenamePrefix: 'commandes-compta',
+  formatCsv: formatComptaCsv,
+})

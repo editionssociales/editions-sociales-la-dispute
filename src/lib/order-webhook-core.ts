@@ -4,12 +4,19 @@
  * l'appelant (`api/stripe/webhook/order-handler.ts`) extrait les champs bruts
  * de l'objet Stripe (déjà de simples valeurs JSON) et joint les lignes
  * décodées (`checkout-core.ts:decodeCheckoutLines`) au titre/ISBN/stock relus
- * fraîchement (`commerce-source.ts`) — ce module ne fait que la validation
- * minimale (email/adresse/lignes présents) + la mise en forme vers le shape
- * `payload.create({collection:'orders'})`, symétrique de `checkout-core.ts`
- * côté création de session.
+ * fraîchement (`commerce-source.ts`) — ce module fait la validation
+ * minimale (email/adresse/lignes présents), la mise en forme vers le shape
+ * `payload.create({collection:'orders'})` (symétrique de `checkout-core.ts`
+ * côté création de session) ET les petites conversions champ-à-champ
+ * (pays, centimes de metadata, adresse) que l'appelant gardait privées
+ * avant le refactor. Les types `Stripe.*`/`Order` n'apparaissent qu'en
+ * `import type`, effacés à la compilation — aucun SDK ni Payload chargé.
  */
+import type Stripe from "stripe";
+import type { Order } from "@/payload-types";
 import type { ShippingMethodLabel } from "./cart-quote";
+import type { DecodedCheckoutLine } from "./checkout-core";
+import type { DonationMailRecapAddress } from "./donation-mail";
 import { centsToEuros } from "./money";
 
 /** Ventes restreintes FR/BE/CH (`Orders.ts:shippingAddress.country`, même contrainte que `shipping_address_collection`). */
@@ -115,6 +122,43 @@ export interface OrderCreateData {
   confirmationSent: boolean;
 }
 
+const ORDER_COUNTRIES: readonly OrderCountry[] = ["FR", "BE", "CH"];
+
+/** Restreint un code pays Stripe à l'ensemble vendu — `shipping_address_collection` ne devrait jamais renvoyer autre chose, repli défensif sur FR sinon. */
+export function toOrderCountry(country: string | null): OrderCountry {
+  return (ORDER_COUNTRIES as readonly string[]).includes(country ?? "")
+    ? (country as OrderCountry)
+    : "FR";
+}
+
+/** Parse un montant en centimes posé en `metadata` Stripe — `0` si absent/non fini (metadata corrompue), jamais `NaN` stocké. */
+export function metadataCents(value: string | undefined): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Parse l'id de code promo posé en `metadata` — `null` si absent/non fini. */
+export function metadataPromoCodeId(value: string | undefined): number | null {
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Adresse Stripe (`collected_information.shipping_details`) → faits `Orders` — `null` si absente (anomalie sur une session complétée). */
+export function addressFromStripe(
+  shipping: Stripe.Checkout.Session.CollectedInformation.ShippingDetails | null | undefined,
+): OrderAddressFacts | null {
+  if (!shipping?.address) return null;
+  return {
+    fullName: shipping.name,
+    addressLine1: shipping.address.line1 ?? "",
+    addressLine2: shipping.address.line2 ?? undefined,
+    postalCode: shipping.address.postal_code ?? "",
+    city: shipping.address.city ?? "",
+    country: toOrderCountry(shipping.address.country),
+  };
+}
+
 /**
  * Assemble les données `Orders` à partir des faits extraits d'une session —
  * refuse (jamais ne jette) si email/adresse/lignes manquent : une session
@@ -212,4 +256,58 @@ export function computePartTotalCents(
 ): number {
   const subtotalCents = lines.reduce((sum, l) => sum + l.unitPriceCents * l.quantity, 0);
   return Math.max(0, subtotalCents - discountCents) + shippingCostCents;
+}
+
+/* ------------------------------ dons avec contrepartie (client 2026-08-21) ------------------------------ */
+
+/** Faits minimaux d'un article de contrepartie relu en base — sous-ensemble structurel de `ContrepartieBook` (`contreparties.ts`), pour que ce cœur pur ne dépende jamais du lecteur Payload. */
+export interface DonationBookFacts {
+  title: string;
+  isbn: string | null;
+}
+
+/**
+ * Joint les lignes de contrepartie décodées (`donLines`) au titre/ISBN relus
+ * fraîchement — même esprit que `resolveOrderParts` (`order-handler.ts`),
+ * MAIS un id introuvable (fiche supprimée entre le checkout et le webhook)
+ * n'est JAMAIS omis ici : contrairement au commerce, la contrepartie a été
+ * PROMISE au donateur au paiement — la commande doit toujours refléter ce qui
+ * est dû, avec un titre de repli plutôt qu'une ligne disparue. Les ids
+ * introuvables sont RETOURNÉS (`missingBookIds`) : c'est l'appelant
+ * (`order-handler.ts`) qui les signale à Sentry (warning) — jamais bloquant,
+ * même découpage que `contreparties.ts` vs `contreparties-core.ts`.
+ */
+export function resolveDonationLines(
+  decoded: DecodedCheckoutLine[],
+  books: ReadonlyMap<number, DonationBookFacts>,
+): { lines: OrderLineFacts[]; missingBookIds: number[] } {
+  const missingBookIds: number[] = [];
+  const lines = decoded.map((l) => {
+    const book = books.get(l.id);
+    if (!book) missingBookIds.push(l.id);
+    return {
+      bookId: l.id,
+      titleSnapshot: book?.title ?? `Article #${l.id}`,
+      isbnSnapshot: book?.isbn ?? null,
+      quantity: l.qty,
+      unitPriceCents: l.unitPriceCents, // toujours 0 — contrat partagé avec la server action de don
+    };
+  });
+  return { lines, missingBookIds };
+}
+
+/** `Order.shippingAddress`/`billingAddress` (déjà posées, identiques) → adresse du récap mail — `undefined` seulement si la commande n'en porte aucune (anomalie, ne devrait jamais arriver pour un don : tous les paliers 2026 collectent une adresse). */
+export function recapAddressFromOrder(
+  order: Pick<Order, "shippingAddress">,
+): DonationMailRecapAddress | undefined {
+  const a = order.shippingAddress;
+  if (!a) return undefined;
+  return {
+    fullName: a.fullName,
+    addressLine1: a.addressLine1,
+    addressLine2: a.addressLine2 ?? undefined,
+    postalCode: a.postalCode,
+    city: a.city,
+    country: a.country,
+  };
 }

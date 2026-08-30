@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : collections + globals, rôles/accès, hooks de revalidation à l'édition, et une surface admin custom (home `/admin` v4 — KPI ventes/newsletter, graphique, commandes, « En cours » —, vues `/admin/stock` · `/admin/sante` · `/admin/ventes`, chips de filtre livres/rencontres) au-dessus du CRUD généré. Cœurs purs et endpoints custom vivent dans `lib/`.
+Le back-office Payload monté dans l'app (schéma Postgres dédié `payload`) : collections + globals, rôles/accès, hooks de revalidation à l'édition, et une surface admin custom (home `/admin` v4 — KPI ventes/newsletter, graphique, commandes, « En cours » —, vues `/admin/stock` · `/admin/sante` · `/admin/ventes`, chips de filtre livres/rencontres) au-dessus du CRUD généré — cœurs purs de la surface dans `admin/dashboard/derive.ts` (testé `derive.test.ts`), endpoints custom et leurs cœurs purs dans `lib/` avec jumeaux `*-core.ts`.
 
 ## Ownership
 
-- **Owns** : la config des collections/globals, les policies d'accès (`access.ts` : `admin`|`editor`), les composants admin custom (`Dashboard.tsx`, `StockPage.tsx`, `HealthPage.tsx`, `VentesPage.tsx`, chips livres/rencontres/commandes, cellules de liste (`admin/cells/`, `admin/orders/`), champ slug), les endpoints custom et leurs cœurs purs dans `lib/`.
+- **Owns** : la config des collections/globals, les policies d'accès (`access.ts` : `admin`|`editor`), les composants + cœurs purs admin custom (`admin/dashboard/`), cellules de liste (`admin/cells/`, `admin/orders/`), champ slug, les endpoints custom et leurs cœurs purs dans `lib/` avec jumeaux `*-core.ts`.
 - **Does NOT own** : le modèle de domaine ni les seams de lecture du front (`src/lib`), les pages (`src/app`), la présentation (`src/components`).
 
 ## Local Contracts
