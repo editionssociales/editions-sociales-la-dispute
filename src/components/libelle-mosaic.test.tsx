@@ -107,6 +107,22 @@ describe("LibelleMosaic — index-manifeste", () => {
     );
   });
 
+  it("« Tous les livres » épinglé en tête même à count inférieur (vue filtrée)", () => {
+    // Sur une vue filtrée, le total peut égaler — voire, ici, être dépassé
+    // par — le count d'un libellé : l'épinglage ne doit rien devoir au tri.
+    const markup = render({
+      items: [
+        { name: "Marxismes", slug: "marxismes", count: 8 },
+        { name: "Tous les livres", slug: null, count: 2 },
+        { name: "Écologie", slug: "ecologie", count: 4 },
+      ],
+    });
+    const tll = markup.indexOf("Tous les livres");
+    expect(tll).toBeGreaterThan(-1);
+    expect(tll).toBeLessThan(markup.indexOf("Marxismes"));
+    expect(markup.indexOf("Marxismes")).toBeLessThan(markup.indexOf("Écologie"));
+  });
+
   it("bannière active (aria-current) quand aucun libellé n'est filtré", () => {
     const markup = render();
     expect(markup).toMatch(/<a[^>]*aria-current="page"[^>]*>Tous les livres/);

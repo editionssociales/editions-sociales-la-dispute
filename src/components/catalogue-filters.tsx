@@ -38,8 +38,8 @@ interface Props {
   /**
    * L'index-manifeste (`libelle-mosaic.tsx`, sous-arbre SERVEUR passé en
    * prop — même montage que les children de `CatalogueTransitionZone`) :
-   * rendu juste SOUS la barre de recherche (retour client 2026-08-30, 2e
-   * passe), entre elle et les chips, pour profiter de l'estompage partagé
+   * rendu SOUS la barre de recherche et sous les chips (retour client
+   * 2026-08-30, 2e puis 7e passes), pour profiter de l'estompage partagé
    * pendant une transition de filtre.
    */
   libellesSlot?: ReactNode;
@@ -308,7 +308,15 @@ export function CatalogueFilters({
   };
 
   const activeEdition = filters.edition ?? "";
-  const chips = activeChips(filters, { libelles, authors, lockedEdition });
+  // Filtres AUTO-REPRÉSENTÉS hors de la rangée de chips (retour client
+  // 2026-08-30, 7e passe) : le libellé actif est déjà surligné dans
+  // l'index-manifeste (un seul sélectionnable à la fois) et la maison sur sa
+  // bascule accentée — leur chip doublonnait. Conséquence assumée : « Tout
+  // effacer » n'apparaît plus que pour recherche/auteur/statut ; le retour
+  // au catalogue complet passe par « Tous les livres » et les bascules.
+  const chips = activeChips(filters, { libelles, authors, lockedEdition }).filter(
+    (chip) => chip.param !== "libelle" && chip.param !== "edition",
+  );
   const showHouseGroup = !lockedEdition;
 
   return (
@@ -434,9 +442,11 @@ export function CatalogueFilters({
         </SelectCell>
       </FramedGrid>
 
-      {libellesSlot && <div className="mt-4">{libellesSlot}</div>}
-
+      {/* Chips AVANT la liste de mots-clés (7e passe 2026-08-30) : la barre
+          des filtres actifs reste collée à la recherche qui les produit. */}
       <FilterChips chips={chips} onRemove={removeFilter} onClearAll={clearAll} />
+
+      {libellesSlot && <div className="mt-4">{libellesSlot}</div>}
     </div>
   );
 }

@@ -88,13 +88,19 @@ export function LibelleMosaic({
   const isActive = (item: LibelleMosaicItem) =>
     (item.slug ?? undefined) === activeLibelle;
 
-  // Ordre de LECTURE : taille de catalogue décroissante, égalités à
-  // l'alphabétique — « Tous les livres » (count = total) arrive donc
-  // naturellement en tête. La COPIE est le contrat (`src/lib/CLAUDE.md`) :
-  // `getFacets` détient l'ordre alphabétique, cette vue ne trie jamais le
-  // tableau de l'appelant en place.
+  // Ordre de LECTURE : « Tous les livres » (`slug: null`) ÉPINGLÉE en tête
+  // QUEL QUE SOIT son count (7e passe 2026-08-30 : sur une vue filtrée,
+  // `facets.total` peut ÉGALER — jamais dépasser — le count d'un libellé
+  // omniprésent dans le sous-ensemble, et l'égalité alphabétique la
+  // reléguait au milieu du paragraphe), puis taille de catalogue
+  // décroissante, égalités à l'alphabétique. La COPIE est le contrat
+  // (`src/lib/CLAUDE.md`) : `getFacets` détient l'ordre alphabétique, cette
+  // vue ne trie jamais le tableau de l'appelant en place.
   const byCount = [...items].sort(
-    (a, b) => b.count - a.count || a.name.localeCompare(b.name, "fr"),
+    (a, b) =>
+      Number(b.slug === null) - Number(a.slug === null) ||
+      b.count - a.count ||
+      a.name.localeCompare(b.name, "fr"),
   );
 
   if (byCount.length === 0) return null;
