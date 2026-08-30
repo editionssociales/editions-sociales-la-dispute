@@ -96,7 +96,10 @@ export const FOCUS_RING_INVERTING = `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK
 /**
  * Cellule inversante : fond clair au repos, inversion en ink à l'état actif —
  * et au survol quand elle est inactive. Recette partagée par les étiquettes de
- * filtres, la mosaïque de thèmes et les numéros de pagination.
+ * filtres et les numéros de pagination. (L'index-manifeste des libellés n'en
+ * relève plus : ses liens sont transparents au repos, un fond opaque
+ * masquerait la bande inversée de la ligne supérieure — cf.
+ * `libelle-mosaic.tsx`.)
  *
  * La branche INACTIVE change de fond au survol : elle porte donc elle-même la
  * surcharge d'anneau qui va avec (l'appelant ne fournit que l'anneau de base,

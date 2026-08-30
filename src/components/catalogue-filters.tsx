@@ -35,6 +35,14 @@ interface Props {
    * eux le jour où ils cessent de la poser.
    */
   hideLibelles?: boolean;
+  /**
+   * L'index-manifeste (`libelle-mosaic.tsx`, sous-arbre SERVEUR passé en
+   * prop — même montage que les children de `CatalogueTransitionZone`) :
+   * rendu juste SOUS la barre de recherche (retour client 2026-08-30, 2e
+   * passe), entre elle et les chips, pour profiter de l'estompage partagé
+   * pendant une transition de filtre.
+   */
+  libellesSlot?: ReactNode;
 }
 
 const SORT_LABELS: Record<BookSort, string> = {
@@ -188,6 +196,7 @@ export function CatalogueFilters({
   libelles,
   authors,
   lockedEdition,
+  libellesSlot,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -365,6 +374,8 @@ export function CatalogueFilters({
           ))}
         </SelectCell>
       </FramedGrid>
+
+      {libellesSlot && <div className="mt-4">{libellesSlot}</div>}
 
       <FilterChips chips={chips} onRemove={removeFilter} onClearAll={clearAll} />
     </div>

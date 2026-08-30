@@ -84,29 +84,27 @@ async function EditionCatalogueBody({
       {/* Provider de transition partagé — même montage que `catalogue/page.tsx`
           (cf. `catalogue-transition.tsx`). */}
       <CatalogueTransitionProvider>
-        <LibelleMosaic
-          items={libelleItems}
-          activeLibelle={filters.libelle}
-          hrefFor={(slug) =>
-            catalogueHref(
-              { ...filters, edition: undefined, libelle: slug ?? undefined, page: undefined },
-              basePath,
-            )
+        {/* Index-manifeste en slot sous la recherche — même montage que
+            `catalogue/page.tsx` (2e passe du 2026-08-30). */}
+        <CatalogueFilters
+          libelles={facets.libelles}
+          authors={facets.authors}
+          lockedEdition={edition}
+          hideLibelles
+          libellesSlot={
+            <LibelleMosaic
+              items={libelleItems}
+              activeLibelle={filters.libelle}
+              hrefFor={(slug) =>
+                catalogueHref(
+                  { ...filters, edition: undefined, libelle: slug ?? undefined, page: undefined },
+                  basePath,
+                )
+              }
+              ariaLabel={`Libellés du catalogue ${info.name}`}
+            />
           }
-          ariaLabel={`Libellés du catalogue ${info.name}`}
-          className="mt-6 sm:mt-7"
         />
-
-        {/* Accolé au manifeste (mt-3, arbitrage 2026-08-30) — même montage
-            que `catalogue/page.tsx`. */}
-        <div className="mt-3">
-          <CatalogueFilters
-            libelles={facets.libelles}
-            authors={facets.authors}
-            lockedEdition={edition}
-            hideLibelles
-          />
-        </div>
 
         <CatalogueTransitionZone>
           <div className="mt-6 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-[18px]">

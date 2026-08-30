@@ -101,35 +101,34 @@ async function CatalogueBody({
       <h1 className="sr-only">Le catalogue par libellés</h1>
 
       {/* Même vue de libellés que /catalogue/[edition] (« index-manifeste »,
-          vue unique — arbitrage client 2026-08-30, remplace les « cases
-          variables » du 25/07) ; les étiquettes de libellés des filtres
-          ci-dessous sont masquées, cette vue couvre déjà ce rôle. */}
+          vue unique — arbitrage client 2026-08-30) : glissée en SLOT sous la
+          barre de recherche (2e passe du même jour — plus de cadre ni de
+          bandeau « Tous les livres », le mot vit dans le paragraphe) ; les
+          étiquettes de libellés des filtres sont masquées, cette vue couvre
+          déjà ce rôle. */}
       {/* Provider de transition partagé (`catalogue-transition.tsx`) : les
           filtres y démarrent leurs navigations, la zone ci-dessous — compteur
           + grille + pagination, LES sous-arbres qui changent — s'estompe
           pendant qu'elles sont en vol. Enfants serveur passés en children. */}
       <CatalogueTransitionProvider>
-        <LibelleMosaic
-          items={[
-            { name: "Tous les livres", slug: null, count: facets.total },
-            ...facets.libelles,
-          ]}
-          activeLibelle={filters.libelle}
-          hrefFor={(slug) =>
-            catalogueHref({ ...filters, libelle: slug ?? undefined, page: undefined })
+        <CatalogueFilters
+          libelles={facets.libelles}
+          authors={facets.authors}
+          hideLibelles
+          libellesSlot={
+            <LibelleMosaic
+              items={[
+                { name: "Tous les livres", slug: null, count: facets.total },
+                ...facets.libelles,
+              ]}
+              activeLibelle={filters.libelle}
+              hrefFor={(slug) =>
+                catalogueHref({ ...filters, libelle: slug ?? undefined, page: undefined })
+              }
+              ariaLabel="Libellés du catalogue"
+            />
           }
-          ariaLabel="Libellés du catalogue"
         />
-
-        {/* Accolé au manifeste (mt-3, arbitrage 2026-08-30) : recherche et
-            maisons travaillent au contact direct des libellés. */}
-        <div className="mt-3">
-          <CatalogueFilters
-            libelles={facets.libelles}
-            authors={facets.authors}
-            hideLibelles
-          />
-        </div>
 
         <CatalogueTransitionZone>
           {/* Live region (issue #86b) : le fallback de chargement (`CatalogueFallback`)

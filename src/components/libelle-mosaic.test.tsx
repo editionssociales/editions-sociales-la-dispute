@@ -127,8 +127,9 @@ describe("LibelleMosaic — index-manifeste", () => {
     );
   });
 
-  it("géométrie invariante de la bannière : active et repos, peinture seule", () => {
-    // La bannière est active sans filtre, inactive dès qu'un libellé l'est.
+  it("géométrie invariante de « Tous les livres » : actif et repos, peinture seule", () => {
+    // Premier mot du paragraphe : actif sans filtre, repos dès qu'un
+    // libellé l'est.
     expectPaintOnlyDiff(
       linkClasses(render({ activeLibelle: "marxismes" }), "Tous les livres"),
       linkClasses(render(), "Tous les livres"),
@@ -139,10 +140,10 @@ describe("LibelleMosaic — index-manifeste", () => {
     const markup = render();
     // Ciblé par sa classe (`mx-1…`) : les liens portent aussi des spans
     // `aria-hidden` (le témoin `LinkPendingHint`), qui ne sont pas des
-    // séparateurs. Un séparateur ENTRE chaque paire de libellés du paragraphe
-    // (3 libellés hors bannière → 2), jamais avant le premier.
+    // séparateurs. Un séparateur ENTRE chaque paire de mots du paragraphe
+    // (4 mots, « Tous les livres » compris → 3), jamais avant le premier.
     const separators = markup.match(/<span aria-hidden="true" class="mx-1[^"]*"><\/span>/g);
-    expect(separators).toHaveLength(2);
+    expect(separators).toHaveLength(3);
   });
 
   it("repli sans bannière : tout coule dans le paragraphe, sans erreur", () => {
@@ -152,11 +153,7 @@ describe("LibelleMosaic — index-manifeste", () => {
     expect(markup).not.toContain("Tous les livres");
   });
 
-  it("bannière seule : aucun paragraphe vide n'est rendu", () => {
-    const markup = render({
-      items: [{ name: "Tous les livres", slug: null, count: 5 }],
-    });
-    expect(markup).toContain("Tous les livres");
-    expect(markup).not.toContain("<p");
+  it("aucun item : rien n'est rendu du tout", () => {
+    expect(render({ items: [] })).toBe("");
   });
 });
