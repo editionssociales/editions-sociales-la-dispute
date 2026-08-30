@@ -29,8 +29,8 @@ import { FILTER_CELL_TEXT, FOCUS_RING_LIGHT } from "@/lib/ui";
 /**
  * Champ de recherche du catalogue AVEC complétion (titres/auteurs/libellés) —
  * la cellule extraite de `catalogue-filters.tsx`, qui garde l'état de la
- * requête et l'anti-rebond ; ici ne vivent que le rendu du champ et la
- * mécanique du dropdown.
+ * requête (un brouillon, validé à l'Entrée) ; ici ne vivent que le rendu du
+ * champ et la mécanique du dropdown.
  *
  * TROISIÈME grammaire de surgissement (cf. scope doc) : le combobox ARIA —
  * `role="combobox"` sur l'input, liste `role="listbox"` d'options qui sont de
@@ -42,8 +42,9 @@ import { FILTER_CELL_TEXT, FOCUS_RING_LIGHT } from "@/lib/ui";
  * Fluidité (l'étalon : l'Autocomplete MUI) : l'index complet (~300 fiches,
  * `GET /api/catalogue/suggestions`) est chargé UNE fois au premier focus,
  * plié une fois (`prepareSuggestionIndex`), puis chaque frappe filtre en
- * mémoire — zéro réseau, zéro attente. L'anti-rebond de 300 ms ne concerne
- * que la grille de résultats derrière ; le dropdown, lui, suit la frappe.
+ * mémoire — zéro réseau, zéro attente. Pendant la saisie, SEUL le dropdown
+ * vit : la grille derrière n'est re-rendue qu'à la validation (Entrée,
+ * suggestion suivie) — plus aucune poussée d'URL par frappe.
  *
  * Coût réseau maîtrisé (politique de l'audit Vercel 2026-08-23) : les liens
  * du dropdown naissent `prefetch={false}` — seule l'option ACTIVE (survolée
@@ -118,11 +119,11 @@ interface Props {
   /** Géométrie de cellule dans la grille encadrée (col-span…) — la disposition reste l'affaire de l'appelant. */
   className?: string;
   value: string;
-  /** La frappe — l'appelant y attache son anti-rebond vers `?q=`. */
+  /** La frappe — ne fait vivre que le brouillon de l'appelant (donc ce dropdown), jamais l'URL. */
   onValueChange: (next: string) => void;
-  /** Entrée validée SANS option active : pousser la recherche tout de suite (court-circuite l'anti-rebond). */
+  /** Entrée SANS option active : l'appelant valide le brouillon et pousse la recherche. */
   onCommit: () => void;
-  /** Une suggestion vient d'être suivie — l'appelant annule l'anti-rebond en vol (et vide le champ pour un filtre). */
+  /** Une suggestion vient d'être suivie — pour un filtre, l'appelant vide le champ (l'URL cible ne porte pas de `q`). */
   onPick: (kind: SuggestionKind) => void;
   hrefForAuthor: (slug: string) => string;
   hrefForLibelle: (slug: string) => string;

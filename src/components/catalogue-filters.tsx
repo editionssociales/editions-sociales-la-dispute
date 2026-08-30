@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useCatalogueTransition } from "@/components/catalogue-transition";
 import { BOOK_SORTS, type BookFilters, type BookSort, type Facet } from "@/lib/types";
 import { EDITION_LIST } from "@/lib/editions";
@@ -249,35 +249,28 @@ export function CatalogueFilters({
 
   const filters = readFilters(params);
 
-  // Valeur locale du champ de recherche, pour pouvoir le vider depuis les
-  // chips et pour anti-rebondir la frappe (#86) avant de pousser l'URL.
-  // Resynchronisée sur l'URL quand elle change sans passer par le champ
-  // (chips, navigation, retour arrière) — par AJUSTEMENT EN RENDU (même
-  // idiome que `site-header.tsx` : comparaison à un état pendant le rendu,
-  // `setState` conditionnel dans le corps) plutôt que par un effet, qui
-  // provoquerait un rendu en cascade. Jamais pendant qu'une de nos
-  // transitions est en vol OU qu'un anti-rebond est en attente (l'URL serait
-  // en retard sur la frappe), ni quand l'URL ne fait que rattraper la
-  // dernière valeur poussée par le champ.
+  // Valeur locale du champ de recherche : un BROUILLON, plus un miroir poussé
+  // en direct. Depuis la complétion (`catalogue-search-box.tsx`), le retour
+  // vivant de la frappe est le dropdown — la grille n'est re-rendue qu'à la
+  // VALIDATION : Entrée (`commitSearch`), suggestion suivie, chips. La
+  // poussée d'URL par frappe (anti-rebond de 300 ms) disparaît AVEC sa raison
+  // d'être (#86 : un `router.replace` par caractère) : plus aucun rendu
+  // serveur pendant la saisie.
+  //
+  // Resynchronisation par AJUSTEMENT EN RENDU (même idiome que
+  // `site-header.tsx`), sur DÉTECTION DE CHANGEMENT de `?q=` — jamais une
+  // simple différence : un brouillon non validé diffère de l'URL par
+  // construction et doit survivre aux rendus. Quand l'URL change hors du
+  // champ (chip, navigation, retour arrière), le champ ne l'adopte que s'il
+  // était resté fidèle à la dernière URL vue — un brouillon plus récent
+  // (frappe pendant la transition d'une validation) a toujours raison.
   const urlQuery = params.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
-  const [lastPushed, setLastPushed] = useState(urlQuery);
-  const [debouncing, setDebouncing] = useState(false);
-  if (!isPending && !debouncing && lastPushed !== urlQuery) {
-    setLastPushed(urlQuery);
-    setQuery(urlQuery);
+  const [syncedUrlQuery, setSyncedUrlQuery] = useState(urlQuery);
+  if (syncedUrlQuery !== urlQuery) {
+    setSyncedUrlQuery(urlQuery);
+    if (query === syncedUrlQuery) setQuery(urlQuery);
   }
-
-  // Anti-rebond de la recherche : un `router.replace` par frappe déclenchait
-  // une navigation non annulée à chaque caractère (#86). Un seul minuteur en
-  // vol à la fois — la frappe suivante l'annule et le redémarre.
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    },
-    [],
-  );
 
   // Un seul encodeur, dans les deux sens : on lit l'URL en `BookFilters`
   // (`readFilters`), on applique l'algèbre, on ré-encode via `serializeBookFilters`.
@@ -295,51 +288,23 @@ export function CatalogueFilters({
 
   const setFilter = (field: FilterField, value: string) => pushFilters(withFilter(filters, field, value));
 
-  /** Annule un anti-rebond de recherche en attente (le champ, lui, ne bouge pas). */
-  const cancelPendingSearch = () => {
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current);
-      searchTimeout.current = null;
-    }
-    setDebouncing(false);
-  };
-
-  /** Annule un anti-rebond de recherche en attente et resynchronise le champ. */
+  /** Vide (ou pose) le brouillon du champ — chips et suggestions de filtre. */
   const resetSearchField = (value: string) => {
-    cancelPendingSearch();
     setQuery(value);
-    setLastPushed(value);
   };
 
-  /** La frappe : miroir local immédiat, poussée d'URL anti-rebondie (#86). */
-  const handleSearchChange = (next: string) => {
-    setQuery(next);
-    setLastPushed(next);
-    setDebouncing(true);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      searchTimeout.current = null;
-      setDebouncing(false);
-      setFilter("q", next);
-    }, 300);
-  };
-
-  /** Entrée sans suggestion active : la recherche part TOUT DE SUITE. */
-  const commitSearch = () => {
-    cancelPendingSearch();
-    setFilter("q", query);
-  };
+  /** Entrée sans suggestion active : le brouillon est validé et poussé. */
+  const commitSearch = () => setFilter("q", query);
 
   /**
-   * Une suggestion vient d'être suivie (son `<Link>` navigue déjà) :
-   * l'anti-rebond en vol pousserait `?q=` PAR-DESSUS cette navigation — il
-   * est annulé dans tous les cas. Pour un filtre auteur/libellé, le champ se
-   * vide aussi : l'URL cible ne porte pas de `q`, le garde-fou de resynchro
-   * (`lastPushed`) doit suivre.
+   * Une suggestion vient d'être suivie (son `<Link>` navigue déjà). Pour un
+   * filtre auteur/libellé, le champ se vide immédiatement : l'URL cible ne
+   * porte pas de `q`, et attendre la resynchro laisserait le brouillon
+   * affiché pendant la transition. Un titre suivi quitte la page — le
+   * brouillon n'a pas à bouger.
    */
   const handleSuggestionPick = (kind: SuggestionKind) => {
-    if (kind === "title") cancelPendingSearch();
-    else resetSearchField("");
+    if (kind !== "title") resetSearchField("");
   };
 
   /**
@@ -426,14 +391,15 @@ export function CatalogueFilters({
       >
         {/* La cellule de recherche vit dans son propre fichier depuis la
             complétion (combobox + dropdown, `catalogue-search-box.tsx`) —
-            l'état de la requête et l'anti-rebond restent ICI, la boîte ne
-            reçoit que la valeur et les gestes. `min-w-0` : cellule d'un track
-            compressible (même garde que les `SelectCell` voisines). */}
+            l'état de la requête (brouillon validé à l'Entrée) reste ICI, la
+            boîte ne reçoit que la valeur et les gestes. `min-w-0` : cellule
+            d'un track compressible (même garde que les `SelectCell`
+            voisines). */}
         <CatalogueSearchBox
           className="col-span-3 sm:col-span-1"
           value={query}
           lockedEdition={lockedEdition}
-          onValueChange={handleSearchChange}
+          onValueChange={setQuery}
           onCommit={commitSearch}
           onPick={handleSuggestionPick}
           hrefForAuthor={suggestionFilterHref("author")}
