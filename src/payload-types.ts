@@ -159,7 +159,7 @@ export interface Book {
   id: number;
   title: string;
   /**
-   * Prérempli depuis le titre — ne pas modifier après publication
+   * Identifiant public de la fiche (URL, contreparties, redirections) — figé après création. Modification réservée aux admins : tout lien existant vers l’ancien slug casse.
    */
   slug: string;
   edition?: ('editions-sociales' | 'la-dispute') | null;
@@ -344,7 +344,7 @@ export interface Author {
    */
   name: string;
   /**
-   * Prérempli depuis le nom — ne pas modifier après publication
+   * Identifiant public (URLs de filtre du catalogue) — figé après création, modification réservée aux admins.
    */
   slug: string;
   bio?: {
@@ -375,7 +375,7 @@ export interface Libelle {
   id: number;
   name: string;
   /**
-   * Identifiant d’URL (`?libelle=…`) — prérempli depuis le nom.
+   * Identifiant d’URL (`?libelle=…`) — figé après création, modification réservée aux admins.
    */
   slug: string;
   updatedAt: string;
