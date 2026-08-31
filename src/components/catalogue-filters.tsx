@@ -2,21 +2,29 @@
 
 import type { ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useCatalogueTransition } from "@/components/catalogue-transition";
 import { BOOK_SORTS, type BookFilters, type BookSort, type Facet } from "@/lib/types";
 import { EDITION_LIST } from "@/lib/editions";
 import { serializeBookFilters } from "@/lib/parse-filters";
 import {
   activeChips,
+  catalogueHref,
   clearFilters,
   readFilters,
   withFilter,
   withoutFilter,
   type FilterField,
 } from "@/lib/browse";
-import { FOCUS_RING_DARK, FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import type { SuggestionKind } from "@/lib/search-suggest-core";
+import {
+  FILTER_CELL_TEXT,
+  FOCUS_RING_DARK,
+  FOCUS_RING_HOVER_DARK,
+  FOCUS_RING_LIGHT,
+} from "@/lib/ui";
 import type { Accent } from "@/lib/format";
+import { CatalogueSearchBox } from "@/components/catalogue-search-box";
 import { FilterChips } from "@/components/filter-chips";
 import { FramedGrid } from "@/components/framed-grid";
 
@@ -52,14 +60,12 @@ const SORT_LABELS: Record<BookSort, string> = {
 };
 const SORTS = BOOK_SORTS.map((s) => ({ value: s, label: SORT_LABELS[s] }));
 
-/**
- * Grille brutaliste : le quadrillage noir vient du fond noir du conteneur
- * qui transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
- * par-dessus (recette « grille encadrée », voir AGENTS.md).
- */
-// 12px depuis la 9e passe du 2026-08-30 (« uniformise les tailles de polices
-// dans la section de tri ») — même corps que les chips de filtres actifs.
-const CELL_TEXT = "text-[12px] font-bold uppercase tracking-[.03em] text-ink";
+// Grille brutaliste : le quadrillage noir vient du fond noir du conteneur qui
+// transparaît dans les gaps de 2px ; chaque cellule est posée en blanc
+// par-dessus (recette « grille encadrée », voir AGENTS.md). La typo des
+// cellules est `FILTER_CELL_TEXT` (`src/lib/ui.ts`, 12px — 9e passe du
+// 2026-08-30), partagée avec la cellule de recherche extraite
+// (`catalogue-search-box.tsx`).
 
 /**
  * Chevron de menu déroulant. Rendu en SVG et NON par un glyphe (▾) : Effra ne
@@ -136,7 +142,7 @@ function SelectCell({
       // compressible — sans lui, l'item grid refuse de descendre sous son
       // min-content et déborde de son track (même garde que le `<label>` de
       // recherche voisin).
-      className={`relative ${SELECT_CELL_DISPLAY[display]} min-h-11 min-w-0 cursor-pointer items-center bg-paper ${CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px] ${className}`}
+      className={`relative ${SELECT_CELL_DISPLAY[display]} min-h-11 min-w-0 cursor-pointer items-center bg-paper ${FILTER_CELL_TEXT} has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-ink has-[select:focus-visible]:outline-offset-[-2px] ${className}`}
     >
       <span
         aria-hidden="true"
@@ -197,9 +203,10 @@ function HouseTag({
   onClick: () => void;
   /**
    * Recette compacte à VALEUR FERMÉE (jamais une surcharge par className,
-   * piège d'ordre v4) : corps 11px et padding réduit pour la rangée mobile
-   * partagée avec le Tri (5e passe 2026-08-30) — « Éditions sociales » +
-   * « La Dispute » + « Tri » doivent tenir sur ~335px.
+   * piège d'ordre v4) : corps 12px (uniformisation 9e passe 2026-08-30) et
+   * padding réduit pour la rangée mobile partagée avec le Tri (5e passe) —
+   * « Éditions sociales » + « La Dispute » + « Trier par » doivent tenir
+   * sur ~335px (vérifié : 335/335).
    */
   dense?: boolean;
   className?: string;
@@ -213,7 +220,7 @@ function HouseTag({
       className={`min-h-11 whitespace-nowrap py-2.5 text-left transition-colors motion-reduce:transition-none ${
         dense
           ? "px-2 text-[12px] font-bold uppercase tracking-[.02em] text-ink"
-          : `px-3.5 ${CELL_TEXT}`
+          : `px-3.5 ${FILTER_CELL_TEXT}`
       } ${
         active
           ? activeClass
@@ -242,35 +249,28 @@ export function CatalogueFilters({
 
   const filters = readFilters(params);
 
-  // Valeur locale du champ de recherche, pour pouvoir le vider depuis les
-  // chips et pour anti-rebondir la frappe (#86) avant de pousser l'URL.
-  // Resynchronisée sur l'URL quand elle change sans passer par le champ
-  // (chips, navigation, retour arrière) — par AJUSTEMENT EN RENDU (même
-  // idiome que `site-header.tsx` : comparaison à un état pendant le rendu,
-  // `setState` conditionnel dans le corps) plutôt que par un effet, qui
-  // provoquerait un rendu en cascade. Jamais pendant qu'une de nos
-  // transitions est en vol OU qu'un anti-rebond est en attente (l'URL serait
-  // en retard sur la frappe), ni quand l'URL ne fait que rattraper la
-  // dernière valeur poussée par le champ.
+  // Valeur locale du champ de recherche : un BROUILLON, plus un miroir poussé
+  // en direct. Depuis la complétion (`catalogue-search-box.tsx`), le retour
+  // vivant de la frappe est le dropdown — la grille n'est re-rendue qu'à la
+  // VALIDATION : Entrée (`commitSearch`), suggestion suivie, chips. La
+  // poussée d'URL par frappe (anti-rebond de 300 ms) disparaît AVEC sa raison
+  // d'être (#86 : un `router.replace` par caractère) : plus aucun rendu
+  // serveur pendant la saisie.
+  //
+  // Resynchronisation par AJUSTEMENT EN RENDU (même idiome que
+  // `site-header.tsx`), sur DÉTECTION DE CHANGEMENT de `?q=` — jamais une
+  // simple différence : un brouillon non validé diffère de l'URL par
+  // construction et doit survivre aux rendus. Quand l'URL change hors du
+  // champ (chip, navigation, retour arrière), le champ ne l'adopte que s'il
+  // était resté fidèle à la dernière URL vue — un brouillon plus récent
+  // (frappe pendant la transition d'une validation) a toujours raison.
   const urlQuery = params.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
-  const [lastPushed, setLastPushed] = useState(urlQuery);
-  const [debouncing, setDebouncing] = useState(false);
-  if (!isPending && !debouncing && lastPushed !== urlQuery) {
-    setLastPushed(urlQuery);
-    setQuery(urlQuery);
+  const [syncedUrlQuery, setSyncedUrlQuery] = useState(urlQuery);
+  if (syncedUrlQuery !== urlQuery) {
+    setSyncedUrlQuery(urlQuery);
+    if (query === syncedUrlQuery) setQuery(urlQuery);
   }
-
-  // Anti-rebond de la recherche : un `router.replace` par frappe déclenchait
-  // une navigation non annulée à chaque caractère (#86). Un seul minuteur en
-  // vol à la fois — la frappe suivante l'annule et le redémarre.
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    },
-    [],
-  );
 
   // Un seul encodeur, dans les deux sens : on lit l'URL en `BookFilters`
   // (`readFilters`), on applique l'algèbre, on ré-encode via `serializeBookFilters`.
@@ -288,16 +288,31 @@ export function CatalogueFilters({
 
   const setFilter = (field: FilterField, value: string) => pushFilters(withFilter(filters, field, value));
 
-  /** Annule un anti-rebond de recherche en attente et resynchronise le champ. */
+  /** Vide (ou pose) le brouillon du champ — chips et suggestions de filtre. */
   const resetSearchField = (value: string) => {
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current);
-      searchTimeout.current = null;
-    }
-    setDebouncing(false);
     setQuery(value);
-    setLastPushed(value);
   };
+
+  /** Entrée sans suggestion active : le brouillon est validé et poussé. */
+  const commitSearch = () => setFilter("q", query);
+
+  /**
+   * Une suggestion vient d'être suivie (son `<Link>` navigue déjà). Pour un
+   * filtre auteur/libellé, le champ se vide immédiatement : l'URL cible ne
+   * porte pas de `q`, et attendre la resynchro laisserait le brouillon
+   * affiché pendant la transition. Un titre suivi quitte la page — le
+   * brouillon n'a pas à bouger.
+   */
+  const handleSuggestionPick = (kind: SuggestionKind) => {
+    if (kind !== "title") resetSearchField("");
+  };
+
+  /**
+   * Cible d'une suggestion auteur/libellé : le filtre remplace la recherche
+   * (même algèbre que `pushFilters`, en `href` pour rester un vrai lien).
+   */
+  const suggestionFilterHref = (field: "author" | "libelle") => (slug: string) =>
+    catalogueHref(withFilter(withoutFilter(filters, "q"), field, slug), pathname);
 
   const removeFilter = (param: string) => {
     if (param === "q") resetSearchField("");
@@ -374,27 +389,22 @@ export function CatalogueFilters({
         aria-label="Recherche et tri du catalogue"
         className={`grid-cols-[1fr_1fr_auto] items-stretch sm:grid-cols-[1fr_auto_auto] ${showHouseGroup ? "sm:mt-[2px]" : ""}`}
       >
-        <label className="col-span-3 flex min-h-11 min-w-0 items-center bg-paper px-3.5 sm:col-span-1">
-          <span className="sr-only">Rechercher</span>
-          <input
-            type="search"
-            value={query}
-            placeholder="Titre, auteur…"
-            onChange={(e) => {
-              const next = e.target.value;
-              setQuery(next);
-              setLastPushed(next);
-              setDebouncing(true);
-              if (searchTimeout.current) clearTimeout(searchTimeout.current);
-              searchTimeout.current = setTimeout(() => {
-                searchTimeout.current = null;
-                setDebouncing(false);
-                setFilter("q", next);
-              }, 300);
-            }}
-            className={`w-full min-w-0 bg-transparent py-2.5 outline-none placeholder:font-normal placeholder:normal-case placeholder:text-ink/40 ${CELL_TEXT} ${FOCUS_RING_LIGHT}`}
-          />
-        </label>
+        {/* La cellule de recherche vit dans son propre fichier depuis la
+            complétion (combobox + dropdown, `catalogue-search-box.tsx`) —
+            l'état de la requête (brouillon validé à l'Entrée) reste ICI, la
+            boîte ne reçoit que la valeur et les gestes. `min-w-0` : cellule
+            d'un track compressible (même garde que les `SelectCell`
+            voisines). */}
+        <CatalogueSearchBox
+          className="col-span-3 sm:col-span-1"
+          value={query}
+          lockedEdition={lockedEdition}
+          onValueChange={setQuery}
+          onCommit={commitSearch}
+          onPick={handleSuggestionPick}
+          hrefForAuthor={suggestionFilterHref("author")}
+          hrefForLibelle={suggestionFilterHref("libelle")}
+        />
 
         {/* Les maisons rejoignent la rangée du Tri SOUS `sm` — rendues une
             SECONDE fois ici plutôt que déplacées : le groupe encadré du
