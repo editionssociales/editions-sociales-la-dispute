@@ -133,6 +133,20 @@ function MentionsCell({ className = "", year }: { className?: string; year: numb
       <p className="mt-auto text-xs text-muted">
         © {year} Les Éditions sociales × La Dispute
       </p>
+      {/* Signature de l'atelier (demande client 2026-08-31) — même registre
+          discret que le copyright, jamais plus. */}
+      <p className="text-xs text-muted">
+        Site créé par{" "}
+        <a
+          href="https://www.solidz.fr"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-ink"
+        >
+          Solidz — www.solidz.fr
+          <NewTabMark />
+        </a>
+      </p>
     </div>
   );
 }
