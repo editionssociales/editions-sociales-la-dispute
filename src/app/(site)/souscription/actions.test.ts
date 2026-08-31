@@ -204,7 +204,7 @@ describe("createDonationCheckout — contrepartie (contrat metadata.donLines)", 
     );
     expect(lastBody?.get("metadata[donLines]")).toBe(
       [
-        `${bookId("les-luttes-de-classes-en-france")}:1:0`,
+        `${bookId("les-luttes-des-classes-en-france")}:1:0`,
         `${bookId("le-communisme-qui-vient")}:1:0`,
         `${bookId("totebag")}:1:0`,
         `${bookId("planche-de-stickers")}:1:0`,

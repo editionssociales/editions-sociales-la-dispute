@@ -76,7 +76,7 @@ describe("resolveContrepartieItems — paliers fixes (sans sélection)", () => {
     expect(resolveContrepartieItems("palier-75", {})).toEqual({
       ok: true,
       items: [
-        { slug: "les-luttes-de-classes-en-france", qty: 1 },
+        { slug: "les-luttes-des-classes-en-france", qty: 1 },
         { slug: "le-communisme-qui-vient", qty: 1 },
         { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },
@@ -89,7 +89,7 @@ describe("resolveContrepartieItems — paliers fixes (sans sélection)", () => {
       ok: true,
       items: [
         { slug: "decoloniser-le-marxisme", qty: 1 },
-        { slug: "les-luttes-de-classes-en-france", qty: 1 },
+        { slug: "les-luttes-des-classes-en-france", qty: 1 },
         { slug: "de-metoo-a-noustoutes", qty: 1 },
         { slug: "totebag", qty: 1 },
         { slug: "planche-de-stickers", qty: 1 },

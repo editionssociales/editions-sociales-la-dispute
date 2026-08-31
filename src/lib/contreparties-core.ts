@@ -123,7 +123,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
         kind: "inclus",
         label: "Cadeaux",
         items: [
-          { slug: "les-luttes-de-classes-en-france", qty: 1 },
+          { slug: "les-luttes-des-classes-en-france", qty: 1 },
           { slug: "le-communisme-qui-vient", qty: 1 },
           { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
@@ -208,7 +208,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
         label: "Cadeaux",
         items: [
           { slug: "decoloniser-le-marxisme", qty: 1 },
-          { slug: "les-luttes-de-classes-en-france", qty: 1 },
+          { slug: "les-luttes-des-classes-en-france", qty: 1 },
           { slug: "de-metoo-a-noustoutes", qty: 1 },
           { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
