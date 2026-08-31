@@ -36,8 +36,5 @@ export function OrderClientCell({ rowData }: OrderClientCellProps) {
   const label = typeof fullName === 'string' && fullName.trim() ? fullName : '—'
   const id = rowData?.id
   if (id == null) return <span>{label}</span>
-  return (
-    // eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office
-    <a href={`/admin/collections/orders/${id}`}>{label}</a>
-  )
+  return <a href={`/admin/collections/orders/${id}`}>{label}</a>
 }

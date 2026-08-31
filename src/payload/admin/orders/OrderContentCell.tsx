@@ -50,7 +50,6 @@ export function OrderContentCell({ rowData }: OrderContentCellProps) {
     )
   }
   return (
-    // eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office
     <a className="order-lines-cell" data-lignes={tooltip} href={`/admin/collections/orders/${id}`}>
       {label}
     </a>
