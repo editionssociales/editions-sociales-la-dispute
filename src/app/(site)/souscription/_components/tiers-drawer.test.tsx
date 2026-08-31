@@ -107,8 +107,8 @@ function parse(html: string): HTMLDivElement {
   return host;
 }
 
-describe("TiersDrawer — fail-open sans JS", () => {
-  it("rendu serveur : tiroir OUVERT, les dix cartes présentes, aucun état masqué", () => {
+describe("TiersDrawer — né FERMÉ, sans-JS rouvert par CSS (demande client 2026-08-31)", () => {
+  it("rendu serveur : tiroir FERMÉ, les dix cartes présentes, panneau SANS inert (sans-JS utilisable)", () => {
     const html = renderToStaticMarkup(
       <TiersDrawer anchors={["paliers", "montant-libre"]}>
         <Cartes />
@@ -119,7 +119,7 @@ describe("TiersDrawer — fail-open sans JS", () => {
     const toggles = Array.from(host.querySelectorAll("button[aria-expanded]"));
     expect(toggles).toHaveLength(2);
     for (const toggle of toggles) {
-      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
     }
 
     const panelId = toggles[0]!.getAttribute("aria-controls");
@@ -131,7 +131,9 @@ describe("TiersDrawer — fail-open sans JS", () => {
     for (let i = 1; i <= 10; i++) {
       expect(panel!.textContent).toContain(`Palier ${i}`);
     }
-    // Ouvert : ni `inert` ...
+    // FERMÉ mais SANS `inert` au rendu serveur : sans JS, `@media (scripting:
+    // none)` rouvre la colonne — un `inert` figé dans le HTML rendrait ce
+    // rail rouvert inutilisable. L'hydratation pose `inert` normalement.
     expect(panel!.hasAttribute("inert")).toBe(false);
     // ... ni masquage par classe. Comparaison sur les classes ENTIÈRES : une
     // regex `\bhidden\b` matcherait `overflow-x-clip`… et surtout `hidden`
@@ -142,16 +144,20 @@ describe("TiersDrawer — fail-open sans JS", () => {
     expect(panel!.getAttribute("style") ?? "").not.toContain("visibility");
   });
 
-  it("le HTML serveur ne pose JAMAIS `--rail-open` : le défaut CSS ouvre le tiroir", () => {
+  it("le HTML serveur ne pose JAMAIS `--rail-open` : le défaut CSS ferme le tiroir, `scripting: none` le rouvre", () => {
     const html = renderToStaticMarkup(
       <TiersDrawer>
         <Cartes />
       </TiersDrawer>,
     );
     expect(html).not.toContain(RAIL_OPEN_PROPERTY);
-    // ... et c'est bien le repli `,1` des classes qui tient l'état ouvert.
-    expect(RAIL_GRID_CLASS).toContain("var(--rail-open,1)");
-    expect(RAIL_WIDTH_CLASS).toContain("var(--rail-open,1)");
+    // ... et c'est bien le repli `,0` des classes qui tient l'état fermé.
+    expect(RAIL_GRID_CLASS).toContain("var(--rail-open,0)");
+    expect(RAIL_WIDTH_CLASS).toContain("var(--rail-open,0)");
+    // Sans moteur de script, la colonne est rouverte d'office (le don sans JS
+    // fonctionne — server actions) : la règle vit dans globals.css.
+    const css = read("src/app/(site)/globals.css");
+    expect(css).toMatch(/@media \(scripting: none\) \{\s*:root \{\s*--rail-open: 1;/);
   });
 });
 
@@ -160,7 +166,7 @@ describe("TiersDrawer — fail-open sans JS", () => {
 describe("TiersDrawer — la colonne vaut 380px ou 0, jamais autre chose", () => {
   it("aucune réserve de poignée n'est logée dans la largeur du rail", () => {
     for (const utility of [RAIL_GRID_CLASS, RAIL_WIDTH_CLASS]) {
-      expect(utility).toContain("calc(380px*var(--rail-open,1))");
+      expect(utility).toContain("calc(380px*var(--rail-open,0))");
       // Une poignée logée DANS la colonne se lirait ici comme un terme
       // ajouté (`calc(2.75rem + 380px * …)`) : la colonne ne vaudrait plus
       // 380px ouverte, et laisserait une bande morte fermée.
@@ -220,6 +226,17 @@ function closeButton(el: HTMLElement): HTMLButtonElement {
   return el.querySelector<HTMLButtonElement>("button[aria-label='Replier les contreparties']")!;
 }
 
+function handleButton(el: HTMLElement): HTMLButtonElement {
+  return el.querySelector<HTMLButtonElement>(`[${RAIL_EDGE_ATTRIBUTE}="handle"]`)!;
+}
+
+/** Le tiroir naît fermé : les tests de comportement « ouvert » commencent par la poignée. */
+function openDrawer(el: HTMLElement): void {
+  act(() => {
+    handleButton(el).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+}
+
 afterEach(() => {
   if (root) {
     act(() => {
@@ -233,13 +250,18 @@ afterEach(() => {
 });
 
 describe("TiersDrawer — bascule", () => {
-  it("ferme au clic : panneau MONTÉ, sorti du clavier par `inert`, jamais par `hidden`", () => {
+  it("naît fermé ; la poignée déplie, la fermeture replie — panneau MONTÉ, `inert`, jamais `hidden`", () => {
     const el = mount(
       <TiersDrawer>
         <Cartes />
       </TiersDrawer>,
     );
     const panel = panelOf(el);
+    // Hydraté FERMÉ (demande client 2026-08-31) : `inert` posé, propriété à 0.
+    expect(panel.hasAttribute("inert")).toBe(true);
+    expect(document.documentElement.style.getPropertyValue(RAIL_OPEN_PROPERTY)).toBe("0");
+
+    openDrawer(el);
     expect(panel.hasAttribute("inert")).toBe(false);
     expect(document.documentElement.style.getPropertyValue(RAIL_OPEN_PROPERTY)).toBe("1");
 
@@ -290,6 +312,7 @@ describe("TiersDrawer — Échap n'est pas écouté sur `document`", () => {
         <Cartes />
       </TiersDrawer>,
     );
+    openDrawer(el);
     const input = el.querySelector("input")!;
     act(() => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -303,7 +326,9 @@ describe("TiersDrawer — Échap n'est pas écouté sur `document`", () => {
         <Cartes />
       </TiersDrawer>,
     );
+    openDrawer(el);
     const panel = panelOf(el);
+    expect(panel.hasAttribute("inert")).toBe(false);
     act(() => {
       panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
@@ -398,6 +423,9 @@ describe("Indice d'appel — peint sur l'aside, pas sur la colonne", () => {
     const panel = panelOf(el);
     expect(panel.classList.contains(RAIL_PULSE_GROUP_CLASS)).toBe(true);
     expect(panel.getAttribute(RAIL_PULSE_ATTRIBUTE)).toBe("off");
+    // Né fermé : on l'ouvre d'abord — c'est le CTA sur tiroir DÉJÀ ouvert
+    // qui est testé ici.
+    openDrawer(el);
 
     const cta = document.createElement("a");
     cta.setAttribute("href", "#paliers");
@@ -470,18 +498,22 @@ describe("Les CTA d'ancre annoncent l'état du tiroir", () => {
         <Cartes />
       </TiersDrawer>,
     );
-    expect(cta.getAttribute("aria-expanded")).toBe("true");
+    // Né fermé : l'état annoncé au montage est `false`.
+    expect(cta.getAttribute("aria-expanded")).toBe("false");
     expect(cta.getAttribute("aria-controls")).toBe(panelOf(el).id);
+
+    openDrawer(el);
+    expect(cta.getAttribute("aria-expanded")).toBe("true");
 
     act(() => {
       closeButton(el).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     });
     expect(cta.getAttribute("aria-expanded")).toBe("false");
 
-    // Fail-open : ces attributs n'existent QUE tant que le tiroir vit. Sans
-    // JS (ou une fois la route quittée) l'ancre redevient une ancre nue, qui
-    // mène au rail déployé — c'est le seul comportement que le HTML servi
-    // promet.
+    // Ces attributs n'existent QUE tant que le tiroir vit. Sans JS (ou une
+    // fois la route quittée) l'ancre redevient une ancre nue, qui mène au
+    // rail — rouvert d'office par `@media (scripting: none)` : c'est le seul
+    // comportement que le HTML servi promet.
     act(() => {
       root!.unmount();
     });
@@ -548,12 +580,13 @@ describe("Impression", () => {
 describe("Absence de JS", () => {
   const css = read("src/app/(site)/globals.css");
 
-  it("le bouton de fermeture n'existe pas", () => {
-    // `open` vaut `true` au rendu serveur : `inert={!open}` laisse un bouton
-    // VISIBLE et inopérant tant que rien ne l'hydrate.
+  it("aucune commande du tiroir n'existe (poignée comme fermeture)", () => {
+    // Les deux boutons de bord sont inopérants sans moteur de script — une
+    // commande visible et inopérante serait un mensonge cliquable : ils
+    // n'apparaissent qu'une fois `data-rail-ready` posé par l'hydratation.
     expect(css).toMatch(
       new RegExp(
-        `html:not\\(\\[${RAIL_READY_ATTRIBUTE}\\]\\) \\[${RAIL_EDGE_ATTRIBUTE}="close"\\] \\{\\s*display: none;`,
+        `html:not\\(\\[${RAIL_READY_ATTRIBUTE}\\]\\) \\[${RAIL_EDGE_ATTRIBUTE}\\] \\{\\s*display: none;`,
       ),
     );
     // ... et le marqueur n'est jamais rendu côté serveur.

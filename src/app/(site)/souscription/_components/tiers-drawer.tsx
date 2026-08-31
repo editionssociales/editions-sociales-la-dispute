@@ -6,6 +6,7 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
@@ -64,6 +65,13 @@ import {
 const MOBILE_QUERY = "(max-width: 1023.98px)";
 
 /**
+ * Abonnement vide de `useSyncExternalStore` : la « donnée externe » est le
+ * fait d'être hydraté, qui ne change jamais après coup — serveur `false`,
+ * client `true`, sans `setState` dans un effet.
+ */
+const subscribeNever = () => () => {};
+
+/**
  * Chevron des commandes — même dessin que la bascule du header et que la
  * poignée de la feuille (angles droits, R8), tourné d'un quart de tour.
  * DUPLIQUÉ plutôt qu'importé de `bottom-sheet.tsx` : ce glyphe n'y est pas
@@ -97,9 +105,20 @@ export function TiersDrawer({
   children: ReactNode;
 }) {
   const mobile = useMediaQuery(MOBILE_QUERY);
-  // Le tiroir NAÎT OUVERT : c'est l'état rendu par le serveur, et les
-  // contreparties sont le point le plus urgent de la page.
-  const [open, setOpen] = useState(true);
+  // Le tiroir NAÎT FERMÉ (demande client 2026-08-31, qui inverse le choix
+  // initial « ouvert d'office ») : c'est l'état rendu par le serveur ET le
+  // défaut CSS `var(--rail-open, 0)` de `rail-inset.ts` — aucun éclair
+  // d'ouverture-fermeture au chargement. Le CTA « Contribuer » l'ouvre.
+  const [open, setOpen] = useState(false);
+  // Hydraté ? Serveur `false`, client `true` — pilote le `inert` du panneau :
+  // le HTML serveur n'en pose PAS, pour que le repli sans-JS de
+  // `@media (scripting: none)` (globals.css, qui rouvre la colonne) donne un
+  // rail réellement utilisable ; hydraté, `inert` suit l'état normalement.
+  const hydrated = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
   /** Liseré d'appel : réaction visible quand un CTA vise un tiroir DÉJÀ ouvert. */
   const [pulsing, setPulsing] = useState(false);
   const pulseRearm = useRef(0);
@@ -160,9 +179,11 @@ export function TiersDrawer({
     if (mobile) return;
     const root = document.documentElement;
     root.style.setProperty(RAIL_OPEN_PROPERTY, open ? "1" : "0");
-    // Marque « le tiroir est hydraté » : `globals.css` ne révèle le bouton de
-    // fermeture qu'à cette condition. Sans JS il n'apparaît jamais — le HTML
-    // serveur rend le tiroir ouvert, rien ne peut le replier.
+    // Marque « le tiroir est hydraté » : `globals.css` ne révèle les DEUX
+    // commandes de bord (poignée ET fermeture) qu'à cette condition — sans JS
+    // elles seraient des mensonges cliquables. Sans JS toujours, la colonne
+    // est rouverte d'office par `@media (scripting: none)` (globals.css) :
+    // le rail reste utilisable, il n'a simplement pas de tiroir.
     root.setAttribute(RAIL_READY_ATTRIBUTE, "");
     return () => {
       root.style.removeProperty(RAIL_OPEN_PROPERTY);
@@ -255,10 +276,11 @@ export function TiersDrawer({
    * (composant serveur, hors de cet arbre) : impossible de leur passer une
    * prop — on les annote depuis ici, comme on intercepte déjà leur clic.
    *
-   * Fail-open intact : sans JS aucun attribut n'est posé et l'ancre reste une
-   * ancre qui mène au rail déployé. `aria-expanded` est un état SUPPORTÉ par
-   * `role=link` (ARIA 1.2) : le lien n'est pas travesti en bouton, il dit
-   * seulement ce que son activation a fait.
+   * Sans JS : aucun attribut n'est posé et l'ancre reste une ancre qui mène
+   * au rail — déployé d'office par `@media (scripting: none)` (globals.css).
+   * `aria-expanded` est un état SUPPORTÉ par `role=link` (ARIA 1.2) : le lien
+   * n'est pas travesti en bouton, il dit seulement ce que son activation a
+   * fait.
    */
   useEffect(() => {
     const ids = anchorKey ? anchorKey.split(" ") : [];
@@ -381,7 +403,12 @@ export function TiersDrawer({
         {...{ [RAIL_PANEL_ATTRIBUTE]: "", [RAIL_PULSE_ATTRIBUTE]: pulsing ? "on" : "off" }}
         // Replié, le panneau reste MONTÉ et sort du parcours clavier par
         // `inert` — jamais par `visibility`/`hidden` (grammaire des déroulés).
-        inert={!open}
+        // JAMAIS posé au rendu serveur (`hydrated`) : le repli sans-JS de
+        // `@media (scripting: none)` rouvre la colonne, un `inert` figé dans
+        // le HTML la rendrait inutilisable. Fenêtre pré-hydratation assumée :
+        // colonne fermée (0px, `overflow-x-clip`), contenu brièvement
+        // tabulable — l'hydratation pose `inert` à la première frame utile.
+        inert={hydrated ? !open : undefined}
         onKeyDown={onKeyDown}
         className={`min-w-0 ${RAIL_PULSE_GROUP_CLASS} lg:self-stretch lg:overflow-x-clip`}
       >

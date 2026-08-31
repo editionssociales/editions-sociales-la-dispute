@@ -67,7 +67,7 @@ function panel(el: HTMLElement): HTMLElement {
 describe("BottomSheet — Échap (issue #114)", () => {
   it("Échap referme la feuille ouverte et rend le focus à la poignée", () => {
     const el = mount(
-      <BottomSheet label="Contribuer" autoOpenDelayMs={60_000}>
+      <BottomSheet label="Contribuer">
         <a href="#x">Lien dans le panneau</a>
       </BottomSheet>,
     );
@@ -90,7 +90,7 @@ describe("BottomSheet — Échap (issue #114)", () => {
 
   it("Échap dans un champ de saisie ne referme PAS la feuille", () => {
     const el = mount(
-      <BottomSheet label="Contribuer" autoOpenDelayMs={60_000}>
+      <BottomSheet label="Contribuer">
         <input name="amount" />
       </BottomSheet>,
     );
@@ -105,12 +105,11 @@ describe("BottomSheet — Échap (issue #114)", () => {
   });
 });
 
-describe("BottomSheet — auto-open reduced-motion (issue #114)", () => {
-  it("n'ouvre pas tout seul sous prefers-reduced-motion", () => {
-    reduceMotion = true;
+describe("BottomSheet — née repliée, le RESTE (demande client 2026-08-31)", () => {
+  it("ne se déroule JAMAIS toute seule — l'ancien déroulé automatique différé est supprimé", () => {
     vi.useFakeTimers();
     const el = mount(
-      <BottomSheet label="Contribuer" autoOpenDelayMs={0}>
+      <BottomSheet label="Contribuer">
         <p>Paliers</p>
       </BottomSheet>,
     );
@@ -118,5 +117,10 @@ describe("BottomSheet — auto-open reduced-motion (issue #114)", () => {
       vi.runAllTimers();
     });
     expect(handle(el).getAttribute("aria-expanded")).toBe("false");
+    // Seul un geste la déplie.
+    act(() => {
+      handle(el).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(handle(el).getAttribute("aria-expanded")).toBe("true");
   });
 });

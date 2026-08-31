@@ -72,21 +72,18 @@ function ChevronGlyph() {
 export function BottomSheet({
   label,
   anchors = [],
-  autoOpenDelayMs = 0,
   children,
 }: {
   /** Libellé du bandeau — c'est aussi le nom accessible du bouton. */
   label: string;
   /** Ids d'ancre de la page qui doivent déplier la feuille (sans `#`). */
   anchors?: string[];
-  /** Temps de pose, bandeau replié visible, avant le déroulé automatique. */
-  autoOpenDelayMs?: number;
   children: ReactNode;
 }) {
   const mobile = useMediaQuery(MOBILE_QUERY);
-  // La feuille NAÎT REPLIÉE et se déroule seule après `autoOpenDelayMs` : le
-  // chargement montre d'abord le bandeau-bouton « Contribuer », puis le
-  // déroulé se joue à l'écran (au lieu d'être déjà fini au premier paint).
+  // La feuille NAÎT REPLIÉE et le RESTE (demande client 2026-08-31 — l'ancien
+  // déroulé automatique différé est supprimé) : seul un geste de l'utilisateur
+  // la déplie — appui sur le bandeau « Contribuer », glissé, ou CTA d'ancre.
   const [open, setOpen] = useState(false);
   // Décalage vertical EN COURS de glissé (px, 0 = déroulée) ; `null` hors
   // geste — la position est alors portée par les classes, donc animée.
@@ -110,28 +107,7 @@ export function BottomSheet({
    *  peut délivrer plusieurs événements par frame (à 120 Hz notamment) —
    *  un seul `setDragOffset` par frame peinte, jamais un par événement brut. */
   const moveRaf = useRef(0);
-  /** L'utilisateur a pris la main → le déroulé automatique est annulé. */
-  const userActed = useRef(false);
   const panelId = useId();
-  const [announcement, setAnnouncement] = useState("");
-
-  // Déroulé automatique différé. `setState` dans un minuteur, pas dans le corps
-  // de l'effet : c'est un événement externe (le temps), pas une dérivation du
-  // rendu. Un appui ou un glissé avant l'échéance l'emporte — la feuille ne
-  // doit jamais se rouvrir dans le dos. Coupé sous `prefers-reduced-motion`
-  // (issue #114) : l'affordance « Contribuer » suffit. Annonce polie quand
-  // l'auto-ouverture a lieu.
-  useEffect(() => {
-    if (!mobile) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setTimeout(() => {
-      if (!userActed.current) {
-        setOpen(true);
-        setAnnouncement(`${label} : contreparties dépliées`);
-      }
-    }, autoOpenDelayMs);
-    return () => window.clearTimeout(id);
-  }, [mobile, autoOpenDelayMs, label]);
 
   // Réserve la hauteur du bandeau replié en bas du DOCUMENT : le pied de site
   // vit dans le layout, hors de portée d'un espaceur rendu ici — sans ça, ses
@@ -155,7 +131,6 @@ export function BottomSheet({
     const onPointerDown = (event: PointerEvent) => {
       const sheet = sheetRef.current;
       if (!sheet || sheet.contains(event.target as Node)) return;
-      userActed.current = true;
       setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -173,7 +148,6 @@ export function BottomSheet({
       const target = event.target;
       if (target instanceof Element && target.closest("input, textarea, select")) return;
       event.preventDefault();
-      userActed.current = true;
       setOpen(false);
       handleRef.current?.focus();
     };
@@ -223,7 +197,6 @@ export function BottomSheet({
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       const sheet = sheetRef.current;
       if (!sheet) return;
-      userActed.current = true;
       // Course utile = tout sauf le bandeau, qui reste toujours visible.
       // Course utile = tout sauf le bandeau, qui reste toujours visible.
       const max = Math.max(0, sheet.offsetHeight - HANDLE_PX);
@@ -272,7 +245,6 @@ export function BottomSheet({
   }, []);
 
   const onClick = useCallback(() => {
-    userActed.current = true;
     // Le `click` de fin de glissé ne doit pas annuler l'aimantation ; l'appui
     // simple (et le clavier, qui n'émet que `click`) bascule.
     if (dragged.current) {
@@ -351,10 +323,6 @@ export function BottomSheet({
           </span>
         </span>
       </button>
-
-      <p aria-live="polite" className="sr-only">
-        {announcement}
-      </p>
 
       {/* `inert` replié : le contenu hors écran ne doit être ni focalisable ni
           lu par un lecteur d'écran (il reste dans le DOM, donc indexable). */}

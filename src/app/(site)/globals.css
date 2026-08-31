@@ -389,10 +389,21 @@ h1, h2, h3, h4 {
   }
 }
 
-/* SANS JS, le bouton de fermeture du tiroir n'existe pas : le HTML serveur
-   rend le tiroir ouvert (fail-open), rien ne peut le replier — une commande
-   visible et inopérante serait un mensonge cliquable. Il n'apparaît qu'une
+/* SANS JS, aucune commande du tiroir n'existe (poignée COMME fermeture) :
+   toutes deux sont inopérantes sans moteur de script — une commande visible
+   et inopérante serait un mensonge cliquable. Elles n'apparaissent qu'une
    fois `data-rail-ready` posé sur <html> par le tiroir hydraté. */
-html:not([data-rail-ready]) [data-rail-edge="close"] {
+html:not([data-rail-ready]) [data-rail-edge] {
   display: none;
+}
+
+/* Sans moteur de script, rien ne peut ouvrir le tiroir : la colonne est
+   rouverte d'office — le don sans JS fonctionne réellement (formulaires en
+   server actions), un rail définitivement fermé le condamnerait. Avec JS, le
+   défaut `var(--rail-open, 0)` de `rail-inset.ts` fait naître le tiroir
+   FERMÉ (demande client 2026-08-31). */
+@media (scripting: none) {
+  :root {
+    --rail-open: 1;
+  }
 }

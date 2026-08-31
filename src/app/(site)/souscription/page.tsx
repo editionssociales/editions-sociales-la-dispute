@@ -736,11 +736,7 @@ export default async function SouscriptionPage() {
           d'ancre `#paliers`/`#montant-libre` la redéploient). À `lg+`,
           `BottomSheet` est transparent : le rail redevient l'item de grille
           sticky de la colonne 380px. */}
-      <BottomSheet
-        label="Contribuer"
-        anchors={["paliers", "montant-libre"]}
-        autoOpenDelayMs={1000}
-      >
+      <BottomSheet label="Contribuer" anchors={["paliers", "montant-libre"]}>
         <TiersDrawer anchors={["paliers", "montant-libre"]}>
           <TiersRail content={content} enabled={enabled} />
         </TiersDrawer>

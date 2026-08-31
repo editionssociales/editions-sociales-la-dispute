@@ -19,25 +19,29 @@
  * se ferme (`souscription/_components/tiers-drawer.tsx`), exactement comme la
  * feuille de bas d'écran sous `lg`. La largeur n'est donc plus une constante
  * mais `380px × --rail-open`, où `--rail-open` vaut 1 (ouvert) ou 0 (fermé).
- * La propriété n'est JAMAIS posée côté serveur : son défaut `var(…, 1)` rend
- * le tiroir OUVERT sans JS (fail-open — même doctrine que les Métriques). La
- * colonne vaut donc 380px ou 0, jamais autre chose : aucune poignée n'est
- * logée dedans (elles sont fixées au bord du viewport).
+ * La propriété n'est JAMAIS posée côté serveur : son défaut `var(…, 0)` rend
+ * le tiroir FERMÉ au chargement (demande client 2026-08-31, qui inverse le
+ * fail-open d'origine) — en phase avec l'état initial du composant, aucun
+ * éclair. L'exception sans-JS vit dans `globals.css` : `@media (scripting:
+ * none)` repose `--rail-open: 1` (le don sans JS fonctionne, server actions —
+ * un rail définitivement fermé le condamnerait). La colonne vaut donc 380px
+ * ou 0, jamais autre chose : aucune poignée n'est logée dedans (elles sont
+ * fixées au bord du viewport).
  */
 
 /**
  * Propriété custom qui porte l'ouverture du tiroir : `1` ouvert, `0` fermé,
  * posée sur `document.documentElement` par le tiroir (client) — jamais rendue
- * dans le HTML serveur. Absente, le `var(--rail-open,1)` des classes
- * ci-dessous retombe sur 1 : OUVERT.
+ * dans le HTML serveur. Absente, le `var(--rail-open,0)` des classes
+ * ci-dessous retombe sur 0 : FERMÉ (sauf `scripting: none`, cf. ci-dessus).
  */
 export const RAIL_OPEN_PROPERTY = "--rail-open";
 
 /** Largeur de la colonne du rail (380px ouvert, 0 fermé) — navbar resserrée d'autant sur /souscription. */
-export const RAIL_WIDTH_CLASS = "lg:mr-[calc(380px*var(--rail-open,1))]";
+export const RAIL_WIDTH_CLASS = "lg:mr-[calc(380px*var(--rail-open,0))]";
 
 /** Grille de page à deux colonnes (contenu + rail) — même largeur que `RAIL_WIDTH_CLASS`. */
-export const RAIL_GRID_CLASS = "lg:grid-cols-[minmax(0,1fr)_calc(380px*var(--rail-open,1))]";
+export const RAIL_GRID_CLASS = "lg:grid-cols-[minmax(0,1fr)_calc(380px*var(--rail-open,0))]";
 
 /**
  * Largeur FIXE du contenu du tiroir (`tiers-rail.tsx`) — la colonne se
