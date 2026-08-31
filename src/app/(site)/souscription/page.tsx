@@ -12,6 +12,7 @@ import { CAMPAIGN_2026_PALIERS, deriveCampaign2026 } from "@/lib/donation-tiers"
 import { RAIL_GRID_CLASS, RAIL_GRID_TRANSITION_CLASS } from "@/components/rail-inset";
 import { POP_BG } from "@/components/pop-palette";
 import type { SafeHtml } from "@/lib/cms-html";
+import { youTubeEmbedUrl } from "@/lib/video";
 import { getCampaign2026 } from "@/lib/donations";
 import { getPageSouscription } from "@/lib/site-content";
 import { getNewReleases } from "@/lib/catalogue";
@@ -35,7 +36,8 @@ import { SoutiensRail } from "./_components/soutiens-rail";
  * colonne principale garde jauge → récit → objectifs → CTA, le rail des
  * contreparties reste hors du corps de texte) : héros de collecte en direct
  * (INCHANGÉ À L'OCTET, cf. plus bas) → titre de l'ask (« 100 ans » +
- * étagère 3D à sa droite, demande alignée à droite) → quatre sections narratives (UN SEUL pattern répété :
+ * étagère 3D à sa droite, demande alignée à droite) → vidéo de campagne
+ * (revenue le 2026-08-31, cf. plus bas) → quatre sections narratives (UN SEUL pattern répété :
  * bandeau de titre à l'accent de la section + corps en prose sobre — gras et
  * surlignage inline pour toute emphase, aucun autre effet) → trois cartes de
  * paliers de jauge (remplacent l'escalier typographique) → preuve sociale
@@ -43,9 +45,7 @@ import { SoutiensRail } from "./_components/soutiens-rail";
  * → CTA final → rail sticky des contreparties (`#paliers`, hors du corps de
  * texte, cf. `_components/tiers-rail.tsx`/`tiers-drawer.tsx`, INCHANGÉS).
  *
- * Ce qui disparaît avec la refonte : la section vidéo conditionnelle (`CAMPAIGN_VIDEO_URL`
- * n'a jamais cessé d'être `null` — `src/lib/video.ts` reste en place,
- * toujours utilisé par la fiche livre) ; la bande hazard, le tampon penché
+ * Ce qui disparaît avec la refonte : la bande hazard, le tampon penché
  * « 100 ans », le crescendo du bandeau d'appel (dont le « ! » ajouté en
  * juillet, absent de la maquette), les exergues `text-[1.5em]`/`[1.8em]`, et
  * la duplication `OBJECTIF_EXTRAS` keyée par montant (avec son invariant de
@@ -92,6 +92,17 @@ const RECIT_CORPS_CLASS =
  * franchit un retour à la ligne. Une classe littérale par couleur de section
  * (contrat JIT — jamais `bg-pop-${couleur}` assemblée dynamiquement).
  */
+/**
+ * Vidéo de campagne — le bloc conditionnel de la maquette 2026-07 (masqué
+ * tant qu'aucune vidéo n'était livrée, puis retiré du code par la refonte
+ * sobre) revient le 2026-08-31 avec la vidéo enfin livrée. URL « watch »
+ * telle que fournie, convertie UNE fois en embed nocookie par
+ * `youTubeEmbedUrl` (`src/lib/video.ts`, règle unique URL → embed) : URL
+ * méconnaissable = bloc absent, jamais une iframe cassée.
+ */
+const CAMPAIGN_VIDEO_URL = "https://www.youtube.com/watch?v=8NY6C5If5h0";
+const CAMPAIGN_VIDEO_EMBED = youTubeEmbedUrl(CAMPAIGN_VIDEO_URL);
+
 const HL_ORANGE = "box-decoration-clone bg-pop-orange px-1 font-bold";
 const HL_TEAL = "box-decoration-clone bg-pop-teal px-1 font-bold";
 const HL_YELLOW = "box-decoration-clone bg-pop-yellow px-1 font-bold";
@@ -496,6 +507,31 @@ export default async function SouscriptionPage() {
             </p>
           </Container>
         </section>
+
+        {/* 2 bis ▪ Vidéo de campagne — pleine largeur de colonne, entre
+            l'ask et le récit : JAMAIS entre la collecte et le titre (leur
+            écart resserré est un retour client 2026-08-21). Mêmes attributs
+            d'iframe que la fiche livre (pas d'autoplay dans `allow`) ;
+            `bg-ink` dans le cadre : le letterboxing reste noir, pas paper. */}
+        {CAMPAIGN_VIDEO_EMBED && (
+          <section className="mt-12 sm:mt-16">
+            <Reveal>
+              <Container>
+                <div className="border-2 border-ink bg-ink">
+                  <iframe
+                    src={CAMPAIGN_VIDEO_EMBED}
+                    title="La vidéo de la souscription"
+                    className="aspect-video w-full"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
+                </div>
+              </Container>
+            </Reveal>
+          </section>
+        )}
 
         {/* 3 ▪ Récit — quatre sections-bandeaux, UN SEUL pattern répété
             (`RecitSection`) : bandeau de titre à l'accent de la section
