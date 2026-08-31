@@ -50,4 +50,40 @@ describe('deriveSlugFromLabel', () => {
       } as never),
     ).toBe('deja-la')
   })
+
+  it('update au champ VIDÉ : conserve l’existant, ne re-dérive JAMAIS du libellé (slug figé, panne du 2026-08-29)', () => {
+    expect(
+      fromTitle({
+        value: '',
+        data: { title: 'Les luttes des classes en France' },
+        siblingData: { title: 'Les luttes des classes en France' },
+        operation: 'update',
+        originalDoc: { slug: 'les-luttes-de-classes-en-france' },
+      } as never),
+    ).toBe('les-luttes-de-classes-en-france')
+  })
+
+  it('update avec saisie explicite (rôle autorisé par l’access du champ) : slugifiée', () => {
+    expect(
+      fromTitle({
+        value: 'Nouveau Slug Choisi',
+        data: {},
+        siblingData: {},
+        operation: 'update',
+        originalDoc: { slug: 'ancien' },
+      } as never),
+    ).toBe('nouveau-slug-choisi')
+  })
+
+  it('update d’une fiche SANS slug (donnée cassée) : seule exception, dérive du libellé', () => {
+    expect(
+      fromTitle({
+        value: '',
+        data: { title: 'Le Capital' },
+        siblingData: { title: 'Le Capital' },
+        operation: 'update',
+        originalDoc: { slug: '' },
+      } as never),
+    ).toBe('le-capital')
+  })
 })

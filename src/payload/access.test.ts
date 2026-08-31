@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Access } from 'payload'
 
-import { isAdmin, isAdminOrEditor } from './access.ts'
+import { isAdmin, isAdminField, isAdminOrEditor } from './access.ts'
 
 /**
  * `isAdmin`/`isAdminOrEditor` n'étaient jusqu'ici exercées qu'indirectement,
@@ -26,6 +26,14 @@ describe('isAdmin', () => {
 
   it('false sans utilisateur connecté', () => {
     expect(isAdmin(ctx(null))).toBe(false)
+  })
+})
+
+describe('isAdminField — verrou de CHAMP (slugs figés après création)', () => {
+  it('même règle qu’isAdmin, sur les trois rôles', () => {
+    expect(isAdminField(ctx('admin') as never)).toBe(true)
+    expect(isAdminField(ctx('editor') as never)).toBe(false)
+    expect(isAdminField(ctx(null) as never)).toBe(false)
   })
 })
 

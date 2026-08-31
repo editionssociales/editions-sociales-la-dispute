@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
-import { isAdminOrEditor } from '../access.ts'
+import { isAdminField, isAdminOrEditor } from '../access.ts'
 import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
@@ -59,13 +59,18 @@ export const BookLabels: CollectionConfig = {
           unique: true,
           index: true,
           label: 'Slug',
+          // Même verrou que le slug des livres (cf. `Books.ts`) : identifiant
+          // public, figé après création.
+          access: {
+            update: isAdminField,
+          },
           hooks: {
             beforeValidate: [deriveSlugFromLabel('name')],
           },
           admin: {
             width: '35%',
             description:
-              'Identifiant d’URL (`?libelle=…`) — prérempli depuis le nom.',
+              'Identifiant d’URL (`?libelle=…`) — figé après création, modification réservée aux admins.',
             components: {
               Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
             },

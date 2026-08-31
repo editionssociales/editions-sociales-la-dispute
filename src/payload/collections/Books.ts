@@ -7,7 +7,7 @@ import type {
   UploadFieldSingleValidation,
 } from 'payload'
 
-import { isAdmin, isAdminOrEditor } from '../access.ts'
+import { isAdmin, isAdminField, isAdminOrEditor } from '../access.ts'
 import {
   revalidateCatalogueAfterChange,
   revalidateCatalogueAfterDelete,
@@ -273,13 +273,22 @@ export const Books: CollectionConfig = {
                   required: true,
                   index: true,
                   label: 'Slug',
+                  // FIGÉ après création (panne dons 75/300 € du 2026-08-29) :
+                  // ce slug est l'identifiant public de la fiche — URL,
+                  // redirections, compositions de contreparties
+                  // (`contreparties-core.ts`). Verrou de rôles + hook
+                  // (`deriveSlugFromLabel` : un update vidé conserve
+                  // l'existant, jamais de re-dérivation depuis le titre).
+                  access: {
+                    update: isAdminField,
+                  },
                   hooks: {
                     beforeValidate: [deriveSlugFromLabel('title')],
                   },
                   admin: {
                     width: '35%',
                     description:
-                      'Prérempli depuis le titre — ne pas modifier après publication',
+                      'Identifiant public de la fiche (URL, contreparties, redirections) — figé après création. Modification réservée aux admins : tout lien existant vers l’ancien slug casse.',
                     components: {
                       Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
                     },

@@ -1,4 +1,4 @@
-import type { Access } from 'payload'
+import type { Access, FieldAccess } from 'payload'
 import type { User } from '@/payload-types'
 
 /**
@@ -19,3 +19,13 @@ export const isAdmin: Access = ({ req: { user } }) => user?.role === 'admin'
 /** Accès ouvert aux administrateur·rice·s ET aux éditrice·eur·s (CRUD catalogue courant). */
 export const isAdminOrEditor: Access = ({ req: { user } }) =>
   user?.role === 'admin' || user?.role === 'editor'
+
+/**
+ * Accès de CHAMP réservé aux admins — même règle qu'`isAdmin`, typée
+ * `FieldAccess` (l'accès d'un champ ne peut pas retourner de `Where`).
+ * Premier usage : les slugs, FIGÉS après création (un slug renommé casse
+ * URLs, redirections et compositions de contreparties — panne dons 75/300 €
+ * du 2026-08-29) ; les écritures automatisées (imports, migrations, webhook)
+ * passent en Local API `overrideAccess` et ne sont pas concernées.
+ */
+export const isAdminField: FieldAccess = ({ req: { user } }) => user?.role === 'admin'
