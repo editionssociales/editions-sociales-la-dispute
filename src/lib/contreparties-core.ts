@@ -71,14 +71,14 @@ export type ContrepartieSelection = Record<string, string>;
 export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
   {
     tierId: "palier-15",
-    sections: [{ kind: "inclus", label: "Inclus", items: [{ slug: "planche-de-stickers", qty: 1 }] }],
+    sections: [{ kind: "inclus", label: "Cadeau", items: [{ slug: "planche-de-stickers", qty: 1 }] }],
   },
   {
     tierId: "palier-35",
     sections: [
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "manifeste-du-parti-communiste", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
@@ -92,7 +92,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       {
         kind: "choix",
         id: "titre",
-        label: "Choisissez votre titre",
+        label: "Votre titre",
         options: [
           {
             id: "antifascisme",
@@ -108,7 +108,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       },
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
@@ -121,7 +121,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
     sections: [
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "les-luttes-de-classes-en-france", qty: 1 },
           { slug: "le-communisme-qui-vient", qty: 1 },
@@ -137,7 +137,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       {
         kind: "choix",
         id: "titre",
-        label: "Choisissez votre titre",
+        label: "Votre titre",
         options: [
           {
             id: "gaza",
@@ -153,7 +153,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       },
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
@@ -167,7 +167,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       {
         kind: "choix",
         id: "duo",
-        label: "Choisissez votre duo de titres",
+        label: "Votre duo de titres",
         options: [
           {
             id: "nouveautes",
@@ -192,7 +192,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       },
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },
@@ -205,7 +205,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
     sections: [
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "decoloniser-le-marxisme", qty: 1 },
           { slug: "les-luttes-de-classes-en-france", qty: 1 },
@@ -221,7 +221,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
     sections: [
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "decouvrir-foucault", qty: 1 },
           { slug: "decouvrir-althusser", qty: 1 },
@@ -241,7 +241,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       {
         kind: "choix",
         id: "pack",
-        label: "Choisissez votre pack",
+        label: "Votre pack",
         options: [
           {
             // Packs composés par la maison, produits dédiés (pas une agrégation d'items unitaires).
@@ -258,7 +258,7 @@ export const CONTREPARTIES_2026: readonly ContrepartieComposition[] = [
       },
       {
         kind: "inclus",
-        label: "Inclus",
+        label: "Cadeaux",
         items: [
           { slug: "totebag", qty: 1 },
           { slug: "planche-de-stickers", qty: 1 },

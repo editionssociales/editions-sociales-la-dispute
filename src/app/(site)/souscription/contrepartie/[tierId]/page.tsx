@@ -43,7 +43,7 @@ export async function generateMetadata({
   const tier = DONATION_TIERS.find((t) => t.id === tierId);
   if (!tier || !tierHasChoices(tier.id)) return {};
   return {
-    title: `Choisissez votre contrepartie — ${tier.title}`,
+    title: `Votre contrepartie — ${tier.title}`,
     robots: { index: false, follow: false },
   };
 }
@@ -212,12 +212,14 @@ export default async function ContrepartieChoicePage({
                     <h2 className="font-sans text-xl font-black italic text-ink sm:text-2xl">
                       {n}. {section.label}
                     </h2>
-                    {/* `FramedGrid` et jamais la recette recopiée à la main :
-                        le flux flex est `w-fit` d'office — l'ancien littéral
-                        pleine largeur laissait tout le reste de la rangée en
-                        aplat ink derrière deux cellules (retour client
-                        2026-08-21, même artefact que les filtres actifs). */}
-                    <FramedGrid as="ul" flow="flex" role="list" className="mt-4">
+                    {/* Cellules encadrées UNE À UNE, plus de treillis partagé
+                        (retour client 2026-08-30) : le `FramedGrid` flex, même
+                        `w-fit`, expose son mortier ink dès que la rangée se
+                        REPLIE — en mobile chaque cellule prenait sa rangée et
+                        le reste s'affichait en aplat noir (mesuré : cellules
+                        de 185/298px dans un conteneur de 335). Un cadre par
+                        cellule ne peut rien exposer, quel que soit le repli. */}
+                    <ul role="list" className="mt-4 flex flex-wrap gap-2">
                       {section.items.map((item) => {
                         const titleClassName = "font-sans text-sm font-bold text-ink";
                         const label = (
@@ -227,7 +229,10 @@ export default async function ContrepartieChoicePage({
                           </>
                         );
                         return (
-                          <li key={item.slug} className="flex items-center gap-3 bg-paper p-3">
+                          <li
+                            key={item.slug}
+                            className="flex items-center gap-3 border-2 border-ink bg-paper p-3"
+                          >
                             <ItemVisual item={item} heightClass="h-40" />
                             {item.fiche ? (
                               <BookHoverCard data={item.fiche} focusable className={titleClassName}>
@@ -239,7 +244,7 @@ export default async function ContrepartieChoicePage({
                           </li>
                         );
                       })}
-                    </FramedGrid>
+                    </ul>
                   </div>
                 )}
               </Reveal>
