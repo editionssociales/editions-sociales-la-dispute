@@ -1342,7 +1342,7 @@ export interface PageSouscription {
       }[]
     | null;
   /**
-   * Rail de visuels défilant en clôture de la page (photos, logos, messages de soutien…). CONTRAIREMENT au tableau Contreparties ci-dessus (dont l’ordre ne pilote jamais l’affichage), L’ORDRE DE SAISIE ICI EST L’ORDRE D’AFFICHAGE — glissez les entrées pour réordonner. Aucun visuel saisi = section absente de la page (rien à activer/désactiver).
+   * Carrousel grand format en clôture de la page — les visuels y défilent seuls, lentement, en boucle (photos, affiches, messages de soutien…). CONTRAIREMENT au tableau Contreparties ci-dessus (dont l’ordre ne pilote jamais l’affichage), L’ORDRE DE SAISIE ICI EST L’ORDRE D’AFFICHAGE — glissez les entrées pour réordonner. Aucun visuel saisi = section absente de la page (rien à activer/désactiver).
    */
   soutiens?:
     | {

@@ -612,13 +612,18 @@ function mergeSoutiens(global: PageSouscription | null | undefined): SoutienVisu
     if (!isMediaPopulated(image) || !image.url || !image.width || !image.height) return [];
     const legende = entry.legende?.trim() || null;
     const lien = entry.lien?.trim() || null;
+    // Alt : la légende saisie prime, sinon l'alt du média (posé par
+    // `scripts/import-soutiens-2026.ts` sur les affiches de campagne, qui
+    // portent leur texte DANS l'image — aucune légende visible à afficher),
+    // sinon vide (décoratif).
+    const altMedia = typeof image.alt === "string" ? image.alt.trim() : "";
     return [
       {
         image: {
           url: image.url,
           width: image.width,
           height: image.height,
-          alt: legende ?? "",
+          alt: legende ?? altMedia,
         },
         legende,
         lien,

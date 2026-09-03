@@ -636,6 +636,25 @@ describe("mergePageSouscription — soutiens (lot D3, 2026-08-30) : contrat de v
     expect(merged.soutiens[0].image.alt).toBe("");
   });
 
+  it("sans légende, l'alt du média prend le relais (affiches de campagne : le texte est DANS l'image)", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      soutiens: [{ image: media({ alt: "Untel soutient La Dispute et Les éditions sociales." }) }],
+    });
+    expect(merged.soutiens[0].legende).toBeNull();
+    expect(merged.soutiens[0].image.alt).toBe(
+      "Untel soutient La Dispute et Les éditions sociales.",
+    );
+  });
+
+  it("la légende saisie PRIME sur l'alt du média", () => {
+    const merged = mergePageSouscription({
+      id: 1,
+      soutiens: [{ image: media({ alt: "Alt du média" }), legende: "Légende saisie" }],
+    });
+    expect(merged.soutiens[0].image.alt).toBe("Légende saisie");
+  });
+
   it("relation image non peuplée (simple id, profondeur insuffisante) → entrée filtrée", () => {
     const merged = mergePageSouscription({
       id: 1,

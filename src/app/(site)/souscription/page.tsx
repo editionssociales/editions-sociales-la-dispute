@@ -20,7 +20,7 @@ import { BottomSheet } from "@/components/bottom-sheet";
 import { OPENING_MICROCOPY, TiersRail } from "./_components/tiers-rail";
 import { HeroShelf, MobileShelf } from "./_components/shelf";
 import { TiersDrawer } from "./_components/tiers-drawer";
-import { SoutiensRail } from "./_components/soutiens-rail";
+import { SoutiensCarousel } from "./_components/soutiens-carousel";
 
 /**
  * Page /souscription — refonte SOBRE (maquette client PDF, 2026-08-21,
@@ -41,7 +41,8 @@ import { SoutiensRail } from "./_components/soutiens-rail";
  * bandeau de titre à l'accent de la section + corps en prose sobre — gras et
  * surlignage inline pour toute emphase, aucun autre effet) → trois cartes de
  * paliers de jauge (remplacent l'escalier typographique) → preuve sociale
- * (`_components/soutiens-rail.tsx`, lot D3, ABSENTE si aucun visuel saisi)
+ * (`_components/soutiens-carousel.tsx`, carrousel grand format à
+ * défilement automatique lent, ABSENTE si aucun visuel saisi)
  * → CTA final → rail sticky des contreparties (`#paliers`, hors du corps de
  * texte, cf. `_components/tiers-rail.tsx`/`tiers-drawer.tsx`, INCHANGÉS).
  *
@@ -707,13 +708,15 @@ export default async function SouscriptionPage() {
             </Reveal>
           </Container>
 
-          {/* 5 ▪ Preuve sociale (lot D3, 2026-08-30) — juste AVANT la demande
-              finale (retour Clara : « un espace pour une catégorie avec des
-              visuels qui défilent »), hors du `<Container>` : le rail bleed
-              en pleine largeur, même traitement que `NouveautesCarousel`
-              (accueil). Absente du DOM si aucun visuel n'est saisi
-              (`mergeSoutiens`, contrat de vide propre à cette section). */}
-          <SoutiensRail soutiens={content.soutiens} />
+          {/* 5 ▪ Preuve sociale (lot D3, 2026-08-30 ; carrousel grand format
+              2026-09-03) — juste AVANT la demande finale (retour Clara :
+              « un espace pour une catégorie avec des visuels qui défilent »),
+              hors du `<Container>` : le carrousel bleed en pleine largeur et
+              défile seul, lentement, en boucle — même gabarit visuel que
+              `NouveautesCarousel` (accueil), sans effet de profondeur. Absente
+              du DOM si aucun visuel n'est saisi (`mergeSoutiens`, contrat de
+              vide propre à cette section). */}
+          <SoutiensCarousel soutiens={content.soutiens} />
 
           <Container>
             {/* CTA final : renvoie simplement à l'ancre unique du rail — le

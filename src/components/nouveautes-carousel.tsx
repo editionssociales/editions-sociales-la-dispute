@@ -23,8 +23,9 @@ export type { NouveauteBook };
  * le SOURCE de ce fichier. Ne reste ici que ce qui est spécifique au livre :
  * couvertures (`Cover`), lien de fiche, bootstrap LCP et `id` DOM singleton
  * (`NOUVEAUTES_RAIL_ID`) — le rail lui-même (défilement natif, glissé
- * souris, flèches, effet de profondeur) vit dans `scroll-rail.tsx`, partagé
- * avec `souscription/_components/soutiens-rail.tsx`.
+ * souris, flèches, effet de profondeur) vit dans `scroll-rail.tsx` (dont ce
+ * fichier est aujourd'hui le seul consommateur — les visuels de soutien ont
+ * pris leur propre carrousel en boucle, `souscription/_components/soutiens-carousel.tsx`).
  *
  * PROFONDEUR (épure minimaliste — la perspective 3D/rotation a été retirée) :
  * activée ici (`depthEffect`) — la carte centrale zoomée et opaque, les
