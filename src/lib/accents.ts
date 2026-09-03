@@ -14,7 +14,7 @@ export const ACCENT_BG: Record<Accent, string> = {
   brick: "bg-brick",
   // Identité La Dispute (cf. `format.ts`) — accent CLAIR, contrairement aux
   // quatre de couverture : tout texte posé dessus est `ink`, jamais `paper`
-  // (5,09:1 vs 3,38:1, cf. `pop-palette.ts`) — à traiter par l'appelant.
+  // (5,84:1 vs 2,95:1, cf. `pop-palette.ts`) — à traiter par l'appelant.
   "pop-orange": "bg-pop-orange",
 };
 

@@ -14,10 +14,10 @@
  * l'entoure). D'où :
  *
  *  • `*_LIGHT` (outline ink) sur tout fond clair — paper 17,19:1, paper-2
- *    15,62:1 — ou pop (jaune 15,19:1, rose 9,92:1, bleu 9,89:1, orange
- *    5,09:1) ;
- *  • `*_DARK` (outline pop-yellow) sur tout fond sombre — ink 15,19:1, navy
- *    11,07:1, brick 4,99:1, bottle 6,40:1.
+ *    15,62:1 — ou pop (jaune 15,16:1, rose 12,44:1, bleu 10,26:1, orange
+ *    5,84:1) ;
+ *  • `*_DARK` (outline pop-yellow) sur tout fond sombre — ink 15,16:1, navy
+ *    11,05:1, brick 4,98:1, bottle 6,38:1.
  *
  * Le pop-yellow n'a de contraste réel que sur fond sombre (1,13:1 sur paper,
  * 1:1 sur le chip jaune lui-même) : un seul token pour les deux contextes
@@ -56,15 +56,15 @@ export const FOCUS_RING_DARK =
  * bordent — celui du SURVOL :
  *
  *  • `_LIGHT` (outline ink) quand le survol vire au clair ou au pop — paper
- *    17,19:1, paper-2 15,62:1, jaune 15,19:1, rose 9,92:1, bleu 9,89:1,
- *    orange 5,09:1 ;
+ *    17,19:1, paper-2 15,62:1, jaune 15,16:1, rose 12,44:1, bleu 10,26:1,
+ *    orange 5,84:1 ;
  *  • `_DARK` (outline paper) quand le survol vire au sombre — ink 17,19:1,
  *    navy 12,53:1, bottle 7,24:1, brick 5,65:1.
  *
  * `_DARK` peint du `paper` et non le `pop-yellow` des anneaux de base : sur
- * ink, paper monte à 17,19:1 contre 15,19:1, et une seule couleur d'appoint
+ * ink, paper monte à 17,19:1 contre 15,16:1, et une seule couleur d'appoint
  * suffit alors pour TOUS les fonds sombres, brick compris (le jaune n'y ferait
- * que 4,99:1, le paper 5,65:1).
+ * que 4,98:1, le paper 5,65:1).
  *
  * **Pourquoi ça surcharge sans dépendre de l'ordre de la feuille** : la
  * variante empilée `hover:focus-visible:` porte une pseudo-classe de plus que
@@ -84,12 +84,13 @@ export const FOCUS_RING_HOVER_DARK = "hover:focus-visible:outline-paper";
  * survol : `FOCUS_RING_LIGHT` + `FOCUS_RING_HOVER_DARK`. Portée entre autres
  * par les surfaces qui s'inversent orange ↔ ink (variante `alarm` de
  * `button.tsx`, poignée de `bottom-sheet.tsx` — les deux entrées vers le
- * paiement de /souscription) : ink 5,09:1 sur l'orange au repos, paper
+ * paiement de /souscription) : ink 5,84:1 sur l'orange au repos, paper
  * 17,19:1 sur l'ink au survol.
  *
  * Le `pop-yellow` de `FOCUS_RING_DARK` a été essayé sur l'orange et retiré :
- * 2,99:1, juste SOUS le seuil de 3:1 de WCAG 1.4.11 (le commentaire de
- * `button.tsx` annonçait « ≈3:1 » ; c'était en dessous).
+ * 2,99:1 à l'époque, juste SOUS le seuil de 3:1 de WCAG 1.4.11 (le
+ * commentaire de `button.tsx` annonçait « ≈3:1 » ; c'était en dessous) —
+ * 2,60:1 depuis l'orange campagne 2026, encore plus net.
  */
 export const FOCUS_RING_INVERTING = `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`;
 

@@ -58,7 +58,7 @@ export const INVERT = `border-paper bg-paper text-ink hover:bg-ink hover:text-pa
  *
  * Deux natures d'accent, deux recettes : navy est SOMBRE (bordure paper,
  * inversion vers paper — R4, anneau sombre + surcharge claire) ; l'orange est
- * CLAIR — la recette d'`ALARM` (bordure ink, texte ink 5,09:1, inversion vers
+ * CLAIR — la recette d'`ALARM` (bordure ink, texte ink 5,84:1, inversion vers
  * l'INK : l'orange en texte sur paper est sous AA — et anneau inversant).
  */
 const HOUSE: Record<"navy" | "brick", string> = {
@@ -71,15 +71,16 @@ const HOUSE: Record<"navy" | "brick", string> = {
  * du compteur de /souscription ; brick à l'origine, passé à l'orange le
  * 2026-08-07 avec toute la page, retour Clara) : bordure INK et non paper —
  * posée sur paper, une bordure paper disparaîtrait ; le contour reste celui des
- * objets du fond clair. L'orange est CLAIR : le texte y est `ink` (5,09:1),
- * jamais `paper` (3,38:1, sous les 4,5:1 de AA), et l'inversion au survol se
+ * objets du fond clair. L'orange est CLAIR : le texte y est `ink` (5,84:1),
+ * jamais `paper` (2,95:1, sous les 4,5:1 de AA), et l'inversion au survol se
  * fait donc vers ink et non vers paper. Anneau : `FOCUS_RING_INVERTING`
  * (`lib/ui.ts`), le même qu'OUTLINE et INVERT — clair au repos, paper au
- * survol. Le pop-yellow de DARK a été essayé ici : 2,99:1 sur l'orange, SOUS
- * le seuil de 3:1 de WCAG 1.4.11 (ce commentaire annonçait « ≈3:1 » ; c'était
- * en dessous, corrigé le 2026-08-18) ; et un LIGHT nu, sans sa surcharge de
+ * survol. Le pop-yellow de DARK a été essayé ici : 2,99:1 sur l'orange
+ * d'alors, SOUS le seuil de 3:1 de WCAG 1.4.11 (ce commentaire annonçait
+ * « ≈3:1 » ; c'était en dessous, corrigé le 2026-08-18 — 2,60:1 depuis
+ * l'orange campagne 2026) ; et un LIGHT nu, sans sa surcharge de
  * survol, disparaîtrait sur l'ink du survol. L'anneau inversant tient les DEUX
- * états : ink 5,09:1 au repos, paper 17,19:1 au survol. Elle rime avec le
+ * états : ink 5,84:1 au repos, paper 17,19:1 au survol. Elle rime avec le
  * bandeau de la feuille de bas d'écran : les deux entrées vers le paiement
  * portent le même orange — et le même anneau.
  */

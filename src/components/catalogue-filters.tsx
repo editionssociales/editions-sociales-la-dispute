@@ -169,7 +169,7 @@ function SelectCell({
  * l'identité La Dispute est l'ORANGE (accent CLAIR, ex-brick — cf.
  * `lib/editions.ts`), texte et anneau dépendent de la nature de l'accent.
  * Accents sombres : texte paper + anneau sombre (R5). Orange : texte ink
- * (5,09:1 — paper y serait sous AA) + anneau clair (ink, 5,09:1, au-dessus
+ * (5,84:1 — paper y serait sous AA) + anneau clair (ink, 5,84:1, au-dessus
  * du seuil 3:1 de WCAG 1.4.11). Aucun survol ne change le fond d'une cellule
  * active, l'anneau de repos suffit dans les deux cas.
  */

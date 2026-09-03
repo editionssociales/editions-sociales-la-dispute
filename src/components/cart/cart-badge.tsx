@@ -12,7 +12,7 @@ import { cartFlyTarget } from "./fly-to-cart";
  * ré-exportée : une constante, pas une dépendance inverse `cart →
  * site-header`) ; le focus vient de `FOCUS_RING_LIGHT` SEUL (`lib/ui.ts`) — la
  * cellule passe de paper à pop-yellow au survol, deux fonds CLAIRS, et l'ink de
- * l'anneau y tient les deux états (17,19:1 puis 15,19:1) : aucune surcharge
+ * l'anneau y tient les deux états (17,19:1 puis 15,16:1) : aucune surcharge
  * `hover:focus-visible:` n'est nécessaire ici, contrairement aux cellules
  * voisines qui virent à l'ink (R5). Toujours rendue sous `<CartProvider>`.
  *

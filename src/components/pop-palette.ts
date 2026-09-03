@@ -10,17 +10,22 @@
  * couverture (navy/bottle/ocher/brick) vers cette palette sur les pages
  * qu'elle a relevées.
  *
- * **Contraste** : les quatre teintes sont CLAIRES — le texte posé dessus est
- * toujours `ink` (5,09:1 sur l'orange), jamais `paper` (3,38:1, sous les
- * 4,5:1 de AA — et c'est le MÊME couple que « orange sur paper » plus bas, le
- * contraste étant symétrique : un seul chiffre pour les deux sens). Dans
- * l'autre sens, SUR paper, seul `orange` passe le seuil de 3:1 (3,38:1) : lui
- * seul y sert de couleur de TEXTE (AA large seulement, corps ≥ 24px ou ≥ 19px
- * gras) et de TRAIT — soulignement décoratif, filet, contour (3:1 = seuil
- * WCAG 1.4.11 pour un objet graphique). Rose (1,73:1), bleu (1,74:1) et jaune
- * (1,13:1) n'y servent QU'EN APLAT, texte `ink` par-dessus : en trait sur
- * paper ils sont à la limite de l'invisible. Un soulignement d'emphase se
- * peint donc en `decoration-pop-orange`, jamais en rose ni en bleu.
+ * **Contraste** (valeurs campagne 2026, cf. `globals.css`) : les quatre
+ * teintes sont CLAIRES — le texte posé dessus est toujours `ink` (5,84:1 sur
+ * l'orange, le pire couple ; ≥ 10:1 sur les trois autres), jamais `paper`
+ * (2,95:1 sur l'orange, sous les 4,5:1 de AA — et c'est le MÊME couple que
+ * « orange sur paper » plus bas, le contraste étant symétrique : un seul
+ * chiffre pour les deux sens). Dans l'autre sens, SUR paper, PLUS AUCUNE
+ * teinte n'atteint le seuil de 3:1 depuis le recalage sur les exports web
+ * des affiches (décision client 2026-09-03 : la fidélité aux visuels prime
+ * — l'orange print d'avant tenait 3,38:1, celui de campagne fait 2,95:1,
+ * 2 % sous le seuil WCAG 1.4.11 des objets graphiques). L'orange reste de
+ * loin la teinte la plus dense et continue de porter les traits existants
+ * (pulse du rail des contreparties, focus de l'étagère 3D) — ne pas en
+ * ajouter sur paper sans repeser ce 2,95:1. Rose (1,38:1), bleu (1,68:1) et
+ * jaune (1,13:1) n'y servent QU'EN APLAT, texte `ink` par-dessus : en trait
+ * sur paper ils sont invisibles. Un soulignement d'emphase se peint donc en
+ * `decoration-pop-orange`, jamais en rose ni en bleu.
  *
  * Fichier plat, sans `"use client"` : importable des deux arbres (le header
  * client comme les pages serveur), précédent `nav-accent.ts`/`rail-inset.ts`.

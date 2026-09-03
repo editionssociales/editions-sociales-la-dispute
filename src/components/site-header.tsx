@@ -107,7 +107,7 @@ const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
  * Les DEUX accents n'ont plus la même nature — d'où l'anneau PORTÉ PAR
  * L'ENTRÉE, plus par une règle commune : navy est SOMBRE (texte paper,
  * inversion vers paper, anneau sombre + surcharge claire) ; l'orange est
- * CLAIR — texte ink (5,09:1 ; paper serait à 3,38:1, sous AA), inversion vers
+ * CLAIR — texte ink (5,84:1 ; paper serait à 2,95:1, sous AA), inversion vers
  * l'INK au survol (jamais vers paper : l'orange en texte à ce corps y est
  * sous AA, cf. `pop-palette.ts` — même recette qu'`ALARM` de `button.tsx`),
  * anneau clair + surcharge sombre (R5).
@@ -194,8 +194,8 @@ function maisonCellClass(compact: boolean) {
 function navCellClass(section: NavSectionId, active: boolean, compact: boolean) {
   // Fond toujours clair (bg-paper) ou pop (R2), au repos COMME au survol :
   // l'anneau clair tient les deux états sans surcharge (R5) — ink 17,19:1 sur
-  // paper, 15,19:1 sur le jaune, 9,92:1 sur le rose, 9,89:1 sur le bleu,
-  // 5,09:1 sur l'orange ; la cellule active ne change pas de fond du tout.
+  // paper, 15,16:1 sur le jaune, 12,44:1 sur le rose, 10,26:1 sur le bleu,
+  // 5,84:1 sur l'orange ; la cellule active ne change pas de fond du tout.
   // Taille fixe sous `lg` (compact par défaut) ; à `lg`
   // la hauteur suit la rangée (py-0), seule la taille de texte varie au scroll.
   // Échelle rem (#88, R7 zoom-texte) : 12/14/13px → 0.75/0.875/0.8125rem.
@@ -213,7 +213,7 @@ function soutenirClass(placement: string) {
   // ancre la flèche déployée (hors des calques, pour garder sa position d'origine).
   // `min-h-11` : cible tactile garantie sous `lg`, où le calque compact seul
   // porte la hauteur de la cellule (chantier 3 §3). Fond ink au repos, jaune au
-  // survol : anneau sombre (pop-yellow, 15,19:1 sur l'ink) + sa surcharge de
+  // survol : anneau sombre (pop-yellow, 15,16:1 sur l'ink) + sa surcharge de
   // survol (R5) — sans elle, le jaune se posait sur le jaune (1:1).
   return `relative grid min-h-11 bg-ink px-4 text-center font-sans font-extrabold italic uppercase tracking-[.06em] text-paper hover:bg-pop-yellow hover:text-black ${CELL_TRANSITION} ${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT} ${placement}`;
 }
@@ -335,7 +335,7 @@ function MobileMenuToggle({
       // La largeur vient de l'emplacement : carré `w-14` de la rangée haute
       // (porté par la pile de calques) ou barre pleine largeur du menu.
       // Paper au repos, pop-yellow au survol : deux fonds CLAIRS, l'anneau
-      // clair tient les deux (17,19:1 puis 15,19:1) — aucune surcharge (R5).
+      // clair tient les deux (17,19:1 puis 15,16:1) — aucune surcharge (R5).
       className={`relative flex h-full min-h-11 w-full items-center justify-center bg-paper text-ink hover:bg-pop-yellow ${CELL_TRANSITION} ${FOCUS_RING_LIGHT}`}
     >
       <span className={open ? "rotate-180" : undefined}>

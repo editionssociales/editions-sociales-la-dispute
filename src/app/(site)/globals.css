@@ -34,11 +34,22 @@
    * Palette « pop » — refonte grille brutaliste (maquette « essai site »).
    * Aplats vifs qui codent les sections de nav (catalogue, la Geme, à
    * paraître, agenda) ; texte NOIR dessus pour le contraste.
+   *
+   * Valeurs recalées le 2026-09-03 sur les EXPORTS WEB des affiches de
+   * campagne « Ils et elles nous soutiennent » (médiane de la grappe de
+   * teinte dominante de chaque JPEG — la série précédente venait d'une
+   * conversion d'épreuves PRINT, plus saturée et plus rouge). Décision
+   * client : fidélité EXACTE aux visuels, y compris l'orange à 2,95:1 sur
+   * paper (2 % sous le seuil 3:1 des traits — cf. `pop-palette.ts`, qui
+   * porte la doctrine de contraste à jour). Les affiches emploient aussi
+   * quatre teintes SANS jeton ici (lime #d6db41, vert #a3d1ac, menthe
+   * #c3e2d2, lilas #c7a8d1) : n'en créer un que le jour où le site en a
+   * l'usage.
    */
-  --color-pop-pink: #f4a9c6;
-  --color-pop-teal: #5fd0c4;
-  --color-pop-orange: #f04e1f;
-  --color-pop-yellow: #ffed00;
+  --color-pop-pink: #f8c8d6;
+  --color-pop-teal: #88cdd4;
+  --color-pop-orange: #ec6b06;
+  --color-pop-yellow: #feed01;
 }
 
 :root {
