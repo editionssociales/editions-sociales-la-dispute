@@ -33,16 +33,16 @@ import { SoutiensCarousel } from "./_components/soutiens-carousel";
  * typographique, escalier des objectifs) — supprimée en bloc.
  *
  * Ordre du DOM, inchangé dans son principe (retour client 2026-07-24, la
- * colonne principale garde jauge → récit → objectifs → CTA, le rail des
+ * colonne principale garde jauge → récit → soutiens → objectifs → CTA, le rail des
  * contreparties reste hors du corps de texte) : héros de collecte en direct
  * (INCHANGÉ À L'OCTET, cf. plus bas) → titre de l'ask (« 100 ans » +
  * étagère 3D à sa droite, demande alignée à droite) → vidéo de campagne
  * (revenue le 2026-08-31, cf. plus bas) → quatre sections narratives (UN SEUL pattern répété :
  * bandeau de titre à l'accent de la section + corps en prose sobre — gras et
  * surlignage inline pour toute emphase, aucun autre effet) → trois cartes de
- * paliers de jauge (remplacent l'escalier typographique) → preuve sociale
- * (`_components/soutiens-carousel.tsx`, carrousel grand format à
- * défilement automatique lent, ABSENTE si aucun visuel saisi)
+ * preuve sociale (`_components/soutiens-carousel.tsx`, carrousel grand
+ * format à défilement automatique lent, ABSENTE si aucun visuel saisi) →
+ * trois cartes de paliers de jauge (remplacent l'escalier typographique)
  * → CTA final → rail sticky des contreparties (`#paliers`, hors du corps de
  * texte, cf. `_components/tiers-rail.tsx`/`tiers-drawer.tsx`, INCHANGÉS).
  *
@@ -672,7 +672,17 @@ export default async function SouscriptionPage() {
           </p>
         </RecitSection>
 
-        {/* 4 ▪ Objectifs de la jauge — trois cartes UNIFORMES (remplacent
+        {/* 4 ▪ Preuve sociale (lot D3, 2026-08-30 ; carrousel grand format
+            2026-09-03) — remontée AU-DESSUS des trois cartes de paliers
+            (retour client 2026-09-03, remplace l'emplacement initial juste
+            avant le CTA final), hors de tout `<Container>` : le carrousel
+            bleed en pleine largeur et défile seul, lentement, en boucle —
+            même gabarit visuel que `NouveautesCarousel` (accueil), sans effet
+            de profondeur. Absente du DOM si aucun visuel n'est saisi
+            (`mergeSoutiens`, contrat de vide propre à cette section). */}
+        <SoutiensCarousel soutiens={content.soutiens} />
+
+        {/* 5 ▪ Objectifs de la jauge — trois cartes UNIFORMES (remplacent
             l'escalier typographique) : liseré gauche épais à l'accent de
             palier, montant à la MÊME taille pour les trois, sommet (100k)
             seul inversé (`bg-ink text-paper`). Pas de titre de section
@@ -708,15 +718,6 @@ export default async function SouscriptionPage() {
             </Reveal>
           </Container>
 
-          {/* 5 ▪ Preuve sociale (lot D3, 2026-08-30 ; carrousel grand format
-              2026-09-03) — juste AVANT la demande finale (retour Clara :
-              « un espace pour une catégorie avec des visuels qui défilent »),
-              hors du `<Container>` : le carrousel bleed en pleine largeur et
-              défile seul, lentement, en boucle — même gabarit visuel que
-              `NouveautesCarousel` (accueil), sans effet de profondeur. Absente
-              du DOM si aucun visuel n'est saisi (`mergeSoutiens`, contrat de
-              vide propre à cette section). */}
-          <SoutiensCarousel soutiens={content.soutiens} />
 
           <Container>
             {/* CTA final : renvoie simplement à l'ancre unique du rail — le

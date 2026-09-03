@@ -334,19 +334,30 @@ export function Gauge({
             REPREND un cœur ink, seule teinte qui tranche à la fois sur l'orange
             et sur le `line` — cœur calé pour garder son apex 2px au-dessus de
             celui du triangle externe. */}
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-x-0 top-0 ${sweepClass}`}
-          style={sweepStyle}
-        >
-          <span
-            className={`absolute left-[-7px] top-[-6px] h-0 w-0 border-l-8 border-r-8 border-t-[12px] border-l-transparent border-r-transparent ${
-              dark ? "border-t-paper" : "border-t-ink"
-            }`}
-          />
-          {dark && (
-            <span className="absolute left-[-4px] top-[-4px] h-0 w-0 border-l-[5px] border-r-[5px] border-t-8 border-l-transparent border-r-transparent border-t-ink" />
-          )}
+        {/* CLIP horizontal du calque curseur (2026-09-03) : le calque translaté
+            ci-dessous est PLEINE LARGEUR (le translateX en % se réfère à sa
+            propre boîte, donc à la barre — cf. le commentaire du cache) ; non
+            clippé, son bord droit dépassait la page de `pct%` de la largeur
+            de barre — barre de défilement horizontale fantôme sur toute la
+            page, constatée en prod le 2026-09-03. `overflow-x-clip` SEUL (la
+            combinaison visible/clip est la seule mixte permise) : la coupe
+            est purement horizontale, le triangle garde ses 6px de débord
+            AU-DESSUS de la barre. ±8px de marge (`-inset-x-2` dehors,
+            `inset-x-2` dedans — le calque interne retrouve la largeur EXACTE
+            de la barre, référence du %) : l'apex du triangle (16px, centré
+            sur le front) survit entier aux deux extrémités, et 8px de débord
+            restent sous le padding du conteneur — plus aucun élargissement. */}
+        <div aria-hidden="true" className="pointer-events-none absolute -inset-x-2 top-0 overflow-x-clip">
+          <div className={`absolute inset-x-2 top-0 ${sweepClass}`} style={sweepStyle}>
+            <span
+              className={`absolute left-[-7px] top-[-6px] h-0 w-0 border-l-8 border-r-8 border-t-[12px] border-l-transparent border-r-transparent ${
+                dark ? "border-t-paper" : "border-t-ink"
+              }`}
+            />
+            {dark && (
+              <span className="absolute left-[-4px] top-[-4px] h-0 w-0 border-l-[5px] border-r-[5px] border-t-8 border-l-transparent border-r-transparent border-t-ink" />
+            )}
+          </div>
         </div>
       </div>
       {/* Bande des paliers : valeur + intitulé, centrés sur LEUR coupure —

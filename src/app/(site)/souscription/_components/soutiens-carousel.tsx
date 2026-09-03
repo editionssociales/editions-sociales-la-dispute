@@ -41,8 +41,7 @@ import { FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * reste une boucle navigable à la main).
  *
  * Contrat de vide inchangé (`mergeSoutiens`, `site-content-core.ts`) :
- * `soutiens` vide ⇒ AUCUN rendu, jamais un titre de section sans rien
- * dessous. L'alt de chaque visuel vient de la légende saisie, sinon de l'alt
+ * `soutiens` vide ⇒ AUCUN rendu (section absente du DOM). L'alt de chaque visuel vient de la légende saisie, sinon de l'alt
  * du média (posé par `scripts/import-soutiens-2026.ts` pour les affiches de
  * campagne) — les affiches portent leur propre texte, aucune légende visible
  * n'est nécessaire.
@@ -309,13 +308,13 @@ export function SoutiensCarousel({
   if (n === 0) return null;
 
   return (
+    // Aucun surtitre visible (retour client 2026-09-03) : la première affiche
+    // porte elle-même « Ils et elles nous soutiennent » — l'`aria-label` de la
+    // section reste le nom du landmark pour les technologies d'assistance.
     <section aria-label="Ils et elles nous soutiennent" className="mt-12 sm:mt-16">
       <Reveal>
         <Container>
-          <div className="mb-4 flex min-h-[clamp(44px,4vw,52px)] items-end justify-between gap-4">
-            <h2 className="font-sans text-sm font-extrabold uppercase tracking-[.08em] text-ink">
-              Ils et elles nous soutiennent
-            </h2>
+          <div className="mb-4 flex min-h-[clamp(44px,4vw,52px)] items-end justify-end gap-4">
             {/* Pause/lecture explicite (WCAG 2.2.2) — même chrome que les
                 flèches des rails. Inutile (donc absent) sans boucle active ou
                 sous `prefers-reduced-motion` : rien ne bouge tout seul. */}
