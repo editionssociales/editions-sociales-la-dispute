@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Container } from "@/components/container";
 import { NewTabMark } from "@/components/new-tab-mark";
-import { Reveal } from "@/components/reveal";
 import { Cover } from "@/lib/cover";
 import type { SoutienVisuel } from "@/lib/site-content-core";
-import { FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_LIGHT } from "@/lib/ui";
 
 /**
  * Section « Ils et elles nous soutiennent » — carrousel GRAND FORMAT à
@@ -35,10 +33,13 @@ import { FOCUS_RING_HOVER_DARK, FOCUS_RING_LIGHT } from "@/lib/ui";
  * PAUSES du défilement automatique — le mouvement s'arrête dès que
  * l'utilisateur s'intéresse au rail, et ne tourne jamais pour personne :
  * survol souris, glissé en cours, toucher (+ 1,5 s après le relâché, le temps
- * de l'inertie), focus clavier dans le rail, bouton pause/lecture explicite
- * (WCAG 2.2.2), section hors viewport (IntersectionObserver), et
- * `prefers-reduced-motion` (aucun défilement automatique du tout — le rail
- * reste une boucle navigable à la main).
+ * de l'inertie), focus clavier dans le rail, section hors viewport
+ * (IntersectionObserver), et `prefers-reduced-motion` (aucun défilement
+ * automatique du tout — le rail reste une boucle navigable à la main). Le
+ * bouton pause/lecture explicite a été RETIRÉ (retour client 2026-09-03,
+ * avec le surtitre et la rangée d'en-tête entière — l'espace au-dessus du
+ * rail est réduit au minimum) : le survol et reduced-motion restent les
+ * mécanismes d'arrêt.
  *
  * Contrat de vide inchangé (`mergeSoutiens`, `site-content-core.ts`) :
  * `soutiens` vide ⇒ AUCUN rendu (section absente du DOM). L'alt de chaque visuel vient de la légende saisie, sinon de l'alt
@@ -114,15 +115,9 @@ export function SoutiensCarousel({
   const visibleRef = useRef(true);
   /** Horodatage `performance.now()` avant lequel le défilement reste suspendu (toucher récent). */
   const pauseUntilRef = useRef(0);
-  const userPausedRef = useRef(false);
 
   const [loop, setLoop] = useState(false);
   const [reduced, setReduced] = useState(false);
-  const [userPaused, setUserPaused] = useState(false);
-
-  useEffect(() => {
-    userPausedRef.current = userPaused;
-  }, [userPaused]);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -188,7 +183,6 @@ export function SoutiensCarousel({
       if (
         el &&
         visibleRef.current &&
-        !userPausedRef.current &&
         !hoverRef.current &&
         !focusRef.current &&
         !dragRef.current &&
@@ -308,42 +302,12 @@ export function SoutiensCarousel({
   if (n === 0) return null;
 
   return (
-    // Aucun surtitre visible (retour client 2026-09-03) : la première affiche
-    // porte elle-même « Ils et elles nous soutiennent » — l'`aria-label` de la
-    // section reste le nom du landmark pour les technologies d'assistance.
-    <section aria-label="Ils et elles nous soutiennent" className="mt-12 sm:mt-16">
-      <Reveal>
-        <Container>
-          <div className="mb-4 flex min-h-[clamp(44px,4vw,52px)] items-end justify-end gap-4">
-            {/* Pause/lecture explicite (WCAG 2.2.2) — même chrome que les
-                flèches des rails. Inutile (donc absent) sans boucle active ou
-                sous `prefers-reduced-motion` : rien ne bouge tout seul. */}
-            {loop && !reduced && (
-              <button
-                type="button"
-                aria-pressed={userPaused}
-                aria-label={
-                  userPaused
-                    ? "Relancer le défilement automatique"
-                    : "Mettre en pause le défilement automatique"
-                }
-                onClick={() => setUserPaused((p) => !p)}
-                className={`flex h-[clamp(44px,4vw,52px)] w-[clamp(44px,4vw,52px)] flex-none items-center justify-center border-[1.5px] border-ink bg-paper text-ink transition-colors hover:bg-ink hover:text-paper motion-reduce:transition-none ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
-              >
-                {userPaused ? (
-                  <svg aria-hidden="true" viewBox="0 0 12 12" className="h-3 w-3 fill-current">
-                    <path d="M2.5 1 11 6 2.5 11z" />
-                  </svg>
-                ) : (
-                  <svg aria-hidden="true" viewBox="0 0 12 12" className="h-3 w-3 fill-current">
-                    <path d="M2 1h3v10H2zM7 1h3v10H7z" />
-                  </svg>
-                )}
-              </button>
-            )}
-          </div>
-        </Container>
-      </Reveal>
+    // Aucun surtitre visible ni rangée d'en-tête (retours client 2026-09-03) :
+    // la première affiche porte elle-même « Ils et elles nous soutiennent »,
+    // l'`aria-label` de la section reste le nom du landmark, et la marge
+    // haute est réduite au minimum (la prose du récit au-dessus n'a pas de
+    // marge basse propre — tout l'air visible vient d'ici).
+    <section aria-label="Ils et elles nous soutiennent" className="mt-4 sm:mt-6">
       <ul
         ref={trackRef}
         role="list"
