@@ -300,7 +300,11 @@ export async function StockPage(props: AdminViewServerProps) {
 
                 {nonSuivis.length > 0 && (
                   <>
-                    <h3 className={styles.zoneTitle}>Titres non suivis (stock non renseigné)</h3>
+                    <h3 className={styles.zoneTitle}>Titres non suivis — non vendus en ligne</h3>
+                    <p className={styles.muted}>
+                      Stock non renseigné : ces titres sont retirés de la vente en ligne tant
+                      qu&apos;un stock (import routeur ou saisie manuelle) n&apos;est pas renseigné.
+                    </p>
                     <div className={styles.tableWrap}>
                       <table className={styles.dataTable}>
                         <thead>

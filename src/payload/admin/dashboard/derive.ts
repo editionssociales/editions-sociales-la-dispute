@@ -814,10 +814,11 @@ export interface StockOutlookRow {
 
 /**
  * Projection de rupture par titre. `joursRestants`/`rupturePrevue` à `null`
- * si le stock n'est pas suivi (`null`, "vide = pas de décompte") OU si la
- * vélocité est nulle (jamais une division par zéro déguisée en "infini jours
- * restants"). `joursRestants` arrondi à l'entier inférieur — un stock qui
- * suffit encore 4,9 jours affiche 4, pas 5.
+ * si le stock n'est pas renseigné (`null` — retiré de la vente en ligne, cf.
+ * `sellability.ts`, PAS une projection possible faute de plancher connu) OU
+ * si la vélocité est nulle (jamais une division par zéro déguisée en "infini
+ * jours restants"). `joursRestants` arrondi à l'entier inférieur — un stock
+ * qui suffit encore 4,9 jours affiche 4, pas 5.
  */
 export function stockOutlook(
   books: StockOutlookInput[],

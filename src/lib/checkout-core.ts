@@ -98,7 +98,11 @@ export interface CheckoutBookLookup {
   /** ISO `YYYY-MM-DD` — parution future = ligne refusée, même règle que `resolveNativePurchase` (`catalogue-core.ts`). */
   publishedAt: string | null;
   sellable: boolean;
-  /** `null` = stock non suivi (illimité) ; sinon plancher STRICT (`stock >= qty`, pas seulement `> 0`). */
+  /**
+   * `null` = stock non renseigné → ligne refusée (`untracked`, indisponible
+   * à la commande), sauf précommande sur fiche encore à paraître ; sinon
+   * plancher STRICT (`stock >= qty`, pas seulement `> 0`).
+   */
   stock: number | null;
   reducedShippingFlag: boolean;
   /** « Ouvert à la précommande » (`Books.ts:commerce.preorder`) — lève le refus `upcoming` pour cette ligne, cf. `sellability.ts`. */
@@ -136,10 +140,11 @@ export interface ValidatedCheckoutLine {
 /**
  * Valide UNE ligne contre le livre fraîchement relu — jamais contre ce que le
  * client prétend. Ordre des règles : introuvable → verdict `assessSellability`
- * (parution future sans précommande ouverte/non vendable → refus
- * `not-sellable` ; épuisé/stock insuffisant → refus `insufficient-stock`) →
- * prix manquant (fiche incomplète, ne devrait jamais arriver pour un livre
- * vendable, filet de sécurité).
+ * (parution future sans précommande ouverte/non vendable/stock non renseigné
+ * → refus `not-sellable` — même reason générique, message distinct par cas ;
+ * épuisé/stock insuffisant → refus `insufficient-stock`) → prix manquant
+ * (fiche incomplète, ne devrait jamais arriver pour un livre vendable, filet
+ * de sécurité).
  */
 export function validateCheckoutLine(
   input: CheckoutRequestLine,
@@ -183,6 +188,20 @@ export function validateCheckoutLine(
         id: input.id,
         reason: "not-sellable",
         message: `« ${book.title} » n'est plus disponible à la vente.`,
+      },
+    };
+  }
+  if (!verdict.ok && verdict.reason === "untracked") {
+    // Stock non renseigné (décision client 2026-09-04) : même `reason`
+    // générique que les deux refus ci-dessus pour le front (qui n'affiche que
+    // `message`), libellé propre pour ne pas laisser croire à une rupture
+    // (« épuisé ») alors qu'aucun stock n'a simplement été saisi.
+    return {
+      ok: false,
+      refusal: {
+        id: input.id,
+        reason: "not-sellable",
+        message: `« ${book.title} » n'est pas disponible à la vente en ligne.`,
       },
     };
   }

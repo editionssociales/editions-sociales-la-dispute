@@ -3,7 +3,8 @@ import { assessSellability, isUpcoming, upcomingBoundaryUtc } from "./sellabilit
 
 /**
  * L'invariant « upcoming prime toujours » et la sémantique du stock
- * (`null` = non suivi, `0` = épuisé, plancher strict contre `qty`) se
+ * (`null` = indisponible à la commande — refus `untracked`, SAUF à paraître
+ * + précommande ouverte ; `0` = épuisé ; plancher strict contre `qty`) se
  * vérifient ICI une seule fois — `catalogue-core.test.ts` et
  * `checkout-core.test.ts` ne testent plus que la traduction du verdict
  * (statut d'achat, refus motivé).
@@ -42,9 +43,9 @@ describe("assessSellability", () => {
     });
   });
 
-  it("stock non suivi (null) = disponible, quelle que soit la quantité", () => {
-    expect(assessSellability(SELLABLE, 1, NOW)).toEqual({ ok: true });
-    expect(assessSellability(SELLABLE, 15, NOW)).toEqual({ ok: true });
+  it("stock non renseigné (null) sur une fiche parue → refus `untracked` (décision client 2026-09-04)", () => {
+    expect(assessSellability(SELLABLE, 1, NOW)).toEqual({ ok: false, reason: "untracked" });
+    expect(assessSellability(SELLABLE, 15, NOW)).toEqual({ ok: false, reason: "untracked" });
   });
 
   it("stock 0 (ou négatif, défensif) → épuisé", () => {
@@ -145,6 +146,16 @@ describe("assessSellability — précommande (`preorderEnabled`)", () => {
         NOW,
       ),
     ).toEqual({ ok: true });
+  });
+
+  it("preorderEnabled sur une fiche DÉJÀ parue + stock null → untracked (l'exemption stock vide ne vaut QUE tant que la fiche est encore à paraître)", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: null, publishedAt: "2020-01-01", preorderEnabled: true },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: false, reason: "untracked" });
   });
 });
 

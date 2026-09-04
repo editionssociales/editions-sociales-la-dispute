@@ -149,9 +149,16 @@ describe("validateCheckoutLine", () => {
     expect(!result.ok && result.refusal.message).toBe("« Le Capital » est épuisé.");
   });
 
-  it("stock non suivi (`null`) → jamais un plancher, qty élevée acceptée", () => {
+  it("stock non renseigné (`null`) sur une fiche parue → refusé (`untracked`, décision client 2026-09-04)", () => {
     const result = validateCheckoutLine({ id: 1, qty: 20 }, book({ stock: null }), NOW);
-    expect(result.ok).toBe(true);
+    expect(result).toEqual({
+      ok: false,
+      refusal: {
+        id: 1,
+        reason: "not-sellable",
+        message: "« Le Capital » n'est pas disponible à la vente en ligne.",
+      },
+    });
   });
 
   it("stock EXACTEMENT égal à la quantité demandée → accepté (plancher inclusif)", () => {
@@ -290,6 +297,26 @@ describe("validateCheckoutLine — précommande (client 2026-08-20)", () => {
       NOW,
     );
     expect(!result.ok && result.refusal.message).toBe("« Le Capital » n'est plus disponible à la vente.");
+  });
+
+  it("à paraître + preorderEnabled + stock non renseigné (`null`) → accepté (le routeur ne connaît pas encore le titre)", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 3 },
+      book({ publishedAt: "2099-01-01", preorderEnabled: true, stock: null, priceEuros: 10 }),
+      NOW,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("preorderEnabled + fiche DÉJÀ parue + stock non renseigné (`null`) → refusé (`untracked`), l'exemption ne vaut que tant que la fiche est à paraître", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ publishedAt: "2020-01-01", preorderEnabled: true, stock: null }),
+      NOW,
+    );
+    expect(!result.ok && result.refusal.message).toBe(
+      "« Le Capital » n'est pas disponible à la vente en ligne.",
+    );
   });
 
   it("livre déjà paru : isPreorder toujours false, quel que soit preorderEnabled", () => {

@@ -85,7 +85,10 @@ const LD_BOOKS: RawBook[] = [
 ];
 
 const BOUTIQUE_ONLY: RawBook[] = [
-  rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(null) }),
+  // Stock explicite (article normalement vendu) : `sellable(null)` produirait
+  // désormais `unavailable` (refus `untracked`), hors sujet de ces tests
+  // d'assemblage/facettes.
+  rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(5) }),
 ];
 
 const rawByEdition: Partial<Record<EditionSlug, RawBook[]>> = {
@@ -224,7 +227,7 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
     expect(resolved.purchaseMode).toBe("legacy-link");
   });
 
-  it("stock `null` = non suivi = disponible (jamais un plancher qui bloque la vente)", () => {
+  it("stock `null` sur une fiche parue → indisponible (refus `untracked`, décision client 2026-09-04)", () => {
     const book = rawBook({ id: 2, slug: "capital", title: "Le Capital" });
     const resolved = resolveNativePurchase(
       toBook("editions-sociales", book),
@@ -232,9 +235,9 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
       "/catalogue/editions-sociales/capital",
     );
     expect(resolved).toEqual({
-      status: "available",
-      permalink: "/catalogue/editions-sociales/capital",
-      purchaseMode: "cart",
+      status: "unavailable",
+      permalink: null,
+      purchaseMode: "legacy-link",
     });
   });
 
@@ -246,6 +249,49 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
       "/catalogue/editions-sociales/epuise",
     );
     expect(resolved.status).toBe("unavailable");
+  });
+
+  it("mapping front épuisé vs indisponible : `unavailableReason` posé UNIQUEMENT pour le refus `out-of-stock`", () => {
+    const book = rawBook({ id: 30, slug: "epuise-reason", title: "Épuisé (raison)" });
+    const outOfStock = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(0),
+      "/catalogue/editions-sociales/epuise-reason",
+    );
+    expect(outOfStock.status).toBe("unavailable");
+    expect(outOfStock.unavailableReason).toBe("out-of-stock");
+
+    const untracked = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(null),
+      "/catalogue/editions-sociales/epuise-reason",
+    );
+    expect(untracked.status).toBe("unavailable");
+    expect(untracked.unavailableReason).toBeUndefined();
+
+    const notSellableResolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      notSellable,
+      "/catalogue/editions-sociales/epuise-reason",
+    );
+    expect(notSellableResolved.status).toBe("unavailable");
+    expect(notSellableResolved.unavailableReason).toBeUndefined();
+  });
+
+  it("épuisé MAIS lien libraire externe → reste `external`, jamais `unavailableReason` (précédence inchangée)", () => {
+    const book = rawBook({
+      id: 31,
+      slug: "epuise-external",
+      title: "Épuisé chez un libraire",
+      buy: { boutique: null, parislibrairies: "https://parislibrairies.fr/epuise-external", lalibrairie: null },
+    });
+    const resolved = resolveNativePurchase(
+      toBook("editions-sociales", book),
+      sellable(0),
+      "/catalogue/editions-sociales/epuise-external",
+    );
+    expect(resolved.status).toBe("external");
+    expect(resolved).not.toHaveProperty("unavailableReason");
   });
 
   it("stock positif + vendable → disponible, panier natif", () => {
@@ -285,7 +331,12 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
       sellable(0),
       "/catalogue/editions-sociales/epuise-sec",
     );
-    expect(resolved).toEqual({ status: "unavailable", permalink: null, purchaseMode: "legacy-link" });
+    expect(resolved).toEqual({
+      status: "unavailable",
+      permalink: null,
+      purchaseMode: "legacy-link",
+      unavailableReason: "out-of-stock",
+    });
   });
 
   it("aucune donnée commerce (fiche jamais migrée) → jamais faussement disponible", () => {
@@ -393,7 +444,7 @@ describe("buildNativeCatalogue — assemblage des fonds + boutique-seuls", () =>
   it("ajoute les articles boutique-seuls (origin: boutique, edition: null) avec leur propre permalink interne", () => {
     const raw: RawBook[] = [rawBook({ id: 1, slug: "capital", title: "Le Capital", commerce: sellable(5) })];
     const boutiqueOnly: RawBook[] = [
-      rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(null) }),
+      rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(5) }),
     ];
     const catalogue = buildNativeCatalogue({ "editions-sociales": raw }, boutiqueOnly);
     expect(catalogue).toHaveLength(2);
@@ -431,7 +482,7 @@ describe("buildNativeBookDetail", () => {
   });
 
   it("fiche boutique-seule : edition null, origin boutique", () => {
-    const raw = rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(null) });
+    const raw = rawBook({ id: 100, slug: "tote-bag", title: "Tote bag", commerce: sellable(5) });
     const detail = buildNativeBookDetail(null, raw, "/boutique/tote-bag", "boutique");
     expect(detail.edition).toBeNull();
     expect(detail.origin).toBe("boutique");

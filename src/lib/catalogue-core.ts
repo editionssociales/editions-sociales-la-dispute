@@ -13,6 +13,7 @@ import type {
   PurchaseMode,
   PurchaseStatus,
   Term,
+  UnavailableReason,
 } from "./types";
 
 /**
@@ -91,8 +92,14 @@ const NO_COMMERCE: CommerceInfo = { sellable: false, stock: null };
  *     consulté pour ce verdict, jamais une seconde règle de refus.
  *  3. Verdict vendable (parution passée) → disponible, panier natif.
  *  4. Sinon lien(s) externe(s) existant(s) (Paris Librairies / La Librairie)
- *     → « en librairie », lien externe inchangé.
- *  5. Sinon indisponible — jamais retiré du catalogue (contrat).
+ *     → « en librairie », lien externe inchangé — PRIME sur l'épuisement :
+ *     un livre épuisé mais présent chez un libraire partenaire reste
+ *     `external`, jamais `unavailable`.
+ *  5. Sinon indisponible — jamais retiré du catalogue (contrat) ;
+ *     `unavailableReason: "out-of-stock"` posé UNIQUEMENT quand le refus
+ *     `sellability.ts` est `out-of-stock` (demande client 2026-09-04 :
+ *     distinguer « Épuisé » du reste côté front, `BuyLinksList`/`BookCard`) —
+ *     `not-sellable`/`untracked` n'en portent pas.
  *
  * `internalPermalink` est fourni par l'appelant (route `/catalogue/<edition>/
  * <slug>` ou `/boutique/<slug>`, plan §4 étape 11) : ce module reste pur, il
@@ -102,7 +109,12 @@ export function resolveNativePurchase(
   book: Pick<Book, "publishedAt" | "buy">,
   commerce: CommerceInfo,
   internalPermalink: string,
-): { status: PurchaseStatus; permalink: string | null; purchaseMode: PurchaseMode } {
+): {
+  status: PurchaseStatus;
+  permalink: string | null;
+  purchaseMode: PurchaseMode;
+  unavailableReason?: UnavailableReason;
+} {
   const verdict = assessSellability({
     sellable: commerce.sellable,
     stock: commerce.stock,
@@ -120,7 +132,15 @@ export function resolveNativePurchase(
   if (external) {
     return { status: "external", permalink: external, purchaseMode: "legacy-link" };
   }
-  return { status: "unavailable", permalink: null, purchaseMode: "legacy-link" };
+  // « Épuisé » (stock à 0) est le SEUL motif surfacé côté front (demande
+  // client 2026-09-04, `BuyLinksList`/`BookCard`) — `not-sellable`/`untracked`
+  // retombent sur le libellé générique « Indisponible ».
+  return {
+    status: "unavailable",
+    permalink: null,
+    purchaseMode: "legacy-link",
+    ...(verdict.reason === "out-of-stock" ? { unavailableReason: "out-of-stock" as const } : {}),
+  };
 }
 
 /**

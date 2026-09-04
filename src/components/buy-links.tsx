@@ -118,10 +118,13 @@ export function BuyLinksList({
   }
 
   if (book.status === "unavailable") {
+    // « Épuisé » (stock à 0) distingué du reste (demande client 2026-09-04) —
+    // seul le libellé change, la microcopie de repli reste identique.
+    const isOutOfStock = book.unavailableReason === "out-of-stock";
     return (
       <div>
         {priceBlock}
-        <p className={STATUS_CLASS}>Indisponible à la vente en ligne</p>
+        <p className={STATUS_CLASS}>{isOutOfStock ? "Épuisé" : "Indisponible à la vente en ligne"}</p>
         <p className={MICROCOPY_CLASS}>
           {secondary.length > 0 ? "Consultez nos partenaires libraires ci-dessous" : "Revenez bientôt."}
         </p>

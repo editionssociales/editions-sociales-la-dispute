@@ -589,7 +589,9 @@ export const Books: CollectionConfig = {
                       admin: {
                         width: '20%',
                         description:
-                          'Champ unique livres + boutique ; vide = pas de décompte ; 0 = épuisé sans retrait du catalogue.',
+                          'Champ unique livres + boutique ; vide = indisponible à la commande (le titre ' +
+                          "n'est plus vendu en ligne tant qu'un stock n'est pas renseigné) ; 0 = épuisé, " +
+                          'retiré de la vente sans être retiré du catalogue ; > 0 = commandable.',
                       },
                     },
                     {

@@ -59,9 +59,11 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
       Autre libraire
     </span>
   );
+  // « Épuisé » (stock à 0) distingué du reste (demande client 2026-09-04) —
+  // même recette visuelle que « Indisponible », seul le libellé change.
   const unavailableBadge = book.status === "unavailable" && (
     <span className="inline-flex flex-none border-b-2 border-r-2 border-ink bg-paper px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[.05em] text-muted">
-      Indisponible
+      {book.unavailableReason === "out-of-stock" ? "Épuisé" : "Indisponible"}
     </span>
   );
   const statusBadge = preorderBadge || upcomingBadge || externalBadge || unavailableBadge;

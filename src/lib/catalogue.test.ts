@@ -49,11 +49,11 @@ vi.mock("./catalogue-pg", () => ({
         : [rawBook(3)],
   }),
   listBoutiqueOnlyBooks: async () => [
-    rawBook(100, { slug: "tote-bag", title: "Tote bag", commerce: { sellable: true, stock: null } }),
+    rawBook(100, { slug: "tote-bag", title: "Tote bag", commerce: { sellable: true, stock: 3 } }),
   ],
   getBoutiqueOnlyBook: async (slug: string) =>
     slug === "tote-bag"
-      ? rawBook(100, { slug: "tote-bag", title: "Tote bag", commerce: { sellable: true, stock: null } })
+      ? rawBook(100, { slug: "tote-bag", title: "Tote bag", commerce: { sellable: true, stock: 3 } })
       : null,
 }));
 

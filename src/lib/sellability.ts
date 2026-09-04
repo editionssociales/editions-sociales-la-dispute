@@ -1,9 +1,15 @@
 /**
  * Cœur pur de la règle de vendabilité — LE seul endroit qui énonce le contrat
  * stock/parution (CLAUDE.md racine, « Stock ») : le stock EST la
- * disponibilité (`null` = non suivi = disponible, `0` = épuisé — jamais un
- * plancher qui inventerait un suivi) et « à paraître » PRIME TOUJOURS, même
- * sur une fiche déjà cochée vendable avec du stock en préparation.
+ * disponibilité au sens STRICT (décision client 2026-09-04 — un stock vide
+ * n'est plus assimilé à un suivi absent : 55 fiches parues sans stock
+ * renseigné, dont des titres épuisés, étaient commandées à tort) — `null` =
+ * indisponible à la commande (refus `untracked`), `0` = épuisé
+ * (`out-of-stock`), `> 0` = commandable, jamais un plancher qui inventerait
+ * un suivi. SEULE exemption : une fiche à paraître dont la précommande est
+ * ouverte — avant parution le routeur ne connaît pas encore le titre, le
+ * stock y est nécessairement vide. « à paraître » PRIME TOUJOURS, même sur
+ * une fiche déjà cochée vendable avec du stock en préparation.
  *
  * Réénoncée auparavant dans `catalogue-core.ts:resolveNativePurchase` et
  * `checkout-core.ts:validateCheckoutLine` — même classe de dérive que la
@@ -52,7 +58,13 @@ export function upcomingBoundaryUtc(now: Date = new Date()): string {
 /** Les faits dont le verdict a besoin — fournis par l'appelant (`CommerceInfo` du port ou `CheckoutBookLookup`), jamais relus ici. */
 export interface SellabilityFacts {
   sellable: boolean;
-  /** `null` = stock non suivi = disponible ; sinon plancher strict (`0` = épuisé). */
+  /**
+   * `null` = stock non renseigné → refus `untracked` (indisponible à la
+   * commande), SAUF à paraître + précommande ouverte (le routeur ne connaît
+   * pas encore le titre — exemption limitée à ce seul cas) ; `0` = épuisé
+   * (`out-of-stock`) ; `> 0` = plancher strict contre `qty`
+   * (`insufficient-stock` si `stock < qty`).
+   */
   stock: number | null;
   /** Parution ISO `YYYY-MM-DD` — future = refus `upcoming`, quel que soit le reste. */
   publishedAt: string | null;
@@ -71,6 +83,7 @@ export interface SellabilityFacts {
 export type SellabilityRefusal =
   | "upcoming"
   | "not-sellable"
+  | "untracked"
   | "out-of-stock"
   | "insufficient-stock";
 
@@ -80,29 +93,41 @@ export type SellabilityVerdict = { ok: true } | { ok: false; reason: Sellability
  * Verdict de vendabilité pour `qty` exemplaires (1 par défaut — la question
  * « ce livre est-il achetable ? » du catalogue). Ordre des règles, fixé une
  * fois pour tous les appelants : à paraître (SAUF précommande ouverte) → non
- * vendable → épuisé (`stock ≤ 0`) → stock insuffisant (`stock < qty`) →
- * vendable.
+ * vendable → stock non renseigné (`untracked`, SAUF à paraître + précommande
+ * ouverte, seul cas où un stock vide vaut vendable) → épuisé (`stock ≤ 0`,
+ * s'applique AUSSI à une précommande ouverte — saisir 0 ferme explicitement
+ * la précommande) → stock insuffisant (`stock < qty`) → vendable.
  *
- * `preorderEnabled` ne fait QUE lever le premier refus — une fiche « à
- * paraître » avec le drapeau coché retombe ensuite dans les mêmes règles
- * stock/vendable que n'importe quelle autre fiche (une précommande décochée
- * ou épuisée reste refusée). L'appelant (catalogue, checkout) distingue un
- * verdict `{ok:true}` obtenu ainsi d'un verdict « normal » en relisant
- * `isUpcoming(facts.publishedAt, now)` lui-même — helper pur exporté ici,
- * jamais une seconde règle de refus.
+ * `preorderEnabled` ne fait QUE lever le refus `upcoming` ET, tant que la
+ * fiche est encore à paraître, l'exemption ponctuelle du stock vide
+ * ci-dessus — une fiche « à paraître » avec le drapeau coché retombe ensuite
+ * dans les mêmes règles stock/vendable que n'importe quelle autre fiche (une
+ * précommande décochée, non renseignée ou épuisée reste refusée).
+ * L'appelant (catalogue, checkout) distingue un verdict `{ok:true}` obtenu
+ * ainsi d'un verdict « normal » en relisant `isUpcoming(facts.publishedAt,
+ * now)` lui-même — helper pur exporté ici, jamais une seconde règle de
+ * refus.
  */
 export function assessSellability(
   facts: SellabilityFacts,
   qty = 1,
   now: Date = new Date(),
 ): SellabilityVerdict {
-  if (isUpcoming(facts.publishedAt, now) && !facts.preorderEnabled) {
+  const upcoming = isUpcoming(facts.publishedAt, now);
+  if (upcoming && !facts.preorderEnabled) {
     return { ok: false, reason: "upcoming" };
   }
   if (!facts.sellable) return { ok: false, reason: "not-sellable" };
-  if (facts.stock != null) {
-    if (facts.stock <= 0) return { ok: false, reason: "out-of-stock" };
-    if (facts.stock < qty) return { ok: false, reason: "insufficient-stock" };
+  if (facts.stock == null) {
+    // À ce point, `upcoming` implique forcément `preorderEnabled` (sinon le
+    // premier `if` aurait déjà rendu la main) : avant parution, le routeur ne
+    // connaît pas encore le titre — un stock vide y est attendu, pas un
+    // défaut de suivi. Exemption limitée à ce seul cas (décision client
+    // 2026-09-04) : une fiche déjà parue au stock vide est refusée.
+    if (upcoming) return { ok: true };
+    return { ok: false, reason: "untracked" };
   }
+  if (facts.stock <= 0) return { ok: false, reason: "out-of-stock" };
+  if (facts.stock < qty) return { ok: false, reason: "insufficient-stock" };
   return { ok: true };
 }

@@ -55,6 +55,16 @@ export type PurchaseStatus = "available" | "preorder" | "external" | "upcoming" 
  */
 export type PurchaseMode = "cart" | "legacy-link";
 
+/**
+ * Motif d'un statut `unavailable` — distingue « épuisé » (stock à 0) du
+ * reste (case décochée, stock non renseigné…) pour l'UI (demande client
+ * 2026-09-04 : `BuyLinksList`/`BookCard` affichent « Épuisé » plutôt
+ * qu'« Indisponible »). Posé par `resolveNativePurchase` uniquement quand le
+ * refus `sellability.ts` est `out-of-stock` ET qu'aucun lien libraire externe
+ * ne fait retomber le statut sur `external` (précédence inchangée).
+ */
+export type UnavailableReason = "out-of-stock";
+
 /** Un livre du catalogue unifié (vue liste). */
 export interface Book {
   id: number;
@@ -75,6 +85,8 @@ export interface Book {
   cover: Cover | null;
   buy: BuyLinks;
   status: PurchaseStatus;
+  /** Motif du statut `unavailable` — `"out-of-stock"` (épuisé) ou absent (tout le reste). */
+  unavailableReason?: UnavailableReason;
   /** Destination du bouton d'achat principal (produit boutique ou lien externe). */
   permalink: string | null;
   /**

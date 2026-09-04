@@ -52,3 +52,19 @@ describe("BookCard — le prix s'affiche même hors vente", () => {
     expect(markup).not.toContain("€");
   });
 });
+
+/** Badge « Épuisé » vs « Indisponible » (demande client 2026-09-04) — même recette visuelle, libellé piloté par `unavailableReason`. */
+describe("BookCard — badge « Épuisé » distinct d'« Indisponible »", () => {
+  it("unavailableReason absent → badge « Indisponible »", () => {
+    const markup = renderToStaticMarkup(<BookCard book={book({ status: "unavailable" })} />);
+    expect(markup).toContain("Indisponible");
+    expect(markup).not.toContain("Épuisé");
+  });
+
+  it("unavailableReason: out-of-stock → badge « Épuisé »", () => {
+    const markup = renderToStaticMarkup(
+      <BookCard book={book({ status: "unavailable", unavailableReason: "out-of-stock" })} />,
+    );
+    expect(markup).toContain("Épuisé");
+  });
+});

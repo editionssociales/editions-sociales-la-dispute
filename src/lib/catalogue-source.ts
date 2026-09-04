@@ -68,7 +68,11 @@ export interface RawBook {
 export interface CommerceInfo {
   /** Coché = éligible au panier natif — cf. `Books.ts:commerce.sellable`. */
   sellable: boolean;
-  /** `null` = non suivi = disponible (jamais un plancher qui bloque la vente) ; sinon 0 = épuisé. */
+  /**
+   * `null` = stock non renseigné → indisponible à la commande (refus
+   * `untracked`, `sellability.ts`), sauf à paraître + précommande ouverte ;
+   * `0` = épuisé ; `> 0` = commandable.
+   */
   stock: number | null;
   /**
    * Coché = « Ouvert à la précommande » (`Books.ts:commerce.preorder`,

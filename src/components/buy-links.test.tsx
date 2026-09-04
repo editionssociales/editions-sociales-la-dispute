@@ -162,3 +162,24 @@ describe("BuyLinksList — le prix s'affiche même hors vente", () => {
     expect(markup).not.toContain("€");
   });
 });
+
+/**
+ * Épuisé vs indisponible (demande client 2026-09-04) : `unavailableReason`
+ * (posé par `resolveNativePurchase` uniquement pour un refus `out-of-stock`)
+ * pilote le SEUL libellé — la microcopie de repli reste identique.
+ */
+describe("BuyLinksList — « Épuisé » distinct d'« Indisponible »", () => {
+  it("unavailableReason absent → « Indisponible à la vente en ligne »", () => {
+    const markup = renderToStaticMarkup(<BuyLinksList book={book({ status: "unavailable" })} />);
+    expect(markup).toContain("Indisponible à la vente en ligne");
+    expect(markup).not.toContain("Épuisé");
+  });
+
+  it("unavailableReason: out-of-stock → « Épuisé »", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "unavailable", unavailableReason: "out-of-stock" })} />,
+    );
+    expect(markup).toContain("Épuisé");
+    expect(markup).not.toContain("Indisponible à la vente en ligne");
+  });
+});
