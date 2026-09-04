@@ -20,8 +20,6 @@ export const PagesLegales: GlobalConfig = {
   },
   admin: {
     group: 'Pages du site',
-    description:
-      'CGV & dons, mentions légales, confidentialité, pied de page, réseaux sociaux et réglages de référencement (SEO) — textes communs à tout le site, très rarement modifiés.',
   },
   access: {
     read: () => true,
@@ -134,7 +132,8 @@ export const PagesLegales: GlobalConfig = {
               label: 'Délai de livraison annoncé',
               admin: {
                 description:
-                  'Affiché sur la fiche produit, le panier, la page de remerciement et les CGV. Vide = « entre 48 h et 10 jours ». L’e-mail de confirmation de commande garde toujours cette mention par défaut, quoi que vous saisissiez ici.',
+                  'Affiché sur la fiche produit, le panier et la page de remerciement — vide = « entre 48 h et 10 jours ». ' +
+                  'L’e-mail de confirmation garde toujours le texte par défaut.',
               },
             },
             {

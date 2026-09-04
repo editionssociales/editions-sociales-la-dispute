@@ -30,7 +30,6 @@ export const Highlight: CollectionConfig = {
     // en tête — dit si la bannière serait affichée AUJOURD'HUI, pas
     // seulement si la case est cochée (l'audit UX demandait ce croisement).
     defaultColumns: ['titre', 'live', 'dateDebut', 'dateFin', 'actif'],
-    description: 'Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).',
   },
   access: {
     // Lu par la page d'accueil via la Local API ; même lecture ouverte que
@@ -86,7 +85,7 @@ export const Highlight: CollectionConfig = {
         { value: 'pop-yellow', label: 'Jaune' },
       ],
       admin: {
-        description: "Couleur d'accent du bandeau (liseré à gauche du bloc). Ignorée pour la campagne souscription (lien vers /souscription), qui garde son identité sombre propre.",
+        description: 'Couleur d’accent à gauche du bandeau. Sans effet si le lien pointe vers /souscription.',
       },
     },
     {

@@ -28,8 +28,6 @@ export const PromoCodes: CollectionConfig = {
   admin: {
     group: 'Boutique',
     useAsTitle: 'code',
-    description:
-      'Codes de réduction utilisables au paiement (montant fixe ou livraison offerte) — à créer pour une opération commerciale, à désactiver une fois la campagne finie.',
     // « État » (calculée) remplace la colonne `active` brute — audit UX,
     // manque n°1 : aucune colonne ne disait « en cours en ce moment »
     // (croise active + expiresAt, cf. le champ `etat` plus bas).
@@ -103,9 +101,7 @@ export const PromoCodes: CollectionConfig = {
       min: 0,
       label: 'Panier minimum (€)',
       admin: {
-        description:
-          'Montant TTC minimum du panier pour que le code s’applique (ex. ' +
-          '50 € pour la livraison offerte — plan §étape 5).',
+        description: 'Montant TTC minimum du panier pour que le code s’applique (ex. 50 € pour la livraison offerte).',
       },
     },
     {

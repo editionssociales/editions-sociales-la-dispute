@@ -30,7 +30,6 @@ export const Rencontres: CollectionConfig = {
     // `lieu` manquait à côté de `ville` — colonnes utiles au quotidien,
     // ordre/tri (`defaultSort: '-date'` ci-dessus) inchangés.
     defaultColumns: ['titre', 'date', 'lieu', 'ville'],
-    description: 'Agenda public des rencontres (page /rencontres) — une entrée par événement.',
     // Chips de filtre À venir/Passées/Toutes — au-dessus du tableau, même
     // slot et même pattern que `BooksFilterChipsPanel.tsx`/`Books.ts`.
     components: {
@@ -136,8 +135,7 @@ export const Rencontres: CollectionConfig = {
           },
           admin: {
             width: '50%',
-            description:
-              'Photo ou visuel de l’événement (facultatif) — remplace la couverture du livre si renseigné. Format libre.',
+            description: 'Remplace la couverture du livre si renseignée.',
           },
         },
       ],
@@ -149,8 +147,7 @@ export const Rencontres: CollectionConfig = {
       defaultValue: false,
       admin: {
         position: 'sidebar',
-        description:
-          'Coché : l’événement s’affiche en grande carte pleine largeur en tête de l’agenda (ex. braderie). Décoché : carte standard dans la grille 2-3 colonnes.',
+        description: 'Affiche l’événement en grande carte pleine largeur, en tête de l’agenda.',
       },
     },
     {

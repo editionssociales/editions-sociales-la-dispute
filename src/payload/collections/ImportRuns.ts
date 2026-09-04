@@ -25,12 +25,8 @@ export const ImportRuns: CollectionConfig = {
     group: 'Administration & technique',
     defaultColumns: ['createdAt', 'nbLignes', 'nbMatchees'],
     description:
-      "Historique des imports mensuels du fichier stock routeur — un " +
-      "document par import réussi, créé automatiquement par l'import " +
-      '(jamais à la main). Le dernier run alimente le panneau « Import ' +
-      'routeur » du tableau de bord. Consultation seule, réservée aux ' +
-      'administrateur·rice·s ; le dernier import est déjà résumé sur le ' +
-      'tableau de bord.',
+      'Historique des imports du fichier stock routeur, créé automatiquement à chaque import. ' +
+      'Le dernier est déjà résumé sur le tableau de bord — consultation seule.',
     // Même règle que `Users` : invisible dans le menu pour un compte editor —
     // le vrai garde-fou reste l'access control ci-dessous.
     hidden: ({ user }) => user?.role !== 'admin',
@@ -79,9 +75,7 @@ export const ImportRuns: CollectionConfig = {
       label: 'Rapport',
       admin: {
         readOnly: true,
-        description:
-          'Rapport complet du run (`StockImportReport`) — les non-appariés ' +
-          'se téléchargent en CSV via le tableau de bord.',
+        description: 'Les non-appariés se téléchargent en CSV via le tableau de bord.',
       },
     },
   ],

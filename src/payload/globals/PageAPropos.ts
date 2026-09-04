@@ -30,8 +30,7 @@ export const PageAPropos: GlobalConfig = {
   },
   admin: {
     group: 'Pages du site',
-    description:
-      'Textes des pages /editions/editions-sociales et /editions/la-dispute. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.',
+    description: 'Textes des pages /editions/editions-sociales et /editions/la-dispute.',
   },
   access: {
     read: () => true,
@@ -57,8 +56,7 @@ export const PageAPropos: GlobalConfig = {
                 plural: 'Maisons',
               },
               admin: {
-                description:
-                  'Textes propres à chaque maison. Maison absente ou champ vide = texte actuel ; les couleurs restent en code.',
+                description: 'Textes propres à chaque maison. Maison absente ou champ vide = texte actuel.',
               },
               fields: [
                 {
@@ -158,8 +156,7 @@ export const PageAPropos: GlobalConfig = {
                   type: 'richText',
                   label: 'Texte du bloc',
                   admin: {
-                    description:
-                      'Remplace ENTIÈREMENT le texte par défaut (adresse e-mail ci-dessus comprise) — à utiliser seulement si la phrase d’accroche ne convient plus telle quelle. Vide = texte actuel.',
+                    description: 'Remplace entièrement le texte par défaut, adresse e-mail comprise. Vide = texte actuel.',
                   },
                 },
               ],

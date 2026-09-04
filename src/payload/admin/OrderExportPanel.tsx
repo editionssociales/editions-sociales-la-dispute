@@ -34,13 +34,9 @@ export function OrderExportPanel() {
       <h3 className={styles.panelTitle}>Export CSV des commandes</h3>
       <OrderExportForm />
       <p className={styles.muted}>
-        Ces deux liens exportent <strong>exactement les lignes de la liste ci-dessous</strong>,
-        filtres et recherche compris (toutes les pages, pas seulement celle affichée). Pour
-        n&apos;exporter qu&apos;une partie — un type, un statut, une période, un titre —, filtrez
-        la liste, puis exportez ; et pour des commandes précises, cochez-les : la sélection
-        remplace alors les filtres. « Préparation » et « Compta » ne changent que les colonnes :
-        adresse de livraison éclatée, e-mail et téléphone d&apos;un côté ; une ligne par commande
-        avec la TVA 5,5 % ventilée de l&apos;autre.
+        Exporte les commandes cochées, ou toute la liste filtrée si rien n&apos;est coché. «
+        Préparation » : adresse, e-mail, téléphone. « Compta » : une ligne par commande, TVA
+        détaillée.
       </p>
     </div>
   )

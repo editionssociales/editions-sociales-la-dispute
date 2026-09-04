@@ -14,8 +14,6 @@ export const ReglagesBoutique: GlobalConfig = {
   label: 'Seuil stock',
   admin: {
     group: 'Boutique',
-    description:
-      'Nombre d’exemplaires en dessous duquel un livre est signalé « stock bas » sur le tableau de bord et la page Stock — modifiable par les administrateur·rice·s uniquement.',
   },
   access: {
     read: isAdminOrEditor,
@@ -31,10 +29,7 @@ export const ReglagesBoutique: GlobalConfig = {
       label: 'Seuil d’alerte stock bas',
       admin: {
         description:
-          "En dessous de ce nombre d'exemplaires (`commerce.stock` des " +
-          'fiches Livres), un article est signalé comme stock bas — usage ' +
-          'réservé aux étapes ultérieures du plan (back-office, étape 10) ; ' +
-          'ce lot ne pose que le réglage.',
+          'En dessous de ce nombre d’exemplaires, un livre est signalé « stock bas » sur le tableau de bord et la page Stock.',
       },
     },
   ],

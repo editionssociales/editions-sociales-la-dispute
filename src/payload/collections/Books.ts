@@ -187,10 +187,6 @@ export const Books: CollectionConfig = {
     // dérivent via `upcomingBoundaryUtc` (`sellability.ts`).
     defaultColumns: ['title', 'edition', 'dateParution', 'commerce.stock', 'libelles', '_status'],
     listSearchableFields: ['title', 'isbn', 'slug'],
-    description:
-      'Le catalogue des deux maisons : titre, présentation, couverture de chaque livre — et, ' +
-      'pour les titres vendus sur le site, prix et stock dans l\'onglet Commerce. À modifier à ' +
-      'chaque parution, réédition ou changement de prix.',
     // Chips de filtre État/Maison + bouton « Nouveau livre » (issue #26) —
     // au-dessus du tableau, cf. `BooksFilterChipsPanel.tsx` (même slot que
     // `OrderExportPanel.tsx`/`Orders.ts`).
@@ -288,7 +284,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     width: '35%',
                     description:
-                      'Identifiant public de la fiche (URL, contreparties, redirections) — figé après création. Modification réservée aux admins : tout lien existant vers l’ancien slug casse.',
+                      'Adresse de la fiche. Ne pas modifier après publication : les liens déjà partagés casseraient.',
                     components: {
                       Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
                     },
@@ -347,7 +343,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     width: '30%',
                     description:
-                      'Une date future rend la fiche « à paraître » (badge, refus d’achat sauf précommande ouverte) — automatique, il n’y a rien d’autre à cocher.',
+                      'Une date future rend le livre « à paraître » : achat bloqué, sauf précommande ouverte.',
                     date: {
                       pickerAppearance: 'dayOnly',
                       displayFormat: 'dd/MM/yyyy',
@@ -362,8 +358,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     width: '45%',
                     placeholder: '978-2-35367-036-9',
-                    description:
-                      'ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.',
+                    description: 'ISBN-13 ou ISBN-10, tirets facultatifs.',
                   },
                 },
                 {
@@ -390,8 +385,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     width: '34%',
                     className: 'book-upload-only',
-                    description:
-                      'Téléversez une image (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.',
+                    description: 'Glissez-déposez une image. Texte alternatif généré automatiquement.',
                   },
                 },
                 {
@@ -406,8 +400,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     width: '33%',
                     className: 'book-upload-only',
-                    description:
-                      'Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.',
+                    description: 'Glissez-déposez un PDF. Texte alternatif généré automatiquement.',
                   },
                 },
                 {
@@ -422,8 +415,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     width: '33%',
                     className: 'book-upload-only',
-                    description:
-                      'Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.',
+                    description: 'Glissez-déposez un PDF. Texte alternatif généré automatiquement.',
                   },
                 },
               ],
@@ -436,7 +428,7 @@ export const Books: CollectionConfig = {
               admin: {
                 disableListColumn: true,
                 description:
-                  'À la première sauvegarde humaine, ce texte Lexical remplace le HTML WordPress d’origine sur le site.',
+                  'Si ce champ paraît vide, l’ancien texte reste affiché sur le site. Dès que vous enregistrez ici, il le remplace.',
               },
             },
             {
@@ -446,7 +438,7 @@ export const Books: CollectionConfig = {
               admin: {
                 disableListColumn: true,
                 description:
-                  'Affiché dans l’onglet « Pour aller plus loin » de la fiche (premier onglet, quand ce contenu est renseigné).',
+                  'Affiché dans l’onglet « Pour aller plus loin » — l’onglet n’apparaît que si ce champ est rempli.',
               },
             },
             // Contenus souvent ajoutés après coup, tous explicitement
@@ -475,7 +467,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     disableListColumn: true,
                     description:
-                      'Citations affichées dans l’onglet « La presse en parle » de la fiche. Aucune citation ni vidéo = pas d’onglet.',
+                      'Affichées dans l’onglet « La presse en parle ». Aucune citation ni vidéo = pas d’onglet.',
                   },
                   fields: [
                     {
@@ -519,8 +511,7 @@ export const Books: CollectionConfig = {
                   type: 'text',
                   label: 'Vidéo YouTube (URL)',
                   admin: {
-                    description:
-                      'URL YouTube (watch, youtu.be ou embed) — intégrée sous les citations de l’onglet « La presse en parle ».',
+                    description: 'URL YouTube (watch, youtu.be ou embed).',
                   },
                 },
                 {
@@ -530,7 +521,7 @@ export const Books: CollectionConfig = {
                   admin: {
                     disableListColumn: true,
                     description:
-                      'Affichée dans l’onglet « Table des matières » de la fiche ; le PDF téléversé plus haut reste proposé en lien.',
+                      'Affichée dans l’onglet « Table des matières » ; le PDF téléversé plus haut reste aussi proposé en lien.',
                   },
                 },
               ],
@@ -574,9 +565,6 @@ export const Books: CollectionConfig = {
               name: 'commerce',
               type: 'group',
               label: 'Commerce natif',
-              admin: {
-                description: 'Vente en ligne native — pilote le panier et le checkout du site.',
-              },
               fields: [
                 {
                   type: 'row',
@@ -589,9 +577,7 @@ export const Books: CollectionConfig = {
                       admin: {
                         width: '20%',
                         description:
-                          'Champ unique livres + boutique ; vide = indisponible à la commande (le titre ' +
-                          "n'est plus vendu en ligne tant qu'un stock n'est pas renseigné) ; 0 = épuisé, " +
-                          'retiré de la vente sans être retiré du catalogue ; > 0 = commandable.',
+                          'Vide = indisponible à la commande ; 0 = épuisé, retiré de la vente sans quitter le catalogue ; > 0 = commandable.',
                       },
                     },
                     {
@@ -602,7 +588,7 @@ export const Books: CollectionConfig = {
                       admin: {
                         width: '50%',
                         description:
-                          'Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.',
+                          'Décocher retire le titre de la vente en ligne sans le retirer du catalogue.',
                       },
                     },
                   ],
@@ -628,7 +614,7 @@ export const Books: CollectionConfig = {
                       label: 'Ouvert à la précommande',
                       admin: {
                         description:
-                          "Un livre « à paraître » (parution future) devient achetable en précommande dans le panier natif dès que cette case est cochée — expédié à la parution. Sans effet sur une fiche déjà parue. Sans cette case, un livre à paraître reste refusé à la vente comme aujourd'hui.",
+                          'Un livre à paraître devient achetable en précommande dès que cette case est cochée — expédié à la parution. Sans effet sur un livre déjà paru.',
                       },
                     },
                   ],
@@ -668,9 +654,7 @@ export const Books: CollectionConfig = {
                           admin: {
                             width: '40%',
                             readOnly: true,
-                            description:
-                              "Posé automatiquement par l'import stock routeur mensuel " +
-                              '(`POST /api/books/import-stock`) — jamais saisi à la main.',
+                            description: 'Mis à jour automatiquement par l’import mensuel — jamais saisi à la main.',
                           },
                         },
                       ],
@@ -700,7 +684,7 @@ export const Books: CollectionConfig = {
                       admin: {
                         width: '33%',
                         description:
-                          'Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.',
+                          'Se remplit automatiquement depuis l’ISBN dès que le livre est référencé chez ce libraire. Un lien collé à la main reste prioritaire.',
                       },
                     },
                     {
@@ -710,7 +694,7 @@ export const Books: CollectionConfig = {
                       admin: {
                         width: '33%',
                         description:
-                          'Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.',
+                          'Se remplit automatiquement depuis l’ISBN dès que le livre est référencé chez ce libraire. Un lien collé à la main reste prioritaire.',
                       },
                     },
                   ],

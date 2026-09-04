@@ -150,8 +150,6 @@ export interface UserAuthOperations {
   };
 }
 /**
- * Le catalogue des deux maisons : titre, présentation, couverture de chaque livre — et, pour les titres vendus sur le site, prix et stock dans l'onglet Commerce. À modifier à chaque parution, réédition ou changement de prix.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "books".
  */
@@ -159,7 +157,7 @@ export interface Book {
   id: number;
   title: string;
   /**
-   * Identifiant public de la fiche (URL, contreparties, redirections) — figé après création. Modification réservée aux admins : tout lien existant vers l’ancien slug casse.
+   * Adresse de la fiche. Ne pas modifier après publication : les liens déjà partagés casseraient.
    */
   slug: string;
   edition?: ('editions-sociales' | 'la-dispute') | null;
@@ -169,28 +167,28 @@ export interface Book {
    */
   libelles?: (number | Libelle)[] | null;
   /**
-   * Une date future rend la fiche « à paraître » (badge, refus d’achat sauf précommande ouverte) — automatique, il n’y a rien d’autre à cocher.
+   * Une date future rend le livre « à paraître » : achat bloqué, sauf précommande ouverte.
    */
   dateParution: string;
   /**
-   * ISBN-13 (ou ISBN-10). Tirets facultatifs — ex. 978-2-35367-036-9. La clé de contrôle est vérifiée.
+   * ISBN-13 ou ISBN-10, tirets facultatifs.
    */
   isbn?: string | null;
   pages?: number | null;
   /**
-   * Téléversez une image (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
+   * Glissez-déposez une image. Texte alternatif généré automatiquement.
    */
   cover?: (number | null) | Media;
   /**
-   * Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
+   * Glissez-déposez un PDF. Texte alternatif généré automatiquement.
    */
   tablePdf?: (number | null) | Media;
   /**
-   * Téléversez un PDF (glisser-déposer ou « Créer »). Pas de réutilisation depuis la bibliothèque — le texte alternatif est généré automatiquement.
+   * Glissez-déposez un PDF. Texte alternatif généré automatiquement.
    */
   extraitPdf?: (number | null) | Media;
   /**
-   * À la première sauvegarde humaine, ce texte Lexical remplace le HTML WordPress d’origine sur le site.
+   * Si ce champ paraît vide, l’ancien texte reste affiché sur le site. Dès que vous enregistrez ici, il le remplace.
    */
   presentation: {
     root: {
@@ -208,7 +206,7 @@ export interface Book {
     [k: string]: unknown;
   };
   /**
-   * Affiché dans l’onglet « Pour aller plus loin » de la fiche (premier onglet, quand ce contenu est renseigné).
+   * Affiché dans l’onglet « Pour aller plus loin » — l’onglet n’apparaît que si ce champ est rempli.
    */
   plusLoin?: {
     root: {
@@ -226,7 +224,7 @@ export interface Book {
     [k: string]: unknown;
   } | null;
   /**
-   * Citations affichées dans l’onglet « La presse en parle » de la fiche. Aucune citation ni vidéo = pas d’onglet.
+   * Affichées dans l’onglet « La presse en parle ». Aucune citation ni vidéo = pas d’onglet.
    */
   presse?:
     | {
@@ -250,11 +248,11 @@ export interface Book {
       }[]
     | null;
   /**
-   * URL YouTube (watch, youtu.be ou embed) — intégrée sous les citations de l’onglet « La presse en parle ».
+   * URL YouTube (watch, youtu.be ou embed).
    */
   video?: string | null;
   /**
-   * Affichée dans l’onglet « Table des matières » de la fiche ; le PDF téléversé plus haut reste proposé en lien.
+   * Affichée dans l’onglet « Table des matières » ; le PDF téléversé plus haut reste aussi proposé en lien.
    */
   tableMatieres?: {
     root: {
@@ -276,16 +274,13 @@ export interface Book {
    */
   prix?: number | null;
   origin: 'catalogue' | 'boutique';
-  /**
-   * Vente en ligne native — pilote le panier et le checkout du site.
-   */
   commerce?: {
     /**
-     * Champ unique livres + boutique ; vide = indisponible à la commande (le titre n'est plus vendu en ligne tant qu'un stock n'est pas renseigné) ; 0 = épuisé, retiré de la vente sans être retiré du catalogue ; > 0 = commandable.
+     * Vide = indisponible à la commande ; 0 = épuisé, retiré de la vente sans quitter le catalogue ; > 0 = commandable.
      */
     stock?: number | null;
     /**
-     * Vendable en ligne par défaut ; décocher retire le titre de la vente sans le retirer du catalogue.
+     * Décocher retire le titre de la vente en ligne sans le retirer du catalogue.
      */
     sellable?: boolean | null;
     /**
@@ -293,7 +288,7 @@ export interface Book {
      */
     reducedShippingFlag?: boolean | null;
     /**
-     * Un livre « à paraître » (parution future) devient achetable en précommande dans le panier natif dès que cette case est cochée — expédié à la parution. Sans effet sur une fiche déjà parue. Sans cette case, un livre à paraître reste refusé à la vente comme aujourd'hui.
+     * Un livre à paraître devient achetable en précommande dès que cette case est cochée — expédié à la parution. Sans effet sur un livre déjà paru.
      */
     preorder?: boolean | null;
     /**
@@ -301,18 +296,18 @@ export interface Book {
      */
     stockSuivi?: ('routeur' | 'manuel') | null;
     /**
-     * Posé automatiquement par l'import stock routeur mensuel (`POST /api/books/import-stock`) — jamais saisi à la main.
+     * Mis à jour automatiquement par l’import mensuel — jamais saisi à la main.
      */
     stockUpdatedAt?: string | null;
   };
   buy?: {
     boutiqueUrl?: string | null;
     /**
-     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     * Se remplit automatiquement depuis l’ISBN dès que le livre est référencé chez ce libraire. Un lien collé à la main reste prioritaire.
      */
     parislibrairies?: string | null;
     /**
-     * Laissé vide, se remplit automatiquement depuis l’ISBN à l’enregistrement, dès que le livre est référencé chez le libraire. Un lien collé à la main reste prioritaire.
+     * Se remplit automatiquement depuis l’ISBN dès que le livre est référencé chez ce libraire. Un lien collé à la main reste prioritaire.
      */
     lalibrairie?: string | null;
   };
@@ -332,8 +327,6 @@ export interface Book {
   _status?: ('draft' | 'published') | null;
 }
 /**
- * Fiches auteur·rice·s rattachées aux livres (nom, biographie) — à créer avant de pouvoir les associer à une fiche Livre.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "authors".
  */
@@ -344,7 +337,7 @@ export interface Author {
    */
   name: string;
   /**
-   * Identifiant public (URLs de filtre du catalogue) — figé après création, modification réservée aux admins.
+   * Utilisé dans les liens de filtre du catalogue. Ne pas modifier après publication : les liens déjà partagés casseraient.
    */
   slug: string;
   bio?: {
@@ -366,8 +359,6 @@ export interface Author {
   createdAt: string;
 }
 /**
- * Thèmes majeurs du catalogue (introduction, travail, genre…). Un livre peut porter plusieurs libellés.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "libelles".
  */
@@ -375,14 +366,14 @@ export interface Libelle {
   id: number;
   name: string;
   /**
-   * Identifiant d’URL (`?libelle=…`) — figé après création, modification réservée aux admins.
+   * Utilisé dans les liens de filtre du catalogue. Ne pas modifier après publication : les liens déjà partagés casseraient.
    */
   slug: string;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé. Pour remplacer une image : téléverser un nouveau fichier (jamais l’outil de recadrage en place — l’image modifiée garderait la même adresse et resterait invisible derrière le cache, jusqu’à un an).
+ * Pour remplacer une image : téléversez un nouveau fichier plutôt que de la recadrer en place — sinon elle garde la même adresse et peut rester invisible en ligne pendant longtemps.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
@@ -390,12 +381,9 @@ export interface Libelle {
 export interface Media {
   id: number;
   /**
-   * Rempli automatiquement à la sauvegarde du livre (couverture, table des matières ou extrait — titre + auteur·rice·s). Non modifiable à la main.
+   * Rempli automatiquement depuis le titre et les auteur·rice·s du livre.
    */
   alt?: string | null;
-  /**
-   * Clé d'idempotence de la migration
-   */
   sourceUrl?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -410,7 +398,7 @@ export interface Media {
   focalY?: number | null;
 }
 /**
- * Commandes du commerce natif — créées par le webhook Stripe, suivies ici (statut de préparation/expédition uniquement). Un panier mixte (articles parus + précommande) scinde en DEUX commandes distinctes (même session Stripe, même paiement) — cf. « Type ».
+ * Créées automatiquement au paiement. Vous ne modifiez ici que le statut de préparation. Un panier mixte (paru + précommande) peut créer deux commandes distinctes — voir « Type ».
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "orders".
@@ -418,21 +406,21 @@ export interface Media {
 export interface Order {
   id: number;
   /**
-   * Généré automatiquement à la création (préfixe CMD- + id) — ne se modifie pas.
+   * Généré automatiquement à la création — ne se modifie pas.
    */
   number?: string | null;
   /**
-   * Seul champ modifiable au back-office — suivi de préparation (paid → prepared → shipped) ; annulation/remboursement au besoin. « Échec du paiement » : posé par le webhook (checkout.session.async_payment_failed) pour un moyen de paiement différé (ex. virement/prélèvement) dont la confirmation échoue APRÈS que checkout.session.completed s'est déjà présenté en attente — trace l'essai sans jamais décrémenter le stock (webhook route, lot 2 étape 9).
+   * Seul champ modifiable ici — suivi de préparation (payée → préparée → expédiée), plus annulation/remboursement au besoin. « Échec du paiement » est posé automatiquement pour un paiement différé (virement, prélèvement) qui échoue.
    */
   status: 'paid' | 'prepared' | 'shipped' | 'cancelled' | 'refunded' | 'failed';
   /**
-   * Commande normale (articles parus) ou précommande (articles à paraître avec « Ouvert à la précommande » coché) — posé par le webhook selon la scission du panier au paiement (client 2026-08-20). Un panier mixte produit UNE commande de chaque type, même session/paiement Stripe, chacune avec SES lignes et SES frais de port. « Don » (contreparties) : étanche des deux autres types — exclu de tout agrégat de CA/TVA (export compta, carte KPI ventes 30 j du dashboard), mais visible en préparation/expédition comme une commande normale.
+   * Commande normale, précommande (article à paraître) ou don. Un panier mixte (paru + précommande) crée une commande de chaque type pour un même paiement. « Don » : jamais compté dans le chiffre d’affaires, mais suivi en préparation et expédition comme une commande normale.
    */
   orderType: 'commande' | 'precommande' | 'don';
   paidAt?: string | null;
   email: string;
   /**
-   * Collecté par Stripe au paiement depuis le 2026-08-24 (demandé par l'équipe pour l'export des commandes et les livraisons) — vide sur les commandes antérieures, sur les dons et sur tout l’historique WooCommerce.
+   * Peut être vide : non collecté sur les commandes anciennes, les dons et l’historique repris.
    */
   phone?: string | null;
   shippingAddress: {
@@ -441,13 +429,10 @@ export interface Order {
     addressLine2?: string | null;
     postalCode: string;
     city: string;
-    /**
-     * Ventes restreintes FR/BE/CH (plan phase 4, étape 8).
-     */
     country: 'FR' | 'BE' | 'CH';
   };
   /**
-   * Snapshot au moment de la vente (titre/ISBN/prix) — indépendant d'une modification ultérieure de la fiche livre.
+   * Titre, ISBN et prix tels qu’au moment de la vente — ne changent pas si la fiche livre est modifiée depuis.
    */
   lines?:
     | {
@@ -465,7 +450,7 @@ export interface Order {
   discountTTC?: number | null;
   totalTTC: number;
   /**
-   * Dupliquée depuis la livraison par le webhook si le checkout ne collecte pas d’adresse de facturation distincte (étape 8).
+   * Identique à l’adresse de livraison si aucune adresse de facturation distincte n’a été saisie.
    */
   billingAddress: {
     fullName: string;
@@ -473,30 +458,25 @@ export interface Order {
     addressLine2?: string | null;
     postalCode: string;
     city: string;
-    /**
-     * Ventes restreintes FR/BE/CH (plan phase 4, étape 8).
-     */
     country: 'FR' | 'BE' | 'CH';
   };
   /**
-   * Clé d'idempotence du webhook avec « Type » (étape 9, étendue 2026-08-20) — une même session ne crée jamais deux commandes du MÊME type, mais peut légitimement porter DEUX commandes (une « Commande » + une « Précommande ») pour un panier mixte.
+   * Identifiant du paiement Stripe. Un panier mixte peut produire deux commandes avec le même identifiant (une « Commande » + une « Précommande »).
    */
   stripeSessionId: string;
   stripePaymentIntentId?: string | null;
   /**
-   * Marqueur technique du webhook (issue #64 — reprise après échec partiel) : le stock des lignes de cette commande a-t-il déjà été décrémenté ? Un rejeu Stripe ne redécrémente jamais tant que ce marqueur est vrai. Ne se modifie jamais à la main.
+   * Indique si le stock de cette commande a déjà été décompté. Ne se modifie jamais à la main.
    */
   stockDecremented: boolean;
   /**
-   * Marqueur technique du webhook (issue #64) : l'e-mail de confirmation de cette commande a-t-il déjà été envoyé ? Ne se modifie jamais à la main.
+   * Indique si l’e-mail de confirmation a déjà été envoyé. Ne se modifie jamais à la main.
    */
   confirmationSent: boolean;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Codes de réduction utilisables au paiement (montant fixe ou livraison offerte) — à créer pour une opération commerciale, à désactiver une fois la campagne finie.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "promo-codes".
  */
@@ -512,7 +492,7 @@ export interface PromoCode {
    */
   amount?: number | null;
   /**
-   * Montant TTC minimum du panier pour que le code s’applique (ex. 50 € pour la livraison offerte — plan §étape 5).
+   * Montant TTC minimum du panier pour que le code s’applique (ex. 50 € pour la livraison offerte).
    */
   minCart?: number | null;
   expiresAt?: string | null;
@@ -521,7 +501,7 @@ export interface PromoCode {
   createdAt: string;
 }
 /**
- * Contributions à la souscription reçues par virement bancaire (hors site) — elles s’ajoutent au montant collecté et au nombre de contributeur·rices affichés sur la page Souscription. Importez le fichier Excel de suivi ci-dessous : le réimporter en entier après chaque ajout ne crée jamais de doublon.
+ * Virements bancaires reçus hors site — comptés dans la jauge de la page Souscription. Réimporter le fichier Excel en entier après chaque ajout ne crée jamais de doublon.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "virements-souscription".
@@ -529,16 +509,16 @@ export interface PromoCode {
 export interface VirementsSouscription {
   id: number;
   /**
-   * Jour du virement (demandé au client « pour l’analyse plus tard ») — jamais une heure.
+   * Jour du virement, sans l’heure.
    */
   date: string;
   nom: string;
   /**
-   * En euros, comme les montants des commandes (ex. 50 ou 37,50).
+   * En euros (ex. 50 ou 37,50).
    */
   montantEUR: number;
   /**
-   * Reconnu automatiquement à l’import depuis la colonne « choix de la souscription » (intitulé du palier ou montant) ; « Autre » quand la colonne est remplie sans correspondre à un palier. Jamais deviné depuis le montant versé.
+   * Reconnu automatiquement à l’import depuis la colonne « choix de la souscription » — « Autre » si elle ne correspond à aucun palier connu.
    */
   palier?:
     | (
@@ -555,7 +535,7 @@ export interface VirementsSouscription {
       )
     | null;
   /**
-   * Cellule « choix de la souscription » telle qu’elle est écrite dans le classeur — conservée même quand le palier est reconnu.
+   * Texte brut de la colonne du fichier, conservé même si le palier ci-dessus est reconnu.
    */
   choixSaisi?: string | null;
   email?: string | null;
@@ -564,14 +544,14 @@ export interface VirementsSouscription {
    */
   reference?: string | null;
   /**
-   * Empreinte date + nom + montant de la ligne du classeur — c’est elle qui évite les doublons quand le fichier est réimporté. Vide pour une ligne saisie à la main (elle ne sera jamais écrasée par un import).
+   * Évite les doublons lors du réimport. Vide pour une ligne saisie à la main — jamais écrasée par un import.
    */
   cleImport?: string | null;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Les ePub (ou PDF) envoyés automatiquement aux acheteur·euses après paiement. « Créer » → téléversez le fichier → choisissez le titre concerné : à partir de là, toute commande payée contenant ce titre reçoit un lien de téléchargement personnel dans son e-mail de confirmation. Ces fichiers ne sont jamais listés ni téléchargeables depuis le site public. Pour remplacer un fichier, ouvrez la fiche existante et téléversez le nouveau : les liens déjà envoyés restent valables et pointeront vers le nouveau fichier.
+ * Téléversez le fichier, choisissez le titre concerné : toute commande payée contenant ce titre reçoit ensuite un lien de téléchargement dans son e-mail de confirmation. Pour remplacer un fichier, ouvrez sa fiche et téléversez le nouveau — les liens déjà envoyés restent valables.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "ebooks".
@@ -579,7 +559,7 @@ export interface VirementsSouscription {
 export interface Ebook {
   id: number;
   /**
-   * Le livre (ou l’article) dont ce fichier est la version numérique. Un seul fichier par titre — pour le remplacer, téléversez le nouveau ici même plutôt que de créer une seconde fiche.
+   * Un seul fichier par titre — pour le remplacer, téléversez le nouveau ici plutôt que de créer une seconde fiche.
    */
   livre: number | Book;
   updatedAt: string;
@@ -595,8 +575,6 @@ export interface Ebook {
   focalY?: number | null;
 }
 /**
- * Bandeau ponctuel affiché sur la page d’accueil (une campagne à la fois).
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "highlight".
  */
@@ -608,7 +586,7 @@ export interface Highlight {
    */
   texte?: string | null;
   /**
-   * Couleur d'accent du bandeau (liseré à gauche du bloc). Ignorée pour la campagne souscription (lien vers /souscription), qui garde son identité sombre propre.
+   * Couleur d’accent à gauche du bandeau. Sans effet si le lien pointe vers /souscription.
    */
   couleur?: ('pop-pink' | 'pop-teal' | 'pop-orange' | 'pop-yellow') | null;
   /**
@@ -629,8 +607,6 @@ export interface Highlight {
   createdAt: string;
 }
 /**
- * Agenda public des rencontres (page /rencontres) — une entrée par événement.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "rencontres".
  */
@@ -649,11 +625,11 @@ export interface Rencontre {
    */
   livre?: (number | null) | Book;
   /**
-   * Photo ou visuel de l’événement (facultatif) — remplace la couverture du livre si renseigné. Format libre.
+   * Remplace la couverture du livre si renseignée.
    */
   image?: (number | null) | Media;
   /**
-   * Coché : l’événement s’affiche en grande carte pleine largeur en tête de l’agenda (ex. braderie). Décoché : carte standard dans la grille 2-3 colonnes.
+   * Affiche l’événement en grande carte pleine largeur, en tête de l’agenda.
    */
   pleinCadre?: boolean | null;
   /**
@@ -665,8 +641,6 @@ export interface Rencontre {
   createdAt: string;
 }
 /**
- * Comptes du back-office (administrateur·rice ou éditrice·eur) — à créer ou modifier seulement pour donner ou retirer un accès à l’équipe.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
@@ -694,7 +668,7 @@ export interface User {
   collection: 'users';
 }
 /**
- * Historique des imports mensuels du fichier stock routeur — un document par import réussi, créé automatiquement par l'import (jamais à la main). Le dernier run alimente le panneau « Import routeur » du tableau de bord. Consultation seule, réservée aux administrateur·rice·s ; le dernier import est déjà résumé sur le tableau de bord.
+ * Historique des imports du fichier stock routeur, créé automatiquement à chaque import. Le dernier est déjà résumé sur le tableau de bord — consultation seule.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "import-runs".
@@ -710,7 +684,7 @@ export interface ImportRun {
    */
   nbMatchees: number;
   /**
-   * Rapport complet du run (`StockImportReport`) — les non-appariés se téléchargent en CSV via le tableau de bord.
+   * Les non-appariés se téléchargent en CSV via le tableau de bord.
    */
   rapport?:
     | {
@@ -1154,7 +1128,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Titre, récit et contreparties de la page /souscription. Un champ vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).
+ * Titre, récit et contreparties de la page /souscription. Un champ vide garde le contenu actuel.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "page-souscription".
@@ -1183,7 +1157,7 @@ export interface PageSouscription {
      */
     titreItalique?: string | null;
     /**
-     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné n’a aucun effet visuel.
      */
     corps?: {
       root: {
@@ -1211,7 +1185,7 @@ export interface PageSouscription {
      */
     titreItalique?: string | null;
     /**
-     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné n’a aucun effet visuel.
      */
     corps?: {
       root: {
@@ -1239,7 +1213,7 @@ export interface PageSouscription {
      */
     titreItalique?: string | null;
     /**
-     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné n’a aucun effet visuel.
      */
     corps?: {
       root: {
@@ -1267,7 +1241,7 @@ export interface PageSouscription {
      */
     titreItalique?: string | null;
     /**
-     * Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).
+     * Vide = texte actuel. Le gras est repris sur le site ; le souligné n’a aucun effet visuel.
      */
     corps?: {
       root: {
@@ -1286,7 +1260,7 @@ export interface PageSouscription {
     } | null;
   };
   /**
-   * Les MONTANTS des trois paliers restent calés sur la jauge de collecte (ils la pilotent) — le titre court et la description qui l’accompagnent se modifient ici.
+   * Les montants des trois paliers restent fixes ; seuls le titre court et sa description se modifient ici.
    */
   objectifs?: {
     /**
@@ -1315,7 +1289,7 @@ export interface PageSouscription {
     descriptif100?: string | null;
   };
   /**
-   * Une entrée par palier à modifier : son « Contenu du lot » remplace celui de LA carte de ce palier, les huit autres cartes restant inchangées (rien à faire pour les garder). Une entrée sans aucune ligne saisie est ignorée. Le même palier saisi deux fois : la dernière entrée du tableau l’emporte. L’ordre des neuf cartes sur la page ne dépend jamais de l’ordre de ce tableau. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.
+   * Une entrée par palier à modifier — remplace le contenu de sa carte, les autres cartes restent inchangées. Montant et intitulé viennent du palier choisi et ne s’éditent pas ici ; l’ordre de ce tableau n’a aucun effet sur la page.
    */
   contreparties?:
     | {
@@ -1342,7 +1316,7 @@ export interface PageSouscription {
       }[]
     | null;
   /**
-   * Carrousel grand format en clôture de la page — les visuels y défilent seuls, lentement, en boucle (photos, affiches, messages de soutien…). CONTRAIREMENT au tableau Contreparties ci-dessus (dont l’ordre ne pilote jamais l’affichage), L’ORDRE DE SAISIE ICI EST L’ORDRE D’AFFICHAGE — glissez les entrées pour réordonner. Aucun visuel saisi = section absente de la page (rien à activer/désactiver).
+   * Carrousel en fin de page — l’ordre de saisie est l’ordre d’affichage, glissez les entrées pour réordonner. Aucun visuel saisi = section absente de la page.
    */
   soutiens?:
     | {
@@ -1365,22 +1339,20 @@ export interface PageSouscription {
   createdAt?: string | null;
 }
 /**
- * Nombre d’exemplaires en dessous duquel un livre est signalé « stock bas » sur le tableau de bord et la page Stock — modifiable par les administrateur·rice·s uniquement.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "reglages-boutique".
  */
 export interface ReglagesBoutique {
   id: number;
   /**
-   * En dessous de ce nombre d'exemplaires (`commerce.stock` des fiches Livres), un article est signalé comme stock bas — usage réservé aux étapes ultérieures du plan (back-office, étape 10) ; ce lot ne pose que le réglage.
+   * En dessous de ce nombre d’exemplaires, un livre est signalé « stock bas » sur le tableau de bord et la page Stock.
    */
   seuilAlerteStockBas: number;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
 /**
- * Textes des pages /editions/editions-sociales et /editions/la-dispute. Un champ vide = le texte actuel du site ; les couleurs et la mise en page restent en code.
+ * Textes des pages /editions/editions-sociales et /editions/la-dispute.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "page-a-propos".
@@ -1388,7 +1360,7 @@ export interface ReglagesBoutique {
 export interface PageAPropos {
   id: number;
   /**
-   * Textes propres à chaque maison. Maison absente ou champ vide = texte actuel ; les couleurs restent en code.
+   * Textes propres à chaque maison. Maison absente ou champ vide = texte actuel.
    */
   maisons?:
     | {
@@ -1423,7 +1395,7 @@ export interface PageAPropos {
      */
     email?: string | null;
     /**
-     * Remplace ENTIÈREMENT le texte par défaut (adresse e-mail ci-dessus comprise) — à utiliser seulement si la phrase d’accroche ne convient plus telle quelle. Vide = texte actuel.
+     * Remplace entièrement le texte par défaut, adresse e-mail comprise. Vide = texte actuel.
      */
     texte?: {
       root: {
@@ -1464,8 +1436,6 @@ export interface PageContact {
   createdAt?: string | null;
 }
 /**
- * CGV & dons, mentions légales, confidentialité, pied de page, réseaux sociaux et réglages de référencement (SEO) — textes communs à tout le site, très rarement modifiés.
- *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages-legales".
  */
@@ -1501,7 +1471,7 @@ export interface PagesLegales {
     descriptionParDefaut?: string | null;
   };
   /**
-   * Affiché sur la fiche produit, le panier, la page de remerciement et les CGV. Vide = « entre 48 h et 10 jours ». L’e-mail de confirmation de commande garde toujours cette mention par défaut, quoi que vous saisissiez ici.
+   * Affiché sur la fiche produit, le panier et la page de remerciement — vide = « entre 48 h et 10 jours ». L’e-mail de confirmation garde toujours le texte par défaut.
    */
   livraisonDelai?: string | null;
   /**

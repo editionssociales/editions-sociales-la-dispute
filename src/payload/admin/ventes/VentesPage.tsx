@@ -271,8 +271,8 @@ export async function VentesPage(props: AdminViewServerProps) {
       <div className="gutter gutter--left gutter--right">
         <h1>Ventes — détail</h1>
         <p className={styles.muted}>
-          Statuts payée/préparée/expédiée, dons avec contrepartie exclus des montants, historique
-          boutique 2018→2026 inclus.
+          Commandes payées, préparées ou expédiées ; dons exclus des montants ; historique boutique
+          inclus.
         </p>
         <div className={styles.board}>
           {/* ── 0. Analyse libre (recherche par période/titre) ── */}
@@ -281,9 +281,8 @@ export async function VentesPage(props: AdminViewServerProps) {
               Analyse libre
             </h3>
             <p className={styles.muted}>
-              Période et/ou titre au choix, calculés sur l’historique déjà chargé
-              ({SALES_HISTORY_MONTHS_BACK + 1} mois glissants) — CA hors frais de port (méthode
-              « titres les plus vendus », ci-dessous).
+              Période et/ou titre au choix, sur les {SALES_HISTORY_MONTHS_BACK + 1} derniers mois.
+              CA hors frais de port.
             </p>
             <form method="GET" className={ventesStyles.filterForm}>
               <label className={ventesStyles.filterField}>

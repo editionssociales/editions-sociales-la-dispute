@@ -34,7 +34,8 @@ export const Media: CollectionConfig = {
   admin: {
     group: 'Catalogue',
     description:
-      'Bibliothèque des images et PDF téléversés depuis les fiches Livres et Rencontres — rarement ouverte directement, sert surtout à retrouver ou remplacer un fichier déjà envoyé. Pour remplacer une image : téléverser un nouveau fichier (jamais l’outil de recadrage en place — l’image modifiée garderait la même adresse et resterait invisible derrière le cache, jusqu’à un an).',
+      'Pour remplacer une image : téléversez un nouveau fichier plutôt que de la recadrer en place — ' +
+      'sinon elle garde la même adresse et peut rester invisible en ligne pendant longtemps.',
   },
   upload: {
     mimeTypes: ['image/*', 'application/pdf'],
@@ -68,8 +69,7 @@ export const Media: CollectionConfig = {
           label: 'Texte alternatif',
           admin: {
             readOnly: true,
-            description:
-              'Rempli automatiquement à la sauvegarde du livre (couverture, table des matières ou extrait — titre + auteur·rice·s). Non modifiable à la main.',
+            description: 'Rempli automatiquement depuis le titre et les auteur·rice·s du livre.',
           },
         },
         {
@@ -79,7 +79,6 @@ export const Media: CollectionConfig = {
           index: true,
           admin: {
             readOnly: true,
-            description: "Clé d'idempotence de la migration",
           },
         },
       ],

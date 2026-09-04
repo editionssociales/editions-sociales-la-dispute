@@ -46,14 +46,9 @@ export const Ebooks: CollectionConfig = {
     useAsTitle: 'filename',
     defaultColumns: ['livre', 'filename', 'filesize', 'updatedAt'],
     description:
-      'Les ePub (ou PDF) envoyés automatiquement aux acheteur·euses après ' +
-      'paiement. « Créer » → téléversez le fichier → choisissez le titre ' +
-      'concerné : à partir de là, toute commande payée contenant ce titre ' +
-      'reçoit un lien de téléchargement personnel dans son e-mail de ' +
-      'confirmation. Ces fichiers ne sont jamais listés ni téléchargeables ' +
-      'depuis le site public. Pour remplacer un fichier, ouvrez la fiche ' +
-      'existante et téléversez le nouveau : les liens déjà envoyés restent ' +
-      'valables et pointeront vers le nouveau fichier.',
+      'Téléversez le fichier, choisissez le titre concerné : toute commande payée contenant ce ' +
+      'titre reçoit ensuite un lien de téléchargement dans son e-mail de confirmation. Pour ' +
+      'remplacer un fichier, ouvrez sa fiche et téléversez le nouveau — les liens déjà envoyés restent valables.',
   },
   upload: {
     // ePub d'abord ; PDF toléré (certains titres numériques n'existent qu'en
@@ -96,9 +91,7 @@ export const Ebooks: CollectionConfig = {
       label: 'Titre concerné',
       admin: {
         description:
-          'Le livre (ou l’article) dont ce fichier est la version numérique. ' +
-          'Un seul fichier par titre — pour le remplacer, téléversez le nouveau ' +
-          'ici même plutôt que de créer une seconde fiche.',
+          'Un seul fichier par titre — pour le remplacer, téléversez le nouveau ici plutôt que de créer une seconde fiche.',
       },
     },
   ],

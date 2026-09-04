@@ -56,9 +56,6 @@ function addressFields(): Field[] {
         { value: 'BE', label: 'Belgique' },
         { value: 'CH', label: 'Suisse' },
       ],
-      admin: {
-        description: 'Ventes restreintes FR/BE/CH (plan phase 4, étape 8).',
-      },
     },
   ]
 }
@@ -127,10 +124,8 @@ export const Orders: CollectionConfig = {
     // ne hisse pas les sous-champs d'un `array`, contrairement à un `group`).
     listSearchableFields: ['shippingAddress.fullName', 'number', 'email', 'lines.titleSnapshot'],
     description:
-      'Commandes du commerce natif — créées par le webhook Stripe, suivies ' +
-      'ici (statut de préparation/expédition uniquement). Un panier mixte ' +
-      '(articles parus + précommande) scinde en DEUX commandes distinctes ' +
-      '(même session Stripe, même paiement) — cf. « Type ».',
+      'Créées automatiquement au paiement. Vous ne modifiez ici que le statut de préparation. ' +
+      'Un panier mixte (paru + précommande) peut créer deux commandes distinctes — voir « Type ».',
     // Chips de filtre (état) AVANT l'export CSV (action quotidienne avant
     // l'occasionnel, « descente de previews ») — cf.
     // `orders/OrdersFilterChipsPanel.tsx` et `OrderExportPanel.tsx`.
@@ -186,7 +181,7 @@ export const Orders: CollectionConfig = {
       label: 'N° de commande',
       admin: {
         readOnly: true,
-        description: "Généré automatiquement à la création (préfixe CMD- + id) — ne se modifie pas.",
+        description: 'Généré automatiquement à la création — ne se modifie pas.',
       },
       access: lockedAfterCreate,
     },
@@ -213,14 +208,9 @@ export const Orders: CollectionConfig = {
         // champ sans `access.update`, cf. `Orders.test.ts`).
         position: 'sidebar',
         description:
-          'Seul champ modifiable au back-office — suivi de préparation ' +
-          '(paid → prepared → shipped) ; annulation/remboursement au besoin. ' +
-          '« Échec du paiement » : posé par le webhook (checkout.session.' +
-          'async_payment_failed) pour un moyen de paiement différé (ex. ' +
-          "virement/prélèvement) dont la confirmation échoue APRÈS que " +
-          "checkout.session.completed s'est déjà présenté en attente — trace " +
-          "l'essai sans jamais décrémenter le stock (webhook route, lot 2 " +
-          'étape 9).',
+          'Seul champ modifiable ici — suivi de préparation (payée → préparée → expédiée), ' +
+          'plus annulation/remboursement au besoin. « Échec du paiement » est posé ' +
+          'automatiquement pour un paiement différé (virement, prélèvement) qui échoue.',
       },
     },
     {
@@ -239,15 +229,10 @@ export const Orders: CollectionConfig = {
       admin: {
         position: 'sidebar',
         description:
-          'Commande normale (articles parus) ou précommande (articles à ' +
-          'paraître avec « Ouvert à la précommande » coché) — posé par le ' +
-          'webhook selon la scission du panier au paiement (client ' +
-          '2026-08-20). Un panier mixte produit UNE commande de chaque ' +
-          "type, même session/paiement Stripe, chacune avec SES lignes et " +
-          "SES frais de port. « Don » (contreparties) : étanche des deux " +
-          'autres types — exclu de tout agrégat de CA/TVA (export compta, ' +
-          'carte KPI ventes 30 j du dashboard), mais visible en préparation/' +
-          'expédition comme une commande normale.',
+          'Commande normale, précommande (article à paraître) ou don. Un panier mixte ' +
+          '(paru + précommande) crée une commande de chaque type pour un même paiement. ' +
+          '« Don » : jamais compté dans le chiffre d’affaires, mais suivi en préparation ' +
+          'et expédition comme une commande normale.',
       },
     },
     {
@@ -291,10 +276,7 @@ export const Orders: CollectionConfig = {
       access: lockedAfterCreate,
       admin: {
         description:
-          'Collecté par Stripe au paiement depuis le 2026-08-24 (demandé par ' +
-          "l'équipe pour l'export des commandes et les livraisons) — vide sur " +
-          'les commandes antérieures, sur les dons et sur tout l’historique ' +
-          'WooCommerce.',
+          'Peut être vide : non collecté sur les commandes anciennes, les dons et l’historique repris.',
       },
     },
     {
@@ -317,8 +299,7 @@ export const Orders: CollectionConfig = {
       access: lockedAfterCreate,
       admin: {
         description:
-          'Snapshot au moment de la vente (titre/ISBN/prix) — indépendant ' +
-          "d'une modification ultérieure de la fiche livre.",
+          'Titre, ISBN et prix tels qu’au moment de la vente — ne changent pas si la fiche livre est modifiée depuis.',
       },
       fields: [
         {
@@ -452,8 +433,7 @@ export const Orders: CollectionConfig = {
           access: lockedAfterCreate,
           admin: {
             description:
-              'Dupliquée depuis la livraison par le webhook si le checkout ne ' +
-              'collecte pas d’adresse de facturation distincte (étape 8).',
+              'Identique à l’adresse de livraison si aucune adresse de facturation distincte n’a été saisie.',
           },
           fields: addressFields(),
         },
@@ -466,10 +446,8 @@ export const Orders: CollectionConfig = {
           access: lockedAfterCreate,
           admin: {
             description:
-              "Clé d'idempotence du webhook avec « Type » (étape 9, étendue " +
-              "2026-08-20) — une même session ne crée jamais deux commandes du " +
-              'MÊME type, mais peut légitimement porter DEUX commandes (une ' +
-              '« Commande » + une « Précommande ») pour un panier mixte.',
+              'Identifiant du paiement Stripe. Un panier mixte peut produire deux commandes ' +
+              'avec le même identifiant (une « Commande » + une « Précommande »).',
           },
         },
         {
@@ -487,10 +465,7 @@ export const Orders: CollectionConfig = {
           access: lockedAfterCreate,
           admin: {
             readOnly: true,
-            description:
-              'Marqueur technique du webhook (issue #64 — reprise après échec partiel) : ' +
-              "le stock des lignes de cette commande a-t-il déjà été décrémenté ? Un rejeu " +
-              "Stripe ne redécrémente jamais tant que ce marqueur est vrai. Ne se modifie jamais à la main.",
+            description: 'Indique si le stock de cette commande a déjà été décompté. Ne se modifie jamais à la main.',
           },
         },
         {
@@ -502,9 +477,7 @@ export const Orders: CollectionConfig = {
           access: lockedAfterCreate,
           admin: {
             readOnly: true,
-            description:
-              "Marqueur technique du webhook (issue #64) : l'e-mail de confirmation de cette " +
-              "commande a-t-il déjà été envoyé ? Ne se modifie jamais à la main.",
+            description: 'Indique si l’e-mail de confirmation a déjà été envoyé. Ne se modifie jamais à la main.',
           },
         },
       ],

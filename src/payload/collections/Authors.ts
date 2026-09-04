@@ -20,8 +20,6 @@ export const Authors: CollectionConfig = {
   admin: {
     group: 'Catalogue',
     useAsTitle: 'name',
-    description:
-      'Fiches auteur·rice·s rattachées aux livres (nom, biographie) — à créer avant de pouvoir les associer à une fiche Livre.',
   },
   access: {
     read: () => true,
@@ -67,7 +65,7 @@ export const Authors: CollectionConfig = {
           admin: {
             width: '35%',
             description:
-              'Identifiant public (URLs de filtre du catalogue) — figé après création, modification réservée aux admins.',
+              'Utilisé dans les liens de filtre du catalogue. Ne pas modifier après publication : les liens déjà partagés casseraient.',
             components: {
               Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
             },

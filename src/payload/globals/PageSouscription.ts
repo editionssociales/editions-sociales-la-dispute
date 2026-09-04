@@ -66,7 +66,7 @@ function champsRecit(
         label: 'Texte',
         admin: {
           description:
-            'Vide = texte actuel. Le gras est repris sur le site ; le souligné, lui, n’a AUCUN effet visuel sur le site (utilisez le gras à la place).',
+            'Vide = texte actuel. Le gras est repris sur le site ; le souligné n’a aucun effet visuel.',
         },
       },
     ],
@@ -82,7 +82,7 @@ export const PageSouscription: GlobalConfig = {
   admin: {
     group: 'Vie du site',
     description:
-      'Titre, récit et contreparties de la page /souscription. Un champ vide = le contenu actuel du site ; les montants des paliers restent pilotés par le code (paiement Stripe).',
+      'Titre, récit et contreparties de la page /souscription. Un champ vide garde le contenu actuel.',
   },
   access: {
     read: () => true,
@@ -138,7 +138,7 @@ export const PageSouscription: GlobalConfig = {
               label: 'Objectifs de la jauge',
               admin: {
                 description:
-                  'Les MONTANTS des trois paliers restent calés sur la jauge de collecte (ils la pilotent) — le titre court et la description qui l’accompagnent se modifient ici.',
+                  'Les montants des trois paliers restent fixes ; seuls le titre court et sa description se modifient ici.',
               },
               fields: [
                 {
@@ -194,7 +194,8 @@ export const PageSouscription: GlobalConfig = {
               },
               admin: {
                 description:
-                  'Une entrée par palier à modifier : son « Contenu du lot » remplace celui de LA carte de ce palier, les huit autres cartes restant inchangées (rien à faire pour les garder). Une entrée sans aucune ligne saisie est ignorée. Le même palier saisi deux fois : la dernière entrée du tableau l’emporte. L’ordre des neuf cartes sur la page ne dépend jamais de l’ordre de ce tableau. Montant et intitulé viennent du palier choisi — ils pilotent le paiement et ne s’éditent pas ici.',
+                  'Une entrée par palier à modifier — remplace le contenu de sa carte, les autres cartes restent inchangées. ' +
+                  'Montant et intitulé viennent du palier choisi et ne s’éditent pas ici ; l’ordre de ce tableau n’a aucun effet sur la page.',
               },
               fields: [
                 {
@@ -242,7 +243,8 @@ export const PageSouscription: GlobalConfig = {
               },
               admin: {
                 description:
-                  'Carrousel grand format en clôture de la page — les visuels y défilent seuls, lentement, en boucle (photos, affiches, messages de soutien…). CONTRAIREMENT au tableau Contreparties ci-dessus (dont l’ordre ne pilote jamais l’affichage), L’ORDRE DE SAISIE ICI EST L’ORDRE D’AFFICHAGE — glissez les entrées pour réordonner. Aucun visuel saisi = section absente de la page (rien à activer/désactiver).',
+                  'Carrousel en fin de page — l’ordre de saisie est l’ordre d’affichage, glissez les entrées pour réordonner. ' +
+                  'Aucun visuel saisi = section absente de la page.',
               },
               fields: [
                 {

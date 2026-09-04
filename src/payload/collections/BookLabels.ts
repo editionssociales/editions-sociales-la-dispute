@@ -26,8 +26,6 @@ export const BookLabels: CollectionConfig = {
     group: 'Catalogue',
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'updatedAt'],
-    description:
-      'Thèmes majeurs du catalogue (introduction, travail, genre…). Un livre peut porter plusieurs libellés.',
   },
   access: {
     read: () => true,
@@ -70,7 +68,7 @@ export const BookLabels: CollectionConfig = {
           admin: {
             width: '35%',
             description:
-              'Identifiant d’URL (`?libelle=…`) — figé après création, modification réservée aux admins.',
+              'Utilisé dans les liens de filtre du catalogue. Ne pas modifier après publication : les liens déjà partagés casseraient.',
             components: {
               Field: '/payload/admin/SlugFromLabelField.tsx#SlugFromLabelField',
             },

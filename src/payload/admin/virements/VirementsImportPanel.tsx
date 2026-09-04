@@ -88,10 +88,9 @@ export function VirementsImportPanel() {
 
       <p className={styles.muted}>
         Colonnes attendues : <strong>date</strong>, <strong>nom</strong>,{' '}
-        <strong>montant</strong>, <strong>choix de la souscription</strong> (l’ordre n’a pas
-        d’importance ; les colonnes e-mail et notes sont facultatives). Réimportez le fichier
-        entier après chaque ajout : les lignes déjà présentes ne sont jamais dupliquées, et
-        rien n’est supprimé.
+        <strong>montant</strong>, <strong>choix de la souscription</strong> (e-mail et notes
+        facultatifs, ordre libre). Réimportez le fichier entier à chaque ajout : rien n’est
+        jamais dupliqué ni supprimé.
       </p>
 
       {report && (

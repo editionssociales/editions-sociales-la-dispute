@@ -40,11 +40,8 @@ export const VirementsSouscription: CollectionConfig = {
     defaultColumns: ['nom', 'montantEUR', 'palier', 'date'],
     listSearchableFields: ['nom', 'email'],
     description:
-      'Contributions à la souscription reçues par virement bancaire (hors ' +
-      'site) — elles s’ajoutent au montant collecté et au nombre de ' +
-      'contributeur·rices affichés sur la page Souscription. Importez le ' +
-      'fichier Excel de suivi ci-dessous : le réimporter en entier après ' +
-      'chaque ajout ne crée jamais de doublon.',
+      'Virements bancaires reçus hors site — comptés dans la jauge de la page Souscription. ' +
+      'Réimporter le fichier Excel en entier après chaque ajout ne crée jamais de doublon.',
     components: {
       beforeListTable: [
         '/payload/admin/virements/VirementsImportPanel.tsx#VirementsImportPanel',
@@ -81,9 +78,7 @@ export const VirementsSouscription: CollectionConfig = {
       label: 'Date du virement',
       admin: {
         date: { pickerAppearance: 'dayOnly', displayFormat: 'dd/MM/yyyy' },
-        description:
-          'Jour du virement (demandé au client « pour l’analyse plus tard ») — ' +
-          'jamais une heure.',
+        description: 'Jour du virement, sans l’heure.',
       },
     },
     {
@@ -100,7 +95,7 @@ export const VirementsSouscription: CollectionConfig = {
       label: 'Montant (€)',
       admin: {
         step: 0.01,
-        description: 'En euros, comme les montants des commandes (ex. 50 ou 37,50).',
+        description: 'En euros (ex. 50 ou 37,50).',
       },
     },
     {
@@ -116,10 +111,8 @@ export const VirementsSouscription: CollectionConfig = {
       ],
       admin: {
         description:
-          'Reconnu automatiquement à l’import depuis la colonne « choix de la ' +
-          'souscription » (intitulé du palier ou montant) ; « Autre » quand la ' +
-          'colonne est remplie sans correspondre à un palier. Jamais deviné ' +
-          'depuis le montant versé.',
+          'Reconnu automatiquement à l’import depuis la colonne « choix de la souscription » — ' +
+          '« Autre » si elle ne correspond à aucun palier connu.',
       },
     },
     {
@@ -127,9 +120,7 @@ export const VirementsSouscription: CollectionConfig = {
       type: 'text',
       label: 'Choix (texte du fichier)',
       admin: {
-        description:
-          'Cellule « choix de la souscription » telle qu’elle est écrite dans le ' +
-          'classeur — conservée même quand le palier est reconnu.',
+        description: 'Texte brut de la colonne du fichier, conservé même si le palier ci-dessus est reconnu.',
       },
     },
     {
@@ -155,9 +146,8 @@ export const VirementsSouscription: CollectionConfig = {
         readOnly: true,
         position: 'sidebar',
         description:
-          'Empreinte date + nom + montant de la ligne du classeur — c’est elle ' +
-          'qui évite les doublons quand le fichier est réimporté. Vide pour une ' +
-          'ligne saisie à la main (elle ne sera jamais écrasée par un import).',
+          'Évite les doublons lors du réimport. Vide pour une ligne saisie à la main — ' +
+          'jamais écrasée par un import.',
       },
     },
   ],

@@ -131,8 +131,7 @@ export async function HealthPage(props: AdminViewServerProps) {
               )}
             </p>
             <span className={styles.kbdNote}>
-              « Dernière commande écrite » est un proxy informatif de l’activité webhook — jamais un
-              signal de panne isolé : l’absence de vente est un fait métier normal, pas une panne.
+              Absence de commande récente : normal, pas nécessairement une panne.
             </span>
             <div className={styles.actions}>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route admin Payload (catch-all `(payload)/admin/[[...segments]]`), navigation par ancre pleine comme le reste du back-office */}
@@ -227,7 +226,7 @@ export async function HealthPage(props: AdminViewServerProps) {
               </div>
             </div>
             <span className={styles.kbdNote}>
-              Présence des variables seulement — jamais leur valeur. Si une variable manque, relayer le
+              Présence des variables seulement, jamais leur valeur. Variable manquante : relayer son
               nom exact au développeur.
             </span>
             <span className={styles.noteChip}>page réservée au rôle admin</span>

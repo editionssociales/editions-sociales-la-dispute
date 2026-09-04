@@ -65,8 +65,7 @@ export function OrderExportForm() {
     <div className={styles.formRow}>
       {hasExplicitSelection && (
         <p className={styles.muted}>
-          Sélection : {count} commande{count > 1 ? 's' : ''} cochée{count > 1 ? 's' : ''} — les
-          liens ci-dessous portent sur cette sélection, filtres ignorés.
+          {count} commande{count > 1 ? 's' : ''} cochée{count > 1 ? 's' : ''} — filtres ignorés.
         </p>
       )}
       <a href={href('preparation')}>
