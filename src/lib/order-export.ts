@@ -144,6 +144,14 @@ export interface OrderExportLine {
   quantity: number;
   /** Euros TTC. */
   unitPriceTTC: number;
+  /**
+   * Titre vendu uniquement en numérique AU MOMENT DE LA VENTE
+   * (`Orders.lines.digital`, client 2026-09-09) — nourrit la colonne
+   * « Numérique » du profil préparation. Optionnel : absent (fixtures
+   * existantes, commandes antérieures à ce champ) = colonne vide, jamais
+   * « oui » par défaut.
+   */
+  digital?: boolean;
 }
 
 export interface OrderExportRow {
@@ -276,6 +284,12 @@ export function splitFullName(fullName: string): SplitName {
  * derrière : rien de ce que l'équipe avait n'est retiré (n° de commande,
  * type, ISBN, référence produit, prix, coupon, remise), et le nom complet
  * brut ferme la marche comme filet de la séparation nom/prénom.
+ *
+ * « Numérique » (client 2026-09-09) EN FIN de feuille, sans déplacer aucune
+ * des colonnes ci-dessus — « oui » sur une ligne dont le titre est vendu
+ * uniquement en numérique (`OrderExportLine.digital`), vide sinon (jamais
+ * « non ») : l'équipe n'a besoin d'un signal que pour EXCLURE ces lignes de
+ * la préparation d'un colis, pas d'une colonne booléenne à lire partout.
  */
 const PREPARATION_HEADER = [
   "Date de commande",
@@ -298,6 +312,7 @@ const PREPARATION_HEADER = [
   "Code de coupon",
   "Réduction",
   "Nom complet (tel que saisi)",
+  "Numérique",
 ] as const;
 
 /**
@@ -354,6 +369,7 @@ export function formatPreparationCsv(orders: readonly OrderExportRow[]): string 
       order.couponCode ?? "",
       formatAmount(order.discountTTC),
       order.shippingAddress.fullName,
+      line.digital ? "oui" : "",
     ]);
   });
   return toCsv(PREPARATION_HEADER, rows);

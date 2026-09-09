@@ -163,7 +163,7 @@ describe("formatPreparationCsv", () => {
     expect(csv).toBe(
       "Date de commande;Titre;Quantité;Nom;Prénom;Adresse;Complément d'adresse;Code postal;Ville;Pays;" +
         "E-mail;Téléphone;N° de commande;Type;UGS(ISBN);Article #;Prix du produit;Code de coupon;Réduction;" +
-        "Nom complet (tel que saisi)\r\n",
+        "Nom complet (tel que saisi);Numérique\r\n",
     );
   });
 
@@ -183,12 +183,33 @@ describe("formatPreparationCsv", () => {
     expect(lines).toHaveLength(3); // en-tête + 2 lignes d'article
     expect(lines[1]).toBe(
       "10/07/2026;Le Capital, livre 1;2;Dupont;Jeanne;12 rue des Fables;;75020;Paris;FR;" +
-        "jeanne@example.org;+33612345678;CMD-000042;Commande;9782360830001;101;12,50;SOLIDAIRE10;2,50;Jeanne Dupont",
+        "jeanne@example.org;+33612345678;CMD-000042;Commande;9782360830001;101;12,50;SOLIDAIRE10;2,50;Jeanne Dupont;",
     );
     expect(lines[2]).toBe(
       "10/07/2026;Sans ISBN;1;Dupont;Jeanne;12 rue des Fables;;75020;Paris;FR;" +
-        "jeanne@example.org;+33612345678;CMD-000042;Commande;;202;8,00;SOLIDAIRE10;2,50;Jeanne Dupont",
+        "jeanne@example.org;+33612345678;CMD-000042;Commande;;202;8,00;SOLIDAIRE10;2,50;Jeanne Dupont;",
     );
+  });
+
+  it("colonne « Numérique » (client 2026-09-09) : « oui » sur une ligne dont le titre est numérique seul, vide sinon — EN FIN de feuille", () => {
+    const csv = formatPreparationCsv([
+      order({
+        lines: [
+          { bookId: 101, isbn: "9782360830001", title: "Le Capital, livre 1", quantity: 1, unitPriceTTC: 12.5 },
+          {
+            bookId: 202,
+            isbn: "9782000000202",
+            title: "Notes sur James Mill",
+            quantity: 1,
+            unitPriceTTC: 9.99,
+            digital: true,
+          },
+        ],
+      }),
+    ]);
+    const lines = csv.trim().split("\r\n");
+    expect(lines[1].endsWith(";Jeanne Dupont;")).toBe(true); // ligne physique — colonne vide
+    expect(lines[2].endsWith(";Jeanne Dupont;oui")).toBe(true); // ligne numérique — « oui »
   });
 
   it("date au jour de PARIS, pas au jour UTC (une commande de 1 h du matin ne recule pas d'un jour)", () => {

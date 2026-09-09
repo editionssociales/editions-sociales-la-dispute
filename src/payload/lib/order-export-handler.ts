@@ -7,8 +7,34 @@ import {
   formatComptaCsv,
   formatPreparationCsv,
   parseExportOrderIds,
+  type OrderExportAddress,
   type OrderExportRow,
 } from '../../lib/order-export.ts'
+
+/**
+ * `Orders.shippingAddress`/`billingAddress` → `OrderExportAddress` — trois
+ * champs devenus optionnels côté schéma (client 2026-09-09, commande sans
+ * envoi : `addressLine1`/`postalCode`/`city` vides pour `shippingMethod ===
+ * "aucun"`) : coercés en chaîne vide ici, jamais `"null"`/`"undefined"` dans
+ * une cellule CSV.
+ */
+function toExportAddress(address: {
+  fullName: string
+  addressLine1?: string | null
+  addressLine2?: string | null
+  postalCode?: string | null
+  city?: string | null
+  country: string
+}): OrderExportAddress {
+  return {
+    fullName: address.fullName,
+    addressLine1: address.addressLine1 ?? '',
+    addressLine2: address.addressLine2,
+    postalCode: address.postalCode ?? '',
+    city: address.city ?? '',
+    country: address.country,
+  }
+}
 
 /**
  * Orchestration I/O des deux exports CSV commandes (cœur pur de formatage
@@ -121,9 +147,12 @@ async function fetchOrdersForExport(payload: Payload, where: Where | undefined):
       title: line.titleSnapshot,
       quantity: line.quantity,
       unitPriceTTC: line.unitPriceTTC,
+      // Snapshot au moment de la vente (client 2026-09-09) — colonne
+      // « Numérique » du profil préparation (`order-export.ts`).
+      digital: line.digital,
     })),
-    shippingAddress: order.shippingAddress,
-    billingAddress: order.billingAddress,
+    shippingAddress: toExportAddress(order.shippingAddress),
+    billingAddress: toExportAddress(order.billingAddress),
     totalTTC: order.totalTTC,
     shippingCostTTC: order.shippingCostTTC,
     discountTTC: order.discountTTC ?? 0,
