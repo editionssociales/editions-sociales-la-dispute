@@ -87,6 +87,7 @@ const SHIPPING_LABELS: Record<string, string> = {
   standard: 'standard',
   reduit: 'réduit',
   offert: 'offert',
+  aucun: 'aucun envoi',
 }
 
 export async function Dashboard({ payload }: ServerProps) {

@@ -16,6 +16,7 @@ import {
 import { parseStoredImportReport } from '../../lib/import-run-report-core.ts'
 import { brevoConfigured, getNewsletterListStats } from '../../../lib/brevo.ts'
 import { getCampaign2026 } from '../../../lib/donations.ts'
+import { findDigitalOnlyBookIds } from '../../../lib/ebooks-source.ts'
 import { isoDayParis, monthsAgoParisMonthStartUtc, parisMidnightUtc } from '../../../lib/format.ts'
 import { getActiveHighlight } from '../../../lib/highlight.ts'
 import { upcomingBoundaryUtc } from '../../../lib/sellability.ts'
@@ -182,7 +183,7 @@ export interface WorkOrderRow {
   createdAt: string
   paidAt: string | null
   totalTTC: number
-  shippingMethod: 'standard' | 'reduit' | 'offert'
+  shippingMethod: 'standard' | 'reduit' | 'offert' | 'aucun'
   lines: { titleSnapshot: string; quantity: number }[]
 }
 
@@ -287,6 +288,12 @@ export type StockOutlookData = { state: 'ok'; rows: StockOutlookRow[] } | { stat
  * fenêtre partagée par le KPI et le graphique) — un état `na` dégrade
  * silencieusement en vélocité 0 partout (jamais un plantage de la page stock
  * pour un incident qui ne touche que les ventes).
+ *
+ * Titres numérique seul (client 2026-09-09) EXCLUS de ce résultat : cette vue
+ * porte sur le stock PHYSIQUE, et `sellability.ts` ignore déjà le stock pour
+ * eux — les y montrer (a fortiori dans la section « non suivis, retirés de la
+ * vente en ligne ») laisserait croire à tort qu'ils ne sont pas commandables.
+ * Un seul lot `ebooks-source.ts` pour toute la requête (jamais de N+1).
  */
 export async function readStockOutlook(
   payload: Payload,
@@ -315,15 +322,18 @@ export async function readStockOutlook(
       limit: 0,
       overrideAccess: true,
     })
+    const digitalOnlyIds = await findDigitalOnlyBookIds(docs.map((doc) => doc.id))
     const soldByBook =
       salesWindow.state === 'ok' ? quantitySoldByBook(salesWindow.rows, now) : new Map<number, number>()
-    const inputs = docs.map((doc) => ({
-      id: doc.id,
-      title: doc.title,
-      edition: doc.edition ?? null,
-      stock: doc.commerce?.stock ?? null,
-      stockSuivi: doc.commerce?.stockSuivi ?? null,
-    }))
+    const inputs = docs
+      .filter((doc) => !digitalOnlyIds.has(doc.id))
+      .map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        edition: doc.edition ?? null,
+        stock: doc.commerce?.stock ?? null,
+        stockSuivi: doc.commerce?.stockSuivi ?? null,
+      }))
     return { state: 'ok', rows: stockOutlook(inputs, soldByBook, now) }
   } catch {
     return { state: 'na' }

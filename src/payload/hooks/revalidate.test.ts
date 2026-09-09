@@ -144,6 +144,46 @@ describe('revalidateCatalogueAfterChange — ciblage par collection', () => {
     await revalidateCatalogueAfterChange(changeArgs({ slug: 'books', doc: { slug: 'x' }, req }))
     expect(purgedPaths()).toEqual([])
   })
+
+  describe('ebooks (client 2026-09-09) — relation DIRECTE, `livre` pointe vers le livre', () => {
+    it('purge listes + fiche du livre lié (id nu, non peuplé)', async () => {
+      const { req, find } = fakeReq([{ slug: 'notes-sur-mill', edition: 'editions-sociales' }])
+      await revalidateCatalogueAfterChange(changeArgs({ slug: 'ebooks', doc: { livre: 12 }, req }))
+      const paths = purgedPaths()
+      for (const liste of LISTES) expect(paths).toContain(liste)
+      expect(paths).toContain('/catalogue/editions-sociales/notes-sur-mill')
+      expect(paths).not.toContain(MOTIF_LARGE)
+      expect(find.mock.calls[0]?.[0]?.where).toEqual({ id: { equals: 12 } })
+    })
+
+    it('purge listes + fiche du livre lié (relation peuplée, `{ id }`)', async () => {
+      const { req } = fakeReq([{ slug: 'notes-sur-mill', edition: 'editions-sociales' }])
+      await revalidateCatalogueAfterChange(changeArgs({ slug: 'ebooks', doc: { livre: { id: 12 } }, req }))
+      expect(purgedPaths()).toContain('/catalogue/editions-sociales/notes-sur-mill')
+    })
+
+    it('titre lié changé : purge AUSSI l’ancienne fiche (previousDoc.livre)', async () => {
+      // Un id par livre : le mock générique (`fakeReq`) renvoie la MÊME
+      // réponse à chaque appel — insuffisant ici, où les deux requêtes
+      // (nouveau/ancien livre) doivent renvoyer des fiches DIFFÉRENTES.
+      const byId: Record<number, { slug: string; edition: string }> = {
+        12: { slug: 'nouveau-titre', edition: 'editions-sociales' },
+        9: { slug: 'ancien-titre', edition: 'la-dispute' },
+      }
+      const find = vi.fn(async (args: { where?: { id?: { equals?: number } } }) => {
+        const id = args?.where?.id?.equals
+        const doc = id != null ? byId[id] : undefined
+        return { docs: doc ? [doc] : [] }
+      })
+      const req = { context: {}, payload: { find } } as unknown as ChangeArgs['req']
+      await revalidateCatalogueAfterChange(
+        changeArgs({ slug: 'ebooks', doc: { livre: 12 }, previousDoc: { livre: 9 }, req }),
+      )
+      const paths = purgedPaths()
+      expect(paths).toContain('/catalogue/editions-sociales/nouveau-titre')
+      expect(paths).toContain('/catalogue/la-dispute/ancien-titre')
+    })
+  })
 })
 
 describe('revalidateCatalogueAfterDelete', () => {
@@ -158,5 +198,18 @@ describe('revalidateCatalogueAfterDelete', () => {
     const paths = purgedPaths()
     expect(paths).toContain(MOTIF_LARGE)
     expect(paths).toContain('/catalogue/editions-sociales/supprime')
+  })
+
+  it('ebooks (client 2026-09-09) : ciblage explicite du livre lié, JAMAIS la purge large (bookFichePath ne peut rien pour un doc ebooks)', async () => {
+    const { req } = fakeReq([{ slug: 'notes-sur-mill', edition: 'editions-sociales' }])
+    const args = {
+      collection: { slug: 'ebooks' },
+      doc: { livre: 12 },
+      req,
+    } as unknown as Parameters<CollectionAfterDeleteHook>[0]
+    await revalidateCatalogueAfterDelete(args)
+    const paths = purgedPaths()
+    expect(paths).toContain('/catalogue/editions-sociales/notes-sur-mill')
+    expect(paths).not.toContain(MOTIF_LARGE)
   })
 })

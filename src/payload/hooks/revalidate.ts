@@ -129,6 +129,30 @@ async function fichePathsReferencing(
   })
 }
 
+/**
+ * Fiche du livre référencé par un doc `ebooks` (`livre`, relation DIRECTE —
+ * l'inverse de `fichePathsReferencing` ci-dessus) : `doc.livre` est déjà
+ * l'id (hooks non peuplés) ou un objet peuplé selon le contexte d'appel,
+ * jamais garanti — les deux formes sont couvertes. `null` si absent (champ
+ * `required`, ne devrait pas arriver) ou si le livre n'a pas de chemin public.
+ */
+async function fichePathForBookId(
+  req: Parameters<CollectionAfterChangeHook>[0]['req'],
+  bookId: number | null,
+): Promise<string | null> {
+  if (bookId == null) return null
+  const { docs } = await req.payload.find({
+    collection: 'books',
+    where: { id: { equals: bookId } },
+    depth: 0,
+    limit: 1,
+    select: { slug: true, edition: true, origin: true },
+    overrideAccess: true,
+    req,
+  })
+  return docs[0] ? bookFichePath(docs[0]) : null
+}
+
 /** Revalide la seule page d'accueil (bandeau de mise en avant, E6bis). */
 function revalidateHome(): void {
   revalidatePath('/')
@@ -236,6 +260,28 @@ export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = async (
         }
         return
       }
+      case 'ebooks': {
+        // Relation DIRECTE (contrairement à authors/libelles/media
+        // ci-dessus) : `ebooks.livre` pointe VERS un livre — c'est LUI qui
+        // change de vendabilité (`numeriqueSeul`) ou de bloc téléchargement,
+        // pas l'inverse. `numeriqueSeul` (client 2026-09-09) change le
+        // port/l'adresse demandés au panier/checkout : toute écriture ici
+        // purge la fiche liée comme une édition directe.
+        revalidateCatalogueLists()
+        const bookId = typeof doc.livre === 'number' ? doc.livre : (doc.livre?.id ?? null)
+        const path = await fichePathForBookId(req, bookId)
+        if (path) revalidatePath(path)
+        // Titre lié changé (rare — `livre` est `unique`, un changement délie
+        // l'ancienne fiche) : purge aussi l'ancienne, sinon elle garde le
+        // bloc téléchargement affiché jusqu'à 24 h.
+        const previousBookId =
+          typeof previousDoc?.livre === 'number' ? previousDoc.livre : (previousDoc?.livre?.id ?? null)
+        if (previousBookId != null && previousBookId !== bookId) {
+          const previousPath = await fichePathForBookId(req, previousBookId)
+          if (previousPath && previousPath !== path) revalidatePath(previousPath)
+        }
+        return
+      }
       default:
         // Collection inattendue câblée sur ce hook : purge large, jamais du
         // contenu périmé par surprise.
@@ -255,8 +301,25 @@ export const revalidateCatalogueAfterChange: CollectionAfterChangeHook = async (
  * fiables sur Vercel (constat live plus haut), sans lui la fiche d'un livre
  * supprimé resterait servie jusqu'à 24 h (revue 2026-08-23).
  */
-export const revalidateCatalogueAfterDelete: CollectionAfterDeleteHook = ({ doc, req }) => {
+export const revalidateCatalogueAfterDelete: CollectionAfterDeleteHook = async ({
+  collection,
+  doc,
+  req,
+}) => {
   if (req.context?.disableRevalidate) return
+  // `ebooks` (client 2026-09-09) : relation DIRECTE comme dans
+  // `revalidateCatalogueAfterChange` — `bookFichePath(doc)` ne peut rien pour
+  // un doc `ebooks` (pas de `slug`/`edition`), la purge large ci-dessous ne
+  // suffit donc pas (motifs peu fiables sur Vercel) : ciblage explicite du
+  // livre lié, sinon sa fiche garderait le bloc téléchargement/le format
+  // numérique affichés jusqu'à 24 h après suppression du fichier.
+  if (collection?.slug === 'ebooks') {
+    revalidateCatalogueLists()
+    const bookId = typeof doc?.livre === 'number' ? doc.livre : (doc?.livre?.id ?? null)
+    const path = await fichePathForBookId(req, bookId)
+    if (path) revalidatePath(path)
+    return
+  }
   revalidateCatalogueWide()
   const path = doc ? bookFichePath(doc) : null
   if (path) revalidatePath(path)
