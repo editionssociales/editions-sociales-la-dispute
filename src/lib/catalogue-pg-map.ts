@@ -105,18 +105,33 @@ function mediaUrl(value: number | Media | null | undefined): string | null {
  * `number | null`) : `sellable` manquant vaut « non vendable » (jamais
  * vendable par défaut), `stock` manquant vaut « non suivi » — même défaut que
  * `resolveNativePurchase` applique à une fiche sans groupe `commerce` du tout.
+ *
+ * `digital` (client 2026-09-09) n'est PAS un champ du groupe `commerce` —
+ * porté par une collection séparée (`ebooks.numeriqueSeul`, cf.
+ * `Ebooks.ts`) — fourni en paramètre par l'appelant (`catalogue-pg.ts`, une
+ * requête `ebooks-source.ts` par LOT, jamais par fiche).
  */
-function toCommerce(value: PayloadBook["commerce"]): CommerceInfo | null {
+function toCommerce(value: PayloadBook["commerce"], digital: boolean): CommerceInfo | null {
   if (!value) return null;
   return {
     sellable: Boolean(value.sellable),
     stock: value.stock ?? null,
     preorder: Boolean(value.preorder),
+    digital,
   };
 }
 
-/** Document `books` Payload (Local API, `depth:2`) → forme brute neutre du port. */
-export function payloadBookToRawBook(doc: PayloadBook): RawBook {
+/**
+ * Document `books` Payload (Local API, `depth:2`) → forme brute neutre du
+ * port. `digitalBookIds` : ensemble des ids « numérique seul » du LOT en
+ * cours (`ebooks-source.ts:findDigitalOnlyBookIds`, une requête pour toute la
+ * page) — défaut `undefined` pour les appels existants qui n'ont pas encore
+ * ce lot (comportement historique : `digital` retombe à `false`).
+ */
+export function payloadBookToRawBook(
+  doc: PayloadBook,
+  digitalBookIds?: ReadonlySet<number>,
+): RawBook {
   const presentation = renderHtml(doc.presentationLegacyHtml, doc.presentation, doc.contentTouched);
   const plusLoin =
     renderHtml(doc.plusLoinLegacyHtml, doc.plusLoin, doc.contentTouched) || null;
@@ -160,6 +175,6 @@ export function payloadBookToRawBook(doc: PayloadBook): RawBook {
     }),
     videoUrl: doc.video?.trim() || null,
     tocHtml: lexicalToHtml(doc.tableMatieres) || null,
-    commerce: toCommerce(doc.commerce),
+    commerce: toCommerce(doc.commerce, digitalBookIds?.has(doc.id) ?? false),
   };
 }

@@ -63,12 +63,29 @@ vi.mock("payload", () => ({
   }),
 }));
 
+/**
+ * `ebooks-source.ts` mocké en bloc, comme `catalogue-pg-map` dans
+ * `catalogue-pg.test.ts` : ce fichier vérifie la COMPOSITION (le lot d'ids
+ * passé, `digital` reporté dans `CheckoutBookLookup`), pas la requête
+ * `ebooks` elle-même (`ebooks-source.test.ts`).
+ */
+let digitalBookIds = new Set<number>();
+let lastDigitalIdsArg: number[] | null = null;
+vi.mock("./ebooks-source", () => ({
+  findDigitalOnlyBookIds: vi.fn(async (ids: number[]) => {
+    lastDigitalIdsArg = ids;
+    return digitalBookIds;
+  }),
+}));
+
 const { getCommerceBookRecords, getPromoCodeRecord } = await import("./commerce-source");
 
 beforeEach(() => {
   bookDocs = [];
   promoDocs = [];
   lastFindArgs = null;
+  digitalBookIds = new Set();
+  lastDigitalIdsArg = null;
 });
 
 describe("getCommerceBookRecords", () => {
@@ -111,6 +128,7 @@ describe("getCommerceBookRecords", () => {
       stock: 3,
       reducedShippingFlag: true,
       preorderEnabled: true,
+      digital: false,
     });
   });
 
@@ -126,7 +144,22 @@ describe("getCommerceBookRecords", () => {
       stock: null,
       reducedShippingFlag: false,
       preorderEnabled: false,
+      digital: false,
     });
+  });
+
+  it("id présent dans le lot numérique-seul (`ebooks-source.ts`) → digital:true", async () => {
+    bookDocs = [
+      { id: 3, title: "Notes sur James Mill", prix: 9.99, commerce: { sellable: true, stock: null } },
+    ];
+    digitalBookIds = new Set([3]);
+    const records = await getCommerceBookRecords([3]);
+    expect(records.get(3)?.digital).toBe(true);
+  });
+
+  it("une SEULE requête `ebooks` pour tout le lot (jamais de N+1)", async () => {
+    await getCommerceBookRecords([1, 2, 3]);
+    expect(lastDigitalIdsArg).toEqual([1, 2, 3]);
   });
 });
 

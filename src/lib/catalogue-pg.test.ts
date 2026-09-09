@@ -46,6 +46,21 @@ vi.mock("./catalogue-pg-map", () => ({
   payloadBookToRawBook: vi.fn(mapDoc),
 }));
 
+/**
+ * `ebooks-source.ts` mocké en bloc, comme `catalogue-pg-map` ci-dessus : ce
+ * fichier vérifie la COMPOSITION (le lot d'ids passé, le résultat reporté au
+ * mapper), pas la requête `ebooks` elle-même (couverte par
+ * `ebooks-source.test.ts`).
+ */
+let digitalBookIdsToReturn = new Set<number>();
+let lastDigitalIdsArg: number[] | null = null;
+vi.mock("./ebooks-source", () => ({
+  findDigitalOnlyBookIds: vi.fn(async (ids: number[]) => {
+    lastDigitalIdsArg = ids;
+    return digitalBookIdsToReturn;
+  }),
+}));
+
 interface FakeFindArgs {
   collection: string;
   where?: unknown;
@@ -80,6 +95,8 @@ const source = pgCatalogueSource();
 beforeEach(() => {
   docsToReturn = [];
   lastFindArgs = null;
+  digitalBookIdsToReturn = new Set();
+  lastDigitalIdsArg = null;
   vi.mocked(payloadBookToRawBook).mockClear();
 });
 
@@ -111,6 +128,21 @@ describe("listBooks", () => {
     expect(result).toEqual([]);
     expect(payloadBookToRawBook).not.toHaveBeenCalled();
   });
+
+  it("relit les ids numérique-seul du LOT entier en une requête, reportés à chaque appel du mapper", async () => {
+    docsToReturn = [
+      { id: 1, slug: "capital" },
+      { id: 2, slug: "notes-sur-mill" },
+    ];
+    digitalBookIdsToReturn = new Set([2]);
+    await source.listBooks("editions-sociales");
+
+    expect(lastDigitalIdsArg).toEqual([1, 2]);
+    expect(vi.mocked(payloadBookToRawBook).mock.calls.map((call) => call[1])).toEqual([
+      digitalBookIdsToReturn,
+      digitalBookIdsToReturn,
+    ]);
+  });
 });
 
 describe("getBook", () => {
@@ -125,7 +157,8 @@ describe("getBook", () => {
       overrideAccess: false,
       limit: 1,
     });
-    expect(payloadBookToRawBook).toHaveBeenCalledExactlyOnceWith(docsToReturn[0]);
+    expect(lastDigitalIdsArg).toEqual([3]);
+    expect(payloadBookToRawBook).toHaveBeenCalledExactlyOnceWith(docsToReturn[0], digitalBookIdsToReturn);
     expect(result).toEqual(mapDoc(docsToReturn[0]));
   });
 
@@ -169,7 +202,8 @@ describe("getBoutiqueOnlyBook", () => {
       overrideAccess: false,
       limit: 1,
     });
-    expect(payloadBookToRawBook).toHaveBeenCalledExactlyOnceWith(docsToReturn[0]);
+    expect(lastDigitalIdsArg).toEqual([11]);
+    expect(payloadBookToRawBook).toHaveBeenCalledExactlyOnceWith(docsToReturn[0], digitalBookIdsToReturn);
     expect(result).toEqual(mapDoc(docsToReturn[0]));
   });
 

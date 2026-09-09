@@ -62,6 +62,9 @@ export function toBook(
     // Par défaut « lien externe » (comportement historique) — le seul appelant
     // qui pose `"cart"` est `resolveNativePurchase`, en aval.
     purchaseMode: "legacy-link",
+    // Par défaut « papier » — même parti pris que `purchaseMode` : le seul
+    // appelant qui pose `"numerique"` est `resolveNativePurchase`, en aval.
+    format: "papier",
   };
 }
 
@@ -114,31 +117,40 @@ export function resolveNativePurchase(
   permalink: string | null;
   purchaseMode: PurchaseMode;
   unavailableReason?: UnavailableReason;
+  format: Book["format"];
 } {
+  // Posé une fois, rendu par TOUTES les branches ci-dessous — même parti pris
+  // que `purchaseMode` (toujours posé par ce builder, jamais réénoncé par
+  // l'appelant).
+  const format: Book["format"] = commerce.digital ? "numerique" : "papier";
   const verdict = assessSellability({
     sellable: commerce.sellable,
     stock: commerce.stock,
     publishedAt: book.publishedAt,
     preorderEnabled: commerce.preorder,
+    digital: commerce.digital,
   });
   if (!verdict.ok && verdict.reason === "upcoming") {
-    return { status: "upcoming", permalink: null, purchaseMode: "legacy-link" };
+    return { status: "upcoming", permalink: null, purchaseMode: "legacy-link", format };
   }
   if (verdict.ok) {
     const status: PurchaseStatus = isUpcoming(book.publishedAt) ? "preorder" : "available";
-    return { status, permalink: internalPermalink, purchaseMode: "cart" };
+    return { status, permalink: internalPermalink, purchaseMode: "cart", format };
   }
   const external = book.buy.parislibrairies || book.buy.lalibrairie;
   if (external) {
-    return { status: "external", permalink: external, purchaseMode: "legacy-link" };
+    return { status: "external", permalink: external, purchaseMode: "legacy-link", format };
   }
   // « Épuisé » (stock à 0) est le SEUL motif surfacé côté front (demande
   // client 2026-09-04, `BuyLinksList`/`BookCard`) — `not-sellable`/`untracked`
-  // retombent sur le libellé générique « Indisponible ».
+  // retombent sur le libellé générique « Indisponible ». Un titre numérique
+  // seul ne peut de toute façon jamais atteindre `out-of-stock` (le stock est
+  // ignoré par `assessSellability`).
   return {
     status: "unavailable",
     permalink: null,
     purchaseMode: "legacy-link",
+    format,
     ...(verdict.reason === "out-of-stock" ? { unavailableReason: "out-of-stock" as const } : {}),
   };
 }

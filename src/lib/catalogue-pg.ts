@@ -8,6 +8,7 @@ import {
   type CatalogueSource,
   type RawBook,
 } from "./catalogue-source";
+import { findDigitalOnlyBookIds } from "./ebooks-source";
 import type { EditionSlug } from "./types";
 
 /**
@@ -42,7 +43,10 @@ async function listBooks(edition: EditionSlug): Promise<RawBook[]> {
     // l'adaptateur http, qui parcourt ses propres pages en interne).
     limit: 0,
   });
-  return docs.map(payloadBookToRawBook);
+  // Une seule requête `ebooks` pour tout le fonds (jamais de N+1) —
+  // `digital` (client 2026-09-09) n'est pas un champ de `books`.
+  const digitalBookIds = await findDigitalOnlyBookIds(docs.map((doc) => doc.id));
+  return docs.map((doc) => payloadBookToRawBook(doc, digitalBookIds));
 }
 
 async function getBook(edition: EditionSlug, slug: string): Promise<RawBook | null> {
@@ -57,7 +61,9 @@ async function getBook(edition: EditionSlug, slug: string): Promise<RawBook | nu
     limit: 1,
   });
   const doc = docs[0];
-  return doc ? payloadBookToRawBook(doc) : null;
+  if (!doc) return null;
+  const digitalBookIds = await findDigitalOnlyBookIds([doc.id]);
+  return payloadBookToRawBook(doc, digitalBookIds);
 }
 
 export function pgCatalogueSource(): CatalogueSource {
@@ -83,7 +89,8 @@ export async function listBoutiqueOnlyBooks(): Promise<RawBook[]> {
     sort: "-sortDate",
     limit: 0,
   });
-  return docs.map(payloadBookToRawBook);
+  const digitalBookIds = await findDigitalOnlyBookIds(docs.map((doc) => doc.id));
+  return docs.map((doc) => payloadBookToRawBook(doc, digitalBookIds));
 }
 
 /** Fiche d'un article boutique-seul par slug (`/boutique/[slug]`, plan §4 étape 7) — `null` si absent. */
@@ -97,5 +104,7 @@ export async function getBoutiqueOnlyBook(slug: string): Promise<RawBook | null>
     limit: 1,
   });
   const doc = docs[0];
-  return doc ? payloadBookToRawBook(doc) : null;
+  if (!doc) return null;
+  const digitalBookIds = await findDigitalOnlyBookIds([doc.id]);
+  return payloadBookToRawBook(doc, digitalBookIds);
 }

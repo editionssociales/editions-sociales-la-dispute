@@ -160,6 +160,61 @@ describe("assessSellability — précommande (`preorderEnabled`)", () => {
 });
 
 /**
+ * Titre numérique seul (`digital`, client 2026-09-09 — « Notes sur Mill »
+ * vendu uniquement en ePub) : IGNORE entièrement le stock (ni `untracked`, ni
+ * `out-of-stock`, ni `insufficient-stock`) — `upcoming`/précommande et
+ * `not-sellable` s'appliquent normalement, AVANT cette exemption.
+ */
+describe("assessSellability — titre numérique seul (`digital`)", () => {
+  it("stock non renseigné (null) → vendable quand même (aucun stock à suivre pour un ePub)", () => {
+    expect(assessSellability({ ...SELLABLE, digital: true }, 1, NOW)).toEqual({ ok: true });
+    expect(assessSellability({ ...SELLABLE, digital: true }, 99, NOW)).toEqual({ ok: true });
+  });
+
+  it("stock à 0 ou négatif (fiche jamais touchée depuis) → vendable quand même, jamais `out-of-stock`", () => {
+    expect(assessSellability({ ...SELLABLE, digital: true, stock: 0 }, 1, NOW)).toEqual({ ok: true });
+    expect(assessSellability({ ...SELLABLE, digital: true, stock: -3 }, 1, NOW)).toEqual({ ok: true });
+  });
+
+  it("stock renseigné mais insuffisant pour `qty` → sans effet, vendable quand même (le stock est ignoré, pas seulement le plancher)", () => {
+    expect(assessSellability({ ...SELLABLE, digital: true, stock: 1 }, 50, NOW)).toEqual({ ok: true });
+  });
+
+  it("non vendable (case décochée) → refusé comme n'importe quelle fiche, `digital` ne contourne QUE le stock", () => {
+    expect(
+      assessSellability({ sellable: false, stock: null, publishedAt: null, digital: true }, 1, NOW),
+    ).toEqual({ ok: false, reason: "not-sellable" });
+  });
+
+  it("à paraître SANS précommande ouverte → `upcoming` inchangé, `digital` ne contourne pas la parution", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: null, publishedAt: "2026-07-19", digital: true },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: false, reason: "upcoming" });
+  });
+
+  it("à paraître + précommande ouverte + digital → vendable (les deux exemptions se cumulent sans conflit)", () => {
+    expect(
+      assessSellability(
+        { sellable: true, stock: null, publishedAt: "2026-07-19", preorderEnabled: true, digital: true },
+        1,
+        NOW,
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it("absent/`false` → comportement historique inchangé (stock requis comme avant)", () => {
+    expect(assessSellability({ ...SELLABLE, digital: false }, 1, NOW)).toEqual({
+      ok: false,
+      reason: "untracked",
+    });
+  });
+});
+
+/**
  * `upcomingBoundaryUtc` — jumeau requête d'`isUpcoming` (borne pour les
  * `where` admin sur le timestamp brut `dateParution`) : minuit Paris du
  * LENDEMAIN du jour civil français de `now`. Verrouille les deux offsets

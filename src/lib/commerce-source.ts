@@ -3,6 +3,7 @@ import config from "@payload-config";
 import { getPayload } from "payload";
 import { PUBLIC_BOOKS_READ } from "./catalogue-source";
 import type { CheckoutBookLookup } from "./checkout-core";
+import { findDigitalOnlyBookIds } from "./ebooks-source";
 import { normalizePromoCode, type PromoCodeLike } from "./promo-core";
 
 /**
@@ -30,22 +31,31 @@ import { normalizePromoCode, type PromoCodeLike } from "./promo-core";
  * par Payload (singleton par process), pas de `cache()` React.
  */
 
-/** Faits de vente frais des livres demandés (ceux du panier ou de la commande) — un id introuvable est simplement absent de la carte. */
+/**
+ * Faits de vente frais des livres demandés (ceux du panier ou de la
+ * commande) — un id introuvable est simplement absent de la carte. `digital`
+ * (client 2026-09-09) vient d'une SECONDE requête ciblée sur `ebooks`
+ * (`ebooks-source.ts`, un seul lot pour toute la carte — jamais de N+1) : ce
+ * n'est pas un champ du groupe `commerce` de `books`.
+ */
 export async function getCommerceBookRecords(
   ids: number[],
 ): Promise<Map<number, CheckoutBookLookup>> {
   if (ids.length === 0) return new Map();
   const payload = await getPayload({ config });
-  const { docs } = await payload.find({
-    collection: "books",
-    where: { id: { in: ids } },
-    // Jamais un brouillon dépublié servi au parcours d'achat public.
-    ...PUBLIC_BOOKS_READ,
-    // Les groupes `buy`/`commerce` sont toujours présents quelle que soit la
-    // profondeur — seules les relations en dépendent, aucune ici.
-    depth: 0,
-    limit: ids.length,
-  });
+  const [{ docs }, digitalBookIds] = await Promise.all([
+    payload.find({
+      collection: "books",
+      where: { id: { in: ids } },
+      // Jamais un brouillon dépublié servi au parcours d'achat public.
+      ...PUBLIC_BOOKS_READ,
+      // Les groupes `buy`/`commerce` sont toujours présents quelle que soit la
+      // profondeur — seules les relations en dépendent, aucune ici.
+      depth: 0,
+      limit: ids.length,
+    }),
+    findDigitalOnlyBookIds(ids),
+  ]);
   return new Map(
     docs.map((doc) => [
       doc.id,
@@ -58,6 +68,7 @@ export async function getCommerceBookRecords(
         stock: doc.commerce?.stock ?? null,
         reducedShippingFlag: Boolean(doc.commerce?.reducedShippingFlag),
         preorderEnabled: Boolean(doc.commerce?.preorder),
+        digital: digitalBookIds.has(doc.id),
       } satisfies CheckoutBookLookup,
     ]),
   );

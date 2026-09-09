@@ -238,6 +238,7 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
       status: "unavailable",
       permalink: null,
       purchaseMode: "legacy-link",
+      format: "papier",
     });
   });
 
@@ -321,6 +322,7 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
       status: "external",
       permalink: "https://parislibrairies.fr/ideologie",
       purchaseMode: "legacy-link",
+      format: "papier",
     });
   });
 
@@ -336,6 +338,7 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
       permalink: null,
       purchaseMode: "legacy-link",
       unavailableReason: "out-of-stock",
+      format: "papier",
     });
   });
 
@@ -367,6 +370,7 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
         status: "preorder",
         permalink: "/catalogue/editions-sociales/a-paraitre-precoco",
         purchaseMode: "cart",
+        format: "papier",
       });
     });
 
@@ -408,6 +412,59 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
         "/catalogue/editions-sociales/deja-paru",
       );
       expect(resolved.status).toBe("available");
+    });
+  });
+
+  describe("titre numérique seul (`commerce.digital`, client 2026-09-09 — « Notes sur Mill »)", () => {
+    it("stock `null` (jamais renseigné pour un ePub) → disponible quand même, format « numerique »", () => {
+      const book = rawBook({ id: 20, slug: "notes-sur-mill", title: "Notes sur James Mill" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        { sellable: true, stock: null, digital: true },
+        "/catalogue/editions-sociales/notes-sur-mill",
+      );
+      expect(resolved).toEqual({
+        status: "available",
+        permalink: "/catalogue/editions-sociales/notes-sur-mill",
+        purchaseMode: "cart",
+        format: "numerique",
+      });
+    });
+
+    it("non vendable (décoché) → refusé comme n'importe quelle fiche, `digital` ne contourne QUE le stock", () => {
+      const book = rawBook({ id: 21, slug: "numerique-decoche", title: "Numérique décoché" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        { sellable: false, stock: null, digital: true },
+        "/catalogue/editions-sociales/numerique-decoche",
+      );
+      expect(resolved.status).toBe("unavailable");
+      expect(resolved.format).toBe("numerique");
+    });
+
+    it("à paraître SANS précommande ouverte → `upcoming`, `digital` ne contourne pas la parution", () => {
+      const book = rawBook({
+        id: 22,
+        slug: "numerique-a-paraitre",
+        title: "Numérique à paraître",
+        publishedAt: "2999-01-01",
+      });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        { sellable: true, stock: null, digital: true },
+        "/catalogue/editions-sociales/numerique-a-paraitre",
+      );
+      expect(resolved.status).toBe("upcoming");
+    });
+
+    it("format « papier » par défaut (livre sans fichier numérique seul)", () => {
+      const book = rawBook({ id: 23, slug: "papier", title: "Livre papier" });
+      const resolved = resolveNativePurchase(
+        toBook("editions-sociales", book),
+        sellable(5),
+        "/catalogue/editions-sociales/papier",
+      );
+      expect(resolved.format).toBe("papier");
     });
   });
 });

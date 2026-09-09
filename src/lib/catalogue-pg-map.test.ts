@@ -219,31 +219,44 @@ describe("payloadBookToRawBook — commerce natif (groupe `commerce`)", () => {
     const raw = payloadBookToRawBook(
       book({ commerce: { sellable: true, stock: 5, reducedShippingFlag: false } }),
     );
-    expect(raw.commerce).toEqual({ sellable: true, stock: 5, preorder: false });
+    expect(raw.commerce).toEqual({ sellable: true, stock: 5, preorder: false, digital: false });
   });
 
   it("stock absent (non suivi) → null, jamais 0 ni undefined", () => {
     const raw = payloadBookToRawBook(book({ commerce: { sellable: true } }));
-    expect(raw.commerce).toEqual({ sellable: true, stock: null, preorder: false });
+    expect(raw.commerce).toEqual({ sellable: true, stock: null, preorder: false, digital: false });
   });
 
   it("stock à 0 est préservé (épuisé) — pas confondu avec « non suivi »", () => {
     const raw = payloadBookToRawBook(book({ commerce: { sellable: true, stock: 0 } }));
-    expect(raw.commerce).toEqual({ sellable: true, stock: 0, preorder: false });
+    expect(raw.commerce).toEqual({ sellable: true, stock: 0, preorder: false, digital: false });
   });
 
   it("sellable absent → false (jamais vendable par défaut)", () => {
     const raw = payloadBookToRawBook(book({ commerce: { stock: 10 } }));
-    expect(raw.commerce).toEqual({ sellable: false, stock: 10, preorder: false });
+    expect(raw.commerce).toEqual({ sellable: false, stock: 10, preorder: false, digital: false });
   });
 
   it("preorder coché → reporté tel quel (« Ouvert à la précommande »)", () => {
     const raw = payloadBookToRawBook(book({ commerce: { sellable: true, stock: 5, preorder: true } }));
-    expect(raw.commerce).toEqual({ sellable: true, stock: 5, preorder: true });
+    expect(raw.commerce).toEqual({ sellable: true, stock: 5, preorder: true, digital: false });
   });
 
   it("groupe `commerce` absent (fiche jamais touchée par la migration commerce) → null", () => {
     const raw = payloadBookToRawBook(book({ commerce: undefined }));
     expect(raw.commerce).toBeNull();
+  });
+
+  it("id présent dans le lot `digitalBookIds` (client 2026-09-09, « Notes sur Mill ») → digital:true", () => {
+    const raw = payloadBookToRawBook(
+      book({ id: 42, commerce: { sellable: true, stock: null } }),
+      new Set([42]),
+    );
+    expect(raw.commerce).toEqual({ sellable: true, stock: null, preorder: false, digital: true });
+  });
+
+  it("`digitalBookIds` absent (appelant qui ne l'a pas encore) → digital:false, comportement historique", () => {
+    const raw = payloadBookToRawBook(book({ id: 42, commerce: { sellable: true, stock: 3 } }));
+    expect(raw.commerce).toEqual({ sellable: true, stock: 3, preorder: false, digital: false });
   });
 });

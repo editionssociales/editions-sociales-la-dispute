@@ -6,10 +6,20 @@
  * renseigné, dont des titres épuisés, étaient commandées à tort) — `null` =
  * indisponible à la commande (refus `untracked`), `0` = épuisé
  * (`out-of-stock`), `> 0` = commandable, jamais un plancher qui inventerait
- * un suivi. SEULE exemption : une fiche à paraître dont la précommande est
- * ouverte — avant parution le routeur ne connaît pas encore le titre, le
- * stock y est nécessairement vide. « à paraître » PRIME TOUJOURS, même sur
- * une fiche déjà cochée vendable avec du stock en préparation.
+ * un suivi. SEULE exemption au sens strict : une fiche à paraître dont la
+ * précommande est ouverte — avant parution le routeur ne connaît pas encore
+ * le titre, le stock y est nécessairement vide. « à paraître » PRIME
+ * TOUJOURS, même sur une fiche déjà cochée vendable avec du stock en
+ * préparation.
+ *
+ * SECONDE exemption, orthogonale (client 2026-09-09, « Notes sur Mill » vendu
+ * uniquement en ePub) : `facts.digital` — un titre numérique seul (fichier
+ * `ebooks` coché `numeriqueSeul`) n'a rien à expédier, le stock n'a donc
+ * simplement aucun sens pour lui. `assessSellability` l'IGNORE alors
+ * entièrement (ni `untracked`, ni `out-of-stock`, ni `insufficient-stock`) ;
+ * `upcoming`/précommande et `not-sellable` s'appliquent normalement AVANT
+ * cette exemption — un titre numérique seul reste refusable pour ces deux
+ * raisons, seul le stock lui est indifférent.
  *
  * Réénoncée auparavant dans `catalogue-core.ts:resolveNativePurchase` et
  * `checkout-core.ts:validateCheckoutLine` — même classe de dérive que la
@@ -78,6 +88,15 @@ export interface SellabilityFacts {
    * historique inchangé (`upcoming` refuse toujours).
    */
   preorderEnabled?: boolean;
+  /**
+   * Titre vendu uniquement en numérique (`CommerceInfo.digital`, client
+   * 2026-09-09) — coché, le stock est entièrement IGNORÉ par
+   * `assessSellability` (ni `untracked`, ni `out-of-stock`, ni
+   * `insufficient-stock`) : rien à expédier, rien à suivre. Optionnel —
+   * absent/`false` = comportement historique inchangé (stock requis comme
+   * avant).
+   */
+  digital?: boolean;
 }
 
 export type SellabilityRefusal =
@@ -93,10 +112,11 @@ export type SellabilityVerdict = { ok: true } | { ok: false; reason: Sellability
  * Verdict de vendabilité pour `qty` exemplaires (1 par défaut — la question
  * « ce livre est-il achetable ? » du catalogue). Ordre des règles, fixé une
  * fois pour tous les appelants : à paraître (SAUF précommande ouverte) → non
- * vendable → stock non renseigné (`untracked`, SAUF à paraître + précommande
- * ouverte, seul cas où un stock vide vaut vendable) → épuisé (`stock ≤ 0`,
- * s'applique AUSSI à une précommande ouverte — saisir 0 ferme explicitement
- * la précommande) → stock insuffisant (`stock < qty`) → vendable.
+ * vendable → numérique seul (`digital`, IGNORE tout ce qui suit — vendable) →
+ * stock non renseigné (`untracked`, SAUF à paraître + précommande ouverte,
+ * seul cas où un stock vide vaut vendable) → épuisé (`stock ≤ 0`, s'applique
+ * AUSSI à une précommande ouverte — saisir 0 ferme explicitement la
+ * précommande) → stock insuffisant (`stock < qty`) → vendable.
  *
  * `preorderEnabled` ne fait QUE lever le refus `upcoming` ET, tant que la
  * fiche est encore à paraître, l'exemption ponctuelle du stock vide
@@ -107,6 +127,11 @@ export type SellabilityVerdict = { ok: true } | { ok: false; reason: Sellability
  * ainsi d'un verdict « normal » en relisant `isUpcoming(facts.publishedAt,
  * now)` lui-même — helper pur exporté ici, jamais une seconde règle de
  * refus.
+ *
+ * `digital` (client 2026-09-09) COURT-CIRCUITE les trois refus liés au stock
+ * — un titre numérique seul reste soumis à `upcoming`/`not-sellable` (les
+ * deux `if` précédents), mais jamais à `untracked`/`out-of-stock`/
+ * `insufficient-stock` : le stock n'a simplement aucun sens pour lui.
  */
 export function assessSellability(
   facts: SellabilityFacts,
@@ -118,6 +143,7 @@ export function assessSellability(
     return { ok: false, reason: "upcoming" };
   }
   if (!facts.sellable) return { ok: false, reason: "not-sellable" };
+  if (facts.digital) return { ok: true };
   if (facts.stock == null) {
     // À ce point, `upcoming` implique forcément `preorderEnabled` (sinon le
     // premier `if` aurait déjà rendu la main) : avant parution, le routeur ne

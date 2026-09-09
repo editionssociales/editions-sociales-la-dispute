@@ -81,6 +81,15 @@ export interface CommerceInfo {
    * avant migration) = `false`, comportement historique inchangé.
    */
   preorder?: boolean;
+  /**
+   * `true` ssi une ligne `ebooks` cochée « vendu uniquement en numérique »
+   * (`Ebooks.ts:numeriqueSeul`) référence ce livre (client 2026-09-09) —
+   * lève l'exigence de stock d'`assessSellability` (`sellability.ts`) : rien
+   * à expédier, le stock n'a jamais de sens pour cette fiche. Optionnel :
+   * absent (fixtures existantes, adaptateur pg avant migration) = `false`,
+   * comportement historique inchangé (stock requis comme avant).
+   */
+  digital?: boolean;
 }
 
 /* -------- Where « books lisibles publiquement » (pg) --------

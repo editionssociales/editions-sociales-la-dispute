@@ -96,6 +96,15 @@ export interface Book {
    * (`browse.test.ts`) sans passer par ces builders.
    */
   purchaseMode?: PurchaseMode;
+  /**
+   * `"numerique"` ssi un fichier `ebooks` coché « vendu uniquement en
+   * numérique » référence ce livre (`CommerceInfo.digital`,
+   * `sellability.ts`) — rien à expédier : ni port, ni adresse, ni stock.
+   * `"papier"` sinon (défaut historique). Posé par les mêmes builders que
+   * `purchaseMode` (`toBook`, `resolveNativePurchase`) ; optionnel pour la
+   * même raison qu'eux (fixtures minimales construites à la main).
+   */
+  format?: "papier" | "numerique";
 }
 
 /** Citation presse de la fiche livre (onglet « La presse en parle »). */
