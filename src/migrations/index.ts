@@ -28,6 +28,8 @@ import * as migration_20260824_110000_ebooks from './20260824_110000_ebooks'
 import * as migration_20260824_120000_commande_telephone from './20260824_120000_commande_telephone'
 import * as migration_20260829_090000_livraison_delai_editable from './20260829_090000_livraison_delai_editable'
 import * as migration_20260830_090000_souscription_soutiens_titres_jauge from './20260830_090000_souscription_soutiens_titres_jauge'
+import * as migration_20260909_100000_ebook_numerique_seul from './20260909_100000_ebook_numerique_seul'
+import * as migration_20260909_110000_commande_sans_envoi from './20260909_110000_commande_sans_envoi'
 
 export const migrations = [
   {
@@ -179,5 +181,15 @@ export const migrations = [
     up: migration_20260830_090000_souscription_soutiens_titres_jauge.up,
     down: migration_20260830_090000_souscription_soutiens_titres_jauge.down,
     name: '20260830_090000_souscription_soutiens_titres_jauge',
+  },
+  {
+    up: migration_20260909_100000_ebook_numerique_seul.up,
+    down: migration_20260909_100000_ebook_numerique_seul.down,
+    name: '20260909_100000_ebook_numerique_seul',
+  },
+  {
+    up: migration_20260909_110000_commande_sans_envoi.up,
+    down: migration_20260909_110000_commande_sans_envoi.down,
+    name: '20260909_110000_commande_sans_envoi',
   },
 ];
