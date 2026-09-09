@@ -177,7 +177,14 @@ function orderCreateData(overrides: Partial<OrderCreateData> = {}): OrderCreateD
     shippingAddress: ADDRESS,
     billingAddress: ADDRESS,
     lines: [
-      { book: 12, titleSnapshot: "Le Capital", isbnSnapshot: "978-1", quantity: 2, unitPriceTTC: 15 },
+      {
+        book: 12,
+        titleSnapshot: "Le Capital",
+        isbnSnapshot: "978-1",
+        quantity: 2,
+        unitPriceTTC: 15,
+        digital: false,
+      },
     ],
     shippingMethod: "standard",
     shippingCostTTC: 6.5,

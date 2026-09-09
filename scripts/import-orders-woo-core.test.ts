@@ -411,7 +411,14 @@ describe("buildOrderLines", () => {
     ];
     const result = buildOrderLines(lines, index, -1);
     expect(result.lines).toEqual([
-      { book: 5, titleSnapshot: "Florian Gulli et Jean Quétier, Découvrir Marx", isbnSnapshot: "9782000000000", quantity: 2, unitPriceTTC: 12 },
+      {
+        book: 5,
+        titleSnapshot: "Florian Gulli et Jean Quétier, Découvrir Marx",
+        isbnSnapshot: "9782000000000",
+        quantity: 2,
+        unitPriceTTC: 12,
+        digital: false,
+      },
     ]);
     expect(result.qtyAnomalies).toEqual([]);
   });

@@ -40,6 +40,8 @@ export interface OrderLineData {
   isbnSnapshot: string | null;
   quantity: number;
   unitPriceTTC: number;
+  /** Toujours `false` pour l'historique Woo importé (client 2026-09-09) — le concept « numérique seul » n'existait pas côté WooCommerce, rejoué ici pour satisfaire le schéma `Orders.lines`. */
+  digital: boolean;
 }
 
 /** Payload de création `orders` — mêmes champs que `payload.create({collection:'orders', data})` (`Orders.ts`). */
@@ -745,6 +747,7 @@ export function buildOrderLines(
       isbnSnapshot: match.book?.isbn ?? null,
       quantity: qty,
       unitPriceTTC: round2(subtotal / qty),
+      digital: false,
     });
 
     productBuckets.push({ productId: wl.productId, bucket: match.bucket, bookId: match.book?.id ?? null });
