@@ -47,6 +47,8 @@ interface FakeBookRecord {
   title: string;
   isbn: string | null;
   stock: number | null;
+  /** Titre vendu uniquement en numérique (client 2026-09-09) — absent/`false` = comportement historique inchangé (stock décrémenté normalement). */
+  digital?: boolean;
 }
 
 let bookRecords: Record<number, FakeBookRecord> = {};
@@ -566,8 +568,13 @@ describe("POST /api/stripe/webhook — scission commande/précommande (client 20
   const MIXED_METADATA = {
     kind: "order",
     zone: "FR",
+    // Clés SÉPARÉES par partie depuis le client 2026-09-09 (une partie peut
+    // être « aucun » pendant que l'autre facture le tarif partagé) — ici les
+    // deux valent le même tarif (5,50 €), comme avant cette date.
     shippingMethod: "standard",
     shippingCostCents: "550",
+    preorderShippingMethod: "standard",
+    preorderShippingCostCents: "550",
     discountCents: "0",
     preorderDiscountCents: "0",
     promoCodeId: "",
@@ -756,6 +763,106 @@ describe("POST /api/stripe/webhook — scission commande/précommande (client 20
   });
 });
 
+describe("POST /api/stripe/webhook — titre numérique seul (client 2026-09-09, « Notes sur Mill »)", () => {
+  const DIGITAL_METADATA = {
+    kind: "order",
+    zone: "FR",
+    shippingMethod: "aucun",
+    shippingCostCents: "0",
+    preorderShippingMethod: "standard",
+    preorderShippingCostCents: "0",
+    discountCents: "0",
+    promoCodeId: "",
+    lines: "14:1:999",
+    noShipment: "1",
+  };
+
+  function digitalCheckoutSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "cs_test_digital_1",
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 999,
+      payment_intent: "pi_test_digital_1",
+      // Nom collecté par Stripe (`customer_details.name`) MÊME sans adresse —
+      // c'est lui qui devient `shippingAddress.fullName` (repli).
+      customer_details: { email: "client@exemple.fr", name: "Jean Dupont" },
+      // AUCUNE `shipping_details` — `/api/checkout` n'active pas
+      // `shipping_address_collection` pour une commande sans envoi.
+      collected_information: {},
+      metadata: DIGITAL_METADATA,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    bookRecords = { 14: { title: "Notes sur James Mill", isbn: "978-3", stock: null, digital: true } };
+  });
+
+  it("commande payée acceptée SANS adresse collectée — fullName repose sur customer_details.name, ville/CP/adresse vides", async () => {
+    const res = await POST(
+      signedEventRequest({
+        id: "evt_digital_1",
+        type: "checkout.session.completed",
+        object: digitalCheckoutSession(),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({
+      status: "paid",
+      orderType: "commande",
+      shippingMethod: "aucun",
+      shippingCostTTC: 0,
+      totalTTC: 9.99,
+      lines: [{ book: 14, titleSnapshot: "Notes sur James Mill", quantity: 1, unitPriceTTC: 9.99 }],
+    });
+    expect(orders[0].shippingAddress).toMatchObject({
+      fullName: "Jean Dupont",
+      addressLine1: "",
+      postalCode: "",
+      city: "",
+    });
+  });
+
+  it("aucun décrément de stock pour la ligne numérique — même si un stock traîne encore sur la fiche", async () => {
+    bookRecords[14].stock = 5; // stock résiduel, ne doit pas bouger
+    await POST(
+      signedEventRequest({
+        id: "evt_digital_stock",
+        type: "checkout.session.completed",
+        object: digitalCheckoutSession(),
+      }),
+    );
+    expect(stockUpdates).toEqual([]);
+    expect(bookRecords[14].stock).toBe(5);
+  });
+
+  it("nom Stripe absent → repli sur l'e-mail (jamais une adresse sans nom)", async () => {
+    await POST(
+      signedEventRequest({
+        id: "evt_digital_no_name",
+        type: "checkout.session.completed",
+        object: digitalCheckoutSession({
+          customer_details: { email: "sans-nom@exemple.fr" },
+        }),
+      }),
+    );
+    expect(orders[0].shippingAddress).toMatchObject({ fullName: "sans-nom@exemple.fr" });
+  });
+
+  it("mail de confirmation reçoit noShipment:true — la commande n'a rien à expédier", async () => {
+    await POST(
+      signedEventRequest({
+        id: "evt_digital_mail",
+        type: "checkout.session.completed",
+        object: digitalCheckoutSession(),
+      }),
+    );
+    expect(sendOrderConfirmation).toHaveBeenCalledWith(expect.objectContaining({ noShipment: true }));
+  });
+});
+
 describe("POST /api/stripe/webhook — don avec contrepartie (client 2026-08-21)", () => {
   const DON_METADATA = {
     kind: "donation",
@@ -870,8 +977,15 @@ describe("POST /api/stripe/webhook — don avec contrepartie (client 2026-08-21)
     expect(res.status).toBe(200);
     expect(orders).toHaveLength(1);
     expect(orders[0].lines).toEqual([
-      { book: 21, titleSnapshot: "Article #21", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
-      { book: 22, titleSnapshot: "Planche de stickers", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+      { book: 21, titleSnapshot: "Article #21", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0, digital: false },
+      {
+        book: 22,
+        titleSnapshot: "Planche de stickers",
+        isbnSnapshot: null,
+        quantity: 1,
+        unitPriceTTC: 0,
+        digital: false,
+      },
     ]);
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       "Webhook Stripe (don) : article de contrepartie introuvable — titre de repli",

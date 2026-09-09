@@ -31,9 +31,17 @@ function facts(overrides: Partial<OrderSessionFacts> = {}): OrderSessionFacts {
     stripePaymentIntentId: "pi_test_1",
     email: "client@exemple.fr",
     phone: null,
+    customerName: null,
     shippingAddress: ADDRESS,
     lines: [
-      { bookId: 12, titleSnapshot: "Le Capital", isbnSnapshot: "978-1", quantity: 2, unitPriceCents: 1500 },
+      {
+        bookId: 12,
+        titleSnapshot: "Le Capital",
+        isbnSnapshot: "978-1",
+        quantity: 2,
+        unitPriceCents: 1500,
+        digital: false,
+      },
     ],
     orderType: "commande",
     shippingMethod: "standard",
@@ -57,7 +65,14 @@ describe("buildOrderCreateData", () => {
       shippingAddress: ADDRESS,
       billingAddress: ADDRESS,
       lines: [
-        { book: 12, titleSnapshot: "Le Capital", isbnSnapshot: "978-1", quantity: 2, unitPriceTTC: 15 },
+        {
+          book: 12,
+          titleSnapshot: "Le Capital",
+          isbnSnapshot: "978-1",
+          quantity: 2,
+          unitPriceTTC: 15,
+          digital: false,
+        },
       ],
       shippingMethod: "standard",
       shippingCostTTC: 6.5,
@@ -72,6 +87,26 @@ describe("buildOrderCreateData", () => {
       stockDecremented: false,
       confirmationSent: false,
     });
+  });
+
+  it("`digital` d'une ligne reporté tel quel (snapshot, client 2026-09-09) — sans effet sur le reste de l'assemblage", () => {
+    const result = buildOrderCreateData(
+      facts({
+        lines: [
+          {
+            bookId: 14,
+            titleSnapshot: "Notes sur James Mill",
+            isbnSnapshot: "978-3",
+            quantity: 1,
+            unitPriceCents: 999,
+            digital: true,
+          },
+        ],
+      }),
+    );
+    expect(result).not.toHaveProperty("error");
+    if ("error" in result) throw new Error("fixture invalide");
+    expect(result.lines[0].digital).toBe(true);
   });
 
   it("billingAddress dupliquée depuis shippingAddress (pas de collecte distincte)", () => {
@@ -111,6 +146,50 @@ describe("buildOrderCreateData", () => {
     });
   });
 
+  describe("commande sans envoi (`shippingMethod === \"aucun\"`, client 2026-09-09)", () => {
+    it("adresse absente → ACCEPTÉE (jamais un refus) : fullName = nom Stripe, reste vide", () => {
+      const result = buildOrderCreateData(
+        facts({ shippingAddress: null, shippingMethod: "aucun", shippingCostCents: 0, customerName: "Jean Dupont" }),
+      );
+      expect(result).not.toHaveProperty("error");
+      if ("error" in result) throw new Error("fixture invalide");
+      expect(result.shippingAddress).toEqual({
+        fullName: "Jean Dupont",
+        addressLine1: "",
+        addressLine2: undefined,
+        postalCode: "",
+        city: "",
+        country: "FR",
+      });
+      // Facturation = livraison, MÊME référence (aucune collecte distincte).
+      expect(result.billingAddress).toBe(result.shippingAddress);
+    });
+
+    it("nom Stripe absent → repli sur l'e-mail (jamais une adresse sans nom)", () => {
+      const result = buildOrderCreateData(
+        facts({ shippingAddress: null, shippingMethod: "aucun", customerName: null }),
+      );
+      expect(result).not.toHaveProperty("error");
+      if ("error" in result) throw new Error("fixture invalide");
+      expect(result.shippingAddress.fullName).toBe("client@exemple.fr");
+    });
+
+    it("adresse RÉELLEMENT présente malgré `shippingMethod: \"aucun\"` (cas rare) → celle-ci prime, jamais le repli", () => {
+      const result = buildOrderCreateData(facts({ shippingMethod: "aucun", shippingCostCents: 0 }));
+      expect(result).not.toHaveProperty("error");
+      if ("error" in result) throw new Error("fixture invalide");
+      expect(result.shippingAddress).toEqual(ADDRESS);
+    });
+
+    it("toute AUTRE méthode de port + adresse absente → refus inchangé (comportement historique)", () => {
+      for (const shippingMethod of ["standard", "reduit", "offert"] as const) {
+        expect(buildOrderCreateData(facts({ shippingAddress: null, shippingMethod }))).toEqual({
+          error: "Session Stripe cs_test_1 : adresse de livraison absente.",
+        });
+      }
+    });
+  });
+
   it("aucune ligne décodée → erreur", () => {
     expect(buildOrderCreateData(facts({ lines: [] }))).toEqual({
       error: "Session Stripe cs_test_1 : aucune ligne décodée depuis les metadata.",
@@ -130,13 +209,21 @@ describe("buildOrderCreateData", () => {
       facts({
         orderType: "don",
         lines: [
-          { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
+          {
+            bookId: 21,
+            titleSnapshot: "Tote bag",
+            isbnSnapshot: null,
+            quantity: 1,
+            unitPriceCents: 0,
+            digital: false,
+          },
           {
             bookId: 22,
             titleSnapshot: "Planche de stickers",
             isbnSnapshot: null,
             quantity: 1,
             unitPriceCents: 0,
+            digital: false,
           },
         ],
         shippingMethod: "offert",
@@ -154,8 +241,22 @@ describe("buildOrderCreateData", () => {
       shippingAddress: ADDRESS,
       billingAddress: ADDRESS,
       lines: [
-        { book: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
-        { book: 22, titleSnapshot: "Planche de stickers", isbnSnapshot: null, quantity: 1, unitPriceTTC: 0 },
+        {
+          book: 21,
+          titleSnapshot: "Tote bag",
+          isbnSnapshot: null,
+          quantity: 1,
+          unitPriceTTC: 0,
+          digital: false,
+        },
+        {
+          book: 22,
+          titleSnapshot: "Planche de stickers",
+          isbnSnapshot: null,
+          quantity: 1,
+          unitPriceTTC: 0,
+          digital: false,
+        },
       ],
       shippingMethod: "offert",
       shippingCostTTC: 0,
@@ -173,8 +274,8 @@ describe("buildOrderCreateData", () => {
 
 describe("computePartTotalCents", () => {
   const LINES: OrderLineFacts[] = [
-    { bookId: 1, titleSnapshot: "A", isbnSnapshot: null, quantity: 2, unitPriceCents: 1000 },
-    { bookId: 2, titleSnapshot: "B", isbnSnapshot: null, quantity: 1, unitPriceCents: 500 },
+    { bookId: 1, titleSnapshot: "A", isbnSnapshot: null, quantity: 2, unitPriceCents: 1000, digital: false },
+    { bookId: 2, titleSnapshot: "B", isbnSnapshot: null, quantity: 1, unitPriceCents: 500, digital: false },
   ];
 
   it("sous-total des lignes + port de l'envoi - remise déjà allouée", () => {
@@ -344,8 +445,15 @@ describe("resolveDonationLines", () => {
       BOOKS,
     );
     expect(lines).toEqual([
-      { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
-      { bookId: 22, titleSnapshot: "Planche de stickers", isbnSnapshot: "978-9", quantity: 2, unitPriceCents: 0 },
+      { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0, digital: false },
+      {
+        bookId: 22,
+        titleSnapshot: "Planche de stickers",
+        isbnSnapshot: "978-9",
+        quantity: 2,
+        unitPriceCents: 0,
+        digital: false,
+      },
     ]);
     expect(missingBookIds).toEqual([]);
   });
@@ -359,8 +467,8 @@ describe("resolveDonationLines", () => {
       BOOKS,
     );
     expect(lines).toEqual([
-      { bookId: 99, titleSnapshot: "Article #99", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
-      { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0 },
+      { bookId: 99, titleSnapshot: "Article #99", isbnSnapshot: null, quantity: 1, unitPriceCents: 0, digital: false },
+      { bookId: 21, titleSnapshot: "Tote bag", isbnSnapshot: null, quantity: 1, unitPriceCents: 0, digital: false },
     ]);
     expect(missingBookIds).toEqual([99]);
   });

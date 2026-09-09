@@ -83,6 +83,9 @@ export async function POST(req: Request): Promise<Response> {
     preorderSubtotalCents: preorder.subtotalCents,
     hasNormalLines: normal.lines.length > 0,
     hasPreorderLines: preorder.lines.length > 0,
+    physicalSubtotalCents: normal.physicalSubtotalCents + preorder.physicalSubtotalCents,
+    hasNormalPhysicalLines: normal.hasPhysicalLines,
+    hasPreorderPhysicalLines: preorder.hasPhysicalLines,
     zone: parsed.zone,
     manifestOnly: validation.manifestOnly,
     promoEval,
@@ -91,21 +94,36 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: quote.shipping.message, reason: "shipping" }, { status: 422 });
   }
 
+  // Aucune ligne physique dans le panier ENTIER (client 2026-09-09) — rien à
+  // expédier : ni adresse, ni téléphone demandés à Stripe (cf. plus bas),
+  // snapshoté en `metadata` pour que le webhook n'ait pas à re-déduire.
+  const noShipment = !normal.hasPhysicalLines && !preorder.hasPhysicalLines;
+
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ?? `https://${(await headers()).get("host")}`;
 
   // `metadata` dupliquée sur la session ET `payment_intent_data` — même
   // raison que `souscription/actions.ts` : c'est la Charge (le PaymentIntent
   // y copie ses metadata) que le webhook (étape 9) lit pour `charge.refunded`.
-  // `shippingCostCents` reste le tarif d'UN SEUL envoi (le webhook l'applique
-  // tel quel à chaque commande créée, jamais divisé/multiplié une seconde
-  // fois) ; `discountCents`/`preorderDiscountCents` sont la remise DÉJÀ
+  // `shippingMethod`/`shippingCostCents` valent pour la partie NORMALE,
+  // `preorderShippingMethod`/`preorderShippingCostCents` pour la précommande
+  // (client 2026-09-09) — DEUX clés séparées depuis qu'une partie peut être
+  // « aucun » (0 €) pendant que l'autre facture le tarif partagé (même
+  // barème, `cart-quote.ts` : un panier mixte physique + numérique n'a plus
+  // forcément le MÊME port des deux côtés). Le webhook applique chaque valeur
+  // telle quelle à SA commande, jamais divisée/multipliée une seconde fois.
+  // `noShipment` (whole-cart) : snapshoté pour que le webhook accepte une
+  // adresse absente sans avoir à re-déduire l'absence de tout article
+  // physique. `discountCents`/`preorderDiscountCents` restent la remise DÉJÀ
   // répartie par partie (jamais recalculée côté webhook).
   const metadata: Record<string, string> = {
     kind: "order",
     zone: parsed.zone,
-    shippingMethod: quote.shippingMethod,
-    shippingCostCents: String(quote.shipping.costCents),
+    shippingMethod: quote.normalShippingMethod,
+    shippingCostCents: String(quote.normal.shippingCents ?? 0),
+    preorderShippingMethod: quote.preorderShippingMethod,
+    preorderShippingCostCents: String(quote.preorder.shippingCents ?? 0),
+    noShipment: noShipment ? "1" : "",
     discountCents: String(quote.normal.discountCents),
     preorderDiscountCents: String(quote.preorder.discountCents),
     promoCodeId: promo ? String(promo.id) : "",
@@ -168,25 +186,30 @@ export async function POST(req: Request): Promise<Response> {
             product_data: { name: `${line.titleSnapshot} (précommande)` },
           },
         })),
-        ...(normal.lines.length > 0
+        // Ligne de port PAR PARTIE (client 2026-09-09) : SEULEMENT si cette
+        // partie a au moins une ligne physique — une partie entièrement
+        // numérique n'a rien à expédier, aucune ligne « Livraison (offerte) »
+        // n'a de sens à y ajouter (contrairement au port gratuit par coupon,
+        // qui reste affiché à 0 €).
+        ...(normal.hasPhysicalLines
           ? [
               {
                 quantity: 1,
                 price_data: {
                   currency: "eur",
-                  unit_amount: quote.shipping.costCents,
+                  unit_amount: quote.normal.shippingCents ?? 0,
                   product_data: { name: shippingLineName(quote.split ? "commande" : undefined) },
                 },
               },
             ]
           : []),
-        ...(preorder.lines.length > 0
+        ...(preorder.hasPhysicalLines
           ? [
               {
                 quantity: 1,
                 price_data: {
                   currency: "eur",
-                  unit_amount: quote.shipping.costCents,
+                  unit_amount: quote.preorder.shippingCents ?? 0,
                   product_data: { name: shippingLineName(quote.split ? "précommande" : undefined) },
                 },
               },
@@ -198,14 +221,19 @@ export async function POST(req: Request): Promise<Response> {
       // `customer` fourni, Stripe n'en crée un que si une fonctionnalité
       // ultérieure l'exige (`if_required`, même réglage que les dons).
       customer_creation: "if_required",
-      shipping_address_collection: { allowed_countries: ["FR", "BE", "CH"] },
+      // Aucune ligne physique dans le panier ENTIER (client 2026-09-09) : ni
+      // adresse ni téléphone demandés — rien à expédier, rien à qui livrer.
+      // `shippingAddress.fullName` est alors reconstruite au webhook depuis
+      // `customer_details.name` (repli e-mail), cf. `order-webhook-core.ts`.
+      ...(noShipment ? {} : { shipping_address_collection: { allowed_countries: ["FR", "BE", "CH"] } }),
       // Téléphone (client 2026-08-24, demandé comme colonne de l'export des
       // commandes — et utile au transporteur). ATTENTION : activé, Stripe
       // rend le champ OBLIGATOIRE au paiement, il n'y a pas de mode
       // facultatif. Assumé côté boutique ; volontairement PAS activé sur le
       // parcours de don/souscription (`souscription/actions.ts`), où chaque
-      // champ de plus se paie en conversion pendant la campagne.
-      phone_number_collection: { enabled: true },
+      // champ de plus se paie en conversion pendant la campagne — ni sur une
+      // commande sans envoi (même raison : rien à demander en plus).
+      ...(noShipment ? {} : { phone_number_collection: { enabled: true } }),
       // Pas de `receipt_email` explicite : l'email n'est connu qu'une fois
       // collecté PAR Stripe pendant le checkout (achat invité, jamais saisi
       // chez nous avant) — comme pour les dons, le reçu Stripe natif suit le

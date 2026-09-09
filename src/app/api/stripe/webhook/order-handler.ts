@@ -108,6 +108,12 @@ async function resolveOrderParts(
           isbnSnapshot: book.isbn,
           quantity: l.qty,
           unitPriceCents: l.unitPriceCents,
+          // Snapshot RELU FRAÎCHEMENT (client 2026-09-09), jamais depuis les
+          // `metadata` du checkout — même esprit que `titleSnapshot`/
+          // `isbnSnapshot` ci-dessus. Sans effet sur le port (déjà décidé
+          // par `shippingMethod`/`shippingCostCents` de la commande) : sert
+          // uniquement la colonne « Numérique » de l'export préparation.
+          digital: book.digital,
         },
       ];
     });
@@ -120,7 +126,18 @@ async function resolveOrderParts(
   };
 }
 
-/** Assemble les faits `Orders` d'UNE partie — seul le statut final (`buildOrderCreateData`) et `totalCents` (fourni par l'appelant, cf. docstring `createPaidOrder`) diffèrent entre les deux issues (payée/échouée) ou entre les deux parties. */
+/**
+ * Assemble les faits `Orders` d'UNE partie — seul le statut final
+ * (`buildOrderCreateData`) et `totalCents` (fourni par l'appelant, cf.
+ * docstring `createPaidOrder`) diffèrent entre les deux issues
+ * (payée/échouée) ou entre les deux parties. `shippingCostCents` reste un
+ * PARAMÈTRE (jamais lu ici depuis `metadata`) : c'est l'appelant
+ * (`createPaidOrder`/`recordFailedOrder`) qui choisit la BONNE clé
+ * `metadata.shippingCostCents`/`preorderShippingCostCents` selon `orderType`
+ * — `shippingMethod`, lui, se lit directement ici via la même distinction
+ * (client 2026-09-09 : les deux parties peuvent désormais différer, une
+ * partie « aucun » à côté d'une partie « standard »).
+ */
 function partSessionFacts(
   session: Stripe.Checkout.Session,
   orderType: OrderKind,
@@ -132,6 +149,7 @@ function partSessionFacts(
   createdAtEpoch: number,
 ): OrderSessionFacts {
   const metadata = session.metadata ?? {};
+  const shippingMethodKey = orderType === "precommande" ? "preorderShippingMethod" : "shippingMethod";
   return {
     stripeSessionId: session.id,
     stripePaymentIntentId: paymentIntentId(session),
@@ -140,10 +158,13 @@ function partSessionFacts(
     // route checkout) — absent des sessions antérieures et des dons, d'où le
     // repli `null` plutôt qu'une garantie.
     phone: session.customer_details?.phone ?? null,
+    // Repli d'adresse UNIQUEMENT (`buildOrderCreateData`, commande sans
+    // envoi, client 2026-09-09) — jamais l'adresse elle-même.
+    customerName: session.customer_details?.name ?? null,
     shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
     lines,
     orderType,
-    shippingMethod: (metadata.shippingMethod as OrderShippingMethod) ?? "standard",
+    shippingMethod: (metadata[shippingMethodKey] as OrderShippingMethod) ?? "standard",
     shippingCostCents,
     discountCents,
     promoCodeId,
@@ -157,14 +178,22 @@ function partSessionFacts(
  * `stock` n'est pas suivi) est portée par `decrementBookStock` elle-même
  * (`order-source.ts`, issue #65, boucle comparer-puis-échanger) : ce module ne
  * fait plus que sauter les lignes dont le livre a disparu entre le checkout et
- * le webhook (`books` — snapshot `commerce-source` — ne les contient plus).
+ * le webhook (`books` — snapshot `commerce-source` — ne les contient plus) —
+ * et, depuis le client 2026-09-09, les lignes numérique seul
+ * (`book.digital`) : le stock n'a AUCUN sens pour elles (`sellability.ts`
+ * l'ignore déjà à la vente), un décrément y serait un artefact, pas une
+ * correction. Ne dépend PAS de la valeur du champ `stock` de la fiche — même
+ * si un stock traîne encore dessus (saisie antérieure au passage en
+ * numérique seul), il ne bouge pas.
  */
 async function decrementStock(
   decoded: DecodedCheckoutLine[],
   books: Map<number, CheckoutBookLookup>,
 ): Promise<void> {
   for (const line of decoded) {
-    if (!books.has(line.id)) continue; // livre disparu — snapshot honnête, rien à décrémenter
+    const book = books.get(line.id);
+    if (!book) continue; // livre disparu — snapshot honnête, rien à décrémenter
+    if (book.digital) continue; // numérique seul — le stock n'a pas de sens pour cette ligne
     await decrementBookStock(line.id, line.qty);
   }
 }
@@ -347,6 +376,10 @@ async function createPaidOrderPart(
         totalTTC: order.totalTTC,
         downloads: await buildOrderDownloads(order),
         livraisonDelai,
+        // Commande sans envoi (client 2026-09-09, `Orders.shippingMethod ===
+        // "aucun"`) : ni phrase d'expédition ni délai — le bloc téléchargement
+        // (ci-dessus) porte seul le message.
+        noShipment: order.shippingMethod === "aucun",
       });
     },
   });
@@ -377,7 +410,11 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
 
   const { books, normal, preorder } = await resolveOrderParts(session);
   const metadata = session.metadata ?? {};
-  const shippingCostCents = metadataCents(metadata.shippingCostCents);
+  // DEUX clés depuis le client 2026-09-09 (`/api/checkout` en pose une par
+  // partie — une partie « aucun » peut coexister avec une partie facturée au
+  // tarif partagé) — jamais une seule valeur appliquée aux deux commandes.
+  const shippingCostCentsNormal = metadataCents(metadata.shippingCostCents);
+  const shippingCostCentsPreorder = metadataCents(metadata.preorderShippingCostCents);
   const discountNormal = metadataCents(metadata.discountCents);
   const discountPreorder = metadataCents(metadata.preorderDiscountCents);
   const promoCodeId = metadataPromoCodeId(metadata.promoCodeId);
@@ -385,8 +422,8 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
   const shipments = (normal.decoded.length > 0 ? 1 : 0) + (preorder.decoded.length > 0 ? 1 : 0);
 
   if (shipments > 1) {
-    const normalTotal = computePartTotalCents(normal.lines, shippingCostCents, discountNormal);
-    const preorderTotal = computePartTotalCents(preorder.lines, shippingCostCents, discountPreorder);
+    const normalTotal = computePartTotalCents(normal.lines, shippingCostCentsNormal, discountNormal);
+    const preorderTotal = computePartTotalCents(preorder.lines, shippingCostCentsPreorder, discountPreorder);
     if (session.amount_total != null && normalTotal + preorderTotal !== session.amount_total) {
       Sentry.captureMessage(
         "Webhook Stripe : total scindé (commande + précommande) ne reconstitue pas amount_total",
@@ -409,7 +446,7 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
       normal,
       books,
       discountNormal,
-      shippingCostCents,
+      shippingCostCentsNormal,
       normalTotal,
       promoCodeId,
     );
@@ -420,7 +457,7 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
       preorder,
       books,
       discountPreorder,
-      shippingCostCents,
+      shippingCostCentsPreorder,
       preorderTotal,
       promoCodeId,
     );
@@ -439,7 +476,7 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
     normal,
     books,
     discountNormal,
-    shippingCostCents,
+    shippingCostCentsNormal,
     wholeSessionTotal,
     promoCodeId,
   );
@@ -450,7 +487,7 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
     preorder,
     books,
     discountPreorder,
-    shippingCostCents,
+    shippingCostCentsPreorder,
     wholeSessionTotal,
     promoCodeId,
   );
@@ -467,14 +504,20 @@ async function createPaidOrder(session: Stripe.Checkout.Session, createdAtEpoch:
 async function recordFailedOrder(session: Stripe.Checkout.Session, createdAtEpoch: number): Promise<void> {
   const { normal, preorder } = await resolveOrderParts(session);
   const metadata = session.metadata ?? {};
-  const shippingCostCents = metadataCents(metadata.shippingCostCents);
+  const shippingCostCentsNormal = metadataCents(metadata.shippingCostCents);
+  const shippingCostCentsPreorder = metadataCents(metadata.preorderShippingCostCents);
   const discountNormal = metadataCents(metadata.discountCents);
   const discountPreorder = metadataCents(metadata.preorderDiscountCents);
   const promoCodeId = metadataPromoCodeId(metadata.promoCodeId);
   const shipments = (normal.decoded.length > 0 ? 1 : 0) + (preorder.decoded.length > 0 ? 1 : 0);
   const wholeSessionTotal = session.amount_total ?? 0;
 
-  async function recordPart(orderType: OrderKind, part: ResolvedPart, discountCents: number): Promise<void> {
+  async function recordPart(
+    orderType: OrderKind,
+    part: ResolvedPart,
+    discountCents: number,
+    shippingCostCents: number,
+  ): Promise<void> {
     if (part.decoded.length === 0) return;
     if (await findOrderBySessionId(session.id, orderType)) return;
 
@@ -497,8 +540,8 @@ async function recordFailedOrder(session: Stripe.Checkout.Session, createdAtEpoc
     await createOrder(orderData);
   }
 
-  await recordPart("commande", normal, discountNormal);
-  await recordPart("precommande", preorder, discountPreorder);
+  await recordPart("commande", normal, discountNormal, shippingCostCentsNormal);
+  await recordPart("precommande", preorder, discountPreorder, shippingCostCentsPreorder);
 }
 
 /**
@@ -612,6 +655,11 @@ export async function handleDonationSessionCompleted(
         // paierait en conversion pendant la campagne) ; Stripe le remonte donc
         // seulement si le donateur en a un enregistré, jamais garanti.
         phone: session.customer_details?.phone ?? null,
+        // Sans effet ici : un don avec contrepartie collecte TOUJOURS une
+        // adresse (`shippingMethod: "offert"`, jamais `"aucun"`) —
+        // `customerName` n'est lu qu'en repli d'adresse pour une commande
+        // sans envoi, cf. `order-webhook-core.ts:fallbackAddressForNoShipment`.
+        customerName: session.customer_details?.name ?? null,
         shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
         lines,
         orderType: "don",

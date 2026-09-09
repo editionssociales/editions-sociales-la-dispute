@@ -46,6 +46,15 @@ export interface OrderLineFacts {
   quantity: number;
   /** Centimes — dérivés des `metadata` posées par `/api/checkout` (prix déjà re-validé serveur), jamais recalculés ici. */
   unitPriceCents: number;
+  /**
+   * Titre vendu uniquement en numérique AU MOMENT DE LA VENTE (client
+   * 2026-09-09) — snapshot, comme `titleSnapshot`/`isbnSnapshot` : relu
+   * fraîchement par l'appelant (`commerce-source.ts`, jamais des `metadata`
+   * client) au webhook, PAS depuis le checkout. Sert la colonne « Numérique »
+   * de l'export préparation (`order-export.ts`) — sans effet sur le port
+   * (déjà décidé par `shippingMethod`/`shippingCostCents` de la commande).
+   */
+  digital: boolean;
 }
 
 /** Alias du port — même étiquette que `ShippingMethodLabel` (`cart-quote.ts`), sous le nom attendu par ses consommateurs (`order-handler.ts`). */
@@ -57,6 +66,16 @@ export interface OrderSessionFacts {
   email: string | null;
   /** Téléphone collecté par Stripe Checkout (`phone_number_collection`, client 2026-08-24) — `null` tant qu'une passerelle ne le fournit pas (dons, historique). Jamais bloquant : une commande sans téléphone reste une commande. */
   phone: string | null;
+  /**
+   * Nom du client tel que collecté par Stripe (`customer_details.name`,
+   * client 2026-09-09) — utilisé UNIQUEMENT en repli d'adresse pour une
+   * commande sans envoi (`shippingMethod === "aucun"`, `shippingAddress`
+   * absente puisque non collectée) : `buildOrderCreateData` en fait le
+   * `fullName` de l'adresse minimale posée, jamais ailleurs. L'adresse RÉELLE,
+   * quand elle existe, reste `shippingAddress` — ce champ n'entre jamais en
+   * compétition avec elle.
+   */
+  customerName: string | null;
   shippingAddress: OrderAddressFacts | null;
   lines: OrderLineFacts[];
   /** Commande normale ou précommande — cette partie DE la scission (client 2026-08-20), jamais les deux à la fois (`buildOrderCreateData` assemble UNE commande par appel). */
@@ -103,6 +122,7 @@ export interface OrderCreateData {
     isbnSnapshot: string | null;
     quantity: number;
     unitPriceTTC: number;
+    digital: boolean;
   }[];
   shippingMethod: OrderShippingMethod;
   shippingCostTTC: number;
@@ -160,12 +180,40 @@ export function addressFromStripe(
 }
 
 /**
+ * Adresse de repli d'une commande SANS envoi (`shippingMethod === "aucun"`,
+ * client 2026-09-09) — Stripe ne collecte alors aucune `shipping_details`
+ * (`/api/checkout` n'active pas `shipping_address_collection`) : la commande
+ * garde quand même un `fullName` lisible pour la liste admin (`clientResume`)
+ * et la recherche, tiré du nom Stripe puis, à défaut, de l'e-mail — jamais
+ * vide. Les autres champs restent vides (rien à expédier), `country` garde
+ * son défaut FR (jamais lu pour un envoi qui n'a pas lieu).
+ */
+function fallbackAddressForNoShipment(facts: OrderSessionFacts): OrderAddressFacts {
+  return {
+    fullName: facts.customerName || facts.email || "Client",
+    addressLine1: "",
+    addressLine2: undefined,
+    postalCode: "",
+    city: "",
+    country: "FR",
+  };
+}
+
+/**
  * Assemble les données `Orders` à partir des faits extraits d'une session —
  * refuse (jamais ne jette) si email/adresse/lignes manquent : une session
  * `kind=order` complétée par Stripe doit TOUJOURS les avoir (achat en invité
  * avec adresse de livraison obligatoire) ; leur absence est une anomalie que
  * l'appelant fait remonter en erreur (Sentry), pas une commande à moitié
  * remplie créée en silence.
+ *
+ * EXCEPTION (client 2026-09-09) : une commande SANS envoi
+ * (`shippingMethod === "aucun"`, cf. `Orders.ts:shippingMethod`) n'a
+ * jamais collecté d'adresse — `facts.shippingAddress` y est alors
+ * TOUJOURS `null`, sans que ce soit une anomalie. `fallbackAddressForNoShipment`
+ * fournit l'adresse minimale (`fullName` seul renseigné) à la place du refus.
+ * Pour toute autre méthode de port, l'absence d'adresse reste un refus
+ * (comportement historique inchangé).
  */
 export function buildOrderCreateData(
   facts: OrderSessionFacts,
@@ -174,7 +222,9 @@ export function buildOrderCreateData(
   if (!facts.email) {
     return { error: `Session Stripe ${facts.stripeSessionId} : email absent.` };
   }
-  if (!facts.shippingAddress) {
+  const shippingAddress =
+    facts.shippingAddress ?? (facts.shippingMethod === "aucun" ? fallbackAddressForNoShipment(facts) : null);
+  if (!shippingAddress) {
     return { error: `Session Stripe ${facts.stripeSessionId} : adresse de livraison absente.` };
   }
   if (facts.lines.length === 0) {
@@ -189,16 +239,17 @@ export function buildOrderCreateData(
     // jamais empêché d'expédier une commande, elle ne doit donc pas faire
     // refuser l'assemblage.
     phone: facts.phone,
-    shippingAddress: facts.shippingAddress,
+    shippingAddress,
     // Dupliquée depuis la livraison : le checkout ne collecte pas d'adresse
     // de facturation distincte (cf. `Orders.ts`, commentaire admin du champ).
-    billingAddress: facts.shippingAddress,
+    billingAddress: shippingAddress,
     lines: facts.lines.map((l) => ({
       book: l.bookId,
       titleSnapshot: l.titleSnapshot,
       isbnSnapshot: l.isbnSnapshot,
       quantity: l.quantity,
       unitPriceTTC: centsToEuros(l.unitPriceCents),
+      digital: l.digital,
     })),
     shippingMethod: facts.shippingMethod,
     shippingCostTTC: centsToEuros(facts.shippingCostCents),
@@ -291,12 +342,25 @@ export function resolveDonationLines(
       isbnSnapshot: book?.isbn ?? null,
       quantity: l.qty,
       unitPriceCents: l.unitPriceCents, // toujours 0 — contrat partagé avec la server action de don
+      // Une contrepartie de don n'est jamais un titre numérique seul (hors
+      // périmètre de ce client 2026-09-09) — port toujours offert par ce
+      // chemin, `digital` n'y a donc aucun effet ; posé `false` pour que la
+      // colonne « Numérique » de l'export reste cohérente.
+      digital: false,
     };
   });
   return { lines, missingBookIds };
 }
 
-/** `Order.shippingAddress`/`billingAddress` (déjà posées, identiques) → adresse du récap mail — `undefined` seulement si la commande n'en porte aucune (anomalie, ne devrait jamais arriver pour un don : tous les paliers 2026 collectent une adresse). */
+/**
+ * `Order.shippingAddress`/`billingAddress` (déjà posées, identiques) →
+ * adresse du récap mail — `undefined` seulement si la commande n'en porte
+ * aucune (anomalie, ne devrait jamais arriver pour un don : tous les paliers
+ * 2026 collectent une adresse, jamais `shippingMethod: "aucun"` sur ce
+ * chemin). Les trois champs d'adresse sont devenus optionnels côté schéma
+ * (client 2026-09-09, commande sans envoi) — `?? ""` défensif seulement,
+ * jamais atteint en pratique sur le chemin don.
+ */
 export function recapAddressFromOrder(
   order: Pick<Order, "shippingAddress">,
 ): DonationMailRecapAddress | undefined {
@@ -304,10 +368,10 @@ export function recapAddressFromOrder(
   if (!a) return undefined;
   return {
     fullName: a.fullName,
-    addressLine1: a.addressLine1,
+    addressLine1: a.addressLine1 ?? "",
     addressLine2: a.addressLine2 ?? undefined,
-    postalCode: a.postalCode,
-    city: a.city,
+    postalCode: a.postalCode ?? "",
+    city: a.city ?? "",
     country: a.country,
   };
 }

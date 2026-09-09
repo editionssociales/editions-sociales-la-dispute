@@ -97,6 +97,7 @@ function book(overrides: Partial<FakeBook> = {}): FakeBook {
     stock: 10,
     reducedShippingFlag: false,
     preorderEnabled: false,
+    digital: false,
     ...overrides,
   };
 }
@@ -350,6 +351,69 @@ describe("POST /api/checkout — session Stripe (cas nominal)", () => {
     );
     const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
     expect(res.status).toBe(502);
+  });
+});
+
+describe("POST /api/checkout — titre numérique seul (client 2026-09-09, « Notes sur Mill »)", () => {
+  it("panier ENTIÈREMENT numérique → pas d'adresse ni de téléphone demandés, aucune ligne de port, metadata `noShipment`/`shippingMethod=aucun`", async () => {
+    books = { 12: book({ digital: true, stock: null, priceEuros: 9.99 }) };
+    const res = await POST(request({ lines: [{ id: 12, qty: 1 }], zone: "FR" }));
+    expect(res.status).toBe(200);
+
+    expect(lastSessionBody?.has("shipping_address_collection[allowed_countries][0]")).toBe(false);
+    expect(lastSessionBody?.has("phone_number_collection[enabled]")).toBe(false);
+    // 1 seule ligne (le livre) — aucune ligne de port ajoutée.
+    expect(lastSessionBody?.get("line_items[0][price_data][unit_amount]")).toBe("999");
+    expect(lastSessionBody?.get("line_items[1]")).toBeNull();
+
+    expect(lastSessionBody?.get("metadata[noShipment]")).toBe("1");
+    expect(lastSessionBody?.get("metadata[shippingMethod]")).toBe("aucun");
+    expect(lastSessionBody?.get("metadata[shippingCostCents]")).toBe("0");
+  });
+
+  it("panier MIXTE (une ligne physique + une ligne numérique) → adresse/téléphone TOUJOURS demandés (quelque chose s'expédie), une SEULE ligne de port", async () => {
+    books = {
+      12: book({ priceEuros: 15 }), // physique
+      14: book({ title: "Notes sur Mill", digital: true, stock: null, priceEuros: 9.99 }),
+    };
+    const res = await POST(
+      request({ lines: [{ id: 12, qty: 1 }, { id: 14, qty: 1 }], zone: "FR" }),
+    );
+    expect(res.status).toBe(200);
+    expect(lastSessionBody?.get("shipping_address_collection[allowed_countries][0]")).toBe("FR");
+    expect(lastSessionBody?.get("phone_number_collection[enabled]")).toBe("true");
+    expect(lastSessionBody?.get("metadata[noShipment]")).toBe("");
+    // 2 lignes d'articles + 1 SEULE ligne de port (barème sur 15€ physiques seuls → tranche 11-24€ → 4,50€).
+    expect(lastSessionBody?.get("line_items[2][price_data][unit_amount]")).toBe("450");
+    expect(lastSessionBody?.get("line_items[3]")).toBeNull();
+  });
+
+  it("scission précommande : partie normale ENTIÈREMENT numérique, précommande physique → une SEULE ligne de port (celle de la précommande)", async () => {
+    books = {
+      12: book({ digital: true, stock: null, priceEuros: 9.99 }), // normal, numérique seul
+      13: book({
+        title: "À paraître",
+        priceEuros: 20,
+        publishedAt: "2099-01-01",
+        preorderEnabled: true,
+      }),
+    };
+    const res = await POST(
+      request({ lines: [{ id: 12, qty: 1 }, { id: 13, qty: 1 }], zone: "FR" }),
+    );
+    expect(res.status).toBe(200);
+    expect(lastSessionBody?.get("metadata[noShipment]")).toBe(""); // la précommande s'expédie
+    expect(lastSessionBody?.get("metadata[shippingMethod]")).toBe("aucun"); // partie normale
+    expect(lastSessionBody?.get("metadata[shippingCostCents]")).toBe("0");
+    expect(lastSessionBody?.get("metadata[preorderShippingMethod]")).toBe("standard");
+    // 20€ physiques seuls → tranche 11-24€ → 4,50€, facturé UNE fois (la précommande).
+    expect(lastSessionBody?.get("metadata[preorderShippingCostCents]")).toBe("450");
+    // 2 lignes d'articles + 1 SEULE ligne de port (« — précommande », l'autre partie n'expédie rien).
+    expect(lastSessionBody?.get("line_items[2][price_data][product_data][name]")).toBe(
+      "Livraison — précommande",
+    );
+    expect(lastSessionBody?.get("line_items[2][price_data][unit_amount]")).toBe("450");
+    expect(lastSessionBody?.get("line_items[3]")).toBeNull();
   });
 });
 
