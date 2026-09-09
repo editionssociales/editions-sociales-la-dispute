@@ -68,3 +68,33 @@ describe("BookCard — badge « Épuisé » distinct d'« Indisponible »", () =
     expect(markup).toContain("Épuisé");
   });
 });
+
+/**
+ * Mention « ePub » (client 2026-09-09) — orthogonale au statut d'achat,
+ * co-existe avec le badge de statut. `status: "unavailable"`/`"upcoming"`
+ * (comme les autres tests de ce fichier) : `canAddToCart` reste faux, pas de
+ * `AddToCartButton` rendu (ce composant exige `<CartProvider>`, absent ici —
+ * même contrainte que `buy-links.test.tsx`, qui le mocke ; la mention « ePub »
+ * ne dépend pas du chip panier, ce détour l'évite simplement).
+ */
+describe("BookCard — mention « ePub » (titre numérique seul)", () => {
+  it("format numerique → badge « ePub » affiché", () => {
+    const markup = renderToStaticMarkup(
+      <BookCard book={book({ status: "unavailable", format: "numerique" })} />,
+    );
+    expect(markup).toContain("ePub");
+  });
+
+  it("format papier (défaut) → aucune mention « ePub »", () => {
+    const markup = renderToStaticMarkup(<BookCard book={book({ status: "unavailable" })} />);
+    expect(markup).not.toContain("ePub");
+  });
+
+  it("co-existe avec le badge de statut (précommande numérique)", () => {
+    const markup = renderToStaticMarkup(
+      <BookCard book={book({ status: "upcoming", format: "numerique" })} />,
+    );
+    expect(markup).toContain("À paraître");
+    expect(markup).toContain("ePub");
+  });
+});

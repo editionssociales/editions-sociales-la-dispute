@@ -445,24 +445,49 @@ export function CartView({
   // partie dérivés des lignes `purchasable` (reflet exact de ce que
   // `/api/checkout` scindera à l'encaissement, cf. `checkout-core.ts:
   // splitValidatedLines`) — même filtre `purchasable` que `summary.subtotalCents`,
-  // jamais une ligne indisponible comptée dans un total.
-  const { normalSubtotalCents, preorderSubtotalCents, hasNormalLines, hasPreorderLines } = useMemo(() => {
+  // jamais une ligne indisponible comptée dans un total. Sous-totaux
+  // PHYSIQUES (client 2026-09-09, `!digital`) dérivés en plus : c'est ce que
+  // `computeCartQuote` doit recevoir pour le barème de port, jamais le
+  // sous-total complet qui inclurait le numérique.
+  const {
+    normalSubtotalCents,
+    preorderSubtotalCents,
+    hasNormalLines,
+    hasPreorderLines,
+    physicalSubtotalCents,
+    hasNormalPhysicalLines,
+    hasPreorderPhysicalLines,
+  } = useMemo(() => {
     const purchasable = summary.lines.filter((l) => l.purchasable);
     const normal = purchasable.filter((l) => !l.isPreorder);
     const preorder = purchasable.filter((l) => l.isPreorder);
+    const normalPhysical = normal.filter((l) => !l.digital);
+    const preorderPhysical = preorder.filter((l) => !l.digital);
     return {
       normalSubtotalCents: normal.reduce((sum, l) => sum + l.lineTotalCents, 0),
       preorderSubtotalCents: preorder.reduce((sum, l) => sum + l.lineTotalCents, 0),
       hasNormalLines: normal.length > 0,
       hasPreorderLines: preorder.length > 0,
+      physicalSubtotalCents:
+        normalPhysical.reduce((sum, l) => sum + l.lineTotalCents, 0) +
+        preorderPhysical.reduce((sum, l) => sum + l.lineTotalCents, 0),
+      hasNormalPhysicalLines: normalPhysical.length > 0,
+      hasPreorderPhysicalLines: preorderPhysical.length > 0,
     };
   }, [summary.lines]);
 
-  const { shipping, totals, freeShippingCoupon, split } = computeCartQuote({
+  // Aucun article physique dans le panier ENTIER (client 2026-09-09) — « Aucun
+  // envoi » à la place du libellé de port ci-dessous.
+  const hasPhysicalItems = hasNormalPhysicalLines || hasPreorderPhysicalLines;
+
+  const { shipping, totals, freeShippingCoupon, shipments } = computeCartQuote({
     normalSubtotalCents,
     preorderSubtotalCents,
     hasNormalLines,
     hasPreorderLines,
+    physicalSubtotalCents,
+    hasNormalPhysicalLines,
+    hasPreorderPhysicalLines,
     zone,
     manifestOnly: summary.manifestOnly,
     promoEval,
@@ -702,16 +727,29 @@ export function CartView({
           )}
 
           <dt className="bg-paper px-3.5 py-2.5 font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
-            Port ({zone}){split && shipping.ok ? " — 2 envois" : ""}
+            {hasPhysicalItems ? (
+              <>
+                Port ({zone}){shipments === 2 ? " — 2 envois" : ""}
+              </>
+            ) : (
+              // Panier entièrement numérique (client 2026-09-09) : rien à
+              // expédier — jamais une ligne « Port » à 0,00 € qui laisserait
+              // croire à une livraison gratuite plutôt qu'à une absence
+              // d'envoi.
+              "Livraison"
+            )}
           </dt>
           <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
-            {shipping.ok ? euros(totals.shippingCents ?? 0) : "—"}
+            {hasPhysicalItems ? (shipping.ok ? euros(totals.shippingCents ?? 0) : "—") : "Aucun envoi"}
           </dd>
 
           {/* Panier mixte (client 2026-08-20) : le total de port ci-dessus
               cumule DEUX envois au même tarif — annoncé ici en toutes
-              lettres pour que le montant ne semble jamais doublé par erreur. */}
-          {split && shipping.ok && (
+              lettres pour que le montant ne semble jamais doublé par erreur.
+              `shipments === 2` (pas `split`, client 2026-09-09) : une
+              scission commande/précommande dont une seule partie s'expédie
+              (l'autre entièrement numérique) n'a qu'UN envoi facturé. */}
+          {shipments === 2 && shipping.ok && (
             <div className="col-span-2 bg-paper px-3.5 pb-2.5">
               <p className="font-sans text-xs text-muted">
                 2 envois — frais d’expédition par envoi ({euros(shipping.costCents)} chacun) : un

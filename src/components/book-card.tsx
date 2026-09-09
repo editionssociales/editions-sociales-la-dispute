@@ -68,6 +68,15 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
   );
   const statusBadge = preorderBadge || upcomingBadge || externalBadge || unavailableBadge;
 
+  // Titre numérique seul (client 2026-09-09) — orthogonal au statut d'achat
+  // (co-existe avec `preorderBadge`, par ex.), même recette sobre que
+  // `externalBadge`/`unavailableBadge`.
+  const digitalBadge = book.format === "numerique" && (
+    <span className="inline-flex flex-none border-b-2 border-r-2 border-ink bg-paper px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[.05em] text-muted">
+      ePub
+    </span>
+  );
+
   // Panier natif (plan §4 étape 6) : petit chip, en plus du lien vers la
   // fiche — seulement si le livre est disponible au panier. Sorti du cadre
   // couverture (rangée basse fixe), à droite du badge de statut.
@@ -83,7 +92,7 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
     />
   );
 
-  const hasFooter = Boolean(book.price != null || statusBadge || cartChip);
+  const hasFooter = Boolean(book.price != null || statusBadge || digitalBadge || cartChip);
 
   return (
     // Carte pleine hauteur : le grid parent (`FramedGrid`, `book-grid.tsx`)
@@ -108,6 +117,7 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
           <div className="min-w-0">{priceBlock}</div>
           <div className="flex flex-none items-center gap-2">
             {statusBadge}
+            {digitalBadge}
             {cartChip}
           </div>
         </div>

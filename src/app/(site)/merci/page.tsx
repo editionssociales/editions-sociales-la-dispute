@@ -28,6 +28,13 @@ interface OrderConfirmation {
   email: string | null;
   totalTTC: number;
   pending: boolean;
+  /**
+   * Panier entièrement numérique (client 2026-09-09, `metadata.noShipment`
+   * posée par `/api/checkout`) — whole-session, pas par ligne : suffisant
+   * pour cette page qui ne relit que la session, jamais la commande créée.
+   * `false` par défaut (absent des sessions antérieures à cette date).
+   */
+  noShipment: boolean;
 }
 
 /**
@@ -46,6 +53,7 @@ async function lookupOrder(sessionId: string | undefined): Promise<OrderConfirma
       email: session.customer_details?.email ?? null,
       totalTTC: (session.amount_total ?? 0) / 100,
       pending: session.payment_status !== "paid",
+      noShipment: session.metadata?.noShipment === "1",
     };
   } catch {
     return null;
@@ -120,10 +128,16 @@ export default async function MerciPage({
               ne sait pas distinguer une précommande (elle ne relit que la
               session Stripe), d'où la parenthèse : le mail de confirmation,
               lui, adapte sa phrase commande par commande (`order-mail.ts`,
-              qui garde la constante par défaut, jamais ce champ). */}
-          <p className="mt-4 font-sans text-sm text-muted">
-            Livraison {livraisonDelai} — les précommandes sont expédiées à parution.
-          </p>
+              qui garde la constante par défaut, jamais ce champ). Absente
+              pour une commande sans envoi (client 2026-09-09, panier
+              entièrement numérique, `noShipment`) — repli optimiste
+              (`!order`, session illisible) : on ne SAIT pas que rien ne
+              s'expédie, la phrase reste affichée plutôt que masquée à tort. */}
+          {(!order || !order.noShipment) && (
+            <p className="mt-4 font-sans text-sm text-muted">
+              Livraison {livraisonDelai} — les précommandes sont expédiées à parution.
+            </p>
+          )}
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Button href="/catalogue" variant="solid" className="px-6 py-3 text-sm tracking-[.03em]">

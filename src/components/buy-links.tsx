@@ -26,6 +26,16 @@ const PRICE_CLASS = "font-sans text-3xl font-black leading-none text-ink";
 const STATUS_CLASS = "font-sans text-xl font-black italic text-ink";
 const MICROCOPY_CLASS = "mt-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted";
 
+/**
+ * Mention numérique (client 2026-09-09, « Notes sur Mill ») — remplace TOUTE
+ * mention de stock/expédition (`inStockCopy` ci-dessous, ou « Expédié à
+ * parution » pour une précommande numérique) : rien n'est ni en stock ni
+ * expédié, le fichier part par lien signé après paiement
+ * (`src/lib/ebook-token.ts`, e-mail de confirmation).
+ */
+const DIGITAL_MICROCOPY =
+  "Livre numérique (ePub) : lien de téléchargement envoyé par e-mail après paiement, sans frais de port";
+
 export function BuyLinksList({
   book,
   livraisonDelai = DELIVERY_DELAY_RANGE,
@@ -42,6 +52,10 @@ export function BuyLinksList({
   // Fourchette réelle plutôt que promesse d'expédition éclair (demande client
   // 2026-08-26) — source unique `delivery-copy.ts`, surchargeable au back-office.
   const inStockCopy = `En stock — livraison ${livraisonDelai}`;
+  // Titre numérique seul (client 2026-09-09) : remplace toute mention de
+  // stock/expédition, quel que soit le statut d'achat qui la porterait
+  // (`inStockCopy` ci-dessus comme la microcopie de précommande ci-dessous).
+  const digital = book.format === "numerique";
   // Calculé UNE fois, rendu par les CINQ branches sans exception (bug signalé
   // par la cliente : `upcoming`/`unavailable` n'affichaient pas le prix de
   // leur propre fiche, alors que `available`/`preorder`/`external` le
@@ -109,8 +123,14 @@ export function BuyLinksList({
         {priceBlock}
         <AddToCartButton id={book.id} className="mt-3 w-full" label="Précommander" />
         <p className={MICROCOPY_CLASS}>
-          Expédié à parution
-          {book.publishedAt ? ` — le ${formatDateFr(book.publishedAt)}` : ""}
+          {digital ? (
+            DIGITAL_MICROCOPY
+          ) : (
+            <>
+              Expédié à parution
+              {book.publishedAt ? ` — le ${formatDateFr(book.publishedAt)}` : ""}
+            </>
+          )}
         </p>
         {secondaryLinks}
       </div>
@@ -142,7 +162,7 @@ export function BuyLinksList({
       <div>
         {priceBlock}
         <AddToCartButton id={book.id} className="mt-3 w-full" />
-        <p className={MICROCOPY_CLASS}>{inStockCopy}</p>
+        <p className={MICROCOPY_CLASS}>{digital ? DIGITAL_MICROCOPY : inStockCopy}</p>
         {secondaryLinks}
       </div>
     );
@@ -169,7 +189,9 @@ export function BuyLinksList({
       )}
       <p className={MICROCOPY_CLASS}>
         {book.status === "available"
-          ? inStockCopy
+          ? digital
+            ? DIGITAL_MICROCOPY
+            : inStockCopy
           : "En vente chez un libraire partenaire"}
       </p>
       {secondaryLinks}

@@ -183,3 +183,37 @@ describe("BuyLinksList — « Épuisé » distinct d'« Indisponible »", () => 
     expect(markup).not.toContain("Indisponible à la vente en ligne");
   });
 });
+
+/**
+ * Titre numérique seul (client 2026-09-09, « Notes sur Mill ») :
+ * `format: "numerique"` remplace toute mention de stock/expédition par la
+ * mention numérique, sur les DEUX statuts d'achat où elle peut apparaître
+ * (`available` avec panier natif, `preorder`) — jamais sur `upcoming`/
+ * `unavailable` (ni stock ni expédition n'y sont de toute façon mentionnés).
+ */
+describe("BuyLinksList — titre numérique seul (client 2026-09-09)", () => {
+  it("available + numérique : mention numérique à la place de « En stock »", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "available", purchaseMode: "cart", format: "numerique" })} />,
+    );
+    expect(markup).toContain("Livre numérique (ePub)");
+    expect(markup).toContain("sans frais de port");
+    expect(markup).not.toContain("En stock");
+  });
+
+  it("preorder + numérique : mention numérique à la place de « Expédié à parution »", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "preorder", purchaseMode: "cart", format: "numerique" })} />,
+    );
+    expect(markup).toContain("Livre numérique (ePub)");
+    expect(markup).not.toContain("Expédié à parution");
+  });
+
+  it("available SANS format numérique (livre papier, comportement historique) : « En stock » inchangé", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ status: "available", purchaseMode: "cart" })} />,
+    );
+    expect(markup).toContain("En stock");
+    expect(markup).not.toContain("Livre numérique (ePub)");
+  });
+});
