@@ -37,13 +37,31 @@
  * garantit une somme EXACTE des deux parts sans jamais dépasser le sous-total
  * d'une partie, cf. `cart-quote.test.ts`).
  *
+ * TITRE NUMÉRIQUE SEUL (client 2026-09-09, « Notes sur Mill ») : le barème se
+ * calcule désormais sur le sous-total des SEULES lignes physiques
+ * (`physicalSubtotalCents`, `computeShipping` reçoit ce total-là, jamais le
+ * combiné qui inclurait le numérique) — un « envoi » (`shipments`) n'existe
+ * que pour une partie qui a AU MOINS une ligne physique
+ * (`hasNormalPhysicalLines`/`hasPreorderPhysicalLines`), indépendamment de
+ * `hasNormalLines`/`hasPreorderLines` (qui pilotent toujours la scission en
+ * DEUX `Orders`, commande/précommande — un fait distinct de « qui s'expédie »).
+ * Une partie sans aucune ligne physique a donc `shippingCents: 0` même si
+ * `hasLines` est vrai (elle existe comme commande, mais rien n'y est
+ * expédié) ; un panier entièrement numérique a `shipments: 0` et
+ * `shipping.costCents: 0`. `normalShippingMethod`/`preorderShippingMethod`
+ * (nouveaux, à côté de `shippingMethod` — combiné, inchangé dans sa formule)
+ * valent `"aucun"` pour une partie sans ligne physique : c'est CETTE étiquette
+ * par partie que `/api/checkout` doit snapshoter par `Orders`, jamais la
+ * combinée (un panier mixte peut avoir une partie « aucun » et l'autre
+ * « standard »).
+ *
  * Zéro I/O ici, comme les trois modules composés.
  */
 import { computeCartTotals, type CartTotals } from "./cart-core";
 import { computeShipping, type ShippingResult } from "./shipping-core";
 import type { PromoEvalResult } from "./promo-core";
 
-export type ShippingMethodLabel = "standard" | "reduit" | "offert";
+export type ShippingMethodLabel = "standard" | "reduit" | "offert" | "aucun";
 
 export interface CartQuoteInput {
   /** Sous-total TTC des lignes « parues » (commande normale), en centimes — 0 si aucune. */
@@ -54,9 +72,20 @@ export interface CartQuoteInput {
   hasNormalLines: boolean;
   /** `true` ssi le panier contient au moins une ligne précommande. */
   hasPreorderLines: boolean;
+  /**
+   * Sous-total TTC combiné des SEULES lignes PHYSIQUES (`!digital`), en
+   * centimes — les deux parties confondues (client 2026-09-09) : c'est CE
+   * total que `computeShipping` reçoit pour le barème, jamais
+   * `normalSubtotalCents + preorderSubtotalCents` (qui inclut le numérique).
+   */
+  physicalSubtotalCents: number;
+  /** `true` ssi la partie « normale » a au moins une ligne physique — sinon aucun envoi pour cette partie, quel que soit `hasNormalLines`. */
+  hasNormalPhysicalLines: boolean;
+  /** `true` ssi la partie « précommande » a au moins une ligne physique — sinon aucun envoi pour cette partie, quel que soit `hasPreorderLines`. */
+  hasPreorderPhysicalLines: boolean;
   /** Zone de livraison déclarée — `computeShipping` la valide, ce module ne la revérifie pas. */
   zone: string;
-  /** Panier ENTIER (les deux parties confondues) composé UNIQUEMENT d'articles à port réduit — le barème lit toujours le panier combiné (règle client). */
+  /** Panier ENTIER (les deux parties confondues, lignes PHYSIQUES seulement) composé UNIQUEMENT d'articles à port réduit — le barème lit toujours le panier physique combiné (règle client). */
   manifestOnly: boolean;
   /** Verdict déjà résolu par `evaluatePromoCode` (sur le sous-total COMBINÉ) — `null` = aucun code promo soumis/appliqué. */
   promoEval: PromoEvalResult | null;
@@ -76,13 +105,13 @@ export interface CartQuotePart {
 export interface CartQuote {
   /** `true` ssi un code `free_shipping` valide est appliqué — dérivé du même verdict que la remise `fixed_cart` (cf. `totals.discountCents`, la remise réellement appliquée). */
   freeShippingCoupon: boolean;
-  /** Résolution du barème sur le total COMBINÉ — le tarif d'UN SEUL envoi (règle 3), avant multiplication par `shipments`. */
+  /** Résolution du barème sur le sous-total PHYSIQUE combiné — le tarif d'UN SEUL envoi (règle 3), avant multiplication par `shipments`. `costCents: 0` sans même valider la zone si `physicalSubtotalCents` combiné n'a AUCUNE ligne physique (client 2026-09-09). */
   shipping: ShippingResult;
-  /** Étiquette snapshotée sur `Orders.ts:shippingMethod` (les deux commandes en cas de scission) — dérivée du COÛT réellement calculé (cf. docstring du module). */
+  /** Étiquette du panier ENTIER — `"aucun"` seulement si NI la partie normale NI la précommande n'ont de ligne physique ; sinon dérivée du COÛT réellement calculé (cf. docstring du module). Affichage/synthèse globale UNIQUEMENT : c'est `normalShippingMethod`/`preorderShippingMethod` que `Orders.ts:shippingMethod` doit recevoir, une partie mixte pouvant différer de l'autre. */
   shippingMethod: ShippingMethodLabel;
-  /** `true` ssi le panier contient à la fois des lignes parues et des lignes précommande — scission en 2 commandes/2 envois. */
+  /** `true` ssi le panier contient à la fois des lignes parues et des lignes précommande — scission en 2 commandes, indépendamment de qui s'expédie. */
   split: boolean;
-  /** Nombre d'envois facturés — 1 (panier homogène) ou 2 (panier mixte) ; 0 si les deux parties sont vides (défensif, ne devrait jamais arriver en aval d'un panier non vide). */
+  /** Nombre d'envois PHYSIQUES facturés (client 2026-09-09 : compte les parties avec au moins une ligne physique, pas seulement non vides) — 0, 1 ou 2. */
   shipments: number;
   /** Devis de la commande normale (lignes parues) — `subtotalCents === 0` si aucune. */
   normal: CartQuotePart;
@@ -90,6 +119,10 @@ export interface CartQuote {
   preorder: CartQuotePart;
   /** Totaux COMBINÉS (affichage global panier/vérification du montant Stripe) — somme exacte de `normal` + `preorder`. */
   totals: CartTotals;
+  /** Étiquette PROPRE à la partie normale (client 2026-09-09) — `"aucun"` ssi cette partie n'a aucune ligne physique, sinon même formule que `shippingMethod`. C'est CETTE valeur (jamais `shippingMethod`) que `/api/checkout` doit snapshoter pour l'`Order` « commande ». */
+  normalShippingMethod: ShippingMethodLabel;
+  /** Symétrique de `normalShippingMethod` pour la partie précommande — celle à snapshoter pour l'`Order` « précommande ». */
+  preorderShippingMethod: ShippingMethodLabel;
 }
 
 /**
@@ -97,25 +130,34 @@ export interface CartQuote {
  * promo déjà résolu (évalué par l'appelant sur le sous-total COMBINÉ).
  *
  * Ordre des règles (fixe, identique aux appelants avant extraction, complété
- * 2026-08-20) :
+ * 2026-08-20, puis 2026-09-09 pour le numérique) :
  *  1. `freeShippingCoupon`/`discountCents` COMBINÉ dérivés du verdict promo.
- *  2. Port calculé UNE fois par `computeShipping` sur le total combiné (le
- *     coupon `free_shipping` y prime toujours sur la règle « manifeste »).
- *  3. `shipments` = nombre de parties non vides (0, 1 ou 2) ; `split` = les
- *     deux à la fois.
+ *  2. Port calculé UNE fois par `computeShipping` sur le sous-total PHYSIQUE
+ *     combiné (`input.physicalSubtotalCents`, jamais `normalSubtotalCents +
+ *     preorderSubtotalCents` qui inclurait le numérique) — le coupon
+ *     `free_shipping` y prime toujours sur la règle « manifeste », l'absence
+ *     de tout article physique prime sur tout le reste (`shipping-core.ts`).
+ *  3. `shipments` = nombre de parties qui ont au moins une ligne PHYSIQUE (0,
+ *     1 ou 2) — DISTINCT de `split` (scission commande/précommande, qui reste
+ *     `hasNormalLines && hasPreorderLines` : une partie 100 % numérique EST
+ *     quand même une commande, juste sans envoi).
  *  4. Remise combinée allouée par partie au prorata du sous-total (troncature
  *     sur `normal`, reliquat sur `preorder` — cf. docstring du module).
- *  5. Chaque partie assemblée par `computeCartTotals`, avec pour port SOIT le
- *     tarif d'un envoi (partie non vide) SOIT 0 (partie vide) SOIT `null` (port
- *     refusé pour le panier entier).
+ *  5. Chaque partie assemblée par `computeCartTotals`, avec pour port : `0`
+ *     si la partie est vide OU n'a aucune ligne physique (aucun envoi, même
+ *     si `shipping.ok === false` — le refus ne concerne que le sous-total
+ *     physique, une partie sans rien à expédier n'y est jamais exposée) ;
+ *     sinon le tarif d'un envoi (`shipping.ok`) ou `null` (port refusé).
  *  6. Totaux combinés = somme exacte des deux parties (`shippingCents`
  *     combiné = tarif × `shipments`, jamais recalculé autrement).
- *  7. `shippingMethod` dérivé EN DERNIER du coût réellement obtenu (même
- *     précédence qu'avant l'extraction, appliquée au coût, pas à la seule
- *     validité du coupon) : coupon `free_shipping` valide ET port
+ *  7. Étiquettes dérivées EN DERNIER du coût réellement obtenu (même
+ *     précédence qu'avant l'extraction) : PAS de ligne physique dans la
+ *     partie → `"aucun"` ; sinon coupon `free_shipping` valide ET port
  *     effectivement à 0 → « offert » ; sinon panier « manifeste » →
- *     « réduit » ; sinon → « standard ». Étiquette PARTAGÉE par les deux
- *     commandes en cas de scission (même barème, même envoi unitaire).
+ *     « réduit » ; sinon → « standard ». `shippingMethod` (combiné) applique
+ *     la même formule au panier entier ; `normalShippingMethod`/
+ *     `preorderShippingMethod` l'appliquent à CHAQUE partie — les trois
+ *     peuvent diverger sur un panier mixte physique + numérique.
  */
 export function computeCartQuote(input: CartQuoteInput): CartQuote {
   const freeShippingCoupon = input.promoEval?.ok === true && input.promoEval.type === "free_shipping";
@@ -125,15 +167,17 @@ export function computeCartQuote(input: CartQuoteInput): CartQuote {
       : 0;
 
   const combinedSubtotalCents = input.normalSubtotalCents + input.preorderSubtotalCents;
+  const hasPhysicalItems = input.hasNormalPhysicalLines || input.hasPreorderPhysicalLines;
 
   const shipping = computeShipping({
-    cartTotalCents: combinedSubtotalCents,
+    cartTotalCents: input.physicalSubtotalCents,
     zone: input.zone,
     manifestOnly: input.manifestOnly,
     freeShippingCoupon,
+    hasPhysicalItems,
   });
 
-  const shipments = (input.hasNormalLines ? 1 : 0) + (input.hasPreorderLines ? 1 : 0);
+  const shipments = (input.hasNormalPhysicalLines ? 1 : 0) + (input.hasPreorderPhysicalLines ? 1 : 0);
   const split = input.hasNormalLines && input.hasPreorderLines;
 
   // Plafonnée au sous-total combiné (même garde que `computeCartTotals`),
@@ -146,11 +190,29 @@ export function computeCartQuote(input: CartQuoteInput): CartQuote {
       : Math.floor((safeDiscountCents * input.normalSubtotalCents) / combinedSubtotalCents);
   const preorderDiscountCents = safeDiscountCents - normalDiscountCents;
 
-  function buildPart(subtotalCents: number, hasLines: boolean, discountCents: number): CartQuotePart {
+  function labelFor(partHasPhysicalLines: boolean): ShippingMethodLabel {
+    if (!partHasPhysicalLines) return "aucun";
+    return freeShippingCoupon && shipping.ok && shipping.costCents === 0
+      ? "offert"
+      : input.manifestOnly
+        ? "reduit"
+        : "standard";
+  }
+
+  function buildPart(
+    subtotalCents: number,
+    hasLines: boolean,
+    hasPhysicalLines: boolean,
+    discountCents: number,
+  ): CartQuotePart {
     if (!hasLines) {
       return { subtotalCents: 0, discountCents: 0, subtotalAfterDiscountCents: 0, shippingCents: 0, totalCents: 0 };
     }
-    const partShippingCents = shipping.ok ? shipping.costCents : null;
+    // Aucune ligne physique dans CETTE partie → aucun envoi, port 0 —
+    // INDÉPENDANT de `shipping.ok` (un refus de zone/grille ne concerne que
+    // le sous-total physique, auquel une partie 100 % numérique n'est
+    // jamais exposée).
+    const partShippingCents = !hasPhysicalLines ? 0 : shipping.ok ? shipping.costCents : null;
     const totals = computeCartTotals(subtotalCents, discountCents, partShippingCents);
     return {
       subtotalCents: totals.subtotalCents,
@@ -161,18 +223,36 @@ export function computeCartQuote(input: CartQuoteInput): CartQuote {
     };
   }
 
-  const normal = buildPart(input.normalSubtotalCents, input.hasNormalLines, normalDiscountCents);
-  const preorder = buildPart(input.preorderSubtotalCents, input.hasPreorderLines, preorderDiscountCents);
+  const normal = buildPart(
+    input.normalSubtotalCents,
+    input.hasNormalLines,
+    input.hasNormalPhysicalLines,
+    normalDiscountCents,
+  );
+  const preorder = buildPart(
+    input.preorderSubtotalCents,
+    input.hasPreorderLines,
+    input.hasPreorderPhysicalLines,
+    preorderDiscountCents,
+  );
 
   const combinedShippingCents = shipping.ok ? shipping.costCents * shipments : null;
   const totals = computeCartTotals(combinedSubtotalCents, safeDiscountCents, combinedShippingCents);
 
-  const shippingMethod: ShippingMethodLabel =
-    freeShippingCoupon && shipping.ok && shipping.costCents === 0
-      ? "offert"
-      : input.manifestOnly
-        ? "reduit"
-        : "standard";
+  const shippingMethod = labelFor(hasPhysicalItems);
+  const normalShippingMethod = labelFor(input.hasNormalPhysicalLines);
+  const preorderShippingMethod = labelFor(input.hasPreorderPhysicalLines);
 
-  return { freeShippingCoupon, shipping, shippingMethod, split, shipments, normal, preorder, totals };
+  return {
+    freeShippingCoupon,
+    shipping,
+    shippingMethod,
+    split,
+    shipments,
+    normal,
+    preorder,
+    totals,
+    normalShippingMethod,
+    preorderShippingMethod,
+  };
 }

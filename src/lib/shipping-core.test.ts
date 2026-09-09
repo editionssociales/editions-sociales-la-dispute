@@ -8,13 +8,14 @@ import {
   type ShippingRequest,
 } from "./shipping-core";
 
-/** Requête minimale valide, à surcharger champ par champ dans chaque test. */
+/** Requête minimale valide, à surcharger champ par champ dans chaque test — `hasPhysicalItems: true` par défaut (panier physique, comportement historique). */
 function request(overrides: Partial<ShippingRequest> = {}): ShippingRequest {
   return {
     cartTotalCents: 0,
     zone: "FR",
     manifestOnly: false,
     freeShippingCoupon: false,
+    hasPhysicalItems: true,
     ...overrides,
   };
 }
@@ -226,6 +227,36 @@ describe("computeShipping — zones (FR/BE/CH seules vendues)", () => {
         request({ cartTotalCents: 6000, zone: "US", freeShippingCoupon: true, manifestOnly: true }),
       ),
     ).toMatchObject({ ok: false, reason: "zone" });
+  });
+});
+
+describe("computeShipping — aucun article physique (client 2026-09-09, titre numérique seul)", () => {
+  it("panier entièrement numérique → 0, SANS même valider la zone", () => {
+    expect(
+      computeShipping(request({ hasPhysicalItems: false, cartTotalCents: 0, zone: "DE" })),
+    ).toEqual({ ok: true, costCents: 0 });
+  });
+
+  it("court-circuite AVANT le coupon/la règle manifeste — aucune interaction possible", () => {
+    expect(
+      computeShipping(
+        request({
+          hasPhysicalItems: false,
+          cartTotalCents: 0,
+          manifestOnly: true,
+          freeShippingCoupon: false,
+        }),
+      ),
+    ).toEqual({ ok: true, costCents: 0 });
+  });
+
+  it("cartTotalCents à 0 dans ce cas (sous-total physique, composé par l'appelant) — jamais un montant du panier numérique", () => {
+    // `cart-quote.ts` ne passe QUE le sous-total physique ici ; un panier
+    // entièrement numérique a par construction un sous-total physique de 0.
+    expect(computeShipping(request({ hasPhysicalItems: false, cartTotalCents: 0 }))).toEqual({
+      ok: true,
+      costCents: 0,
+    });
   });
 });
 

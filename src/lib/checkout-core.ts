@@ -107,6 +107,13 @@ export interface CheckoutBookLookup {
   reducedShippingFlag: boolean;
   /** « Ouvert à la précommande » (`Books.ts:commerce.preorder`) — lève le refus `upcoming` pour cette ligne, cf. `sellability.ts`. */
   preorderEnabled: boolean;
+  /**
+   * Titre vendu uniquement en numérique (`CommerceInfo.digital`, client
+   * 2026-09-09) — lève l'exigence de stock d'`assessSellability` ET pilote,
+   * en aval, l'absence d'envoi de la ligne validée (`ValidatedCheckoutLine.digital`,
+   * `shipping-core.ts`/`cart-quote.ts`).
+   */
+  digital: boolean;
 }
 
 export type LineRefusalReason = "not-found" | "not-sellable" | "insufficient-stock" | "no-price";
@@ -135,6 +142,13 @@ export interface ValidatedCheckoutLine {
    * commande à l'encaissement (`cart-quote.ts`, `/api/checkout`, webhook).
    */
   isPreorder: boolean;
+  /**
+   * Reflet direct de `CheckoutBookLookup.digital` (client 2026-09-09) —
+   * cette ligne n'est jamais expédiée : ignorée par le sous-total physique du
+   * barème de port (`shipping-core.ts`) et par la règle « manifeste »
+   * (`isManifestOnly`), toutes deux réservées aux lignes physiques.
+   */
+  digital: boolean;
 }
 
 /**
@@ -163,6 +177,7 @@ export function validateCheckoutLine(
       stock: book.stock,
       publishedAt: book.publishedAt,
       preorderEnabled: book.preorderEnabled,
+      digital: book.digital,
     },
     input.qty,
     now,
@@ -238,6 +253,7 @@ export function validateCheckoutLine(
       lineTotalCents: unitPriceCents * input.qty,
       reducedShippingFlag: book.reducedShippingFlag,
       isPreorder: isUpcoming(book.publishedAt, now),
+      digital: book.digital,
     },
   };
 }
@@ -252,6 +268,11 @@ export type CheckoutLinesResult =
  * différent de celui affiché au client : il revient sur `/panier`, dont
  * l'auto-guérison existante — cf. `cart-view.tsx` — traite déjà les lignes
  * devenues indisponibles).
+ *
+ * `manifestOnly` (client 2026-09-09) se calcule sur les SEULES lignes
+ * physiques (`!digital`) — une ligne numérique seule ne s'expédie jamais,
+ * elle ne doit ni casser ni fabriquer artificiellement le panier « manifeste »
+ * (même règle que le barème de port, `shipping-core.ts`).
  */
 export function validateCheckoutLines(
   inputs: CheckoutRequestLine[],
@@ -268,7 +289,7 @@ export function validateCheckoutLines(
   if (refusals.length > 0) return { ok: false, refusals };
 
   const subtotalCents = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
-  const manifestOnly = isManifestOnly(lines);
+  const manifestOnly = isManifestOnly(lines.filter((l) => !l.digital));
   return { ok: true, lines, subtotalCents, manifestOnly };
 }
 
@@ -277,6 +298,10 @@ export function validateCheckoutLines(
 export interface CheckoutLinesPart {
   lines: ValidatedCheckoutLine[];
   subtotalCents: number;
+  /** Sous-total des SEULES lignes physiques de cette partie (client 2026-09-09) — ce que `cart-quote.ts` combine pour le barème de port, jamais `subtotalCents` (qui inclut le numérique). */
+  physicalSubtotalCents: number;
+  /** `true` ssi cette partie a au moins une ligne physique — sinon aucun envoi, port 0, quel que soit `subtotalCents` (`cart-quote.ts`). */
+  hasPhysicalLines: boolean;
 }
 
 export interface SplitCheckoutLines {
@@ -300,10 +325,16 @@ export function splitValidatedLines(lines: ValidatedCheckoutLine[]): SplitChecko
   const normalLines = lines.filter((l) => !l.isPreorder);
   const preorderLines = lines.filter((l) => l.isPreorder);
   const sum = (ls: ValidatedCheckoutLine[]) => ls.reduce((s, l) => s + l.lineTotalCents, 0);
-  return {
-    normal: { lines: normalLines, subtotalCents: sum(normalLines) },
-    preorder: { lines: preorderLines, subtotalCents: sum(preorderLines) },
-  };
+  const physicalOf = (ls: ValidatedCheckoutLine[]) => ls.filter((l) => !l.digital);
+  function part(ls: ValidatedCheckoutLine[]): CheckoutLinesPart {
+    return {
+      lines: ls,
+      subtotalCents: sum(ls),
+      physicalSubtotalCents: sum(physicalOf(ls)),
+      hasPhysicalLines: physicalOf(ls).length > 0,
+    };
+  }
+  return { normal: part(normalLines), preorder: part(preorderLines) };
 }
 
 /* ------------------------------ encodage compact des lignes (metadata Stripe) ------------------------------ */

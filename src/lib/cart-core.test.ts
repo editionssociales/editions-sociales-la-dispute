@@ -320,6 +320,39 @@ describe("resolveCartSummary", () => {
     const state: CartState = { version: CART_VERSION, lines: [{ id: 1, qty: 1 }] };
     expect(resolveCartSummary(state, [capital], new Map()).lines[0].reducedShippingFlag).toBe(false);
   });
+
+  describe("digital (client 2026-09-09, titre numérique seul)", () => {
+    const numerique = book({
+      id: 7,
+      slug: "notes-sur-mill",
+      title: "Notes sur James Mill",
+      price: 9.99,
+      format: "numerique",
+    });
+
+    it("reflète `book.format === \"numerique\"` — false pour un livre papier", () => {
+      const state: CartState = { version: CART_VERSION, lines: [{ id: 1, qty: 1 }, { id: 7, qty: 1 }] };
+      const summary = resolveCartSummary(state, [capital, numerique], new Map());
+      expect(summary.lines.find((l) => l.id === 1)?.digital).toBe(false);
+      expect(summary.lines.find((l) => l.id === 7)?.digital).toBe(true);
+    });
+
+    it("manifestOnly ignore les lignes numériques : panier 100 % numérique → false (rien à livrer en port réduit)", () => {
+      const state: CartState = { version: CART_VERSION, lines: [{ id: 7, qty: 1 }] };
+      const summary = resolveCartSummary(state, [numerique], new Map([[7, true]]));
+      expect(summary.manifestOnly).toBe(false);
+    });
+
+    it("panier physique manifeste + article numérique en plus (sans reducedShippingFlag) → manifestOnly reste true", () => {
+      const state: CartState = {
+        version: CART_VERSION,
+        lines: [{ id: 1, qty: 1 }, { id: 7, qty: 1 }],
+      };
+      const flags = new Map([[1, true], [7, false]]);
+      const summary = resolveCartSummary(state, [capital, numerique], flags);
+      expect(summary.manifestOnly).toBe(true);
+    });
+  });
 });
 
 /* ---------------------------------- totaux ---------------------------------- */

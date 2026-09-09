@@ -22,6 +22,7 @@ function book(overrides: Partial<CheckoutBookLookup> = {}): CheckoutBookLookup {
     stock: 10,
     reducedShippingFlag: false,
     preorderEnabled: false,
+    digital: false,
     ...overrides,
   };
 }
@@ -95,6 +96,7 @@ describe("validateCheckoutLine", () => {
         lineTotalCents: 3000,
         reducedShippingFlag: false,
         isPreorder: false,
+        digital: false,
       },
     });
   });
@@ -198,6 +200,7 @@ describe("validateCheckoutLines", () => {
           lineTotalCents: 2000,
           reducedShippingFlag: true,
           isPreorder: false,
+          digital: false,
         },
         {
           id: 2,
@@ -208,11 +211,28 @@ describe("validateCheckoutLines", () => {
           lineTotalCents: 2000,
           reducedShippingFlag: true,
           isPreorder: false,
+          digital: false,
         },
       ],
       subtotalCents: 4000,
       manifestOnly: true,
     });
+  });
+
+  it("manifestOnly ignore les lignes numériques (client 2026-09-09) : panier physique manifeste + ligne numérique non reducedShippingFlag → toujours true", () => {
+    const books = new Map([
+      [1, book({ priceEuros: 10, reducedShippingFlag: true })],
+      [2, book({ priceEuros: 5, reducedShippingFlag: false, digital: true, stock: null })],
+    ]);
+    const result = validateCheckoutLines(
+      [
+        { id: 1, qty: 1 },
+        { id: 2, qty: 1 },
+      ],
+      books,
+      NOW,
+    );
+    expect(result.ok && result.manifestOnly).toBe(true);
   });
 
   it("manifestOnly faux dès qu'UNE ligne n'a pas le drapeau", () => {
@@ -276,6 +296,7 @@ describe("validateCheckoutLine — précommande (client 2026-08-20)", () => {
         lineTotalCents: 3600,
         reducedShippingFlag: false,
         isPreorder: true,
+        digital: false,
       },
     });
   });
@@ -329,6 +350,33 @@ describe("validateCheckoutLine — précommande (client 2026-08-20)", () => {
   });
 });
 
+describe("validateCheckoutLine — titre numérique seul (client 2026-09-09, « Notes sur Mill »)", () => {
+  it("stock non renseigné (null) → accepté quand même, digital:true reporté sur la ligne", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 3 },
+      book({ digital: true, stock: null, priceEuros: 9.99 }),
+      NOW,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.line.digital).toBe(true);
+  });
+
+  it("non vendable (décoché) → refusé comme n'importe quelle ligne, `digital` ne contourne QUE le stock", () => {
+    const result = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ digital: true, sellable: false, stock: null }),
+      NOW,
+    );
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.refusal.reason).toBe("not-sellable");
+  });
+
+  it("livre papier ordinaire → digital:false reporté sur la ligne", () => {
+    const result = validateCheckoutLine({ id: 1, qty: 1 }, book(), NOW);
+    expect(result.ok && result.line.digital).toBe(false);
+  });
+});
+
 describe("splitValidatedLines — scission commande / précommande", () => {
   it("panier homogène « paru » → tout dans `normal`, `preorder` vide", () => {
     const parue = validateCheckoutLine({ id: 1, qty: 1 }, book({ priceEuros: 10 }), NOW);
@@ -367,6 +415,43 @@ describe("splitValidatedLines — scission commande / précommande", () => {
     expect(split.normal.subtotalCents).toBe(1000);
     expect(split.preorder.lines.map((l) => l.id)).toEqual([2]);
     expect(split.preorder.subtotalCents).toBe(2400);
+  });
+
+  it("panier physique ordinaire → physicalSubtotalCents = subtotalCents, hasPhysicalLines:true (client 2026-09-09, comportement historique)", () => {
+    const parue = validateCheckoutLine({ id: 1, qty: 1 }, book({ priceEuros: 10 }), NOW);
+    if (!parue.ok) throw new Error("fixture invalide");
+    const split = splitValidatedLines([parue.line]);
+    expect(split.normal.physicalSubtotalCents).toBe(split.normal.subtotalCents);
+    expect(split.normal.hasPhysicalLines).toBe(true);
+    expect(split.preorder.physicalSubtotalCents).toBe(0);
+    expect(split.preorder.hasPhysicalLines).toBe(false);
+  });
+
+  it("partie entièrement numérique → physicalSubtotalCents:0, hasPhysicalLines:false (aucun envoi)", () => {
+    const numerique = validateCheckoutLine(
+      { id: 1, qty: 1 },
+      book({ digital: true, stock: null, priceEuros: 9.99 }),
+      NOW,
+    );
+    if (!numerique.ok) throw new Error("fixture invalide");
+    const split = splitValidatedLines([numerique.line]);
+    expect(split.normal.subtotalCents).toBe(999);
+    expect(split.normal.physicalSubtotalCents).toBe(0);
+    expect(split.normal.hasPhysicalLines).toBe(false);
+  });
+
+  it("partie mixte (une ligne physique + une ligne numérique) → physicalSubtotalCents ne compte QUE la ligne physique", () => {
+    const physique = validateCheckoutLine({ id: 1, qty: 1 }, book({ priceEuros: 15 }), NOW);
+    const numerique = validateCheckoutLine(
+      { id: 2, qty: 1 },
+      book({ digital: true, stock: null, priceEuros: 9.99 }),
+      NOW,
+    );
+    if (!physique.ok || !numerique.ok) throw new Error("fixture invalide");
+    const split = splitValidatedLines([physique.line, numerique.line]);
+    expect(split.normal.subtotalCents).toBe(2499);
+    expect(split.normal.physicalSubtotalCents).toBe(1500);
+    expect(split.normal.hasPhysicalLines).toBe(true);
   });
 });
 

@@ -173,6 +173,13 @@ export interface CartLineView {
    * la commande « précommande » à l'encaissement (scission `cart-quote.ts`).
    */
   isPreorder: boolean;
+  /**
+   * `true` ssi `book.format === "numerique"` (client 2026-09-09) — reflet
+   * direct du fait catalogue, jamais une seconde règle : cette ligne n'entre
+   * ni dans `manifestOnly` (règle réservée au physique) ni dans le sous-total
+   * physique du devis (`cart-view.tsx`, `cart-quote.ts`).
+   */
+  digital: boolean;
 }
 
 export interface CartSummary {
@@ -181,7 +188,7 @@ export interface CartSummary {
   missingIds: number[];
   /** Somme des lignes `purchasable` uniquement, en centimes. */
   subtotalCents: number;
-  /** Vrai ssi au moins une ligne `purchasable` ET toutes le sont avec `reducedShippingFlag`. */
+  /** Vrai ssi au moins une ligne `purchasable` PHYSIQUE ET toutes le sont avec `reducedShippingFlag` — une ligne numérique (client 2026-09-09) n'entre ni dans le compte ni dans la règle, elle ne s'expédie jamais. */
   manifestOnly: boolean;
 }
 
@@ -231,12 +238,13 @@ export function resolveCartSummary(
       purchasable,
       reducedShippingFlag: reducedShippingFlags.get(line.id) ?? false,
       isPreorder: book.status === "preorder",
+      digital: book.format === "numerique",
     });
   }
 
   const purchasableLines = lines.filter((l) => l.purchasable);
   const subtotalCents = purchasableLines.reduce((sum, l) => sum + l.lineTotalCents, 0);
-  const manifestOnly = isManifestOnly(purchasableLines);
+  const manifestOnly = isManifestOnly(purchasableLines.filter((l) => !l.digital));
 
   return { lines, missingIds, subtotalCents, manifestOnly };
 }

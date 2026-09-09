@@ -6,10 +6,14 @@ import type { PromoEvalResult } from "./promo-core";
 /**
  * Requête minimale valide, à surcharger champ par champ dans chaque test —
  * par défaut un panier homogène « normal » (pas de précommande), même
- * scénario que l'ancienne suite avant la scission 2026-08-20.
+ * scénario que l'ancienne suite avant la scission 2026-08-20. Panier
+ * entièrement PHYSIQUE par défaut (client 2026-09-09) :
+ * `physicalSubtotalCents`/`hasXPhysicalLines` sont dérivés des champs de
+ * base APRÈS fusion des surcharges — un test numérique surcharge ces trois
+ * champs explicitement (jamais besoin de répéter les champs de base).
  */
 function input(overrides: Partial<CartQuoteInput> = {}): CartQuoteInput {
-  return {
+  const base = {
     normalSubtotalCents: 2000,
     preorderSubtotalCents: 0,
     hasNormalLines: true,
@@ -17,6 +21,13 @@ function input(overrides: Partial<CartQuoteInput> = {}): CartQuoteInput {
     zone: "FR",
     manifestOnly: false,
     promoEval: null,
+    ...overrides,
+  };
+  return {
+    physicalSubtotalCents: base.normalSubtotalCents + base.preorderSubtotalCents,
+    hasNormalPhysicalLines: base.hasNormalLines,
+    hasPreorderPhysicalLines: base.hasPreorderLines,
+    ...base,
     ...overrides,
   };
 }
@@ -287,5 +298,105 @@ describe("computeCartQuote — port refusé (panier homogène)", () => {
     expect(quote.totals.totalCents).toBeNull();
     // Le sous-total et la remise restent renseignés même si le port est refusé.
     expect(quote.totals.subtotalCents).toBe(2000);
+  });
+});
+
+/**
+ * Titre numérique seul (client 2026-09-09, « Notes sur Mill ») : le barème
+ * lit le sous-total PHYSIQUE, pas le combiné — panier entièrement numérique =
+ * port 0 sans même valider la zone ; panier mixte = barème sur le physique
+ * seul ; une partie de la scission commande/précommande sans aucune ligne
+ * physique n'a aucun envoi, même si l'autre partie en a un.
+ */
+describe("computeCartQuote — titre numérique seul (client 2026-09-09)", () => {
+  it("panier ENTIÈREMENT numérique → port 0, aucune zone requise, méthode « aucun », aucun envoi", () => {
+    const quote = computeCartQuote(
+      input({
+        normalSubtotalCents: 999,
+        physicalSubtotalCents: 0,
+        hasNormalPhysicalLines: false,
+        zone: "DE", // zone invalide — ne doit même pas être regardée
+      }),
+    );
+    expect(quote.shipping).toEqual({ ok: true, costCents: 0 });
+    expect(quote.shipments).toBe(0);
+    expect(quote.shippingMethod).toBe("aucun");
+    expect(quote.normalShippingMethod).toBe("aucun");
+    expect(quote.normal.shippingCents).toBe(0);
+    expect(quote.normal.totalCents).toBe(999);
+    expect(quote.totals.shippingCents).toBe(0);
+  });
+
+  it("panier MIXTE (une ligne physique + une ligne numérique, même partie) → barème sur le sous-total PHYSIQUE seul", () => {
+    // 20 € physiques + 10 € numériques = 30 € combinés, mais le barème ne
+    // doit lire que les 20 € physiques → tranche 11-24 € (450 c), pas 25-49 € (550 c).
+    const quote = computeCartQuote(
+      input({
+        normalSubtotalCents: 3000,
+        physicalSubtotalCents: 2000,
+        hasNormalPhysicalLines: true,
+      }),
+    );
+    expect(quote.shipping).toEqual({ ok: true, costCents: 450 });
+    expect(quote.normal.shippingCents).toBe(450);
+    expect(quote.normalShippingMethod).toBe("standard");
+  });
+
+  it("scission précommande : partie normale ENTIÈREMENT numérique, précommande physique → « aucun » sur normal, tarif normal sur preorder", () => {
+    const quote = computeCartQuote(
+      input({
+        normalSubtotalCents: 999,
+        hasNormalLines: true,
+        physicalSubtotalCents: 2000, // seule la précommande contribue au physique
+        hasNormalPhysicalLines: false,
+        preorderSubtotalCents: 2000,
+        hasPreorderLines: true,
+        hasPreorderPhysicalLines: true,
+      }),
+    );
+    expect(quote.split).toBe(true); // scission commande/précommande : un fait DISTINCT de qui s'expédie
+    expect(quote.shipments).toBe(1); // un seul envoi PHYSIQUE (la précommande)
+    expect(quote.shipping).toEqual({ ok: true, costCents: 450 }); // barème sur 20€ physiques seuls
+    expect(quote.normal.shippingCents).toBe(0);
+    expect(quote.normal.totalCents).toBe(999);
+    expect(quote.normalShippingMethod).toBe("aucun");
+    expect(quote.preorder.shippingCents).toBe(450);
+    expect(quote.preorder.totalCents).toBe(2450);
+    expect(quote.preorderShippingMethod).toBe("standard");
+    // Total combiné = somme exacte des deux parties.
+    expect(quote.totals.totalCents).toBe(999 + 2450);
+  });
+
+  it("scission précommande : partie normale physique, précommande ENTIÈREMENT numérique → symétrique", () => {
+    const quote = computeCartQuote(
+      input({
+        normalSubtotalCents: 2000,
+        hasNormalLines: true,
+        physicalSubtotalCents: 2000,
+        hasNormalPhysicalLines: true,
+        preorderSubtotalCents: 999,
+        hasPreorderLines: true,
+        hasPreorderPhysicalLines: false,
+      }),
+    );
+    expect(quote.shipments).toBe(1);
+    expect(quote.normal.shippingCents).toBe(450);
+    expect(quote.normalShippingMethod).toBe("standard");
+    expect(quote.preorder.shippingCents).toBe(0);
+    expect(quote.preorder.totalCents).toBe(999);
+    expect(quote.preorderShippingMethod).toBe("aucun");
+  });
+
+  it("panier « manifeste » physique + article numérique en plus → le numérique ne casse pas la règle manifeste (barème physique seul)", () => {
+    const quote = computeCartQuote(
+      input({
+        normalSubtotalCents: 2999, // 20€ manifeste + ~10€ numérique
+        physicalSubtotalCents: 2000,
+        hasNormalPhysicalLines: true,
+        manifestOnly: true,
+      }),
+    );
+    expect(quote.shipping).toEqual({ ok: true, costCents: 250 }); // MANIFEST_SHIPPING_COST_CENTS
+    expect(quote.normalShippingMethod).toBe("reduit");
   });
 });

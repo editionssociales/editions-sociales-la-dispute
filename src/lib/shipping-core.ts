@@ -61,7 +61,12 @@ const CART_TOO_HIGH_MESSAGE =
 
 /** Ce que le module a besoin de savoir sur le panier pour calculer le port — rien de plus (pas les lignes, pas les prix). */
 export interface ShippingRequest {
-  /** Total TTC du panier, en CENTIMES entiers. */
+  /**
+   * Total TTC du panier, en CENTIMES entiers — depuis le client 2026-09-09,
+   * le sous-total des SEULES lignes PHYSIQUES (`!digital`) : un titre
+   * numérique seul ne s'expédie jamais, son prix n'entre donc pour rien dans
+   * le barème. L'appelant (`cart-quote.ts`) le compose déjà ainsi.
+   */
   cartTotalCents: number;
   /** Zone de livraison déclarée par le client (code pays). */
   zone: string;
@@ -77,6 +82,13 @@ export interface ShippingRequest {
    * (`promoCodes`), ce module ne voit que le fait « port gratuit demandé ».
    */
   freeShippingCoupon: boolean;
+  /**
+   * `true` ssi le panier contient au moins une ligne PHYSIQUE, n'importe où
+   * (client 2026-09-09) — `false` (panier entièrement numérique) COURT-CIRCUITE
+   * tout le reste : port à 0 SANS même valider la zone (rien à expédier, la
+   * zone de livraison n'a pas de sens pour un fichier numérique).
+   */
+  hasPhysicalItems: boolean;
 }
 
 export type ShippingRefusalReason = "zone" | "cart-too-high";
@@ -125,6 +137,8 @@ export function isManifestOnly(items: readonly { reducedShippingFlag: boolean }[
  * explicite (zone non vendue, panier au-delà de la grille).
  *
  * Ordre des règles (chacune peut court-circuiter la suivante) :
+ * 0. Aucun article physique (`hasPhysicalItems: false`, client 2026-09-09) →
+ *    0, SANS même valider la zone — rien à expédier.
  * 1. Zone non vendue (hors FR/BE/CH) → refus immédiat, avant tout calcul.
  * 2. Coupon `free_shipping` ET panier ≥ 50 € → 0 (gratuit).
  * 3. Panier « manifeste » (uniquement des articles à port réduit) → 2,50 €
@@ -137,6 +151,10 @@ export function computeShipping(request: ShippingRequest): ShippingResult {
     throw new TypeError(
       `computeShipping: cartTotalCents doit être un entier de centimes ≥ 0 (reçu ${request.cartTotalCents}) — jamais de flottant.`,
     );
+  }
+
+  if (!request.hasPhysicalItems) {
+    return { ok: true, costCents: 0 };
   }
 
   const zone = request.zone.trim().toUpperCase();
