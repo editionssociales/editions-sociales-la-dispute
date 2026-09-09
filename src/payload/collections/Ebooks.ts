@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url'
 import type { CollectionConfig } from 'payload'
 
 import { isAdmin, isAdminOrEditor } from '../access.ts'
+import { revalidateCatalogueAfterChange, revalidateCatalogueAfterDelete } from '../hooks/revalidate.ts'
+import {
+  revalidateCatalogueTagAfterChange,
+  revalidateCatalogueTagAfterDelete,
+} from '../hooks/revalidate-catalogue.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -34,6 +39,14 @@ const dirname = path.dirname(filename)
  * titre n'a pas besoin de savoir qu'un fichier existe.
  *
  * Jamais d'`imageSizes` ni de vignette : ce ne sont pas des images.
+ *
+ * `numeriqueSeul` (client 2026-09-09, « Notes sur James Mill » n'existe qu'en
+ * ePub) est un SECOND fait, indépendant du précédent : « a un fichier » (ce
+ * champ `livre`, toujours vrai ici) déclenche le lien de téléchargement après
+ * achat ; « vendu uniquement en numérique » (`numeriqueSeul`) déclenche en
+ * plus l'absence d'envoi — pas de port, pas d'adresse demandée au checkout,
+ * stock ignoré (`src/lib/sellability.ts`). Un livre papier accompagné d'un
+ * ePub a le premier fait sans le second (il reste expédié).
  */
 export const Ebooks: CollectionConfig = {
   slug: 'ebooks',
@@ -77,6 +90,18 @@ export const Ebooks: CollectionConfig = {
     update: isAdminOrEditor,
     delete: isAdmin,
   },
+  // Même paire que `books`/`authors`/`libelles`/`media` (revalidate.ts) —
+  // relation DIRECTE ici (`livre` pointe VERS un livre, cf. le `case 'ebooks'`
+  // dédié dans `revalidateCatalogueAfterChange`) : `numeriqueSeul` change le
+  // port/l'adresse demandés au panier/checkout et le fichier lui-même
+  // conditionne le bloc téléchargement de la fiche — toute écriture ici doit
+  // purger la fiche liée comme si elle avait été éditée directement. Tag
+  // d'abord (`revalidateCatalogueTagAfterChange`), toujours avant la purge
+  // ISR par chemin — même ordre que les autres collections catalogue.
+  hooks: {
+    afterChange: [revalidateCatalogueTagAfterChange, revalidateCatalogueAfterChange],
+    afterDelete: [revalidateCatalogueTagAfterDelete, revalidateCatalogueAfterDelete],
+  },
   fields: [
     {
       name: 'livre',
@@ -92,6 +117,25 @@ export const Ebooks: CollectionConfig = {
       admin: {
         description:
           'Un seul fichier par titre — pour le remplacer, téléversez le nouveau ici plutôt que de créer une seconde fiche.',
+      },
+    },
+    {
+      // Drapeau du commerce natif (client 2026-09-09, cf. CLAUDE.md racine
+      // § « Livre numérique après achat ») — vit ICI et jamais sur `books`,
+      // même raison que `livre` ci-dessus (rejeu de
+      // `20260821_160000_produits_contreparties` sur base neuve). Lu par
+      // `catalogue-pg.ts`/`commerce-source.ts` (`CommerceInfo.digital`,
+      // `CheckoutBookLookup.digital`) via une requête `ebooks` dédiée
+      // (`ebooks-source.ts`) — jamais un champ de plus sur `Books.ts`.
+      name: 'numeriqueSeul',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Titre vendu uniquement en numérique',
+      admin: {
+        description:
+          'Coché : ce fichier EST le produit — rien à expédier, pas de port, pas d’adresse ' +
+          'demandée au paiement, le stock du livre est ignoré. Décoché (défaut) : ce fichier ' +
+          'accompagne le livre papier, qui reste expédié normalement.',
       },
     },
   ],

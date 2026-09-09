@@ -146,6 +146,61 @@ describe('Orders.fields — `orderType` (scission commande/précommande, client 
   })
 })
 
+describe('Orders.fields — `shippingMethod` « aucun » (titre numérique seul, client 2026-09-09)', () => {
+  it('« aucun » figure parmi les options, verrouillé après création comme les autres', () => {
+    const field = topLevelFields().find((f) => f.name === 'shippingMethod') as
+      | { options?: { value: string }[]; access?: { update?: Access } }
+      | undefined
+    expect(field?.options?.map((o) => o.value)).toEqual(['standard', 'reduit', 'offert', 'aucun'])
+    expect(field?.access?.update).toBeTypeOf('function')
+    expect(field?.access?.update?.(adminUser)).toBe(false)
+  })
+})
+
+describe('Orders.fields — adresse facultative pour une commande sans envoi (client 2026-09-09)', () => {
+  // `fullName` reste `required` inconditionnellement — seuls les trois autres
+  // champs deviennent optionnels via `validate` (cf. `requiredUnlessNoShipment`).
+  function addressValidate(groupName: 'shippingAddress' | 'billingAddress', fieldName: string) {
+    const group = topLevelFields().find((f) => f.name === groupName) as
+      | { fields?: (Field & { name?: string })[] }
+      | undefined
+    const field = group?.fields?.find((f) => f.name === fieldName) as
+      | { required?: boolean; validate?: (value: unknown, ctx: { data?: Record<string, unknown> }) => unknown }
+      | undefined
+    return field
+  }
+
+  it('`fullName` reste `required: true`, jamais de `validate` conditionnelle', () => {
+    const shippingFullName = topLevelFields()
+      .find((f) => f.name === 'shippingAddress') as { fields?: (Field & { name?: string })[] } | undefined
+    const fullName = shippingFullName?.fields?.find((f) => f.name === 'fullName') as
+      | { required?: boolean }
+      | undefined
+    expect(fullName?.required).toBe(true)
+  })
+
+  for (const [groupName, fieldName, label] of [
+    ['shippingAddress', 'addressLine1', 'L’adresse'],
+    ['shippingAddress', 'postalCode', 'Le code postal'],
+    ['shippingAddress', 'city', 'La ville'],
+    ['billingAddress', 'addressLine1', 'L’adresse'],
+    ['billingAddress', 'postalCode', 'Le code postal'],
+    ['billingAddress', 'city', 'La ville'],
+  ] as const) {
+    it(`${groupName}.${fieldName} : requis SAUF shippingMethod === "aucun"`, () => {
+      const field = addressValidate(groupName, fieldName)
+      expect(field?.required).toBeUndefined()
+      expect(field?.validate).toBeTypeOf('function')
+      const validate = field!.validate!
+      expect(validate('', { data: { shippingMethod: 'standard' } })).toBe(
+        `${label} est requis(e) pour une commande expédiée.`,
+      )
+      expect(validate('', { data: { shippingMethod: 'aucun' } })).toBe(true)
+      expect(validate('12 rue X', { data: { shippingMethod: 'standard' } })).toBe(true)
+    })
+  }
+})
+
 describe('Orders.indexes — idempotence webhook sur `(stripeSessionId, orderType)`', () => {
   it('index composite unique déclaré — une session peut porter DEUX commandes (une par type), jamais deux du même type', () => {
     expect(Orders.indexes).toEqual([{ fields: ['stripeSessionId', 'orderType'], unique: true }])

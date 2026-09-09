@@ -1,4 +1,9 @@
-import type { CollectionAfterChangeHook, CollectionConfig, Field } from 'payload'
+import type {
+  CollectionAfterChangeHook,
+  CollectionConfig,
+  Field,
+  TextFieldValidation,
+} from 'payload'
 
 import type { ShippingMethodLabel } from '../../lib/cart-quote.ts'
 import { isAdmin, isAdminOrEditor } from '../access.ts'
@@ -7,6 +12,31 @@ import {
   exportPreparationHandler,
 } from '../lib/order-export-handler.ts'
 import { formatOrderNumber } from '../lib/order-number.ts'
+
+/**
+ * Requis SAUF pour une commande sans envoi (`shippingMethod === "aucun"`,
+ * client 2026-09-09 — titre numérique seul, `Orders.ts` § CLAUDE.md « Livre
+ * numérique après achat ») : Stripe ne collecte alors aucune adresse
+ * (`/api/checkout` n'active pas `shipping_address_collection`), ces trois
+ * champs restent donc légitimement vides. `data` porte le document ENTIER en
+ * cours d'écriture (pas `siblingData`, borné au groupe `shippingAddress`/
+ * `billingAddress`) : `shippingMethod` est un champ de premier niveau, lu ici
+ * pour les deux groupes qui partagent cette factory. `fullName` n'utilise PAS
+ * cette fonction — il reste `required` inconditionnellement (repli sur le nom
+ * Stripe puis l'e-mail, jamais vide, cf. `order-webhook-core.ts`).
+ */
+function requiredUnlessNoShipment(label: string): TextFieldValidation {
+  return (value, { data }) => {
+    if (typeof value === 'string' && value.trim() !== '') return true
+    // `TextFieldValidation` fixe `TData` à `unknown` (`Partial<unknown>` ne
+    // porte aucune clé connue de TypeScript) : le champ `shippingMethod` est
+    // un fait de schéma garanti par `Orders.ts` lui-même, pas par ce type
+    // générique — cast local plutôt qu'un `Validate<…>` réénoncé ici.
+    const shippingMethod = (data as { shippingMethod?: string } | undefined)?.shippingMethod
+    if (shippingMethod === 'aucun') return true
+    return `${label} est requis(e) pour une commande expédiée.`
+  }
+}
 
 /**
  * Adresse de livraison/facturation — factory pour ne pas partager une même
@@ -25,8 +55,8 @@ function addressFields(): Field[] {
     {
       name: 'addressLine1',
       type: 'text',
-      required: true,
       label: 'Adresse',
+      validate: requiredUnlessNoShipment('L’adresse'),
     },
     {
       name: 'addressLine2',
@@ -36,14 +66,14 @@ function addressFields(): Field[] {
     {
       name: 'postalCode',
       type: 'text',
-      required: true,
       label: 'Code postal',
+      validate: requiredUnlessNoShipment('Le code postal'),
     },
     {
       name: 'city',
       type: 'text',
-      required: true,
       label: 'Ville',
+      validate: requiredUnlessNoShipment('La ville'),
     },
     {
       name: 'country',
@@ -334,6 +364,19 @@ export const Orders: CollectionConfig = {
           min: 0,
           label: 'Prix unitaire TTC (€)',
         },
+        {
+          // Snapshot (client 2026-09-09), même esprit que `titleSnapshot`/
+          // `isbnSnapshot` ci-dessus : relu fraîchement au webhook
+          // (`commerce-source.ts`), jamais reporté ni recalculé depuis. Sert
+          // la colonne « Numérique » de l'export préparation
+          // (`order-export.ts`) — sans effet sur le port, déjà décidé par
+          // `shippingMethod` au niveau de la commande.
+          name: 'digital',
+          type: 'checkbox',
+          required: true,
+          defaultValue: false,
+          label: 'Titre numérique seul (au moment de la vente)',
+        },
       ],
     },
     {
@@ -377,6 +420,10 @@ export const Orders: CollectionConfig = {
         { value: 'standard', label: 'Standard (grille par valeur)' },
         { value: 'reduit', label: 'Réduit (« manifeste »)' },
         { value: 'offert', label: 'Offert (code promo)' },
+        // Titre(s) numérique(s) seul(s) (client 2026-09-09) : toutes les
+        // lignes de CETTE commande sont vendues uniquement en numérique —
+        // rien à expédier, port TTC à 0, adresse non collectée au checkout.
+        { value: 'aucun', label: 'Aucun envoi (numérique)' },
       ] satisfies { value: ShippingMethodLabel; label: string }[],
     },
     {

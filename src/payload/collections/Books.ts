@@ -577,7 +577,9 @@ export const Books: CollectionConfig = {
                       admin: {
                         width: '20%',
                         description:
-                          'Vide = indisponible à la commande ; 0 = épuisé, retiré de la vente sans quitter le catalogue ; > 0 = commandable.',
+                          'Vide = indisponible à la commande ; 0 = épuisé, retiré de la vente sans quitter le catalogue ; ' +
+                          '> 0 = commandable. Sans effet pour un titre numérique seul (fiche « Fichiers numériques », case ' +
+                          '« Titre vendu uniquement en numérique ») — rien à expédier, le stock y est ignoré.',
                       },
                     },
                     {

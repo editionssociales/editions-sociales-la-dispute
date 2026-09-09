@@ -276,7 +276,7 @@ export interface Book {
   origin: 'catalogue' | 'boutique';
   commerce?: {
     /**
-     * Vide = indisponible à la commande ; 0 = épuisé, retiré de la vente sans quitter le catalogue ; > 0 = commandable.
+     * Vide = indisponible à la commande ; 0 = épuisé, retiré de la vente sans quitter le catalogue ; > 0 = commandable. Sans effet pour un titre numérique seul (fiche « Fichiers numériques », case « Titre vendu uniquement en numérique ») — rien à expédier, le stock y est ignoré.
      */
     stock?: number | null;
     /**
@@ -425,10 +425,10 @@ export interface Order {
   phone?: string | null;
   shippingAddress: {
     fullName: string;
-    addressLine1: string;
+    addressLine1?: string | null;
     addressLine2?: string | null;
-    postalCode: string;
-    city: string;
+    postalCode?: string | null;
+    city?: string | null;
     country: 'FR' | 'BE' | 'CH';
   };
   /**
@@ -441,10 +441,11 @@ export interface Order {
         isbnSnapshot?: string | null;
         quantity: number;
         unitPriceTTC: number;
+        digital: boolean;
         id?: string | null;
       }[]
     | null;
-  shippingMethod: 'standard' | 'reduit' | 'offert';
+  shippingMethod: 'standard' | 'reduit' | 'offert' | 'aucun';
   shippingCostTTC: number;
   promoCode?: (number | null) | PromoCode;
   discountTTC?: number | null;
@@ -454,10 +455,10 @@ export interface Order {
    */
   billingAddress: {
     fullName: string;
-    addressLine1: string;
+    addressLine1?: string | null;
     addressLine2?: string | null;
-    postalCode: string;
-    city: string;
+    postalCode?: string | null;
+    city?: string | null;
     country: 'FR' | 'BE' | 'CH';
   };
   /**
@@ -562,6 +563,10 @@ export interface Ebook {
    * Un seul fichier par titre — pour le remplacer, téléversez le nouveau ici plutôt que de créer une seconde fiche.
    */
   livre: number | Book;
+  /**
+   * Coché : ce fichier EST le produit — rien à expédier, pas de port, pas d’adresse demandée au paiement, le stock du livre est ignoré. Décoché (défaut) : ce fichier accompagne le livre papier, qui reste expédié normalement.
+   */
+  numeriqueSeul?: boolean | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -906,6 +911,7 @@ export interface OrdersSelect<T extends boolean = true> {
         isbnSnapshot?: T;
         quantity?: T;
         unitPriceTTC?: T;
+        digital?: T;
         id?: T;
       };
   shippingMethod?: T;
@@ -992,6 +998,7 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface EbooksSelect<T extends boolean = true> {
   livre?: T;
+  numeriqueSeul?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
