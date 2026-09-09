@@ -150,6 +150,34 @@ describe("renderOrderConfirmationEmail — livre numérique (client 2026-08-24)"
   });
 });
 
+describe("renderOrderConfirmationEmail — commande sans envoi (client 2026-09-09, titre numérique seul)", () => {
+  const SANS_ENVOI: OrderMailPayload = {
+    ...PAYLOAD,
+    noShipment: true,
+    shippingCostTTC: 0,
+    downloads: [{ title: "Notes sur James Mill", url: "https://ld-es.fr/telechargement/12.7.abc" }],
+  };
+
+  it("ni phrase d'expédition ni note de précommande, en HTML ET en texte", () => {
+    const { html, text } = renderOrderConfirmationEmail(SANS_ENVOI);
+    expect(html).not.toContain("Votre commande est en cours de préparation");
+    expect(html).not.toContain("Précommande — expédiée à parution");
+    expect(text).not.toContain("Votre commande est en cours de préparation");
+    expect(text).not.toContain("Précommande — expédiée à parution");
+  });
+
+  it("le bloc téléchargement reste rendu — c'est lui qui porte le message", () => {
+    const { html, text } = renderOrderConfirmationEmail(SANS_ENVOI);
+    expect(html).toContain("VOTRE EXEMPLAIRE NUMÉRIQUE");
+    expect(text).toContain("VOTRE EXEMPLAIRE NUMÉRIQUE");
+  });
+
+  it("`noShipment` absent/false → comportement historique inchangé (note d'expédition affichée)", () => {
+    const { html } = renderOrderConfirmationEmail(PAYLOAD);
+    expect(html).toContain("Votre commande est en cours de préparation");
+  });
+});
+
 describe("selectOrderMailer", () => {
   it("BREVO_API_KEY absente → logOrderMailer", () => {
     expect(selectOrderMailer({})).toBe(logOrderMailer);

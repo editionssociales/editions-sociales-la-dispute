@@ -75,6 +75,14 @@ export interface OrderMailPayload {
    * appelant qui ne la pose pas (tests compris).
    */
   livraisonDelai?: string;
+  /**
+   * Commande sans envoi (client 2026-09-09, `Orders.shippingMethod ===
+   * "aucun"` — panier entièrement numérique) : ni phrase d'expédition/délai
+   * ni bloc adresse — le bloc « votre livre numérique » (`downloads`) porte
+   * seul le message. Absent/`false` = comportement historique inchangé (note
+   * d'expédition ou de précommande affichée comme avant).
+   */
+  noShipment?: boolean;
 }
 
 export interface OrderMailer {
@@ -145,6 +153,10 @@ function totalsRow(
  * transmis par le webhook), avec `DELIVERY_DELAY_RANGE` en défaut pour tout
  * appelant qui ne le pose pas ; l'expédition réelle n'étant pas pilotée par
  * ce module, la précommande garde sa phrase SANS délai (`PREORDER_NOTE`).
+ * Commande SANS envoi (`payload.noShipment`, client 2026-09-09, titre
+ * numérique seul) : ni `buildShippingNote` ni `PREORDER_NOTE`, le bloc
+ * entier est omis — le bloc téléchargement (`downloads`) porte seul le
+ * message.
  */
 /**
  * Phrases partagées entre les rendus HTML et texte brut — une seule source :
@@ -193,7 +205,12 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
       `\n${SHIPPING_LABEL} : ${euros(payload.shippingCostTTC)}` +
       (payload.discountTTC > 0 ? `\n${DISCOUNT_LABEL} : -${euros(payload.discountTTC)}` : "") +
       `\n${TOTAL_LABEL} : ${euros(payload.totalTTC)}`,
-    preorder ? PREORDER_NOTE : buildShippingNote(payload.livraisonDelai ?? DELIVERY_DELAY_RANGE),
+    // Commande sans envoi (client 2026-09-09) : aucune phrase d'expédition —
+    // rien n'est ni « en préparation » ni « expédié à parution », le bloc
+    // téléchargement plus bas porte seul le message.
+    ...(payload.noShipment
+      ? []
+      : [preorder ? PREORDER_NOTE : buildShippingNote(payload.livraisonDelai ?? DELIVERY_DELAY_RANGE)]),
     ...(payload.downloads?.length
       ? [
           `${downloadsTitle(payload.downloads.length)}\n` +
@@ -269,10 +286,14 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     `</td></tr>` +
     // Expédition — texte prudent, aucun délai promis. Précommande (client
     // 2026-08-20) : bandeau dédié, jamais le texte de préparation habituel
-    // (rien n'est « en préparation » avant la parution).
-    `<tr><td style="padding:20px 0 20px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${INK};">` +
-    (preorder ? PREORDER_NOTE : buildShippingNote(payload.livraisonDelai ?? DELIVERY_DELAY_RANGE)) +
-    `</td></tr>` +
+    // (rien n'est « en préparation » avant la parution). Commande sans envoi
+    // (client 2026-09-09, `noShipment`) : bloc entier absent — rien n'est
+    // expédié, le bloc téléchargement ci-dessous porte seul le message.
+    (payload.noShipment
+      ? ""
+      : `<tr><td style="padding:20px 0 20px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${INK};">` +
+        (preorder ? PREORDER_NOTE : buildShippingNote(payload.livraisonDelai ?? DELIVERY_DELAY_RANGE)) +
+        `</td></tr>`) +
     // Livre(s) numérique(s) — encadré à part, APRÈS la note d'expédition :
     // c'est la seule partie de la commande qui est déjà disponible, elle ne
     // doit pas se confondre avec ce qui reste à expédier. Bloc absent quand
