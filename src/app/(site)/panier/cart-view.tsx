@@ -634,6 +634,11 @@ export function CartView({
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
+          {/* Panier sans aucune ligne physique (client 2026-09-09, titre
+              numérique seul) : ni zone ni délai — rien ne part, le devis
+              affiche « Aucun envoi » ; la zone conservée en état reste
+              inoffensive (port 0 quel que soit le pays). */}
+          {hasPhysicalItems && (
           <label className="flex flex-col gap-1">
             <span className="font-sans text-xs font-bold uppercase tracking-[.06em] text-muted">
               Livraison
@@ -656,6 +661,7 @@ export function CartView({
               Livraison {livraisonDelai} — précommandes expédiées à parution.
             </span>
           </label>
+          )}
 
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1">
@@ -705,7 +711,8 @@ export function CartView({
                   : promoResult.message}
               </p>
             )}
-            {shipping.ok &&
+            {hasPhysicalItems &&
+              shipping.ok &&
               !freeShippingCoupon &&
               summary.subtotalCents > 0 &&
               summary.subtotalCents < FREE_SHIPPING_MIN_CART_CENTS && (
