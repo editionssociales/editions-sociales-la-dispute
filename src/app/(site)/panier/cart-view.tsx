@@ -11,6 +11,7 @@ import { Button } from "@/components/button";
 import { BookCover } from "@/lib/cover";
 import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { formatPrice } from "@/lib/format";
+import { EpubTag } from "@/components/epub-tag";
 import { centsToEuros } from "@/lib/money";
 import {
   FOCUS_RING_DARK,
@@ -262,6 +263,14 @@ function CartLineRow({
         {/* Micro-label précommande (client 2026-08-20) — même DA que les
             badges de statut du catalogue (`book-card.tsx`), signale AVANT le
             checkout qu'une ligne ira dans une commande séparée. */}
+        {/* Pastille de format (client 2026-09-09) : une ligne numérique seule
+            se reconnaît d'un coup d'œil, comme sur la carte et la fiche —
+            « Aucun envoi » en pied de devis en est la conséquence. */}
+        {line.digital && (
+          <span className="flex">
+            <EpubTag />
+          </span>
+        )}
         {line.purchasable && line.isPreorder && (
           <span className="inline-flex w-fit flex-none border-b-2 border-r-2 border-ink bg-pop-orange px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-black">
             Précommande

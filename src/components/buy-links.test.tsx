@@ -186,8 +186,8 @@ describe("BuyLinksList — « Épuisé » distinct d'« Indisponible »", () => 
 
 /**
  * Titre numérique seul (client 2026-09-09, « Notes sur Mill ») :
- * `format: "numerique"` remplace toute mention de stock/expédition par la
- * mention numérique, sur les DEUX statuts d'achat où elle peut apparaître
+ * `format: "numerique"` colle la pastille `EpubTag` au prix et remplace toute
+ * mention de stock/expédition par « Téléchargement après paiement », sur les DEUX statuts d'achat où elle peut apparaître
  * (`available` avec panier natif, `preorder`) — jamais sur `upcoming`/
  * `unavailable` (ni stock ni expédition n'y sont de toute façon mentionnés).
  */
@@ -196,16 +196,18 @@ describe("BuyLinksList — titre numérique seul (client 2026-09-09)", () => {
     const markup = renderToStaticMarkup(
       <BuyLinksList book={book({ status: "available", purchaseMode: "cart", format: "numerique" })} />,
     );
-    expect(markup).toContain("Livre numérique (ePub)");
-    expect(markup).toContain("sans frais de port");
+    expect(markup).toContain(">ePub<");
+    expect(markup).toContain("Téléchargement après paiement");
     expect(markup).not.toContain("En stock");
+    expect(markup).not.toContain("frais de port");
   });
 
   it("preorder + numérique : mention numérique à la place de « Expédié à parution »", () => {
     const markup = renderToStaticMarkup(
       <BuyLinksList book={book({ status: "preorder", purchaseMode: "cart", format: "numerique" })} />,
     );
-    expect(markup).toContain("Livre numérique (ePub)");
+    expect(markup).toContain(">ePub<");
+    expect(markup).toContain("Téléchargement après paiement");
     expect(markup).not.toContain("Expédié à parution");
   });
 
@@ -214,6 +216,7 @@ describe("BuyLinksList — titre numérique seul (client 2026-09-09)", () => {
       <BuyLinksList book={book({ status: "available", purchaseMode: "cart" })} />,
     );
     expect(markup).toContain("En stock");
-    expect(markup).not.toContain("Livre numérique (ePub)");
+    expect(markup).not.toContain(">ePub<");
+    expect(markup).not.toContain("Téléchargement après paiement");
   });
 });

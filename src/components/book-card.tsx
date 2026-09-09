@@ -4,6 +4,7 @@ import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { BookPrice } from "./book-price";
+import { EpubTag } from "./epub-tag";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
 
 export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
@@ -69,13 +70,9 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
   const statusBadge = preorderBadge || upcomingBadge || externalBadge || unavailableBadge;
 
   // Titre numérique seul (client 2026-09-09) — orthogonal au statut d'achat
-  // (co-existe avec `preorderBadge`, par ex.), même recette sobre que
-  // `externalBadge`/`unavailableBadge`.
-  const digitalBadge = book.format === "numerique" && (
-    <span className="inline-flex flex-none border-b-2 border-r-2 border-ink bg-paper px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-[.05em] text-muted">
-      ePub
-    </span>
-  );
+  // (co-existe avec `preorderBadge`, par ex.) ; pastille de format INVERSÉE
+  // (`EpubTag`), distincte des badges de statut sobres ci-dessus.
+  const digitalBadge = book.format === "numerique" && <EpubTag />;
 
   // Panier natif (plan §4 étape 6) : petit chip, en plus du lien vers la
   // fiche — seulement si le livre est disponible au panier. Sorti du cadre

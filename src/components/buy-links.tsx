@@ -4,6 +4,7 @@ import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { formatDateFr } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { BookPrice } from "./book-price";
+import { EpubTag } from "./epub-tag";
 import { Button } from "./button";
 import { NewTabMark } from "./new-tab-mark";
 
@@ -27,14 +28,15 @@ const STATUS_CLASS = "font-sans text-xl font-black italic text-ink";
 const MICROCOPY_CLASS = "mt-2 font-sans text-xs font-bold uppercase tracking-[.04em] text-muted";
 
 /**
- * Mention numérique (client 2026-09-09, « Notes sur Mill ») — remplace TOUTE
- * mention de stock/expédition (`inStockCopy` ci-dessous, ou « Expédié à
- * parution » pour une précommande numérique) : rien n'est ni en stock ni
- * expédié, le fichier part par lien signé après paiement
- * (`src/lib/ebook-token.ts`, e-mail de confirmation).
+ * Titre numérique seul (client 2026-09-09, « Notes sur Mill ») : le repère
+ * est VISUEL — pastille `EpubTag` collée au prix, comme chez les libraires en
+ * ligne (Decitre, Fnac, leslibraires.fr) — et la microcopie de
+ * stock/expédition (`inStockCopy`, « Expédié à parution ») cède la place à ce
+ * seul équivalent numérique : rien n'est en stock ni expédié, le fichier part
+ * par lien signé après paiement (`src/lib/ebook-token.ts`, e-mail de
+ * confirmation). Pas de détail ici (arbitrage client) : le mail dit le reste.
  */
-const DIGITAL_MICROCOPY =
-  "Livre numérique (ePub) : lien de téléchargement envoyé par e-mail après paiement, sans frais de port";
+const DIGITAL_MICROCOPY = "Téléchargement après paiement";
 
 export function BuyLinksList({
   book,
@@ -60,7 +62,14 @@ export function BuyLinksList({
   // par la cliente : `upcoming`/`unavailable` n'affichaient pas le prix de
   // leur propre fiche, alors que `available`/`preorder`/`external` le
   // faisaient déjà) — le prix est un fait du livre, pas une promesse de vente.
-  const priceBlock = <BookPrice price={book.price} className={PRICE_CLASS} />;
+  const priceBlock = digital ? (
+    <div className="flex items-center gap-3">
+      <BookPrice price={book.price} className={PRICE_CLASS} />
+      <EpubTag size="lg" />
+    </div>
+  ) : (
+    <BookPrice price={book.price} className={PRICE_CLASS} />
+  );
   // Liens libraires de repli — lus une seule fois, rendus par les CINQ
   // branches de statut sans exception (bug signalé par la cliente,
   // corrigé en plusieurs passes : `upcoming`/`unavailable` les perdaient
