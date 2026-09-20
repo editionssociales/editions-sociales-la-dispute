@@ -1,5 +1,6 @@
 import "server-only";
 import config from "@payload-config";
+import { unstable_cache } from "next/cache";
 import { getPayload } from "payload";
 
 /**
@@ -10,8 +11,17 @@ import { getPayload } from "payload";
  *
  * Même style que `commerce-source.ts`/`catalogue-pg.ts` : `server-only`,
  * `getPayload({ config })` (singleton par process), pas de `cache()` React —
- * une seule lecture par rendu, et la page est en ISR purgée à l'écriture
- * (`revalidateSouscriptionNow`).
+ * une seule lecture par rendu.
+ *
+ * Data-cache tagué `virements` (86400 s en filet — incident Neon 2026-09-19) :
+ * `/souscription` se régénère CHAQUE MINUTE (fenêtre de 60 s héritée du fetch
+ * Stripe de `donations.ts`), et sans ce cache chaque régénération lisait
+ * Postgres — de quoi tenir le compute Neon éveillé en continu (autosuspend à
+ * 5 min jamais atteint), cause probable de l'épuisement du quota du plan
+ * Free. Les virements ne changent qu'à l'écriture back-office :
+ * `revalidateSouscriptionNow` expire le tag (MÊME chaîne littérale) avant de
+ * purger la page. Une lecture en échec jette (contrat ci-dessous) — rien
+ * n'est alors mis en cache.
  *
  * Ne rattrape PAS ses erreurs : `getCampaign2026()` (son unique appelant)
  * absorbe toute panne en `null` et la page affiche alors une mention neutre
@@ -26,7 +36,7 @@ export interface VirementTotals {
   contributors: number;
 }
 
-export async function getVirementTotals(): Promise<VirementTotals> {
+async function loadVirementTotals(): Promise<VirementTotals> {
   const payload = await getPayload({ config });
   const { docs } = await payload.find({
     collection: "virements-souscription",
@@ -43,3 +53,13 @@ export async function getVirementTotals(): Promise<VirementTotals> {
     contributors: montants.length,
   };
 }
+
+// `unstable_cache` exige un store Next (absent sous Vitest) — même garde que
+// `catalogue.ts`.
+export const getVirementTotals: () => Promise<VirementTotals> =
+  process.env.VITEST === "true"
+    ? loadVirementTotals
+    : unstable_cache(loadVirementTotals, ["virements-totals-v1"], {
+        revalidate: 86400,
+        tags: ["virements"],
+      });

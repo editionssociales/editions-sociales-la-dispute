@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import config from "@payload-config";
 import { getPayload, type DataFromGlobalSlug, type GlobalSlug } from "payload";
@@ -33,16 +34,46 @@ import {
  * `catalogue.ts:getAllBooks`/`getBook` : `getReglagesSite()` est notamment
  * appelée deux fois dans `(site)/layout.tsx`, une lecture Payload par appel
  * sans ce `cache()`.
+ *
+ * Data-cache tagué PAR GLOBAL (`site-global:<slug>`, 86400 s en filet —
+ * incident Neon 2026-09-19) : le layout lit `pages-legales` à CHAQUE rendu,
+ * donc à chaque requête des routes dynamiques (`/catalogue?…`, `/panier`,
+ * 404) — sans data-cache, chacune réveillait Postgres : un robot d'indexation
+ * suffit alors à tenir le compute Neon éveillé en continu (autosuspend à
+ * 5 min jamais atteint), cause probable de l'épuisement du quota mensuel du
+ * plan Free. Fraîcheur : les hooks des globals expirent
+ * le tag à l'écriture (`revalidate.ts:invalidateSiteGlobalTag`, MÊME chaîne
+ * littérale des deux côtés, comme `catalogue`). Le doc BRUT est caché, jamais
+ * le résultat fusionné : une lecture en échec JETTE dans `loadGlobal` (rien
+ * n'est mis en cache) et c'est `readGlobal` qui dégrade — cacher 24 h des
+ * textes par défaut serait pire que la panne.
  */
+async function loadGlobal<TSlug extends GlobalSlug>(
+  slug: TSlug,
+): Promise<DataFromGlobalSlug<TSlug>> {
+  const payload = await getPayload({ config });
+  return payload.findGlobal({ slug });
+}
+
+// `unstable_cache` exige un store Next (absent sous Vitest) — même garde que
+// `catalogue.ts`.
+function loadGlobalCached<TSlug extends GlobalSlug>(
+  slug: TSlug,
+): Promise<DataFromGlobalSlug<TSlug>> {
+  if (process.env.VITEST === "true") return loadGlobal(slug);
+  return unstable_cache(() => loadGlobal(slug), ["site-global-v1", slug], {
+    revalidate: 86400,
+    tags: [`site-global:${slug}`],
+  })();
+}
+
 async function readGlobal<TSlug extends GlobalSlug, TContent>(
   slug: TSlug,
   merge: (doc: DataFromGlobalSlug<TSlug> | null) => TContent,
   degradedLabel: string,
 ): Promise<TContent> {
   try {
-    const payload = await getPayload({ config });
-    const doc = await payload.findGlobal({ slug });
-    return merge(doc);
+    return merge(await loadGlobalCached(slug));
   } catch (err) {
     console.error(`[contenus] lecture Payload indisponible — ${degradedLabel} :`, err);
     return merge(null);

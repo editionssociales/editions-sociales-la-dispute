@@ -1,7 +1,7 @@
 import { getAllBooks } from "@/lib/catalogue";
 import { isoDayParis } from "@/lib/format";
 import { findBookFichePaths } from "@/lib/order-source";
-import { revalidateCatalogueNow } from "@/payload/hooks/revalidate.ts";
+import { revalidateParutionsNow } from "@/payload/hooks/revalidate.ts";
 
 /**
  * Cron Vercel (`vercel.json` — 22 h 10 ET 23 h 10 UTC, pour tomber vers
@@ -17,6 +17,11 @@ import { revalidateCatalogueNow } from "@/payload/hooks/revalidate.ts";
  * recouvrement d'un jour ne coûtent que quelques `revalidatePath` de plus.
  * `publishedAt` étant posé à l'avance sur la fiche, lire au travers du
  * data-cache (même périmé) suffit à identifier le lot.
+ *
+ * Chemins SEULS, jamais le tag `catalogue` (`revalidateParutionsNow`) : le
+ * statut est dérivé de la date au rendu, le data-cache n'a pas à être relu —
+ * et l'expirer base coupée fait tomber tout le catalogue (incident Neon
+ * 2026-09-19). Une nuit sans parution ne purge rien et ne touche pas Postgres.
  *
  * Gardé par `CRON_SECRET` (Vercel pose `Authorization: Bearer <CRON_SECRET>`
  * sur ses invocations quand la variable existe ; absente, tout est refusé) :
@@ -36,8 +41,11 @@ export async function GET(request: Request) {
     (book) => book.publishedAt !== null && (book.publishedAt === today || book.publishedAt === yesterday),
   );
 
+  // Rien ne paraît : rien à purger, et surtout aucune lecture Postgres.
+  if (justPublished.length === 0) return Response.json({ revalidated: 0 });
+
   const fichePaths = await findBookFichePaths(justPublished.map((book) => book.id));
-  revalidateCatalogueNow(fichePaths);
+  revalidateParutionsNow(fichePaths);
 
   return Response.json({ revalidated: fichePaths.length });
 }

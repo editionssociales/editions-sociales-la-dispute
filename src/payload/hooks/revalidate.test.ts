@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 import {
   revalidateCatalogueAfterChange,
@@ -211,5 +211,30 @@ describe('revalidateCatalogueAfterDelete', () => {
     const paths = purgedPaths()
     expect(paths).toContain('/catalogue/editions-sociales/notes-sur-mill')
     expect(paths).not.toContain(MOTIF_LARGE)
+  })
+})
+
+/**
+ * Incident Neon 2026-09-19 : deux invariants de purge à ne pas laisser
+ * régresser en silence.
+ */
+describe('incident Neon 2026-09-19', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("le cron des parutions ne touche JAMAIS le tag catalogue (base coupée = catalogue servi du cache)", async () => {
+    const { revalidateParutionsNow } = await import('./revalidate.ts')
+    revalidateParutionsNow(['/catalogue/la-dispute/un-livre'])
+    expect(vi.mocked(revalidateTag)).not.toHaveBeenCalled()
+    expect(purgedPaths()).toEqual([...LISTES, '/catalogue/la-dispute/un-livre'])
+  })
+
+  it('un global expire son data-cache AVANT de purger ses chemins', async () => {
+    const { revalidatePagesLegalesAfterChange } = await import('./revalidate.ts')
+    const { req } = fakeReq()
+    await revalidatePagesLegalesAfterChange({ req } as never)
+    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('site-global:pages-legales', { expire: 0 })
+    expect(vi.mocked(revalidateTag).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(revalidatePath).mock.invocationCallOrder[0],
+    )
   })
 })

@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 import { invalidateCatalogueTag } from './revalidate-catalogue.ts'
 
@@ -183,6 +183,25 @@ export function revalidateCatalogueNow(fichePaths: string[] = []): void {
 }
 
 /**
+ * Purge du JOUR DE PARUTION (cron `/api/cron/parutions`) — chemins SEULS,
+ * jamais le tag `catalogue` : la bascule « à paraître → paru » est évaluée AU
+ * RENDU (`isUpcoming`, `catalogue-core.ts`), hors du data-cache, dont le
+ * contenu brut ne dépend pas de la date. Expirer le tag ici n'apportait rien
+ * et forçait une relecture Postgres chaque nuit — incident 2026-09-19 : base
+ * Neon coupée (quota), le cron de 22 h 10 UTC a expiré le tag, et tout le
+ * catalogue est tombé avec le panier au lieu de rester servi depuis le cache.
+ * Même try/catch que `revalidateCatalogueNow`.
+ */
+export function revalidateParutionsNow(fichePaths: string[]): void {
+  try {
+    revalidateCatalogueLists()
+    for (const path of fichePaths) revalidatePath(path)
+  } catch (err) {
+    console.warn('[revalidate] revalidation parutions impossible (hors requête Next ?)', err)
+  }
+}
+
+/**
  * Hooks `books`/`authors`/`libelles`/`media` — purge CIBLÉE par collection
  * (audit coûts Vercel 2026-08-23, remplace la purge catalogue-entière
  * historique) : toujours les listes (un livre/auteur/libellé/média peut
@@ -355,6 +374,21 @@ export const revalidateRencontresAfterDelete: CollectionAfterDeleteHook = ({ req
  * mais le contrat d'écriture Payload du repo reste uniforme).
  */
 
+/**
+ * Expire le data-cache tagué d'UN global (`src/lib/site-content.ts` —
+ * `site-global:<slug>`, même chaîne littérale des deux côtés) : sans lui, le
+ * re-rendu déclenché par `revalidatePath` relirait le doc périmé. Toujours
+ * AVANT les chemins, `{ expire: 0 }` et try/catch : mêmes raisons que
+ * `invalidateCatalogueTag`.
+ */
+function invalidateSiteGlobalTag(slug: string): void {
+  try {
+    revalidateTag(`site-global:${slug}`, { expire: 0 })
+  } catch (err) {
+    console.warn(`[revalidate] revalidateTag("site-global:${slug}") a échoué (hors scope requête Next ?)`, err)
+  }
+}
+
 /** Pages légales nourries par le global `pages-legales`. */
 const LEGAL_PATHS = ['/cgv', '/mentions-legales', '/confidentialite']
 
@@ -364,6 +398,7 @@ const LEGAL_PATHS = ['/cgv', '/mentions-legales', '/confidentialite']
  */
 export const revalidatePagesLegalesAfterChange: GlobalAfterChangeHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
+  invalidateSiteGlobalTag('pages-legales')
   for (const path of LEGAL_PATHS) revalidatePath(path)
   revalidatePath('/', 'layout')
 }
@@ -372,6 +407,7 @@ export const revalidatePagesLegalesAfterChange: GlobalAfterChangeHook = ({ req }
  *  (l'ex-page commune `/a-propos` est une redirection sans contenu). */
 export const revalidateAProposAfterChange: GlobalAfterChangeHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
+  invalidateSiteGlobalTag('page-a-propos')
   revalidatePath('/editions/editions-sociales')
   revalidatePath('/editions/la-dispute')
 }
@@ -379,6 +415,7 @@ export const revalidateAProposAfterChange: GlobalAfterChangeHook = ({ req }) => 
 /** Hook `page-souscription` : seule la page Souscription lit ce global. */
 export const revalidateSouscriptionAfterChange: GlobalAfterChangeHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
+  invalidateSiteGlobalTag('page-souscription')
   revalidatePath('/souscription')
 }
 
@@ -396,6 +433,9 @@ export const revalidateSouscriptionAfterChange: GlobalAfterChangeHook = ({ req }
  */
 export function revalidateSouscriptionNow(): void {
   try {
+    // Data-cache des virements (`src/lib/virements.ts`, tag `virements`) AVANT
+    // la page, `{ expire: 0 }` : mêmes raisons que `invalidateCatalogueTag`.
+    revalidateTag('virements', { expire: 0 })
     revalidatePath('/souscription')
   } catch (err) {
     console.warn('[revalidate] revalidation souscription impossible (hors requête Next ?)', err)
@@ -417,5 +457,6 @@ export const revalidateSouscriptionCollectionAfterDelete: CollectionAfterDeleteH
 /** Hook `page-contact` : seule la page /contact lit ce global. */
 export const revalidatePageContactAfterChange: GlobalAfterChangeHook = ({ req }) => {
   if (req.context?.disableRevalidate) return
+  invalidateSiteGlobalTag('page-contact')
   revalidatePath('/contact')
 }
