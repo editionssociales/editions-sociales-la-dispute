@@ -205,6 +205,12 @@ function checkoutSession(overrides: Record<string, unknown> = {}): Record<string
         },
       },
     },
+    // Prénom / nom séparés (`custom_fields`, client 2026-10-06) — tels que
+    // Stripe les renvoie sur une session complétée.
+    custom_fields: [
+      { key: "prenom", type: "text", label: { type: "custom", custom: "Prénom" }, text: { value: "Jean" } },
+      { key: "nom", type: "text", label: { type: "custom", custom: "Nom de famille" }, text: { value: "Dupont" } },
+    ],
     metadata: ORDER_METADATA,
     ...overrides,
   };
@@ -397,7 +403,15 @@ describe("POST /api/stripe/webhook — commerce natif (kind: order)", () => {
         { book: 12, titleSnapshot: "Le Capital", isbnSnapshot: "978-1", quantity: 2, unitPriceTTC: 15 },
       ],
     });
-    expect(orders[0].shippingAddress).toMatchObject({ fullName: "Jean Dupont", city: "Paris", country: "FR" });
+    expect(orders[0].shippingAddress).toMatchObject({
+      fullName: "Jean Dupont",
+      firstName: "Jean",
+      lastName: "Dupont",
+      city: "Paris",
+      country: "FR",
+    });
+    // Facturation = copie de la livraison, prénom/nom compris.
+    expect(orders[0].billingAddress).toMatchObject({ firstName: "Jean", lastName: "Dupont" });
 
     // Stock 5 → 3 (décrément de 2, la quantité de la ligne).
     expect(stockUpdates).toEqual([{ id: 12, stock: 3 }]);
@@ -848,7 +862,7 @@ describe("POST /api/stripe/webhook — titre numérique seul (client 2026-09-09,
         }),
       }),
     );
-    expect(orders[0].shippingAddress).toMatchObject({ fullName: "sans-nom@exemple.fr" });
+    expect(orders[0].shippingAddress).toMatchObject({ fullName: "sans-nom@exemple.fr", firstName: null, lastName: null });
   });
 
   it("mail de confirmation reçoit noShipment:true — la commande n'a rien à expédier", async () => {

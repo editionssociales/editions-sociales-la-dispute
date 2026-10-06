@@ -1,7 +1,12 @@
 import * as Sentry from "@sentry/nextjs";
 import type Stripe from "stripe";
 import type { Order } from "@/payload-types";
-import { decodeCheckoutLines, type CheckoutBookLookup, type DecodedCheckoutLine } from "@/lib/checkout-core";
+import {
+  decodeCheckoutLines,
+  recipientNameFromCustomFields,
+  type CheckoutBookLookup,
+  type DecodedCheckoutLine,
+} from "@/lib/checkout-core";
 import { getCommerceBookRecords } from "@/lib/commerce-source";
 import { getContrepartieBooksByIds } from "@/lib/contreparties";
 import { selectDonationMailer } from "@/lib/donation-mail";
@@ -161,7 +166,13 @@ function partSessionFacts(
     // Repli d'adresse UNIQUEMENT (`buildOrderCreateData`, commande sans
     // envoi, client 2026-09-09) — jamais l'adresse elle-même.
     customerName: session.customer_details?.name ?? null,
-    shippingAddress: addressFromStripe(session.collected_information?.shipping_details),
+    // Prénom/nom séparés (`custom_fields`, client 2026-10-06) joints à
+    // l'adresse — `null` sur une session antérieure ou sans envoi, l'export
+    // retombe alors sur son heuristique (`order-export.ts`).
+    shippingAddress: addressFromStripe(
+      session.collected_information?.shipping_details,
+      recipientNameFromCustomFields(session.custom_fields),
+    ),
     lines,
     orderType,
     shippingMethod: (metadata[shippingMethodKey] as OrderShippingMethod) ?? "standard",

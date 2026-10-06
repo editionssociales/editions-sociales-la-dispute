@@ -52,6 +52,30 @@ function addressFields(): Field[] {
       required: true,
       label: 'Nom complet',
     },
+    // Prénom / nom saisis SÉPARÉMENT au paiement (champs Stripe
+    // `custom_fields`, client 2026-10-06 : le « Nom complet » recevait
+    // n'importe quoi). Jamais `required` côté schéma : vides sur toute
+    // commande antérieure, sur les dons et sur l'historique repris — c'est
+    // Stripe qui les impose au paiement (`/api/checkout`). `fullName` reste
+    // le nom d'étiquette, jamais recomposé de ces deux-là.
+    {
+      name: 'firstName',
+      type: 'text',
+      label: 'Prénom',
+      admin: {
+        description:
+          'Saisi séparément du nom complet au paiement — vide sur les commandes antérieures, les dons et l’historique repris.',
+      },
+    },
+    {
+      name: 'lastName',
+      type: 'text',
+      label: 'Nom',
+      admin: {
+        description:
+          'Saisi séparément du nom complet au paiement — vide sur les commandes antérieures, les dons et l’historique repris.',
+      },
+    },
     {
       name: 'addressLine1',
       type: 'text',
@@ -152,7 +176,14 @@ export const Orders: CollectionConfig = {
     // vers la table de l'array puis résolution du reste du chemin), même
     // omission cosmétique du placeholder que ci-dessus (`flattenTopLevelFields`
     // ne hisse pas les sous-champs d'un `array`, contrairement à un `group`).
-    listSearchableFields: ['shippingAddress.fullName', 'number', 'email', 'lines.titleSnapshot'],
+    listSearchableFields: [
+      'shippingAddress.fullName',
+      'shippingAddress.lastName',
+      'shippingAddress.firstName',
+      'number',
+      'email',
+      'lines.titleSnapshot',
+    ],
     description:
       'Créées automatiquement au paiement. Vous ne modifiez ici que le statut de préparation. ' +
       'Un panier mixte (paru + précommande) peut créer deux commandes distinctes — voir « Type ».',

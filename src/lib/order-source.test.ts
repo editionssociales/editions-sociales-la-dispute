@@ -161,6 +161,8 @@ const {
 
 const ADDRESS = {
   fullName: "Jean Dupont",
+  firstName: null,
+  lastName: null,
   addressLine1: "1 rue Paul Lafargue",
   addressLine2: null,
   postalCode: "75001",

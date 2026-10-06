@@ -20,6 +20,8 @@ import {
  */
 function toExportAddress(address: {
   fullName: string
+  firstName?: string | null
+  lastName?: string | null
   addressLine1?: string | null
   addressLine2?: string | null
   postalCode?: string | null
@@ -28,6 +30,8 @@ function toExportAddress(address: {
 }): OrderExportAddress {
   return {
     fullName: address.fullName,
+    firstName: address.firstName ?? null,
+    lastName: address.lastName ?? null,
     addressLine1: address.addressLine1 ?? '',
     addressLine2: address.addressLine2,
     postalCode: address.postalCode ?? '',

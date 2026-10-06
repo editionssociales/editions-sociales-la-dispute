@@ -28,10 +28,12 @@
  * Refonte des colonnes « préparation » (client 2026-08-24) : la feuille de
  * l'équipe porte désormais date, adresse éclatée, nom/prénom séparés et
  * téléphone. Deux points durs, tous deux nommés là où ils se jouent —
- * `splitFullName` (Stripe ne collecte qu'un nom complet, la séparation est
- * une heuristique et la colonne « Nom complet (tel que saisi) » reste la
- * vérité) et le téléphone (collecté depuis cette même date seulement, donc
- * vide sur tout l'historique et sur les dons).
+ * `recipientName` (prénom/nom saisis séparément au paiement depuis le
+ * 2026-10-06 ; avant cette date Stripe ne collectait qu'un nom complet, et
+ * `splitFullName` en tire une séparation HEURISTIQUE — la colonne « Nom
+ * complet (tel que saisi) » reste la vérité) et le téléphone (collecté
+ * depuis le 2026-08-24 seulement, donc vide sur tout l'historique et sur
+ * les dons).
  */
 
 import { isoDayParis } from "./format";
@@ -129,6 +131,9 @@ export function parseExportOrderIds(raw: string | null | undefined): ParsedExpor
 
 export interface OrderExportAddress {
   fullName: string;
+  /** Prénom / nom saisis séparément au paiement (`Orders.shippingAddress.firstName`/`lastName`, client 2026-10-06) — absents avant cette collecte, sur les dons et l'historique : `recipientName` retombe alors sur `splitFullName`. */
+  firstName?: string | null;
+  lastName?: string | null;
   addressLine1: string;
   addressLine2?: string | null;
   postalCode: string;
@@ -239,10 +244,12 @@ export interface SplitName {
  * Sépare un nom complet en prénom / nom (client 2026-08-24 : « nom ; prénom »
  * en colonnes distinctes de l'export).
  *
- * C'est une HEURISTIQUE, et elle est assumée comme telle : Stripe Checkout ne
- * collecte qu'UN champ « nom complet » — la donnée séparée n'existe nulle
- * part, il n'y a donc rien à « lire » correctement. Deux règles, dans cet
- * ordre :
+ * C'est une HEURISTIQUE, et elle est assumée comme telle : jusqu'au
+ * 2026-10-06, Stripe Checkout ne collectait qu'UN champ « nom complet » — la
+ * donnée séparée n'existait nulle part, il n'y avait donc rien à « lire »
+ * correctement. Depuis, prénom et nom sont saisis séparément au paiement et
+ * `recipientName` ne passe plus par ici que pour les commandes qui n'en ont
+ * pas (antérieures, dons, historique). Deux règles, dans cet ordre :
  *
  * 1. Premier mot en CAPITALES alors qu'un autre ne l'est pas (« DUPONT
  *    Marie ») → c'est le nom de famille : usage administratif français
@@ -270,6 +277,20 @@ export function splitFullName(fullName: string): SplitName {
     debutNom--;
   }
   return { prenom: mots.slice(0, debutNom).join(" "), nom: mots.slice(debutNom).join(" ") };
+}
+
+/**
+ * Nom / prénom d'une ligne d'export : les champs saisis SÉPARÉMENT au
+ * paiement quand la commande les porte (`custom_fields` Stripe, client
+ * 2026-10-06 — tous deux présents ou aucun, `order-webhook-core.ts`),
+ * sinon l'heuristique `splitFullName` sur le nom complet (commandes
+ * antérieures, dons, historique). Jamais un mélange des deux sources.
+ */
+export function recipientName(address: OrderExportAddress): SplitName {
+  if (address.firstName && address.lastName) {
+    return { prenom: address.firstName, nom: address.lastName };
+  }
+  return splitFullName(address.fullName);
 }
 
 /**
@@ -347,7 +368,7 @@ function formatDateFr(createdAt: string): string {
  */
 export function formatPreparationCsv(orders: readonly OrderExportRow[]): string {
   const rows = orders.flatMap((order) => {
-    const { prenom, nom } = splitFullName(order.shippingAddress.fullName);
+    const { prenom, nom } = recipientName(order.shippingAddress);
     return order.lines.map((line) => [
       formatDateFr(order.createdAt),
       line.title,
