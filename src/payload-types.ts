@@ -425,6 +425,14 @@ export interface Order {
   phone?: string | null;
   shippingAddress: {
     fullName: string;
+    /**
+     * Saisi séparément du nom complet au paiement — vide sur les commandes antérieures, les dons et l’historique repris.
+     */
+    firstName?: string | null;
+    /**
+     * Saisi séparément du nom complet au paiement — vide sur les commandes antérieures, les dons et l’historique repris.
+     */
+    lastName?: string | null;
     addressLine1?: string | null;
     addressLine2?: string | null;
     postalCode?: string | null;
@@ -455,6 +463,14 @@ export interface Order {
    */
   billingAddress: {
     fullName: string;
+    /**
+     * Saisi séparément du nom complet au paiement — vide sur les commandes antérieures, les dons et l’historique repris.
+     */
+    firstName?: string | null;
+    /**
+     * Saisi séparément du nom complet au paiement — vide sur les commandes antérieures, les dons et l’historique repris.
+     */
+    lastName?: string | null;
     addressLine1?: string | null;
     addressLine2?: string | null;
     postalCode?: string | null;
@@ -897,6 +913,8 @@ export interface OrdersSelect<T extends boolean = true> {
     | T
     | {
         fullName?: T;
+        firstName?: T;
+        lastName?: T;
         addressLine1?: T;
         addressLine2?: T;
         postalCode?: T;
@@ -923,6 +941,8 @@ export interface OrdersSelect<T extends boolean = true> {
     | T
     | {
         fullName?: T;
+        firstName?: T;
+        lastName?: T;
         addressLine1?: T;
         addressLine2?: T;
         postalCode?: T;

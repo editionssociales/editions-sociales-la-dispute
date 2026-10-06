@@ -303,6 +303,19 @@ describe("POST /api/checkout — session Stripe (cas nominal)", () => {
     // des envois et l'export des commandes. Stripe le rend OBLIGATOIRE dès
     // qu'il est activé — c'est le prix assumé de la colonne.
     expect(lastSessionBody?.get("phone_number_collection[enabled]")).toBe("true");
+    // Prénom / nom SÉPARÉS (client 2026-10-06) : deux `custom_fields` texte,
+    // OBLIGATOIRES (aucun `optional` posé — Stripe refuse un paiement sans
+    // eux), Prénom avant Nom — mêmes clés que le webhook relit.
+    expect(lastSessionBody?.get("custom_fields[0][key]")).toBe("prenom");
+    expect(lastSessionBody?.get("custom_fields[0][type]")).toBe("text");
+    expect(lastSessionBody?.get("custom_fields[0][label][type]")).toBe("custom");
+    expect(lastSessionBody?.get("custom_fields[0][label][custom]")).toBe("Prénom");
+    expect(lastSessionBody?.get("custom_fields[1][key]")).toBe("nom");
+    expect(lastSessionBody?.get("custom_fields[1][type]")).toBe("text");
+    expect(lastSessionBody?.get("custom_fields[1][label][custom]")).toBe("Nom de famille");
+    expect(lastSessionBody?.has("custom_fields[0][optional]")).toBe(false);
+    expect(lastSessionBody?.has("custom_fields[1][optional]")).toBe(false);
+    expect(lastSessionBody?.get("custom_fields[2][key]")).toBeNull();
 
     expect(lastSessionBody?.get("line_items[0][quantity]")).toBe("2");
     expect(lastSessionBody?.get("line_items[0][price_data][unit_amount]")).toBe("1500");
@@ -362,6 +375,8 @@ describe("POST /api/checkout — titre numérique seul (client 2026-09-09, « No
 
     expect(lastSessionBody?.has("shipping_address_collection[allowed_countries][0]")).toBe(false);
     expect(lastSessionBody?.has("phone_number_collection[enabled]")).toBe(false);
+    // Ni prénom/nom séparés : rien à étiqueter (client 2026-10-06).
+    expect(lastSessionBody?.has("custom_fields[0][key]")).toBe(false);
     // 1 seule ligne (le livre) — aucune ligne de port ajoutée.
     expect(lastSessionBody?.get("line_items[0][price_data][unit_amount]")).toBe("999");
     expect(lastSessionBody?.get("line_items[1]")).toBeNull();
@@ -382,6 +397,8 @@ describe("POST /api/checkout — titre numérique seul (client 2026-09-09, « No
     expect(res.status).toBe(200);
     expect(lastSessionBody?.get("shipping_address_collection[allowed_countries][0]")).toBe("FR");
     expect(lastSessionBody?.get("phone_number_collection[enabled]")).toBe("true");
+    expect(lastSessionBody?.get("custom_fields[0][key]")).toBe("prenom");
+    expect(lastSessionBody?.get("custom_fields[1][key]")).toBe("nom");
     expect(lastSessionBody?.get("metadata[noShipment]")).toBe("");
     // 2 lignes d'articles + 1 SEULE ligne de port (barème sur 15€ physiques seuls → tranche 11-24€ → 4,50€).
     expect(lastSessionBody?.get("line_items[2][price_data][unit_amount]")).toBe("450");

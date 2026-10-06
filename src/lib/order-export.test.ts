@@ -6,6 +6,7 @@ import {
   formatPreparationCsv,
   MAX_EXPORT_SELECTION,
   parseExportOrderIds,
+  recipientName,
   splitFullName,
   type OrderExportRow,
 } from "./order-export.ts";
@@ -157,7 +158,36 @@ describe("splitFullName", () => {
   });
 });
 
+describe("recipientName — prénom/nom saisis séparément (client 2026-10-06), heuristique en repli", () => {
+  it("les deux champs présents → repris tels quels, le nom complet n'est PAS relu", () => {
+    expect(recipientName(address({ fullName: "n'importe quoi", firstName: "Marie", lastName: "de La Fontaine" }))).toEqual({
+      prenom: "Marie",
+      nom: "de La Fontaine",
+    });
+  });
+
+  it("champs absents, nuls ou vides (commande antérieure, don, historique) → `splitFullName` sur le nom complet", () => {
+    expect(recipientName(address())).toEqual({ prenom: "Jeanne", nom: "Dupont" });
+    expect(recipientName(address({ firstName: null, lastName: null }))).toEqual({ prenom: "Jeanne", nom: "Dupont" });
+    expect(recipientName(address({ firstName: "", lastName: "" }))).toEqual({ prenom: "Jeanne", nom: "Dupont" });
+  });
+
+  it("un seul des deux renseigné (anomalie) → heuristique entière, jamais un mélange des deux sources", () => {
+    expect(recipientName(address({ firstName: "Marie", lastName: null }))).toEqual({ prenom: "Jeanne", nom: "Dupont" });
+    expect(recipientName(address({ firstName: null, lastName: "Durand" }))).toEqual({ prenom: "Jeanne", nom: "Dupont" });
+  });
+});
+
 describe("formatPreparationCsv", () => {
+  it("colonnes Nom / Prénom : les champs saisis séparément quand ils existent, « Nom complet (tel que saisi) » inchangé", () => {
+    const csv = formatPreparationCsv([
+      order({ shippingAddress: address({ fullName: "jeanne", firstName: "Jeanne", lastName: "DUPONT-MARTIN" }) }),
+    ]);
+    const ligne = csv.trim().split("\r\n")[1];
+    expect(ligne.startsWith("10/07/2026;Le Capital, livre 1;2;DUPONT-MARTIN;Jeanne;")).toBe(true);
+    expect(ligne.endsWith(";jeanne;")).toBe(true);
+  });
+
   it("émet l'en-tête demandé par le client le 2026-08-24, dans son ordre", () => {
     const csv = formatPreparationCsv([]);
     expect(csv).toBe(

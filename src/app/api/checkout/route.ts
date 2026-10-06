@@ -5,6 +5,7 @@ import { getCommerceBookRecords, getPromoCodeRecord } from "@/lib/commerce-sourc
 import {
   encodeCheckoutLines,
   parseCheckoutRequest,
+  recipientNameCustomFields,
   splitValidatedLines,
   validateCheckoutLines,
 } from "@/lib/checkout-core";
@@ -234,6 +235,13 @@ export async function POST(req: Request): Promise<Response> {
       // champ de plus se paie en conversion pendant la campagne — ni sur une
       // commande sans envoi (même raison : rien à demander en plus).
       ...(noShipment ? {} : { phone_number_collection: { enabled: true } }),
+      // Prénom / nom SÉPARÉS (client 2026-10-06 : le « Nom complet » Stripe
+      // recevait n'importe quoi) — deux `custom_fields` OBLIGATOIRES, en plus
+      // du « Nom complet » de l'adresse que Stripe ne sait pas retirer ; clés
+      // partagées avec le webhook (`checkout-core.ts:RECIPIENT_NAME_FIELD_KEYS`).
+      // Pas sur une commande sans envoi : rien à étiqueter, même logique que
+      // l'adresse et le téléphone.
+      ...(noShipment ? {} : { custom_fields: recipientNameCustomFields() }),
       // Pas de `receipt_email` explicite : l'email n'est connu qu'une fois
       // collecté PAR Stripe pendant le checkout (achat invité, jamais saisi
       // chez nous avant) — comme pour les dons, le reçu Stripe natif suit le

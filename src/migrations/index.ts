@@ -30,6 +30,7 @@ import * as migration_20260829_090000_livraison_delai_editable from './20260829_
 import * as migration_20260830_090000_souscription_soutiens_titres_jauge from './20260830_090000_souscription_soutiens_titres_jauge'
 import * as migration_20260909_100000_ebook_numerique_seul from './20260909_100000_ebook_numerique_seul'
 import * as migration_20260909_110000_commande_sans_envoi from './20260909_110000_commande_sans_envoi'
+import * as migration_20261006_100000_commande_nom_prenom from './20261006_100000_commande_nom_prenom'
 
 export const migrations = [
   {
@@ -191,5 +192,10 @@ export const migrations = [
     up: migration_20260909_110000_commande_sans_envoi.up,
     down: migration_20260909_110000_commande_sans_envoi.down,
     name: '20260909_110000_commande_sans_envoi',
+  },
+  {
+    up: migration_20261006_100000_commande_nom_prenom.up,
+    down: migration_20261006_100000_commande_nom_prenom.down,
+    name: '20261006_100000_commande_nom_prenom',
   },
 ];

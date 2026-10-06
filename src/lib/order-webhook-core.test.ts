@@ -18,6 +18,8 @@ import {
 
 const ADDRESS: OrderAddressFacts = {
   fullName: "Jean Dupont",
+  firstName: null,
+  lastName: null,
   addressLine1: "1 rue Paul Lafargue",
   addressLine2: null,
   postalCode: "75001",
@@ -155,6 +157,8 @@ describe("buildOrderCreateData", () => {
       if ("error" in result) throw new Error("fixture invalide");
       expect(result.shippingAddress).toEqual({
         fullName: "Jean Dupont",
+        firstName: null,
+        lastName: null,
         addressLine1: "",
         addressLine2: undefined,
         postalCode: "",
@@ -381,9 +385,11 @@ describe("addressFromStripe", () => {
     state: null,
   };
 
-  it("adresse complète → faits Orders (line2 nulle devient undefined)", () => {
+  it("adresse complète → faits Orders (line2 nulle devient undefined) ; sans prénom/nom relus → null tous les deux", () => {
     expect(addressFromStripe({ name: "Jean Dupont", address: STRIPE_ADDRESS })).toEqual({
       fullName: "Jean Dupont",
+      firstName: null,
+      lastName: null,
       addressLine1: "1 rue Paul Lafargue",
       addressLine2: undefined,
       postalCode: "75001",
@@ -405,12 +411,22 @@ describe("addressFromStripe", () => {
       }),
     ).toEqual({
       fullName: "Jean Dupont",
+      firstName: null,
+      lastName: null,
       addressLine1: "",
       addressLine2: undefined,
       postalCode: "",
       city: "",
       country: "FR", // pays absent → même repli défensif que toOrderCountry
     });
+  });
+
+  it("prénom/nom séparés relus (`custom_fields`, client 2026-10-06) → joints TELS QUELS, `fullName` reste le nom Stripe", () => {
+    const result = addressFromStripe(
+      { name: "dupont", address: STRIPE_ADDRESS },
+      { firstName: "Jean", lastName: "Dupont" },
+    );
+    expect(result).toMatchObject({ fullName: "dupont", firstName: "Jean", lastName: "Dupont" });
   });
 
   it("line2 renseignée reportée fidèlement", () => {

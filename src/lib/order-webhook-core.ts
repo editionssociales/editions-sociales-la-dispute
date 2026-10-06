@@ -15,7 +15,7 @@
 import type Stripe from "stripe";
 import type { Order } from "@/payload-types";
 import type { ShippingMethodLabel } from "./cart-quote";
-import type { DecodedCheckoutLine } from "./checkout-core";
+import type { DecodedCheckoutLine, RecipientName } from "./checkout-core";
 import type { DonationMailRecapAddress } from "./donation-mail";
 import { centsToEuros } from "./money";
 
@@ -32,6 +32,16 @@ export type OrderKind = "commande" | "precommande" | "don";
 
 export interface OrderAddressFacts {
   fullName: string;
+  /**
+   * Prénom / nom saisis SÉPARÉMENT au paiement (`custom_fields` Stripe,
+   * client 2026-10-06, `checkout-core.ts:recipientNameFromCustomFields`) —
+   * `null` ensemble ou renseignés ensemble, jamais l'un sans l'autre : absents
+   * sur les sessions antérieures à cette collecte, les dons (parcours sans
+   * ces champs), une commande sans envoi et l'historique repris. `fullName`
+   * reste ce que Stripe a collecté pour l'étiquette, jamais recomposé d'eux.
+   */
+  firstName: string | null;
+  lastName: string | null;
   addressLine1: string;
   addressLine2?: string | null;
   postalCode: string;
@@ -164,13 +174,21 @@ export function metadataPromoCodeId(value: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Adresse Stripe (`collected_information.shipping_details`) → faits `Orders` — `null` si absente (anomalie sur une session complétée). */
+/**
+ * Adresse Stripe (`collected_information.shipping_details`) → faits `Orders`
+ * — `null` si absente (anomalie sur une session complétée). `recipient`
+ * (prénom/nom séparés, `custom_fields`, client 2026-10-06) est joint tel
+ * quel quand l'appelant l'a relu, `null` sinon — jamais dérivé de `name`.
+ */
 export function addressFromStripe(
   shipping: Stripe.Checkout.Session.CollectedInformation.ShippingDetails | null | undefined,
+  recipient: RecipientName | null = null,
 ): OrderAddressFacts | null {
   if (!shipping?.address) return null;
   return {
     fullName: shipping.name,
+    firstName: recipient?.firstName ?? null,
+    lastName: recipient?.lastName ?? null,
     addressLine1: shipping.address.line1 ?? "",
     addressLine2: shipping.address.line2 ?? undefined,
     postalCode: shipping.address.postal_code ?? "",
@@ -191,6 +209,8 @@ export function addressFromStripe(
 function fallbackAddressForNoShipment(facts: OrderSessionFacts): OrderAddressFacts {
   return {
     fullName: facts.customerName || facts.email || "Client",
+    firstName: null,
+    lastName: null,
     addressLine1: "",
     addressLine2: undefined,
     postalCode: "",

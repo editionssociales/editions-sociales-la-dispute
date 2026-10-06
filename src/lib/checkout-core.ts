@@ -15,6 +15,7 @@
  * fraîchement depuis Payload par `commerce-source.ts`, jamais depuis le
  * panier client) — même découpage pur/impur que `shipping-core.ts`/`cart-core.ts`.
  */
+import type Stripe from "stripe";
 import { MAX_LINE_QTY } from "./cart-core";
 import { eurosToCents } from "./money";
 import { assessSellability, isUpcoming } from "./sellability";
@@ -385,4 +386,68 @@ export function decodeCheckoutLines(raw: string | null | undefined): DecodedChec
     lines.push({ id, qty, unitPriceCents });
   }
   return lines;
+}
+
+/**
+ * Prénom / nom du destinataire, saisis SÉPARÉMENT au paiement (client
+ * 2026-10-06) : le « Nom complet » de l'adresse Stripe — seul champ de nom
+ * que Stripe Checkout sache collecter — recevait n'importe quoi (un seul
+ * mot, un e-mail, « M. Dupont »…) et l'export préparation n'avait qu'une
+ * heuristique pour en tirer ses colonnes nom/prénom
+ * (`order-export.ts:splitFullName`, désormais simple repli).
+ *
+ * Stripe ne sait ni scinder ni retirer son « Nom complet » : les deux champs
+ * sont donc des `custom_fields` de la session — OBLIGATOIRES (`optional`
+ * absent : Stripe refuse le paiement s'ils sont vides) — et le « Nom
+ * complet » reste collecté à côté, c'est lui qui s'imprime sur l'étiquette
+ * (`shippingAddress.fullName`). Mêmes CLÉS à l'écriture
+ * (`recipientNameCustomFields`, `/api/checkout`) et à la lecture
+ * (`recipientNameFromCustomFields`, webhook) — même découpage que
+ * `encodeCheckoutLines`/`decodeCheckoutLines`.
+ */
+export const RECIPIENT_NAME_FIELD_KEYS = { firstName: "prenom", lastName: "nom" } as const;
+
+/** Borne d'un champ texte `custom_fields` (plafond Stripe : 255) — large pour un nom, borne tout de même la colonne. */
+const RECIPIENT_NAME_MAX_LENGTH = 100;
+
+/** `custom_fields` de la session Stripe — Prénom puis Nom, l'ordre d'un formulaire français. */
+export function recipientNameCustomFields(): Stripe.Checkout.SessionCreateParams.CustomField[] {
+  return [
+    {
+      key: RECIPIENT_NAME_FIELD_KEYS.firstName,
+      label: { type: "custom", custom: "Prénom" },
+      type: "text",
+      text: { maximum_length: RECIPIENT_NAME_MAX_LENGTH },
+    },
+    {
+      key: RECIPIENT_NAME_FIELD_KEYS.lastName,
+      label: { type: "custom", custom: "Nom de famille" },
+      type: "text",
+      text: { maximum_length: RECIPIENT_NAME_MAX_LENGTH },
+    },
+  ];
+}
+
+export interface RecipientName {
+  firstName: string;
+  lastName: string;
+}
+
+/**
+ * Relit prénom/nom dans les `custom_fields` d'une session complétée — `null`
+ * dès que l'un des deux manque ou est vide (session antérieure à cette
+ * collecte, parcours de don, commande sans envoi, anomalie) : l'appelant
+ * retombe alors sur le comportement historique (nom complet seul), jamais
+ * sur un nom à moitié renseigné. Valeurs `trim`mées, jamais retouchées
+ * au-delà (ni casse ni accents : ce que le client a écrit fait foi).
+ */
+export function recipientNameFromCustomFields(
+  fields: ReadonlyArray<{ key: string; text?: { value: string | null } | null }> | null | undefined,
+): RecipientName | null {
+  if (!fields) return null;
+  const read = (key: string) => fields.find((f) => f.key === key)?.text?.value?.trim() ?? "";
+  const firstName = read(RECIPIENT_NAME_FIELD_KEYS.firstName);
+  const lastName = read(RECIPIENT_NAME_FIELD_KEYS.lastName);
+  if (!firstName || !lastName) return null;
+  return { firstName, lastName };
 }

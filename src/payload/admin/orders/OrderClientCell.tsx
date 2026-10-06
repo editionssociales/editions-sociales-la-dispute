@@ -1,6 +1,9 @@
 /**
  * Cellule "Client" de la liste Commandes (`/admin/collections/orders`) —
- * affiche `shippingAddress.fullName` de la commande, EN LIEN vers la fiche.
+ * affiche « Prénom Nom » quand la commande porte les deux champs saisis
+ * séparément au paiement (`shippingAddress.firstName`/`lastName`, client
+ * 2026-10-06), sinon `shippingAddress.fullName` (commandes antérieures,
+ * dons, historique) — EN LIEN vers la fiche.
  *
  * Le lien est posé PAR la cellule : Payload n'enveloppe que sa `DefaultCell`
  * dans le lien de première colonne (`renderCell.js` : la prop `link` est
@@ -27,13 +30,20 @@ interface OrderClientCellProps {
     id?: number | string
     shippingAddress?: {
       fullName?: unknown
+      firstName?: unknown
+      lastName?: unknown
     }
   }
 }
 
+const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
+
 export function OrderClientCell({ rowData }: OrderClientCellProps) {
-  const fullName = rowData?.shippingAddress?.fullName
-  const label = typeof fullName === 'string' && fullName.trim() ? fullName : '—'
+  const address = rowData?.shippingAddress
+  const firstName = text(address?.firstName)
+  const lastName = text(address?.lastName)
+  const fullName = text(address?.fullName)
+  const label = firstName && lastName ? `${firstName} ${lastName}` : fullName || '—'
   const id = rowData?.id
   if (id == null) return <span>{label}</span>
   return <a href={`/admin/collections/orders/${id}`}>{label}</a>

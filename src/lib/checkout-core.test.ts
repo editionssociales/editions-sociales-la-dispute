@@ -3,6 +3,9 @@ import {
   decodeCheckoutLines,
   encodeCheckoutLines,
   parseCheckoutRequest,
+  RECIPIENT_NAME_FIELD_KEYS,
+  recipientNameCustomFields,
+  recipientNameFromCustomFields,
   splitValidatedLines,
   validateCheckoutLine,
   validateCheckoutLines,
@@ -494,5 +497,52 @@ describe("encodeCheckoutLines / decodeCheckoutLines", () => {
       { id: 12, qty: 2, unitPriceCents: 1500 },
       { id: 45, qty: 1, unitPriceCents: 2200 },
     ]);
+  });
+});
+
+describe("recipientNameCustomFields / recipientNameFromCustomFields — prénom/nom séparés (client 2026-10-06)", () => {
+  it("deux champs texte OBLIGATOIRES, Prénom puis Nom, sous les clés partagées avec le webhook", () => {
+    const fields = recipientNameCustomFields();
+    expect(fields.map((f) => f.key)).toEqual([RECIPIENT_NAME_FIELD_KEYS.firstName, RECIPIENT_NAME_FIELD_KEYS.lastName]);
+    expect(fields.map((f) => f.type)).toEqual(["text", "text"]);
+    expect(fields.map((f) => f.label)).toEqual([
+      { type: "custom", custom: "Prénom" },
+      { type: "custom", custom: "Nom de famille" },
+    ]);
+    // Jamais `optional: true` : c'est tout l'objet de ces champs.
+    expect(fields.every((f) => f.optional === undefined)).toBe(true);
+  });
+
+  it("relecture : les deux valeurs présentes → prénom/nom, `trim`més, jamais retouchés au-delà", () => {
+    expect(
+      recipientNameFromCustomFields([
+        { key: "nom", text: { value: "  de La Fontaine " } },
+        { key: "prenom", text: { value: "marie " } },
+        { key: "autre", text: { value: "ignoré" } },
+      ]),
+    ).toEqual({ firstName: "marie", lastName: "de La Fontaine" });
+  });
+
+  it("l'un des deux vide, absent ou nul → null (jamais un nom à moitié renseigné)", () => {
+    expect(recipientNameFromCustomFields([{ key: "prenom", text: { value: "Marie" } }])).toBeNull();
+    expect(
+      recipientNameFromCustomFields([
+        { key: "prenom", text: { value: "Marie" } },
+        { key: "nom", text: { value: "   " } },
+      ]),
+    ).toBeNull();
+    expect(
+      recipientNameFromCustomFields([
+        { key: "prenom", text: { value: null } },
+        { key: "nom", text: { value: "Dupont" } },
+      ]),
+    ).toBeNull();
+    expect(recipientNameFromCustomFields([{ key: "prenom" }, { key: "nom", text: null }])).toBeNull();
+  });
+
+  it("session sans `custom_fields` (antérieure, don, sans envoi) → null", () => {
+    expect(recipientNameFromCustomFields(undefined)).toBeNull();
+    expect(recipientNameFromCustomFields(null)).toBeNull();
+    expect(recipientNameFromCustomFields([])).toBeNull();
   });
 });
