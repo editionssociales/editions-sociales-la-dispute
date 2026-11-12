@@ -1591,9 +1591,13 @@ export interface PagesLegales {
     descriptionParDefaut?: string | null;
   };
   /**
-   * Affiché sur la fiche produit, le panier et la page de remerciement — vide = « entre 48 h et 10 jours ». L’e-mail de confirmation garde toujours le texte par défaut.
+   * Affiché sur la fiche produit, le panier, la page de remerciement et la section « Livraison » des CGV (« Livraison … »). L’e-mail de confirmation garde toujours le texte par défaut.
    */
   livraisonDelai?: string | null;
+  /**
+   * Réécrit le paragraphe de la section « Livraison » des conditions de vente (zones, frais de port, délai, précommandes). Séparez les paragraphes par une ligne vide. Vide = le texte affiché en transparence. Sans effet si le champ « Conditions générales & conditions de don » ci-dessous est rempli (il remplace alors toute la page).
+   */
+  livraisonInfos?: string | null;
   /**
    * Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.
    */
@@ -1660,7 +1664,7 @@ export interface PagesLegales {
 export interface MailCommandeLot {
   id: number;
   /**
-   * Vide = objet habituel (« Confirmation de votre commande … »).
+   * Vide = objet habituel (« Confirmation de votre commande CMD-… », numéro réel).
    */
   objet?: string | null;
   /**
@@ -1858,6 +1862,7 @@ export interface PagesLegalesSelect<T extends boolean = true> {
         descriptionParDefaut?: T;
       };
   livraisonDelai?: T;
+  livraisonInfos?: T;
   cgv?: T;
   mentionsLegales?: T;
   confidentialite?: T;

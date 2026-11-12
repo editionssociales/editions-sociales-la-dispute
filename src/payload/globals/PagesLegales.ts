@@ -1,5 +1,13 @@
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import type { GlobalConfig } from 'payload'
 
+import {
+  DELIVERY_DELAY_RANGE,
+  FOOTER_ADRESSE_DEFAUT,
+  SEO_DESCRIPTION_DEFAUT,
+  SEO_TITRE_DEFAUT,
+  livraisonInfosDefaut,
+} from '../../lib/site-defaults.ts'
 import { isAdminOrEditor } from '../access.ts'
 import { revalidatePagesLegalesAfterChange } from '../hooks/revalidate.ts'
 
@@ -45,6 +53,7 @@ export const PagesLegales: GlobalConfig = {
                   type: 'textarea',
                   label: 'Texte de la cellule « Adresse »',
                   admin: {
+                    placeholder: FOOTER_ADRESSE_DEFAUT,
                     description:
                       'Sous « Les Éditions sociales × La Dispute » (le nom reste fixe). Vide = texte actuel.',
                   },
@@ -107,6 +116,7 @@ export const PagesLegales: GlobalConfig = {
                   type: 'text',
                   label: 'Titre par défaut',
                   admin: {
+                    placeholder: SEO_TITRE_DEFAUT,
                     description:
                       'Titre de la page d’accueil et suffixe des titres de pages (« Page — Titre »). Vide = titre actuel.',
                   },
@@ -116,6 +126,7 @@ export const PagesLegales: GlobalConfig = {
                   type: 'textarea',
                   label: 'Description par défaut',
                   admin: {
+                    placeholder: SEO_DESCRIPTION_DEFAUT,
                     description: 'Méta-description par défaut du site. Vide = description actuelle.',
                   },
                 },
@@ -131,15 +142,29 @@ export const PagesLegales: GlobalConfig = {
               type: 'text',
               label: 'Délai de livraison annoncé',
               admin: {
+                placeholder: DELIVERY_DELAY_RANGE,
                 description:
-                  'Affiché sur la fiche produit, le panier et la page de remerciement — vide = « entre 48 h et 10 jours ». ' +
+                  'Affiché sur la fiche produit, le panier, la page de remerciement et la section « Livraison » des CGV (« Livraison … »). ' +
                   'L’e-mail de confirmation garde toujours le texte par défaut.',
+              },
+            },
+            {
+              name: 'livraisonInfos',
+              type: 'textarea',
+              label: 'Informations de livraison (CGV)',
+              admin: {
+                placeholder: livraisonInfosDefaut(),
+                description:
+                  'Réécrit le paragraphe de la section « Livraison » des conditions de vente (zones, frais de port, délai, précommandes). ' +
+                  'Séparez les paragraphes par une ligne vide. Vide = le texte affiché en transparence. ' +
+                  'Sans effet si le champ « Conditions générales & conditions de don » ci-dessous est rempli (il remplace alors toute la page).',
               },
             },
             {
               name: 'cgv',
               type: 'richText',
               label: 'Conditions générales & conditions de don',
+              editor: lexicalEditor({ admin: { placeholder: 'Texte actuel de la page /cgv affiché tant que ce champ est vide — écrivez ici pour le remplacer en entier.' } }),
               admin: {
                 description:
                   'Remplace tout le corps de la page /cgv (chapeau compris) — le titre et le fil d’ariane restent fixes. Vide = texte actuel du site.',
@@ -154,6 +179,7 @@ export const PagesLegales: GlobalConfig = {
               name: 'mentionsLegales',
               type: 'richText',
               label: 'Mentions légales',
+              editor: lexicalEditor({ admin: { placeholder: 'Texte actuel de la page /mentions-legales affiché tant que ce champ est vide — écrivez ici pour le remplacer en entier.' } }),
               admin: {
                 description:
                   'Remplace tout le corps de la page /mentions-legales (chapeau compris). Vide = texte actuel du site (identité légale de l’éditeur).',
@@ -168,6 +194,7 @@ export const PagesLegales: GlobalConfig = {
               name: 'confidentialite',
               type: 'richText',
               label: 'Politique de confidentialité',
+              editor: lexicalEditor({ admin: { placeholder: 'Texte actuel de la page /confidentialite affiché tant que ce champ est vide — écrivez ici pour le remplacer en entier.' } }),
               admin: {
                 description:
                   'Remplace tout le corps de la page /confidentialite (chapeau compris). Vide = texte actuel du site.',

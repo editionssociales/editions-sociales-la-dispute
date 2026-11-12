@@ -1,6 +1,12 @@
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import type { Field, GlobalConfig } from 'payload'
 
 import { DONATION_TIERS } from '../../lib/donation-tiers.ts'
+import {
+  OBJECTIFS_DEFAUT,
+  RECIT_TITRES_DEFAUT,
+  SOUSCRIPTION_TITRE_DEFAUT,
+} from '../../lib/site-defaults.ts'
 import { isAdminOrEditor } from '../access.ts'
 import { revalidateSouscriptionAfterChange } from '../hooks/revalidate.ts'
 
@@ -49,13 +55,14 @@ function champsRecit(
         name: 'titre',
         type: 'text',
         label: 'Titre',
-        admin: { description: 'Vide = titre actuel.' },
+        admin: { placeholder: RECIT_TITRES_DEFAUT[name].titre, description: 'Vide = titre actuel.' },
       },
       {
         name: 'titreItalique',
         type: 'text',
         label: 'Titre — 2ᵉ ligne (italique)',
         admin: {
+          placeholder: RECIT_TITRES_DEFAUT[name].titreItalique ?? undefined,
           description:
             'Optionnel, affichée en italique sous le titre. Vide = pas de 2ᵉ ligne (ou la 2ᵉ ligne actuelle).',
         },
@@ -64,6 +71,7 @@ function champsRecit(
         name: 'corps',
         type: 'richText',
         label: 'Texte',
+        editor: lexicalEditor({ admin: { placeholder: 'Texte actuel de cette section affiché sur la page tant que ce champ est vide — écrivez ici pour le remplacer.' } }),
         admin: {
           description:
             'Vide = texte actuel. Le gras est repris sur le site ; le souligné n’a aucun effet visuel.',
@@ -102,19 +110,20 @@ export const PageSouscription: GlobalConfig = {
               name: 'titre',
               type: 'text',
               label: 'Titre principal',
-              admin: { description: 'Vide = « 100 ans ».' },
+              admin: { placeholder: SOUSCRIPTION_TITRE_DEFAUT.titre, description: 'Vide = « 100 ans ».' },
             },
             {
               name: 'sousTitre',
               type: 'text',
               label: 'Sous-titre',
-              admin: { description: 'Vide = « d’édition marxiste : ».' },
+              admin: { placeholder: SOUSCRIPTION_TITRE_DEFAUT.sousTitre, description: 'Vide = « d’édition marxiste : ».' },
             },
             {
               name: 'demande',
               type: 'text',
               label: 'Demande',
               admin: {
+                placeholder: SOUSCRIPTION_TITRE_DEFAUT.demande,
                 description: 'Vide = « aidez-nous à poursuivre l’histoire. ».',
               },
             },
@@ -145,37 +154,37 @@ export const PageSouscription: GlobalConfig = {
                   name: 'titre50',
                   type: 'text',
                   label: 'Titre — 50 000 €',
-                  admin: { description: 'Vide = « On sauve les meubles ».' },
+                  admin: { placeholder: OBJECTIFS_DEFAUT.titre50, description: 'Vide = « On sauve les meubles ».' },
                 },
                 {
                   name: 'descriptif50',
                   type: 'textarea',
                   label: 'Description — 50 000 €',
-                  admin: { description: 'Vide = texte actuel.' },
+                  admin: { placeholder: OBJECTIFS_DEFAUT.descriptif50, description: 'Vide = texte actuel.' },
                 },
                 {
                   name: 'titre80',
                   type: 'text',
                   label: 'Titre — 80 000 €',
-                  admin: { description: 'Vide = « On résiste ».' },
+                  admin: { placeholder: OBJECTIFS_DEFAUT.titre80, description: 'Vide = « On résiste ».' },
                 },
                 {
                   name: 'descriptif80',
                   type: 'textarea',
                   label: 'Description — 80 000 €',
-                  admin: { description: 'Vide = texte actuel.' },
+                  admin: { placeholder: OBJECTIFS_DEFAUT.descriptif80, description: 'Vide = texte actuel.' },
                 },
                 {
                   name: 'titre100',
                   type: 'text',
                   label: 'Titre — 100 000 €',
-                  admin: { description: 'Vide = « On construit ».' },
+                  admin: { placeholder: OBJECTIFS_DEFAUT.titre100, description: 'Vide = « On construit ».' },
                 },
                 {
                   name: 'descriptif100',
                   type: 'textarea',
                   label: 'Description — 100 000 €',
-                  admin: { description: 'Vide = texte actuel.' },
+                  admin: { placeholder: OBJECTIFS_DEFAUT.descriptif100, description: 'Vide = texte actuel.' },
                 },
               ],
             },

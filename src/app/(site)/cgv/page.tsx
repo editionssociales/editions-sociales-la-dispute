@@ -3,6 +3,7 @@ import { Container } from "@/components/container";
 import { PageHero } from "@/components/page-hero";
 import { LegalCmsBody, LegalSection, LEGAL_BODY } from "@/components/legal-section";
 import { getPagesLegales } from "@/lib/site-content";
+import { splitParagraphes } from "@/lib/site-content-core";
 
 // Même recette de sous-titre légal que `confidentialite/page.tsx` : de vrais
 // <h3> (navigation par titres des lecteurs d'écran), pas des spans gras.
@@ -19,7 +20,7 @@ export default async function CgvPage() {
   // Global `pages-legales` (spec « éditeur de contenus ») : onglet rempli =
   // tout le corps (chapeau compris) vient du back-office ; onglet vide = le
   // JSX ci-dessous. Le global reste prioritaire dans les deux cas.
-  const { cgv, livraisonDelai } = await getPagesLegales();
+  const { cgv, livraisonInfos } = await getPagesLegales();
   return (
     <>
       <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
@@ -98,14 +99,15 @@ export default async function CgvPage() {
                   .
                 </p>
                 <h3 className={H3_CLASS}>Livraison</h3>
-                <p className={LEGAL_BODY}>
-                  Les commandes sont expédiées en France métropolitaine, en
-                  Belgique et en Suisse ; les frais de port sont calculés
-                  selon le montant du panier et affichés avant paiement. La
-                  livraison intervient en règle générale {livraisonDelai}{" "}
-                  à compter de la confirmation de paiement ; les précommandes
-                  sont expédiées à parution de l&apos;ouvrage.
-                </p>
+                {/* Texte réécrivable au back-office (`PagesLegales.livraisonInfos`,
+                    client 2026-11) ; vide = le paragraphe d'origine, énoncé dans
+                    `site-defaults.ts` (le même que celui affiché en transparence
+                    dans le champ d'édition). */}
+                {splitParagraphes(livraisonInfos).map((paragraphe, i) => (
+                  <p key={i} className={LEGAL_BODY}>
+                    {paragraphe}
+                  </p>
+                ))}
                 <h3 className={H3_CLASS}>Médiation de la consommation</h3>
                 <p className={LEGAL_BODY}>
                   Conformément aux articles L. 616-1 et R. 616-1 du code de

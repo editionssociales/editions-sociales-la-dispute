@@ -1,5 +1,10 @@
 import type { GlobalConfig } from 'payload'
 
+import {
+  MAIL_LOT_MESSAGE_DEFAUT,
+  MAIL_LOT_OBJET_EXEMPLE,
+  MAIL_LOT_RECOMMANDATIONS_TITRE_DEFAUT,
+} from '../../lib/site-defaults.ts'
 import { isAdminOrEditor } from '../access.ts'
 import { revalidateMailCommandeLotAfterChange } from '../hooks/revalidate.ts'
 
@@ -32,13 +37,17 @@ export const MailCommandeLot: GlobalConfig = {
       name: 'objet',
       type: 'text',
       label: 'Objet du mail',
-      admin: { description: 'Vide = objet habituel (« Confirmation de votre commande … »).' },
+      admin: {
+        placeholder: MAIL_LOT_OBJET_EXEMPLE,
+        description: 'Vide = objet habituel (« Confirmation de votre commande CMD-… », numéro réel).',
+      },
     },
     {
       name: 'message',
       type: 'textarea',
       label: 'Message',
       admin: {
+        placeholder: MAIL_LOT_MESSAGE_DEFAUT,
         description:
           'Texte brut ; séparez les paragraphes par une ligne vide. Remplace la phrase d’accueil du mail. Vide = texte par défaut.',
       },
@@ -47,7 +56,10 @@ export const MailCommandeLot: GlobalConfig = {
       name: 'recommandationsTitre',
       type: 'text',
       label: 'Titre du bloc de recommandations',
-      defaultValue: 'Nos recommandations de lecture',
+      // Plus de `defaultValue` : une valeur pré-remplie ne se distingue pas d'un
+      // texte saisi. Le défaut s'affiche en transparence, la fusion
+      // (`mergeMailCommandeLot`) y retombe à champ vide.
+      admin: { placeholder: MAIL_LOT_RECOMMANDATIONS_TITRE_DEFAUT },
     },
     {
       name: 'recommandations',

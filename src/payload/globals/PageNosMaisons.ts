@@ -1,6 +1,7 @@
 import type { Field, GlobalConfig } from 'payload'
 
 import { safeHttpUrl } from '../../lib/safe-url.ts'
+import { NOS_MAISONS_TITRE_DEFAUT } from '../../lib/site-defaults.ts'
 import { isAdminOrEditor } from '../access.ts'
 import { revalidatePageNosMaisonsAfterChange } from '../hooks/revalidate.ts'
 
@@ -53,7 +54,7 @@ export const PageNosMaisons: GlobalConfig = {
       name: 'titre',
       type: 'text',
       label: 'Titre',
-      admin: { description: 'Vide = « Nos maisons ».' },
+      admin: { placeholder: NOS_MAISONS_TITRE_DEFAUT, description: 'Vide = « Nos maisons ».' },
     },
     {
       name: 'texte',

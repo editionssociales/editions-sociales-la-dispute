@@ -13,6 +13,7 @@ import {
 } from "./site-content-core";
 import { safeHttpUrl } from "./safe-url";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
+import { livraisonInfosDefaut } from "./site-defaults";
 import { CAMPAIGN_2026_PALIERS } from "./donation-tiers";
 import { EDITIONS } from "./editions";
 import type { Media } from "../payload-types";
@@ -101,12 +102,14 @@ describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut
       mentionsLegales: null,
       confidentialite: null,
       livraisonDelai: DELIVERY_DELAY_RANGE,
+      livraisonInfos: livraisonInfosDefaut(),
     });
     expect(mergePagesLegales(undefined)).toEqual({
       cgv: null,
       mentionsLegales: null,
       confidentialite: null,
       livraisonDelai: DELIVERY_DELAY_RANGE,
+      livraisonInfos: livraisonInfosDefaut(),
     });
   });
 
@@ -123,6 +126,7 @@ describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut
       mentionsLegales: null,
       confidentialite: null,
       livraisonDelai: DELIVERY_DELAY_RANGE,
+      livraisonInfos: livraisonInfosDefaut(),
     });
   });
 
@@ -144,6 +148,17 @@ describe("mergePagesLegales — global vide ⇒ trois pages en rendu par défaut
     );
     expect(mergePagesLegales({ id: 1, livraisonDelai: "   " }).livraisonDelai).toBe(
       DELIVERY_DELAY_RANGE,
+    );
+  });
+
+  it("livraisonInfos : le texte saisi remplace le paragraphe ; vide → paragraphe d'origine avec le délai courant", () => {
+    expect(mergePagesLegales({ id: 1, livraisonInfos: " Expédition sous 3 jours. " }).livraisonInfos).toBe(
+      "Expédition sous 3 jours.",
+    );
+    expect(mergePagesLegales({ id: 1, livraisonInfos: "  " }).livraisonInfos).toBe(livraisonInfosDefaut());
+    // Le délai saisi s'insère dans le paragraphe par défaut.
+    expect(mergePagesLegales({ id: 1, livraisonDelai: "sous 5 jours ouvrés" }).livraisonInfos).toContain(
+      "en règle générale sous 5 jours ouvrés à compter",
     );
   });
 });

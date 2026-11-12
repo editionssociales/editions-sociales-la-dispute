@@ -1,5 +1,8 @@
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import type { GlobalConfig } from 'payload'
 
+import { EDITION_LIST } from '../../lib/editions.ts'
+import { EQUIPE_PERMANENTE_DEFAUT, MANUSCRITS_EMAIL_DEFAUT } from '../../lib/site-defaults.ts'
 import { isAdminOrEditor } from '../access.ts'
 import { revalidateAProposAfterChange } from '../hooks/revalidate.ts'
 
@@ -21,6 +24,13 @@ import { revalidateAProposAfterChange } from '../hooks/revalidate.ts'
  * Onglets UI sans `name` (même pattern que `PagesLegales` / fiche Livre) :
  * chemins de données inchangés.
  */
+const MAISON_FIELD = '/payload/admin/MaisonDefaultField.tsx#MaisonDefaultField'
+
+/** Table `{ slug de maison → texte par défaut }` d'un champ de `EDITIONS` — la même source que le rendu public. */
+function defautsParMaison(champ: 'name' | 'tagline' | 'description'): Record<string, string> {
+  return Object.fromEntries(EDITION_LIST.map((e) => [e.slug, e[champ]]))
+}
+
 export const PageAPropos: GlobalConfig = {
   slug: 'page-a-propos',
   label: 'Pages des maisons',
@@ -69,20 +79,25 @@ export const PageAPropos: GlobalConfig = {
                     { label: 'La Dispute', value: 'la-dispute' },
                   ],
                 },
+                // Défaut propre à la maison de la ligne : affiché en transparence
+                // par `MaisonDefaultField` (même source que le front, `EDITIONS`).
                 {
                   name: 'nom',
                   type: 'text',
                   label: 'Nom affiché',
+                  admin: { custom: { defaults: defautsParMaison('name') }, components: { Field: MAISON_FIELD } },
                 },
                 {
                   name: 'tagline',
                   type: 'text',
                   label: 'Sous-titre',
+                  admin: { custom: { defaults: defautsParMaison('tagline') }, components: { Field: MAISON_FIELD } },
                 },
                 {
                   name: 'description',
                   type: 'textarea',
                   label: 'Description',
+                  admin: { custom: { defaults: defautsParMaison('description') }, components: { Field: MAISON_FIELD } },
                 },
                 {
                   name: 'bureau',
@@ -122,6 +137,7 @@ export const PageAPropos: GlobalConfig = {
                   type: 'text',
                   label: 'Noms',
                   admin: {
+                    placeholder: EQUIPE_PERMANENTE_DEFAUT,
                     description:
                       'Liste des noms séparés par des virgules (ex. « A, B et C »), affichée à l’identique sur les deux pages maisons. Vide = liste actuelle.',
                   },
@@ -147,6 +163,7 @@ export const PageAPropos: GlobalConfig = {
                   type: 'text',
                   label: 'Adresse e-mail de dépôt',
                   admin: {
+                    placeholder: MANUSCRITS_EMAIL_DEFAUT,
                     description:
                       'Utilisée dans la phrase d’accroche par défaut ci-dessous. Vide = adresse actuelle.',
                   },
@@ -155,6 +172,12 @@ export const PageAPropos: GlobalConfig = {
                   name: 'texte',
                   type: 'richText',
                   label: 'Texte du bloc',
+                  editor: lexicalEditor({
+                    admin: {
+                      placeholder:
+                        'Texte actuel du bloc affiché sur les pages maisons tant que ce champ est vide — écrivez ici pour le remplacer entièrement.',
+                    },
+                  }),
                   admin: {
                     description: 'Remplace entièrement le texte par défaut, adresse e-mail comprise. Vide = texte actuel.',
                   },

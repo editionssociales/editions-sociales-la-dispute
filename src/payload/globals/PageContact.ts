@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 
+import { CONTACT_INTRO_DEFAUT, CONTACT_TITRE_DEFAUT } from '../../lib/site-defaults.ts'
 import { isAdminOrEditor } from '../access.ts'
 import { revalidatePageContactAfterChange } from '../hooks/revalidate.ts'
 
@@ -34,13 +35,13 @@ export const PageContact: GlobalConfig = {
       name: 'titre',
       type: 'text',
       label: 'Titre',
-      admin: { description: 'Vide = titre actuel.' },
+      admin: { placeholder: CONTACT_TITRE_DEFAUT, description: 'Vide = titre actuel.' },
     },
     {
       name: 'intro',
       type: 'textarea',
       label: 'Texte d’introduction',
-      admin: { description: 'Chapeau sous le titre. Vide = texte actuel.' },
+      admin: { placeholder: CONTACT_INTRO_DEFAUT, description: 'Chapeau sous le titre. Vide = texte actuel.' },
     },
   ],
 }

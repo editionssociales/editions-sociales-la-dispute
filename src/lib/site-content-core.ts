@@ -5,6 +5,22 @@ import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { CAMPAIGN_2026_PALIERS, DONATION_TIERS, type DonationTier } from "./donation-tiers";
 import { EDITION_LIST } from "./editions";
 import { safeHttpUrl } from "./safe-url";
+import {
+  CONTACT_INTRO_DEFAUT,
+  CONTACT_TITRE_DEFAUT,
+  EQUIPE_PERMANENTE_DEFAUT,
+  FOOTER_ADRESSE_DEFAUT,
+  MAIL_LOT_MESSAGE_DEFAUT,
+  MAIL_LOT_RECOMMANDATIONS_TITRE_DEFAUT,
+  MANUSCRITS_EMAIL_DEFAUT,
+  NOS_MAISONS_TITRE_DEFAUT,
+  OBJECTIFS_DEFAUT as OBJECTIFS_TEXTES_DEFAUT,
+  RECIT_TITRES_DEFAUT,
+  SEO_DESCRIPTION_DEFAUT,
+  SEO_TITRE_DEFAUT,
+  SOUSCRIPTION_TITRE_DEFAUT,
+  livraisonInfosDefaut,
+} from "./site-defaults";
 import type { Accent } from "./format";
 import type { EditionSlug } from "./types";
 import type {
@@ -65,17 +81,26 @@ export interface PagesLegalesContent {
   mentionsLegales: SafeHtml | null;
   confidentialite: SafeHtml | null;
   livraisonDelai: string;
+  /**
+   * Paragraphe(s) de la section « Livraison » des CGV (client 2026-11 :
+   * réécriture libre) — toujours résolu : le texte saisi, sinon le paragraphe
+   * actuel avec `livraisonDelai` inséré (`site-defaults.ts:livraisonInfosDefaut`).
+   * Séparer les paragraphes par une ligne vide (`splitParagraphes`).
+   */
+  livraisonInfos: string;
 }
 
 /** Fusion du global `pages-legales` — champ par champ, `null`/vide = défaut dur. */
 export function mergePagesLegales(
   global: PagesLegales | null | undefined,
 ): PagesLegalesContent {
+  const livraisonDelai = texteOuDefaut(global?.livraisonDelai, DELIVERY_DELAY_RANGE);
   return {
     cgv: richTextToSafeHtml(global?.cgv),
     mentionsLegales: richTextToSafeHtml(global?.mentionsLegales),
     confidentialite: richTextToSafeHtml(global?.confidentialite),
-    livraisonDelai: texteOuDefaut(global?.livraisonDelai, DELIVERY_DELAY_RANGE),
+    livraisonDelai,
+    livraisonInfos: texteOuDefaut(global?.livraisonInfos, livraisonInfosDefaut(livraisonDelai)),
   };
 }
 
@@ -107,16 +132,8 @@ export interface ReglagesSiteContent {
  * la fonctionnalité n'existait pas (cellule centrale du footer vide).
  */
 const REGLAGES_SITE_DEFAUT: ReglagesSiteContent = {
-  footer: {
-    adresse:
-      "La maison de la pensée critique, des sciences sociales et du mouvement ouvrier. Paris, France.",
-    reseauxSociaux: [],
-  },
-  seo: {
-    titre: "Les Éditions sociales × La Dispute",
-    description:
-      "Les Éditions sociales × La Dispute : essais critiques, sciences sociales, philosophie et histoire du mouvement ouvrier.",
-  },
+  footer: { adresse: FOOTER_ADRESSE_DEFAUT, reseauxSociaux: [] },
+  seo: { titre: SEO_TITRE_DEFAUT, description: SEO_DESCRIPTION_DEFAUT },
 };
 
 /** Chaîne saisie si non vide (espaces exclus), sinon le texte par défaut. */
@@ -201,9 +218,6 @@ export interface PageAProposContent {
  * la maquette) est conservée telle quelle ; à confirmer avec le client avant
  * tout changement (même réserve que l'ex-constante `BUREAUX` du JSX).
  */
-const EQUIPE_PERMANENTE_DEFAUT =
-  "Noémie Brun, Clara Laspalas, Marina Simonin et Nicolas Vieillescazes";
-
 const BUREAU_DEFAUT: Record<EditionSlug, string[]> = {
   "la-dispute": [
     "Noémie Brun",
@@ -236,8 +250,6 @@ const BUREAU_DEFAUT: Record<EditionSlug, string[]> = {
     "Quentin Fondu",
   ],
 };
-
-const MANUSCRITS_EMAIL_DEFAUT = "manuscritsldes@gmail.com";
 
 /** Fusion du global `page-a-propos` — champ par champ, vide = défaut dur. */
 export function mergePageAPropos(
@@ -510,16 +522,6 @@ const SOUSCRIPTION_DEFAUT: Pick<PageSouscriptionContent, "contreparties"> = {
 };
 
 /**
- * Titre de l'ask — texte actuel de `souscription/page.tsx` (refonte sobre,
- * maquette client 2026-08-21), extrait verbatim.
- */
-const TITRE_DEFAUT = {
-  titre: "100 ans",
-  sousTitre: "d’édition marxiste :",
-  demande: "aidez-nous à poursuivre l’histoire.",
-};
-
-/**
  * Titre (+ 2ᵉ ligne italique optionnelle) des quatre sections du récit —
  * texte actuel, verbatim. Le CORPS par défaut (paragraphes, gras, surlignage)
  * reste en JSX dans `souscription/page.tsx` (pas de JSX dans ce module `.ts`
@@ -529,24 +531,7 @@ const TITRE_DEFAUT = {
 const RECIT_DEFAUT: Record<
   keyof PageSouscriptionContent["recit"],
   { titre: string; titreItalique: string | null }
-> = {
-  danger: {
-    titre: "Édition indépendante et critique :",
-    titreItalique: "Danger maximal",
-  },
-  guerre: {
-    titre: "La guerre culturelle est aussi",
-    titreItalique: "une guerre matérielle",
-  },
-  maisons: {
-    titre: "Les éditions sociales et La Dispute",
-    titreItalique: null,
-  },
-  appel: {
-    titre: "Nous avons besoin de vous",
-    titreItalique: null,
-  },
-};
+> = RECIT_TITRES_DEFAUT;
 
 /**
  * Descriptions des trois paliers de jauge — texte de campagne client
@@ -555,19 +540,7 @@ const RECIT_DEFAUT: Record<
  * (`donation-tiers.ts`) — un champ vide au CMS y retombe donc exactement, le
  * même contrat que les descriptions.
  */
-const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = {
-  descriptif50:
-    "Nous pouvons faire face à l’urgence, poursuivre notre activité éditoriale sans mettre en danger notre équipe.",
-  descriptif80:
-    "Nous arrivons à absorber l’essentiel des dettes de notre ancien distributeur. Nous pouvons ainsi mener à bien certains projets déjà engagés et confirmer l’embauche de Nicolas Vieillescazes.",
-  // Le point final manque aussi dans cette livraison du texte client —
-  // conservé verbatim, comme la version précédente.
-  descriptif100:
-    "Nous poursuivons notre lancée éditoriale et nous pouvons lancer une nouvelle collection dont on espère pouvoir vous parler bientôt",
-  titre50: CAMPAIGN_2026_PALIERS[0].label,
-  titre80: CAMPAIGN_2026_PALIERS[1].label,
-  titre100: CAMPAIGN_2026_PALIERS[2].label,
-};
+const OBJECTIFS_DEFAUT: ObjectifsSouscriptionContent = OBJECTIFS_TEXTES_DEFAUT;
 
 /** Chaîne saisie si non vide (espaces exclus), sinon `null` (pas de 2ᵉ ligne / pas de section). */
 function texteOuDefautNullable(
@@ -672,9 +645,9 @@ export function mergePageSouscription(
 
   return {
     titre: {
-      titre: texteOuDefaut(global?.titre, TITRE_DEFAUT.titre),
-      sousTitre: texteOuDefaut(global?.sousTitre, TITRE_DEFAUT.sousTitre),
-      demande: texteOuDefaut(global?.demande, TITRE_DEFAUT.demande),
+      titre: texteOuDefaut(global?.titre, SOUSCRIPTION_TITRE_DEFAUT.titre),
+      sousTitre: texteOuDefaut(global?.sousTitre, SOUSCRIPTION_TITRE_DEFAUT.sousTitre),
+      demande: texteOuDefaut(global?.demande, SOUSCRIPTION_TITRE_DEFAUT.demande),
     },
     recit: {
       danger: mergeRecitSection(global?.danger, RECIT_DEFAUT.danger),
@@ -708,11 +681,7 @@ export interface PageContactContent {
 }
 
 /** Textes actuels de `contact/page.tsx` (`PageHero`), extraits verbatim. */
-const CONTACT_DEFAUT: PageContactContent = {
-  titre: "Contact",
-  intro:
-    "Une question sur un livre, une commande, une proposition éditoriale ? Écrivez-nous, nous vous répondrons dès que possible.",
-};
+const CONTACT_DEFAUT: PageContactContent = { titre: CONTACT_TITRE_DEFAUT, intro: CONTACT_INTRO_DEFAUT };
 
 /** Fusion du global `page-contact` — champ par champ, vide = défaut dur. */
 export function mergePageContact(
@@ -749,8 +718,6 @@ export interface PageNosMaisonsContent {
   titreArticles: string | null;
   titreMaisons: string | null;
 }
-
-const NOS_MAISONS_DEFAUT_TITRE = "Nos maisons";
 
 /** Texte brut → paragraphes (séparés par une ligne vide), blancs écartés. */
 export function splitParagraphes(texte: string | null | undefined): string[] {
@@ -806,7 +773,7 @@ export function mergePageNosMaisons(
   global: PageNosMaisons | null | undefined,
 ): PageNosMaisonsContent {
   return {
-    titre: texteOuDefaut(global?.titre, NOS_MAISONS_DEFAUT_TITRE),
+    titre: texteOuDefaut(global?.titre, NOS_MAISONS_TITRE_DEFAUT),
     paragraphes: splitParagraphes(global?.texte),
     videos: mergeLiens(global?.videos),
     articles: mergeLiens(global?.articles),
@@ -838,10 +805,8 @@ export interface MailCommandeLotContent {
 
 /** Défaut sobre en attendant le texte du client (saisissable au back-office). */
 const MAIL_LOT_DEFAUT = {
-  message:
-    "Merci pour votre commande et pour votre soutien ! Vos exemplaires seront expédiés dans les meilleurs délais. " +
-    "Vous trouverez ci-dessous le récapitulatif de votre commande.",
-  recommandationsTitre: "Nos recommandations de lecture",
+  message: MAIL_LOT_MESSAGE_DEFAUT,
+  recommandationsTitre: MAIL_LOT_RECOMMANDATIONS_TITRE_DEFAUT,
 };
 
 /**
