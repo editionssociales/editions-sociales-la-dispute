@@ -242,6 +242,13 @@ describe("payloadBookToRawBook — commerce natif (groupe `commerce`)", () => {
     expect(raw.commerce).toEqual({ sellable: true, stock: 5, preorder: true, digital: false });
   });
 
+  it("venteParLot coché → `lot: true` ; décoché → champ absent", () => {
+    const raw = payloadBookToRawBook(book({ commerce: { sellable: true, stock: 50, venteParLot: true } }));
+    expect(raw.commerce?.lot).toBe(true);
+    const sans = payloadBookToRawBook(book({ commerce: { sellable: true, stock: 50, venteParLot: false } }));
+    expect(sans.commerce && "lot" in sans.commerce).toBe(false);
+  });
+
   it("groupe `commerce` absent (fiche jamais touchée par la migration commerce) → null", () => {
     const raw = payloadBookToRawBook(book({ commerce: undefined }));
     expect(raw.commerce).toBeNull();

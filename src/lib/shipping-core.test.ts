@@ -3,6 +3,7 @@ import {
   CART_MAX_CENTS,
   computeShipping,
   countLots,
+  LOT_SIZE,
   LOT_FREE_SHIPPING_MIN_LOTS,
   LOT_SHIPPING_COST_CENTS,
   FREE_SHIPPING_MIN_CART_CENTS,
@@ -345,15 +346,26 @@ describe("computeShipping — vente par lot", () => {
 });
 
 describe("countLots", () => {
-  it("somme les quantités des lignes physiques « lot » seulement", () => {
+  it("compte les tranches COMPLÈTES de LOT_SIZE exemplaires, par ligne physique « lot »", () => {
+    expect(LOT_SIZE).toBe(10);
     expect(
       countLots([
-        { lot: true, digital: false, qty: 2 },
-        { lot: true, digital: true, qty: 5 },
-        { lot: false, digital: false, qty: 9 },
-        { lot: true, digital: false, qty: 1 },
+        { lot: true, digital: false, qty: 25 }, // 2 lots (5 exemplaires hors lot)
+        { lot: true, digital: true, qty: 50 }, // numérique : jamais un lot
+        { lot: false, digital: false, qty: 90 }, // titre non coché
+        { lot: true, digital: false, qty: 10 }, // 1 lot
       ]),
     ).toBe(3);
     expect(countLots([])).toBe(0);
+  });
+
+  it("moins de LOT_SIZE exemplaires d'un titre ne fait pas un lot — et deux titres ne se cumulent pas", () => {
+    expect(countLots([{ lot: true, digital: false, qty: 9 }])).toBe(0);
+    expect(
+      countLots([
+        { lot: true, digital: false, qty: 5 },
+        { lot: true, digital: false, qty: 5 },
+      ]),
+    ).toBe(0);
   });
 });

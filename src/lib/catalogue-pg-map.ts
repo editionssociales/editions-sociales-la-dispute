@@ -118,6 +118,8 @@ function toCommerce(value: PayloadBook["commerce"], digital: boolean): CommerceI
     stock: value.stock ?? null,
     preorder: Boolean(value.preorder),
     digital,
+    // Posé seulement quand il est vrai (même parti pris qu'`unavailableReason`).
+    ...(value.venteParLot ? { lot: true } : {}),
   };
 }
 

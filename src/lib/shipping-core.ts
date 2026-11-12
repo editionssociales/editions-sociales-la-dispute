@@ -20,10 +20,18 @@ function isShippingZone(zone: string): zone is ShippingZone {
 /** Tarif du port réduit « manifeste » (panier composé UNIQUEMENT d'articles `reducedShippingFlag`). */
 export const MANIFEST_SHIPPING_COST_CENTS = 250; // 2,50 €
 
-/** Port forfaitaire d'UN lot « vendu par lot » (`commerce.venteParLot`) — pour tout l'envoi, autres livres du panier compris. */
+/**
+ * Taille d'un lot : un titre coché « vendu par lot » (`commerce.venteParLot`)
+ * reste un livre vendu à l'unité, et CHAQUE tranche de `LOT_SIZE` exemplaires
+ * du même titre dans le panier compte pour un lot (boutons « lot de 10 » de
+ * la carte et de la fiche, `add-to-cart-button.tsx`).
+ */
+export const LOT_SIZE = 10;
+
+/** Port forfaitaire d'UN lot (`LOT_SIZE` exemplaires d'un titre `commerce.venteParLot`) — pour tout l'envoi, autres livres du panier compris. */
 export const LOT_SHIPPING_COST_CENTS = 1000; // 10,00 €
 
-/** Nombre de lots (somme des quantités) à partir duquel le port est offert. */
+/** Nombre de lots (`countLots`) à partir duquel le port est offert. */
 export const LOT_FREE_SHIPPING_MIN_LOTS = 2;
 
 /** Plancher (inclus) du panier pour que le coupon `free_shipping` s'applique. */
@@ -97,7 +105,7 @@ export interface ShippingRequest {
   hasPhysicalItems: boolean;
   /**
    * Nombre de lots dans le panier ENTIER : somme des QUANTITÉS des lignes
-   * physiques « vendu par lot » (`commerce.venteParLot`), entier ≥ 0 — calculé
+   * physiques « vendu par lot » (`commerce.venteParLot`), en LOTS entiers ≥ 0 — calculé
    * par l'appelant via `countLots`. 1 lot → port forfaitaire ; ≥ 2 → offert.
    */
   lotCount: number;
@@ -145,15 +153,19 @@ export function isManifestOnly(items: readonly { reducedShippingFlag: boolean }[
 }
 
 /**
- * LA règle « nombre de lots » : somme des QUANTITÉS des lignes PHYSIQUES
- * « vendu par lot » — consommée par `resolveCartSummary` (`cart-core.ts`) et
- * `validateCheckoutLines` (`checkout-core.ts`), jamais ré-inlinée. Un lot
- * numérique n'existe pas (rien à expédier) : les lignes `digital` sont ignorées.
+ * LA règle « nombre de lots » : pour chaque ligne PHYSIQUE « vendu par lot »,
+ * le nombre de tranches COMPLÈTES de `LOT_SIZE` exemplaires (9 → 0, 10 → 1,
+ * 25 → 2), sommé sur le panier — par LIGNE, jamais sur le cumul de titres
+ * différents (5 + 5 de deux titres ne font pas un lot). Consommée par
+ * `resolveCartSummary` (`cart-core.ts`), `validateCheckoutLines`
+ * (`checkout-core.ts`) et `buildOrderCreateData` (`order-webhook-core.ts`),
+ * jamais ré-inlinée. Un lot numérique n'existe pas (rien à expédier) : les
+ * lignes `digital` sont ignorées.
  */
 export function countLots(
   items: readonly { lot: boolean; digital: boolean; qty: number }[],
 ): number {
-  return items.reduce((sum, i) => (i.lot && !i.digital ? sum + i.qty : sum), 0);
+  return items.reduce((sum, i) => (i.lot && !i.digital ? sum + Math.floor(i.qty / LOT_SIZE) : sum), 0);
 }
 
 /**

@@ -613,11 +613,11 @@ export const Books: CollectionConfig = {
                       name: 'venteParLot',
                       type: 'checkbox',
                       defaultValue: false,
-                      label: 'Vendu par lot (port forfaitaire)',
+                      label: 'Vendu par lot de 10 (port forfaitaire)',
                       admin: {
                         width: '50%',
                         description:
-                          'Port de 10 € pour un lot, offert dès deux lots dans le même panier.',
+                          'Ajoute un bouton « Lot de 10 » sur la carte et la fiche (le livre reste vendu à l’unité, au même prix). Port de 10 € pour un lot de 10 exemplaires, offert dès deux lots dans le même panier.',
                       },
                     },
                     {

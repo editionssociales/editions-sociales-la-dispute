@@ -18,6 +18,7 @@ import type { ShippingMethodLabel } from "./cart-quote";
 import type { DecodedCheckoutLine, RecipientName } from "./checkout-core";
 import type { DonationMailRecapAddress } from "./donation-mail";
 import { centsToEuros } from "./money";
+import { countLots } from "./shipping-core";
 
 /** Ventes restreintes FR/BE/CH (`Orders.ts:shippingAddress.country`, même contrainte que `shipping_address_collection`). */
 export type OrderCountry = "FR" | "BE" | "CH";
@@ -142,7 +143,7 @@ export interface OrderCreateData {
     unitPriceTTC: number;
     digital: boolean;
   }[];
-  /** Au moins une ligne « vendue par lot » (jamais pour un don) — `Orders.venteParLot`. */
+  /** Au moins un LOT complet (`shipping-core.ts:countLots`, jamais pour un don) — `Orders.venteParLot`. Quelques exemplaires à l'unité d'un titre « vendu par lot » ne font pas une commande de lot. */
   venteParLot: boolean;
   shippingMethod: OrderShippingMethod;
   shippingCostTTC: number;
@@ -283,7 +284,9 @@ export function buildOrderCreateData(
     })),
     // Un don n'est jamais une commande de lot, même si une contrepartie
     // portait un jour le drapeau.
-    venteParLot: facts.orderType !== "don" && facts.lines.some((l) => l.lot === true),
+    venteParLot:
+      facts.orderType !== "don" &&
+      countLots(facts.lines.map((l) => ({ lot: l.lot === true, digital: l.digital, qty: l.quantity }))) >= 1,
     shippingMethod: facts.shippingMethod,
     shippingCostTTC: centsToEuros(facts.shippingCostCents),
     promoCode: facts.promoCodeId,

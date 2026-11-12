@@ -3,6 +3,7 @@ import type { Book } from "@/lib/types";
 import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
 import { AddToCartButton } from "./cart/add-to-cart-button";
+import { LOT_SIZE } from "@/lib/shipping-core";
 import { BookPrice } from "./book-price";
 import { EpubTag } from "./epub-tag";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
@@ -78,6 +79,11 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
   // fiche — seulement si le livre est disponible au panier. Sorti du cadre
   // couverture (rangée basse fixe), à droite du badge de statut.
   const cartChip = canAddToCart(book) && <AddToCartButton id={book.id} variant="chip" />;
+  // Titre vendu par lot (`Book.lot`) : seconde puce « ×10 », un lot d'un geste
+  // — le livre reste achetable à l'unité par la puce « + ».
+  const lotChip = canAddToCart(book) && book.lot && (
+    <AddToCartButton id={book.id} variant="chip" qty={LOT_SIZE} />
+  );
 
   // Épure minimaliste : la couverture porte déjà titre/auteurs (alt complet
   // ci-dessus) — la carte n'affiche que le prix en texte visible, quel que
@@ -115,6 +121,7 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
           <div className="flex flex-none items-center gap-2">
             {statusBadge}
             {digitalBadge}
+            {lotChip}
             {cartChip}
           </div>
         </div>

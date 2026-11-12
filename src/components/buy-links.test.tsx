@@ -220,3 +220,19 @@ describe("BuyLinksList — titre numérique seul (client 2026-09-09)", () => {
     expect(markup).not.toContain("Téléchargement après paiement");
   });
 });
+
+describe("BuyLinksList — titre vendu par lot (`Book.lot`)", () => {
+  const available = { status: "available", purchaseMode: "cart", permalink: "/catalogue/x/y" } as const;
+
+  it("propose le bouton « lot de 10 » et rappelle la règle de port, en plus de l'achat à l'unité", () => {
+    const markup = renderToStaticMarkup(<BuyLinksList book={book({ ...available, lot: true })} />);
+    expect(markup).toContain("Ajouter au panier");
+    expect(markup).toContain("Ajouter un lot de 10");
+    expect(markup).toContain("offert dès");
+  });
+
+  it("sans le drapeau : aucun bouton de lot", () => {
+    const markup = renderToStaticMarkup(<BuyLinksList book={book(available)} />);
+    expect(markup).not.toContain("Ajouter un lot de");
+  });
+});

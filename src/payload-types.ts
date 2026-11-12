@@ -292,7 +292,7 @@ export interface Book {
      */
     reducedShippingFlag?: boolean | null;
     /**
-     * Port de 10 € pour un lot, offert dès deux lots dans le même panier.
+     * Ajoute un bouton « Lot de 10 » sur la carte et la fiche (le livre reste vendu à l’unité, au même prix). Port de 10 € pour un lot de 10 exemplaires, offert dès deux lots dans le même panier.
      */
     venteParLot?: boolean | null;
     /**

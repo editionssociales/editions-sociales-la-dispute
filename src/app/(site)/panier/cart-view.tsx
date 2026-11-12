@@ -24,6 +24,7 @@ import {
   FREE_SHIPPING_MIN_CART_CENTS,
   LOT_FREE_SHIPPING_MIN_LOTS,
   LOT_SHIPPING_COST_CENTS,
+  LOT_SIZE,
   type ShippingZone,
 } from "@/lib/shipping-core";
 import { computeCartQuote } from "@/lib/cart-quote";
@@ -514,6 +515,10 @@ export function CartView({
   // Port offert par les lots (≥ 2) : la mention « dès 50 € avec un code » ne
   // doit pas la contredire, et la ligne de port s'affiche « Offerte ».
   const lotsFreeShipping = hasPhysicalItems && summary.lotCount >= LOT_FREE_SHIPPING_MIN_LOTS;
+  // Titre « vendu par lot » présent mais moins de `LOT_SIZE` exemplaires :
+  // on rappelle la règle au lieu de laisser deviner le seuil.
+  const lotHint =
+    summary.lotCount === 0 && summary.lines.some((l) => l.purchasable && l.lot && !l.digital);
 
   const [checkoutPending, startCheckoutTransition] = useTransition();
   /** Un item par refus (`checkout-core.ts` en rédige un par article en défaut) — jamais fusionnés en un seul paragraphe (cf. `<ul>` ci-dessous) ; l'`id`, quand il existe, marque la ligne en cause dans la grille. */
@@ -733,6 +738,12 @@ export function CartView({
               <p aria-live="polite" className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-ink">
                 Port forfaitaire lot : {euros(LOT_SHIPPING_COST_CENTS)}. Ajoutez un deuxième lot : la
                 livraison est offerte.
+              </p>
+            )}
+            {lotHint && (
+              <p className="font-sans text-xs text-muted">
+                Par lot de {LOT_SIZE} exemplaires : port forfaitaire de {euros(LOT_SHIPPING_COST_CENTS)},
+                offert dès {LOT_FREE_SHIPPING_MIN_LOTS} lots.
               </p>
             )}
             {lotsFreeShipping && (

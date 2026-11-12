@@ -523,17 +523,22 @@ describe("recapAddressFromOrder", () => {
 });
 
 describe("buildOrderCreateData — venteParLot", () => {
-  const line = (lot?: boolean): OrderLineFacts => ({
+  const line = (lot?: boolean, quantity = 10): OrderLineFacts => ({
     bookId: 1,
     titleSnapshot: "L'Avenir en commun",
     isbnSnapshot: null,
-    quantity: 1,
+    quantity,
     unitPriceCents: 1000,
     digital: false,
     ...(lot === undefined ? {} : { lot }),
   });
 
-  it("vrai dès qu'une ligne est vendue par lot", () => {
+  it("faux pour quelques exemplaires à l'unité d'un titre vendu par lot (moins d'un lot complet)", () => {
+    const r = buildOrderCreateData(facts({ lines: [line(true, 9)] }));
+    expect("error" in r ? null : r.venteParLot).toBe(false);
+  });
+
+  it("vrai dès qu'une ligne porte un lot complet", () => {
     const r = buildOrderCreateData(facts({ lines: [line(false), line(true)] }));
     expect("error" in r ? null : r.venteParLot).toBe(true);
   });

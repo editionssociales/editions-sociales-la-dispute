@@ -1,8 +1,14 @@
 import type { Book } from "@/lib/types";
 import { canAddToCart } from "@/lib/cart-core";
 import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
-import { formatDateFr } from "@/lib/format";
+import { formatDateFr, formatPrice } from "@/lib/format";
 import { AddToCartButton } from "./cart/add-to-cart-button";
+import { centsToEuros } from "@/lib/money";
+import {
+  LOT_FREE_SHIPPING_MIN_LOTS,
+  LOT_SHIPPING_COST_CENTS,
+  LOT_SIZE,
+} from "@/lib/shipping-core";
 import { BookPrice } from "./book-price";
 import { EpubTag } from "./epub-tag";
 import { Button } from "./button";
@@ -54,6 +60,23 @@ export function BuyLinksList({
   // Fourchette réelle plutôt que promesse d'expédition éclair (demande client
   // 2026-08-26) — source unique `delivery-copy.ts`, surchargeable au back-office.
   const inStockCopy = `En stock — livraison ${livraisonDelai}`;
+  // Titre vendu par lot (`Book.lot`) : second bouton, un lot d'un geste, avec
+  // la règle de port qui va avec (`shipping-core.ts`, jamais réénoncée en dur).
+  const lotBlock = book.lot ? (
+    <>
+      <AddToCartButton
+        id={book.id}
+        qty={LOT_SIZE}
+        tone="outline"
+        className="mt-2 w-full"
+        label={`Ajouter un lot de ${LOT_SIZE}`}
+      />
+      <p className={MICROCOPY_CLASS}>
+        Par lot de {LOT_SIZE} : port {formatPrice(centsToEuros(LOT_SHIPPING_COST_CENTS))}, offert dès{" "}
+        {LOT_FREE_SHIPPING_MIN_LOTS} lots
+      </p>
+    </>
+  ) : null;
   // Titre numérique seul (client 2026-09-09) : remplace toute mention de
   // stock/expédition, quel que soit le statut d'achat qui la porterait
   // (`inStockCopy` ci-dessus comme la microcopie de précommande ci-dessous).
@@ -131,6 +154,7 @@ export function BuyLinksList({
       <div>
         {priceBlock}
         <AddToCartButton id={book.id} className="mt-3 w-full" label="Précommander" />
+        {lotBlock}
         <p className={MICROCOPY_CLASS}>
           {digital ? (
             DIGITAL_MICROCOPY
@@ -172,6 +196,7 @@ export function BuyLinksList({
         {priceBlock}
         <AddToCartButton id={book.id} className="mt-3 w-full" />
         <p className={MICROCOPY_CLASS}>{digital ? DIGITAL_MICROCOPY : inStockCopy}</p>
+        {lotBlock}
         {secondaryLinks}
       </div>
     );

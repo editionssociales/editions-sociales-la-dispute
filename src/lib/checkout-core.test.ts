@@ -243,14 +243,14 @@ describe("validateCheckoutLines", () => {
     expect(result.ok && result.manifestOnly).toBe(true);
   });
 
-  it("lotCount : somme des quantités des lignes validées « lot »", () => {
+  it("lotCount : lots COMPLETS de 10 exemplaires parmi les lignes validées « lot »", () => {
     const books = new Map([
-      [1, book({ lot: true })],
+      [1, book({ lot: true, stock: 50 })],
       [2, book()],
     ]);
     const result = validateCheckoutLines(
       [
-        { id: 1, qty: 2 },
+        { id: 1, qty: 20 },
         { id: 2, qty: 3 },
       ],
       books,

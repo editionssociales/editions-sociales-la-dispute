@@ -287,7 +287,7 @@ describe("CartView — vente par lot", () => {
 
   it("1 lot : encart du forfait et invitation au deuxième lot", async () => {
     lotIds.add(CAPITAL.id);
-    seedQty(1);
+    seedQty(10);
     const el = mount(
       <CartProvider>
         <CartView goodies={[]} />
@@ -302,7 +302,7 @@ describe("CartView — vente par lot", () => {
 
   it("2 lots : livraison offerte, ligne de port « Offerte »", async () => {
     lotIds.add(CAPITAL.id);
-    seedQty(2);
+    seedQty(20);
     const el = mount(
       <CartProvider>
         <CartView goodies={[]} />
@@ -313,6 +313,20 @@ describe("CartView — vente par lot", () => {
     expect(el.textContent).toContain("2 lots ou plus");
     expect(el.textContent).toContain("Offerte");
     expect(el.textContent).not.toContain("Port forfaitaire lot");
+  });
+
+  it("titre vendu par lot, moins de 10 exemplaires : rappel de la règle, port de grille", async () => {
+    lotIds.add(CAPITAL.id);
+    seedQty(3);
+    const el = mount(
+      <CartProvider>
+        <CartView goodies={[]} />
+      </CartProvider>,
+    );
+    await settle(el);
+    expect(el.textContent).toContain("Par lot de 10 exemplaires");
+    expect(el.textContent).not.toContain("Port forfaitaire lot");
+    expect(el.textContent).not.toContain("2 lots ou plus");
   });
 
   it("sans lot : aucun encart lot", async () => {

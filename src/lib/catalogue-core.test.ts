@@ -415,6 +415,23 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
     });
   });
 
+  describe("titre vendu par lot (`commerce.lot`)", () => {
+    const permalink = "/catalogue/editions-sociales/avenir-en-commun";
+    const raw = rawBook({ id: 30, slug: "avenir-en-commun", title: "L'Avenir en commun" });
+
+    it("coché → `lot: true` sur le livre, quel que soit le statut d'achat", () => {
+      const book = toBook("editions-sociales", raw);
+      expect(resolveNativePurchase(book, { sellable: true, stock: 50, lot: true }, permalink).lot).toBe(true);
+      expect(resolveNativePurchase(book, { sellable: true, stock: 0, lot: true }, permalink).lot).toBe(true);
+    });
+
+    it("jamais pour un titre numérique seul (un lot s'expédie)", () => {
+      const book = toBook("editions-sociales", raw);
+      const resolved = resolveNativePurchase(book, { sellable: true, stock: null, digital: true, lot: true }, permalink);
+      expect("lot" in resolved).toBe(false);
+    });
+  });
+
   describe("titre numérique seul (`commerce.digital`, client 2026-09-09 — « Notes sur Mill »)", () => {
     it("stock `null` (jamais renseigné pour un ePub) → disponible quand même, format « numerique »", () => {
       const book = rawBook({ id: 20, slug: "notes-sur-mill", title: "Notes sur James Mill" });

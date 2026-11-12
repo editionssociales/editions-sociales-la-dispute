@@ -90,6 +90,12 @@ export interface CommerceInfo {
    * comportement historique inchangé (stock requis comme avant).
    */
   digital?: boolean;
+  /**
+   * Coché = « Vendu par lot » (`Books.ts:commerce.venteParLot`) — le front
+   * propose alors l'ajout d'un lot de `LOT_SIZE` exemplaires en un geste
+   * (carte, fiche). Optionnel : absent = `false`.
+   */
+  lot?: boolean;
 }
 
 /* -------- Where « books lisibles publiquement » (pg) --------

@@ -45,9 +45,11 @@ export const EMPTY_CART: CartState = { version: CART_VERSION, lines: [] };
 /**
  * Plafond défensif par ligne — même esprit que `FREE_AMOUNT` de
  * `donation-tiers.ts` : borne un `localStorage` trafiqué ou une frappe
- * malheureuse (`qty: 9999`), jamais une vraie limite produit.
+ * malheureuse (`qty: 9999`), jamais une vraie limite produit. Assez haut
+ * pour plusieurs lots de `LOT_SIZE` exemplaires (`shipping-core.ts`) : la
+ * vraie limite reste le stock, revérifié au checkout.
  */
-export const MAX_LINE_QTY = 20;
+export const MAX_LINE_QTY = 100;
 
 function clampQty(qty: number): number {
   if (!Number.isFinite(qty)) return 1;
@@ -192,7 +194,7 @@ export interface CartSummary {
   subtotalCents: number;
   /** Vrai ssi au moins une ligne `purchasable` PHYSIQUE ET toutes le sont avec `reducedShippingFlag` — une ligne numérique (client 2026-09-09) n'entre ni dans le compte ni dans la règle, elle ne s'expédie jamais. */
   manifestOnly: boolean;
-  /** Somme des quantités des lignes `purchasable` PHYSIQUES « vendu par lot » (`countLots`). */
+  /** Nombre de LOTS complets parmi les lignes `purchasable` PHYSIQUES « vendu par lot » (`countLots`). */
   lotCount: number;
 }
 

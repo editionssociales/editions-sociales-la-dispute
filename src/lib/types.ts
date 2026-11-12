@@ -105,6 +105,13 @@ export interface Book {
    * même raison qu'eux (fixtures minimales construites à la main).
    */
   format?: "papier" | "numerique";
+  /**
+   * `true` ssi la fiche est cochée « Vendu par lot »
+   * (`CommerceInfo.lot`) : la carte et la fiche proposent d'ajouter un lot
+   * de `LOT_SIZE` exemplaires d'un geste (`shipping-core.ts`). Posé par
+   * `resolveNativePurchase`, optionnel comme `format`.
+   */
+  lot?: boolean;
 }
 
 /** Citation presse de la fiche livre (onglet « La presse en parle »). */

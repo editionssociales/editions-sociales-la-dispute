@@ -118,11 +118,15 @@ export function resolveNativePurchase(
   purchaseMode: PurchaseMode;
   unavailableReason?: UnavailableReason;
   format: Book["format"];
+  lot?: true;
 } {
   // Posé une fois, rendu par TOUTES les branches ci-dessous — même parti pris
   // que `purchaseMode` (toujours posé par ce builder, jamais réénoncé par
   // l'appelant).
   const format: Book["format"] = commerce.digital ? "numerique" : "papier";
+  // Un lot s'expédie : un titre numérique seul n'est jamais « vendu par lot ».
+  // Posé seulement quand il est vrai (même parti pris qu'`unavailableReason`).
+  const lot = commerce.lot && !commerce.digital ? { lot: true as const } : {};
   const verdict = assessSellability({
     sellable: commerce.sellable,
     stock: commerce.stock,
@@ -131,15 +135,15 @@ export function resolveNativePurchase(
     digital: commerce.digital,
   });
   if (!verdict.ok && verdict.reason === "upcoming") {
-    return { status: "upcoming", permalink: null, purchaseMode: "legacy-link", format };
+    return { status: "upcoming", permalink: null, purchaseMode: "legacy-link", format, ...lot };
   }
   if (verdict.ok) {
     const status: PurchaseStatus = isUpcoming(book.publishedAt) ? "preorder" : "available";
-    return { status, permalink: internalPermalink, purchaseMode: "cart", format };
+    return { status, permalink: internalPermalink, purchaseMode: "cart", format, ...lot };
   }
   const external = book.buy.parislibrairies || book.buy.lalibrairie;
   if (external) {
-    return { status: "external", permalink: external, purchaseMode: "legacy-link", format };
+    return { status: "external", permalink: external, purchaseMode: "legacy-link", format, ...lot };
   }
   // « Épuisé » (stock à 0) est le SEUL motif surfacé côté front (demande
   // client 2026-09-04, `BuyLinksList`/`BookCard`) — `not-sellable`/`untracked`
@@ -151,6 +155,7 @@ export function resolveNativePurchase(
     permalink: null,
     purchaseMode: "legacy-link",
     format,
+    ...lot,
     ...(verdict.reason === "out-of-stock" ? { unavailableReason: "out-of-stock" as const } : {}),
   };
 }

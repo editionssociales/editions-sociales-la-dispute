@@ -36,6 +36,8 @@ export function AddToCartButton({
   variant = "button",
   className,
   label = "Ajouter au panier",
+  qty = 1,
+  tone = "solid",
 }: {
   id: number;
   variant?: "button" | "chip";
@@ -49,6 +51,14 @@ export function AddToCartButton({
    * scission n'a lieu qu'à l'encaissement).
    */
   label?: string;
+  /**
+   * Exemplaires ajoutés d'un geste — 1 par défaut ; `LOT_SIZE` pour le bouton
+   * « lot » d'un titre vendu par lot (`Book.lot`). Au-delà de 1, la puce
+   * affiche « ×N » au lieu de « + » et son nom accessible dit le nombre.
+   */
+  qty?: number;
+  /** Bouton plein (défaut) ou contour — le bouton « lot » de la fiche, secondaire, ne concurrence pas l'achat à l'unité. */
+  tone?: "solid" | "outline";
 }) {
   const { addToCart } = useCart();
   const { fly, flights } = useFlyToCart();
@@ -75,7 +85,7 @@ export function AddToCartButton({
     // le placerait à nouveau dans un ancêtre cliquable.
     e.preventDefault();
     e.stopPropagation();
-    addToCart(id, 1);
+    addToCart(id, qty);
     // Retour visible pour les DEUX variantes (#82c) : la région live du
     // provider ne sert que les technologies d'assistance (`sr-only`), elle ne
     // dit rien à l'œil. La puce de grille restait donc sans aucun retour.
@@ -99,10 +109,12 @@ export function AddToCartButton({
           // n'est donc jamais lu), et le faire changer sous un bouton qui a le
           // focus provoquerait une seconde annonce en plus de celle de la
           // région live du provider.
-          aria-label="Ajouter au panier"
-          className={`${justAdded ? CHIP_ADDED : CHIP_IDLE} ${className ?? ""}`}
+          aria-label={
+            qty > 1 ? `Ajouter un lot de ${qty} exemplaires au panier` : "Ajouter au panier"
+          }
+          className={`${justAdded ? CHIP_ADDED : CHIP_IDLE} ${qty > 1 ? "w-auto min-w-11 px-2 text-sm" : ""} ${className ?? ""}`}
         >
-          {justAdded ? "✓" : "+"}
+          {justAdded ? "✓" : qty > 1 ? `×${qty}` : "+"}
         </button>
         {flights}
       </>
@@ -118,7 +130,7 @@ export function AddToCartButton({
         // même bascule de couleur que la puce (`CHIP_ADDED`), cf. `button.tsx`.
         // `label` (précommande 2026-08-20) : « Précommander » sur un
         // à-paraître ouvert, sans changer le retour « Ajouté au panier ».
-        variant={justAdded ? "confirm" : "solid"}
+        variant={justAdded ? "confirm" : tone}
         className={`px-5 py-2.5 text-sm tracking-[.03em] ${className ?? ""}`}
       >
         {justAdded ? "Ajouté au panier" : label}
