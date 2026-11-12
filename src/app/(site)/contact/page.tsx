@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 export default async function ContactPage() {
   const { titre, intro } = await getPageContact();
   return (
-    <Container className="bg-paper py-12 sm:py-16">
+    <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
       <PageHero title={titre} intro={intro} className="max-w-xl" />
 
       <div className="mt-10 max-w-xl">

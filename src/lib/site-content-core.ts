@@ -734,6 +734,8 @@ export interface NosMaisonsLien {
   url: string;
   media: string | null;
   date: string | null;
+  /** Image de couverture (articles seulement) — toujours exploitable (url/largeur/hauteur présentes) ou `null`. */
+  image: { url: string; width: number; height: number; alt: string } | null;
 }
 
 export interface PageNosMaisonsContent {
@@ -742,6 +744,10 @@ export interface PageNosMaisonsContent {
   paragraphes: string[];
   videos: NosMaisonsLien[];
   articles: NosMaisonsLien[];
+  /** Titres de section FACULTATIFS — `null` = aucun titre visible (le cas courant, retour client 2026-11). */
+  titreVideos: string | null;
+  titreArticles: string | null;
+  titreMaisons: string | null;
 }
 
 const NOS_MAISONS_DEFAUT_TITRE = "Nos maisons";
@@ -760,6 +766,8 @@ type LienBrut = {
   url?: string | null;
   media?: string | null;
   date?: string | null;
+  /** Upload `media` — peuplé (objet) à la lecture du global, sinon simple id (ignoré). */
+  image?: number | Media | null;
 } | null | undefined;
 
 /** Lignes sans titre ou à URL invalide écartées (jamais rendues), ordre de saisie conservé. */
@@ -769,11 +777,25 @@ function mergeLiens(rows: ReadonlyArray<LienBrut> | null | undefined): NosMaison
     const titre = row?.titre?.trim();
     const url = safeHttpUrl(row?.url);
     if (!titre || !url) continue;
+    // Image : même garde que les visuels de soutien (`mergeSoutiens`) — un
+    // média non peuplé ou sans dimensions n'est jamais rendu (l'article reste
+    // alors une simple ligne de texte).
+    const img = row?.image;
+    const image =
+      isMediaPopulated(img) && img.url && img.width && img.height
+        ? {
+            url: img.url,
+            width: img.width,
+            height: img.height,
+            alt: typeof img.alt === "string" ? img.alt.trim() : "",
+          }
+        : null;
     out.push({
       titre,
       url,
       media: row?.media?.trim() || null,
       date: row?.date?.trim() || null,
+      image,
     });
   }
   return out;
@@ -788,6 +810,9 @@ export function mergePageNosMaisons(
     paragraphes: splitParagraphes(global?.texte),
     videos: mergeLiens(global?.videos),
     articles: mergeLiens(global?.articles),
+    titreVideos: global?.titreVideos?.trim() || null,
+    titreArticles: global?.titreArticles?.trim() || null,
+    titreMaisons: global?.titreMaisons?.trim() || null,
   };
 }
 

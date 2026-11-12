@@ -9,7 +9,7 @@ import { FramedGrid } from "@/components/framed-grid";
  */
 export function CatalogueFallback() {
   return (
-    <Container className="bg-paper py-12 sm:py-16">
+    <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
       <div aria-busy="true" aria-live="polite">
         <div className="h-3 w-40 bg-paper-2" />
         <div className="mt-6 h-10 max-w-md bg-paper-2" />

@@ -64,6 +64,29 @@ export const PageNosMaisons: GlobalConfig = {
       },
     },
     {
+      type: 'row',
+      fields: [
+        {
+          name: 'titreVideos',
+          type: 'text',
+          label: 'Titre de la section Vidéos',
+          admin: { width: '33%', description: 'Facultatif — vide = aucun titre (le cas courant).' },
+        },
+        {
+          name: 'titreArticles',
+          type: 'text',
+          label: 'Titre de la section Articles',
+          admin: { width: '33%', description: 'Facultatif — vide = aucun titre.' },
+        },
+        {
+          name: 'titreMaisons',
+          type: 'text',
+          label: 'Titre de la section des deux maisons',
+          admin: { width: '33%', description: 'Facultatif — vide = aucun titre.' },
+        },
+      ],
+    },
+    {
       name: 'videos',
       type: 'array',
       label: 'Vidéos',
@@ -78,7 +101,21 @@ export const PageNosMaisons: GlobalConfig = {
       type: 'array',
       label: 'Articles',
       labels: { singular: 'Article', plural: 'Articles' },
-      fields: lienFields('Lien http(s) vers l’article.'),
+      fields: [
+        ...lienFields('Lien http(s) vers l’article.'),
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          label: 'Image de couverture',
+          displayPreview: true,
+          filterOptions: { mimeType: { contains: 'image' } },
+          admin: {
+            description:
+              'Optionnelle — affichée au-dessus du titre de l’article. Sans image, l’article reste une simple ligne de texte.',
+          },
+        },
+      ],
     },
   ],
 }

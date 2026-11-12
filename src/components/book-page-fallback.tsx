@@ -15,7 +15,7 @@ import { FramedGrid } from "@/components/framed-grid";
  */
 export function BookPageFallback() {
   return (
-    <Container className="bg-paper py-12 sm:py-16">
+    <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
       <div aria-busy="true" aria-live="polite">
         <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
           <div className="order-2 mx-auto w-full max-w-[300px] lg:order-1 lg:mx-0 lg:max-w-none lg:self-start">

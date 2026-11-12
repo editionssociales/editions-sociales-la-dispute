@@ -70,7 +70,7 @@ async function UpcomingCatalogueBody() {
   const nouveautes = toNouveauteBooks(books);
 
   return (
-    <Container className="bg-paper py-12 sm:py-16">
+    <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
       <h1 className="sr-only">Les livres à paraître</h1>
       <NouveautesCarousel books={nouveautes} showArrows={false} showCatalogueLink={false} />
     </Container>
@@ -95,7 +95,7 @@ async function CatalogueBody({
   const resetHref = catalogueHref({ sort: filters.sort });
 
   return (
-    <Container className="bg-paper py-12 sm:py-16">
+    <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
       {/* Épure minimaliste : l'ex-PageHero (titre + chapeau) a été retiré —
           le h1 devient invisible (a11y/SEO seuls), rien ne porte plus ce
           rôle visuellement. */}

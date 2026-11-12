@@ -21,7 +21,7 @@ export default async function ConfidentialitePage() {
   const { confidentialite } = await getPagesLegales();
   return (
     <>
-      <Container className="bg-paper py-12 sm:py-16">
+      <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
         <PageHero
           title="Politique de confidentialité"
           intro={

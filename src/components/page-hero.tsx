@@ -17,7 +17,7 @@ import { LEGAL_BODY } from "./legal-section";
  *
  * Rythme interne fixe (titre → chapeau) ; le rythme vertical de LA SECTION
  * qui l'englobe (padding du `Container`) suit le couple canonique documenté
- * dans `LegalSection` — `py-12 sm:py-16` pour les pages listing et légales,
+ * dans `LegalSection` — `pt-10 pb-14 sm:pt-12 sm:pb-16` pour les pages listing, `py-10 sm:py-12` pour les sections légales,
  * `py-16 sm:py-20` pour les pages éditoriales.
  */
 

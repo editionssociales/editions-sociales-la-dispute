@@ -40,7 +40,7 @@ export default async function PanierPage() {
   const { livraisonDelai } = await getPagesLegales();
 
   return (
-    <Container className="bg-paper py-12">
+    <Container className="bg-paper pt-10 pb-14">
       <PageHero title="Votre panier" className="max-w-2xl" />
 
       <div className="mt-6 sm:mt-7">

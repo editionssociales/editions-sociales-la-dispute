@@ -73,7 +73,7 @@ export default async function RencontresPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript }} />
       )}
 
-      <section className="bg-paper pb-14 pt-6 sm:pt-8 md:pb-24">
+      <section className="bg-paper pb-10 pt-6 sm:pt-8 md:pb-14">
         <Container>
           {/* Retour client 2026-07-23 : seuls les événements « grande
               affiche » (`pleinCadre`, ex. braderie) gardent la carte héros
@@ -121,15 +121,17 @@ export default async function RencontresPage() {
       </section>
 
       {hasPassees && (
-        <section className="border-t-2 border-dashed border-line bg-paper py-14 md:py-24">
+        <section className="border-t-2 border-dashed border-line bg-paper py-10 md:py-14">
           <Container>
             <Reveal>
-              <h2 className="flex items-center gap-3 font-sans text-2xl font-black italic leading-[0.98] text-ink">
-                <span className="inline-block h-3 w-3 flex-none bg-ink/30" aria-hidden="true" />
+              {/* Même intertitre en bandeau plein que `/souscription` et
+                  `/nos-maisons` (retour client 2026-11) : un seul pattern de titre
+                  de section sur tout le site. */}
+              <h2 className="w-full max-w-2xl bg-pop-pink px-4 py-3 font-sans text-[clamp(20px,3vw,28px)] font-black uppercase leading-[1.1] text-ink sm:px-6">
                 Rencontres passées
               </h2>
             </Reveal>
-            <div className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-10 md:grid-cols-2">
               {passees.map((r, i) => (
                 <Reveal key={r.id} delay={i * 80}>
                   <PastCard rencontre={r} />
@@ -143,7 +145,7 @@ export default async function RencontresPage() {
       {/* CTA final — copy adaptée : ne pas prétendre « en attendant les
           premières dates » quand des dates réelles sont affichées au-dessus. */}
       <section className="bg-ink text-paper">
-        <Container className="flex flex-col items-start gap-6 py-16 md:flex-row md:items-center md:justify-between">
+        <Container className="flex flex-col items-start gap-6 py-10 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="font-sans text-2xl font-black italic sm:text-3xl">
               {hasAVenir || hasPassees

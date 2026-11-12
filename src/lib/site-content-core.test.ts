@@ -779,7 +779,17 @@ describe("mergePageNosMaisons", () => {
       paragraphes: [],
       videos: [],
       articles: [],
+      titreVideos: null,
+      titreArticles: null,
+      titreMaisons: null,
     });
+  });
+
+  it("titres de section : repris tels quels s'ils sont saisis, sinon null", () => {
+    const merged = mergePageNosMaisons({ id: 1, titreVideos: " À voir ", titreArticles: "", titreMaisons: "  " });
+    expect(merged.titreVideos).toBe("À voir");
+    expect(merged.titreArticles).toBeNull();
+    expect(merged.titreMaisons).toBeNull();
   });
 
   it("écarte les lignes sans titre ou à URL non http(s), garde l'ordre", () => {
@@ -797,10 +807,30 @@ describe("mergePageNosMaisons", () => {
     expect(merged.titre).toBe("Chez nous");
     expect(merged.paragraphes).toEqual(["A", "B"]);
     expect(merged.videos).toEqual([
-      { titre: "V1", url: "https://youtu.be/abcdefghijk", media: "France 2", date: null },
+      { titre: "V1", url: "https://youtu.be/abcdefghijk", media: "France 2", date: null, image: null },
     ]);
     expect(merged.articles).toEqual([
-      { titre: "Art", url: "https://exemple.fr/a", media: null, date: null },
+      { titre: "Art", url: "https://exemple.fr/a", media: null, date: null, image: null },
+    ]);
+  });
+
+  it("image de couverture d'un article : reprise si le média est peuplé et dimensionné, sinon null", () => {
+    const media = (over: Partial<Media>): Media =>
+      ({ id: 9, url: "https://blob.example/a.jpg", width: 1200, height: 800, alt: " Une une ", ...over }) as Media;
+    const merged = mergePageNosMaisons({
+      id: 1,
+      articles: [
+        { titre: "Avec", url: "https://exemple.fr/a", image: media({}), id: "1" },
+        { titre: "Id seul", url: "https://exemple.fr/b", image: 9, id: "2" },
+        { titre: "Sans taille", url: "https://exemple.fr/c", image: media({ width: null }), id: "3" },
+        { titre: "Sans image", url: "https://exemple.fr/d", id: "4" },
+      ],
+    });
+    expect(merged.articles.map((a) => a.image)).toEqual([
+      { url: "https://blob.example/a.jpg", width: 1200, height: 800, alt: "Une une" },
+      null,
+      null,
+      null,
     ]);
   });
 });

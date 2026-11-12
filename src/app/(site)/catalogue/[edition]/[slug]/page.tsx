@@ -320,7 +320,7 @@ export default async function BookPage({
   }
 
   return (
-    <Container className="bg-paper py-12 sm:py-16">
+    <Container className="bg-paper pt-10 pb-14 sm:pt-12 sm:pb-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: bookJsonLdScript }}

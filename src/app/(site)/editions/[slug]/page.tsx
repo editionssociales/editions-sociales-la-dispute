@@ -120,7 +120,7 @@ export default async function EditionPage({
           justifié (seul bloc justifié du gabarit) + sortie vers le catalogue
           de la maison. */}
       <section>
-        <Container className="py-12 sm:py-16">
+        <Container className="py-10 sm:py-12">
           <Reveal>
             <div className="border-2 border-ink bg-paper p-7 sm:p-10">
               <p className="font-sans text-xl font-extrabold leading-snug text-ink sm:text-2xl">
@@ -145,7 +145,7 @@ export default async function EditionPage({
           global `pages-legales` ; aucune saisie = pas de boîte. */}
       {reseaux.length > 0 && (
         <section>
-          <Container className="pb-12 sm:pb-16">
+          <Container className="pb-10 sm:pb-12">
             <Reveal>
               <nav
                 aria-label="Réseaux sociaux"
@@ -178,7 +178,7 @@ export default async function EditionPage({
           mobile, chaque colonne empile son bandeau puis son texte. Seul le
           bureau éditorial de LA maison affichée est listé. */}
       <section className="border-t-2 border-ink">
-        <Container className="py-12 sm:py-16">
+        <Container className="py-10 sm:py-12">
           <FramedGrid className="md:grid-cols-2">
             <Reveal className="h-full">
               <div className="flex h-full flex-col bg-paper">

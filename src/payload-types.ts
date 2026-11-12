@@ -1498,6 +1498,18 @@ export interface PageNosMaisons {
    */
   texte?: string | null;
   /**
+   * Facultatif — vide = aucun titre (le cas courant).
+   */
+  titreVideos?: string | null;
+  /**
+   * Facultatif — vide = aucun titre.
+   */
+  titreArticles?: string | null;
+  /**
+   * Facultatif — vide = aucun titre.
+   */
+  titreMaisons?: string | null;
+  /**
    * Carrousel, dans cet ordre.
    */
   videos?:
@@ -1533,6 +1545,10 @@ export interface PageNosMaisons {
          * Texte libre (ex. « 12 octobre 2026 »). Optionnel.
          */
         date?: string | null;
+        /**
+         * Optionnelle — affichée au-dessus du titre de l’article. Sans image, l’article reste une simple ligne de texte.
+         */
+        image?: (number | null) | Media;
         id?: string | null;
       }[]
     | null;
@@ -1792,6 +1808,9 @@ export interface PageContactSelect<T extends boolean = true> {
 export interface PageNosMaisonsSelect<T extends boolean = true> {
   titre?: T;
   texte?: T;
+  titreVideos?: T;
+  titreArticles?: T;
+  titreMaisons?: T;
   videos?:
     | T
     | {
@@ -1808,6 +1827,7 @@ export interface PageNosMaisonsSelect<T extends boolean = true> {
         url?: T;
         media?: T;
         date?: T;
+        image?: T;
         id?: T;
       };
   updatedAt?: T;
