@@ -8,6 +8,7 @@ import {
   LOT_FREE_SHIPPING_MIN_LOTS,
   LOT_SHIPPING_COST_CENTS,
   LOT_SIZE,
+  lotPriceEuros,
 } from "@/lib/shipping-core";
 import { BookPrice } from "./book-price";
 import { EpubTag } from "./epub-tag";
@@ -60,22 +61,17 @@ export function BuyLinksList({
   // Fourchette réelle plutôt que promesse d'expédition éclair (demande client
   // 2026-08-26) — source unique `delivery-copy.ts`, surchargeable au back-office.
   const inStockCopy = `En stock — livraison ${livraisonDelai}`;
-  // Titre vendu par lot (`Book.lot`) : second bouton, un lot d'un geste, avec
-  // la règle de port qui va avec (`shipping-core.ts`, jamais réénoncée en dur).
-  const lotBlock = book.lot ? (
-    <>
-      <AddToCartButton
-        id={book.id}
-        qty={LOT_SIZE}
-        tone="outline"
-        className="mt-2 w-full"
-        label={`Ajouter un lot de ${LOT_SIZE}`}
-      />
-      <p className={MICROCOPY_CLASS}>
-        Par lot de {LOT_SIZE} : port {formatPrice(centsToEuros(LOT_SHIPPING_COST_CENTS))}, offert dès{" "}
-        {LOT_FREE_SHIPPING_MIN_LOTS} lots
-      </p>
-    </>
+  // Titre vendu UNIQUEMENT par lot (`Book.lot`) : le seul geste d'achat ajoute
+  // un lot, le prix affiché est celui du lot (`lotPriceEuros`) et la règle de
+  // port vient de `shipping-core.ts`, jamais réénoncée en dur.
+  const lot = Boolean(book.lot);
+  const lotNote = lot ? (
+    <p className={MICROCOPY_CLASS}>
+      Vendu par lot de {LOT_SIZE} exemplaires
+      {book.price != null ? ` — soit ${formatPrice(book.price)} l’exemplaire` : ""}. Port{" "}
+      {formatPrice(centsToEuros(LOT_SHIPPING_COST_CENTS))} pour un lot, offert dès{" "}
+      {LOT_FREE_SHIPPING_MIN_LOTS} lots.
+    </p>
   ) : null;
   // Titre numérique seul (client 2026-09-09) : remplace toute mention de
   // stock/expédition, quel que soit le statut d'achat qui la porterait
@@ -91,7 +87,10 @@ export function BuyLinksList({
       <EpubTag size="lg" />
     </div>
   ) : (
-    <BookPrice price={book.price} className={PRICE_CLASS} />
+    <BookPrice
+      price={book.lot && book.price != null ? lotPriceEuros(book.price) : book.price}
+      className={PRICE_CLASS}
+    />
   );
   // Liens libraires de repli — lus une seule fois, rendus par les CINQ
   // branches de statut sans exception (bug signalé par la cliente,
@@ -153,8 +152,13 @@ export function BuyLinksList({
     return (
       <div>
         {priceBlock}
-        <AddToCartButton id={book.id} className="mt-3 w-full" label="Précommander" />
-        {lotBlock}
+        <AddToCartButton
+          id={book.id}
+          qty={lot ? LOT_SIZE : 1}
+          className="mt-3 w-full"
+          label={lot ? `Précommander un lot de ${LOT_SIZE}` : "Précommander"}
+        />
+        {lotNote}
         <p className={MICROCOPY_CLASS}>
           {digital ? (
             DIGITAL_MICROCOPY
@@ -194,9 +198,14 @@ export function BuyLinksList({
     return (
       <div>
         {priceBlock}
-        <AddToCartButton id={book.id} className="mt-3 w-full" />
+        <AddToCartButton
+          id={book.id}
+          qty={lot ? LOT_SIZE : 1}
+          className="mt-3 w-full"
+          label={lot ? `Ajouter un lot de ${LOT_SIZE}` : undefined}
+        />
         <p className={MICROCOPY_CLASS}>{digital ? DIGITAL_MICROCOPY : inStockCopy}</p>
-        {lotBlock}
+        {lotNote}
         {secondaryLinks}
       </div>
     );

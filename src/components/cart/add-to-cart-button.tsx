@@ -37,7 +37,6 @@ export function AddToCartButton({
   className,
   label = "Ajouter au panier",
   qty = 1,
-  tone = "solid",
 }: {
   id: number;
   variant?: "button" | "chip";
@@ -52,13 +51,12 @@ export function AddToCartButton({
    */
   label?: string;
   /**
-   * Exemplaires ajoutés d'un geste — 1 par défaut ; `LOT_SIZE` pour le bouton
-   * « lot » d'un titre vendu par lot (`Book.lot`). Au-delà de 1, la puce
-   * affiche « ×N » au lieu de « + » et son nom accessible dit le nombre.
+   * Exemplaires ajoutés d'un geste — 1 par défaut ; `LOT_SIZE` pour un titre
+   * vendu UNIQUEMENT par lot (`Book.lot`), dont c'est le seul geste d'achat.
+   * Au-delà de 1, la puce affiche « ×N » au lieu de « + » et son nom
+   * accessible dit le nombre.
    */
   qty?: number;
-  /** Bouton plein (défaut) ou contour — le bouton « lot » de la fiche, secondaire, ne concurrence pas l'achat à l'unité. */
-  tone?: "solid" | "outline";
 }) {
   const { addToCart } = useCart();
   const { fly, flights } = useFlyToCart();
@@ -130,7 +128,7 @@ export function AddToCartButton({
         // même bascule de couleur que la puce (`CHIP_ADDED`), cf. `button.tsx`.
         // `label` (précommande 2026-08-20) : « Précommander » sur un
         // à-paraître ouvert, sans changer le retour « Ajouté au panier ».
-        variant={justAdded ? "confirm" : tone}
+        variant={justAdded ? "confirm" : "solid"}
         className={`px-5 py-2.5 text-sm tracking-[.03em] ${className ?? ""}`}
       >
         {justAdded ? "Ajouté au panier" : label}

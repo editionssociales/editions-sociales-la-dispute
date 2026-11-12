@@ -25,6 +25,7 @@ import {
   LOT_FREE_SHIPPING_MIN_LOTS,
   LOT_SHIPPING_COST_CENTS,
   LOT_SIZE,
+  isWholeLots,
   type ShippingZone,
 } from "@/lib/shipping-core";
 import { computeCartQuote } from "@/lib/cart-quote";
@@ -195,9 +196,17 @@ function QuantityStepper({
   qty,
   onChange,
   disabled = false,
+  step = 1,
 }: {
   qty: number;
   onChange: (next: number) => void;
+  /**
+   * Pas de la quantité — 1 par défaut, `LOT_SIZE` pour un titre vendu
+   * uniquement par lot. Les deux boutons RETOMBENT sur un multiple du pas :
+   * une quantité hors lot (panier antérieur à la coche) se répare au premier
+   * clic, dans un sens comme dans l'autre.
+   */
+  step?: number;
   /** Ligne non `purchasable` (indisponible) — stepper entièrement désactivé, la quantité n'a plus de sens à modifier. */
   disabled?: boolean;
 }) {
@@ -205,9 +214,9 @@ function QuantityStepper({
     <div className="flex items-center gap-3" role="group" aria-label="Quantité">
       <button
         type="button"
-        onClick={() => onChange(qty - 1)}
-        disabled={disabled || qty <= 1}
-        aria-label="Retirer un exemplaire"
+        onClick={() => onChange(Math.ceil(qty / step) * step - step)}
+        disabled={disabled || qty <= step}
+        aria-label={step > 1 ? `Retirer un lot de ${step}` : "Retirer un exemplaire"}
         className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper active:brightness-90 disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink disabled:active:brightness-100 ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
       >
         −
@@ -217,9 +226,9 @@ function QuantityStepper({
       </span>
       <button
         type="button"
-        onClick={() => onChange(qty + 1)}
-        disabled={disabled || qty >= MAX_LINE_QTY}
-        aria-label="Ajouter un exemplaire"
+        onClick={() => onChange(Math.floor(qty / step) * step + step)}
+        disabled={disabled || Math.floor(qty / step) * step + step > MAX_LINE_QTY}
+        aria-label={step > 1 ? `Ajouter un lot de ${step}` : "Ajouter un exemplaire"}
         className={`flex h-11 w-11 items-center justify-center border-2 border-ink font-sans font-bold text-ink hover:bg-ink hover:text-paper active:brightness-90 disabled:opacity-30 disabled:hover:bg-paper disabled:hover:text-ink disabled:active:brightness-100 ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`}
       >
         +
@@ -245,6 +254,8 @@ function CartLineRow({
   // en cause dans un refus doit se lire d'un coup d'œil, pas seulement au
   // milieu de la ligne.
   const dim = line.purchasable && !refused ? "" : "opacity-50";
+  const isLotLine = line.lot && !line.digital;
+  const wholeLots = isWholeLots(line.qty);
   return (
     <Fragment>
       <div className={`flex items-center justify-center bg-paper p-2 ${dim}`}>
@@ -287,6 +298,18 @@ function CartLineRow({
             Indisponible — exclu du calcul, retirez-le si besoin.
           </p>
         )}
+        {/* Titre vendu uniquement par lot : la quantité est en exemplaires,
+            on dit à combien de lots elle correspond — ou qu'elle n'en fait
+            pas un (panier antérieur à la coche), ce qui bloque la commande. */}
+        {line.purchasable && isLotLine && (
+          <p
+            className={`font-sans text-xs font-bold uppercase tracking-[.04em] ${wholeLots ? "text-muted" : "text-brick"}`}
+          >
+            {wholeLots
+              ? `Vendu par lot de ${LOT_SIZE} — ${line.qty / LOT_SIZE} lot${line.qty / LOT_SIZE > 1 ? "s" : ""}`
+              : `Vendu uniquement par lot de ${LOT_SIZE} : ajustez la quantité.`}
+          </p>
+        )}
         {refused && line.purchasable && (
           <p className="font-sans text-xs font-bold uppercase tracking-[.04em] text-brick">
             En cause dans le refus de paiement — détail sous « Commander ».
@@ -300,7 +323,12 @@ function CartLineRow({
           </p>
         )}
         <div className="flex flex-wrap items-center gap-4">
-          <QuantityStepper qty={line.qty} onChange={onSetQty} disabled={!line.purchasable} />
+          <QuantityStepper
+            qty={line.qty}
+            onChange={onSetQty}
+            disabled={!line.purchasable}
+            step={isLotLine ? LOT_SIZE : 1}
+          />
           <button
             type="button"
             onClick={onRemove}
@@ -515,10 +543,12 @@ export function CartView({
   // Port offert par les lots (≥ 2) : la mention « dès 50 € avec un code » ne
   // doit pas la contredire, et la ligne de port s'affiche « Offerte ».
   const lotsFreeShipping = hasPhysicalItems && summary.lotCount >= LOT_FREE_SHIPPING_MIN_LOTS;
-  // Titre « vendu par lot » présent mais moins de `LOT_SIZE` exemplaires :
-  // on rappelle la règle au lieu de laisser deviner le seuil.
-  const lotHint =
-    summary.lotCount === 0 && summary.lines.some((l) => l.purchasable && l.lot && !l.digital);
+  // Titre vendu uniquement par lot dont la quantité n'est pas un multiple de
+  // `LOT_SIZE` (panier antérieur à la coche) : le serveur refuserait la
+  // commande (`checkout-core.ts`), on la bloque ici avec la raison sur la ligne.
+  const hasPartialLot = summary.lines.some(
+    (l) => l.purchasable && l.lot && !l.digital && !isWholeLots(l.qty),
+  );
 
   const [checkoutPending, startCheckoutTransition] = useTransition();
   /** Un item par refus (`checkout-core.ts` en rédige un par article en défaut) — jamais fusionnés en un seul paragraphe (cf. `<ul>` ci-dessous) ; l'`id`, quand il existe, marque la ligne en cause dans la grille. */
@@ -579,7 +609,7 @@ export function CartView({
   // Vrai blocage (panier invalide / port impossible) — distinct de l'état
   // `checkoutPending` (redirection Stripe en cours), qui ne doit jamais se
   // confondre visuellement avec lui (R7).
-  const checkoutBlocked = !shipping.ok || !hasPurchasableLine;
+  const checkoutBlocked = !shipping.ok || !hasPurchasableLine || hasPartialLot;
 
   if (!ready) {
     return <p className="py-16 text-center font-sans text-sm text-muted">Chargement du panier…</p>;
@@ -738,12 +768,6 @@ export function CartView({
               <p aria-live="polite" className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-ink">
                 Port forfaitaire lot : {euros(LOT_SHIPPING_COST_CENTS)}. Ajoutez un deuxième lot : la
                 livraison est offerte.
-              </p>
-            )}
-            {lotHint && (
-              <p className="font-sans text-xs text-muted">
-                Par lot de {LOT_SIZE} exemplaires : port forfaitaire de {euros(LOT_SHIPPING_COST_CENTS)},
-                offert dès {LOT_FREE_SHIPPING_MIN_LOTS} lots.
               </p>
             )}
             {lotsFreeShipping && (

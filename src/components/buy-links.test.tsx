@@ -224,11 +224,26 @@ describe("BuyLinksList — titre numérique seul (client 2026-09-09)", () => {
 describe("BuyLinksList — titre vendu par lot (`Book.lot`)", () => {
   const available = { status: "available", purchaseMode: "cart", permalink: "/catalogue/x/y" } as const;
 
-  it("propose le bouton « lot de 10 » et rappelle la règle de port, en plus de l'achat à l'unité", () => {
+  it("le seul bouton ajoute un lot de 10 — plus d'achat à l'unité", () => {
     const markup = renderToStaticMarkup(<BuyLinksList book={book({ ...available, lot: true })} />);
-    expect(markup).toContain("Ajouter au panier");
     expect(markup).toContain("Ajouter un lot de 10");
+    expect(markup).not.toContain("Ajouter au panier");
+  });
+
+  it("affiche le prix du lot, rappelle le prix à l'exemplaire et la règle de port", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ ...available, lot: true, price: 5 })} />,
+    );
+    expect(markup).toContain(formatPrice(50));
+    expect(markup).toContain(`soit ${formatPrice(5)} l’exemplaire`);
     expect(markup).toContain("offert dès");
+  });
+
+  it("précommande d'un titre vendu par lot : le bouton précommande un lot", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ ...available, status: "preorder", lot: true })} />,
+    );
+    expect(markup).toContain("Précommander un lot de 10");
   });
 
   it("sans le drapeau : aucun bouton de lot", () => {

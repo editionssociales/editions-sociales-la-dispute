@@ -4,6 +4,7 @@ import { matchesSearchQuery } from "./search-text";
 import { assessSellability, isUpcoming } from "./sellability";
 import { frenchTypo } from "./typo-fr";
 import { type CommerceInfo, type RawBook } from "./catalogue-source";
+import { LOT_SIZE } from "./shipping-core";
 import type {
   Book,
   BookDetail,
@@ -127,13 +128,19 @@ export function resolveNativePurchase(
   // Un lot s'expédie : un titre numérique seul n'est jamais « vendu par lot ».
   // Posé seulement quand il est vrai (même parti pris qu'`unavailableReason`).
   const lot = commerce.lot && !commerce.digital ? { lot: true as const } : {};
-  const verdict = assessSellability({
-    sellable: commerce.sellable,
-    stock: commerce.stock,
-    publishedAt: book.publishedAt,
-    preorderEnabled: commerce.preorder,
-    digital: commerce.digital,
-  });
+  // Vendu UNIQUEMENT par lot : la plus petite vente possible est UN lot — la
+  // question posée au stock est donc « y a-t-il `LOT_SIZE` exemplaires ? ».
+  const isLot = "lot" in lot;
+  const verdict = assessSellability(
+    {
+      sellable: commerce.sellable,
+      stock: commerce.stock,
+      publishedAt: book.publishedAt,
+      preorderEnabled: commerce.preorder,
+      digital: commerce.digital,
+    },
+    isLot ? LOT_SIZE : 1,
+  );
   if (!verdict.ok && verdict.reason === "upcoming") {
     return { status: "upcoming", permalink: null, purchaseMode: "legacy-link", format, ...lot };
   }
@@ -156,7 +163,10 @@ export function resolveNativePurchase(
     purchaseMode: "legacy-link",
     format,
     ...lot,
-    ...(verdict.reason === "out-of-stock" ? { unavailableReason: "out-of-stock" as const } : {}),
+    // Moins d'un lot en stock pour un titre vendu par lot = épuisé, au même titre que 0.
+    ...(verdict.reason === "out-of-stock" || (isLot && verdict.reason === "insufficient-stock")
+      ? { unavailableReason: "out-of-stock" as const }
+      : {}),
   };
 }
 

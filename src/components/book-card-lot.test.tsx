@@ -33,10 +33,17 @@ function book(over: Partial<Book>): Book {
 }
 
 describe("BookCard — titre vendu par lot (`Book.lot`)", () => {
-  it("pose une puce « lot de 10 » à côté de la puce d'achat à l'unité", () => {
+  it("une SEULE puce, qui ajoute un lot de 10 — jamais d'achat à l'unité", () => {
     const markup = renderToStaticMarkup(<BookCard book={book({ lot: true })} />);
     expect(markup).toContain("puce×10");
-    expect(markup).toContain("puce×1<");
+    expect(markup).not.toContain("puce×1<");
+  });
+
+  it("affiche le prix du LOT (10 × le prix unitaire), avec sa mention", () => {
+    const markup = renderToStaticMarkup(<BookCard book={book({ lot: true, price: 5 })} />);
+    expect(markup).toContain("50,00");
+    expect(markup.replace(/<!-- -->/g, "")).toContain("les 10");
+    expect(markup).not.toContain(">5,00");
   });
 
   it("sans le drapeau : la seule puce d'achat à l'unité", () => {

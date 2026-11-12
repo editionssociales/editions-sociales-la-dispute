@@ -8,6 +8,8 @@
  * de l'argent est le bug qu'on ne voit qu'en prod).
  */
 
+import { centsToEuros, eurosToCents } from "./money";
+
 /** Zones vendues — toute autre zone est refusée (règle produit, pas encore de vente hors FR/BE/CH). */
 export type ShippingZone = "FR" | "BE" | "CH";
 
@@ -22,11 +24,23 @@ export const MANIFEST_SHIPPING_COST_CENTS = 250; // 2,50 €
 
 /**
  * Taille d'un lot : un titre coché « vendu par lot » (`commerce.venteParLot`)
- * reste un livre vendu à l'unité, et CHAQUE tranche de `LOT_SIZE` exemplaires
- * du même titre dans le panier compte pour un lot (boutons « lot de 10 » de
- * la carte et de la fiche, `add-to-cart-button.tsx`).
+ * ne se vend QUE par lots de `LOT_SIZE` exemplaires, jamais à l'unité. Le
+ * panier, le stock et la commande restent comptés en EXEMPLAIRES (10, 20, 30…)
+ * — c'est la quantité qui avance par pas de `LOT_SIZE` (`isWholeLots`), et le
+ * prix de la fiche reste le prix d'UN exemplaire (`lotPriceEuros` en dérive le
+ * prix affiché du lot).
  */
 export const LOT_SIZE = 10;
+
+/** LA règle « quantité vendable d'un titre vendu par lot » : un multiple entier, non nul, de `LOT_SIZE` — rejouée au checkout serveur (`checkout-core.ts`) et lue par le panier. */
+export function isWholeLots(qty: number): boolean {
+  return Number.isInteger(qty) && qty > 0 && qty % LOT_SIZE === 0;
+}
+
+/** Prix TTC d'un lot, en euros, à partir du prix unitaire de la fiche — calculé en centimes entiers (jamais `prix * 10` en flottant). */
+export function lotPriceEuros(unitPriceEuros: number): number {
+  return centsToEuros(eurosToCents(unitPriceEuros) * LOT_SIZE);
+}
 
 /** Port forfaitaire d'UN lot (`LOT_SIZE` exemplaires d'un titre `commerce.venteParLot`) — pour tout l'envoi, autres livres du panier compris. */
 export const LOT_SHIPPING_COST_CENTS = 1000; // 10,00 €
@@ -154,9 +168,10 @@ export function isManifestOnly(items: readonly { reducedShippingFlag: boolean }[
 
 /**
  * LA règle « nombre de lots » : pour chaque ligne PHYSIQUE « vendu par lot »,
- * le nombre de tranches COMPLÈTES de `LOT_SIZE` exemplaires (9 → 0, 10 → 1,
- * 25 → 2), sommé sur le panier — par LIGNE, jamais sur le cumul de titres
- * différents (5 + 5 de deux titres ne font pas un lot). Consommée par
+ * le nombre de tranches COMPLÈTES de `LOT_SIZE` exemplaires (10 → 1, 20 → 2),
+ * sommé sur le panier — par LIGNE, jamais sur le cumul de titres différents.
+ * Une quantité hors lot (panier périmé : 9, 25…) est refusée au checkout
+ * (`isWholeLots`) ; ici elle est simplement arrondie au lot inférieur. Consommée par
  * `resolveCartSummary` (`cart-core.ts`), `validateCheckoutLines`
  * (`checkout-core.ts`) et `buildOrderCreateData` (`order-webhook-core.ts`),
  * jamais ré-inlinée. Un lot numérique n'existe pas (rien à expédier) : les

@@ -3,7 +3,8 @@ import type { Book } from "@/lib/types";
 import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
 import { AddToCartButton } from "./cart/add-to-cart-button";
-import { LOT_SIZE } from "@/lib/shipping-core";
+import { formatPrice } from "@/lib/format";
+import { LOT_SIZE, lotPriceEuros } from "@/lib/shipping-core";
 import { BookPrice } from "./book-price";
 import { EpubTag } from "./epub-tag";
 import { FOCUS_RING_LIGHT_OUTER } from "@/lib/ui";
@@ -78,22 +79,32 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
   // Panier natif (plan §4 étape 6) : petit chip, en plus du lien vers la
   // fiche — seulement si le livre est disponible au panier. Sorti du cadre
   // couverture (rangée basse fixe), à droite du badge de statut.
-  const cartChip = canAddToCart(book) && <AddToCartButton id={book.id} variant="chip" />;
-  // Titre vendu par lot (`Book.lot`) : seconde puce « ×10 », un lot d'un geste
-  // — le livre reste achetable à l'unité par la puce « + ».
-  const lotChip = canAddToCart(book) && book.lot && (
-    <AddToCartButton id={book.id} variant="chip" qty={LOT_SIZE} />
+  // Titre vendu UNIQUEMENT par lot (`Book.lot`) : la puce ajoute un lot
+  // (« ×10 »), jamais un exemplaire — il n'existe pas d'achat à l'unité.
+  const cartChip = canAddToCart(book) && (
+    <AddToCartButton id={book.id} variant="chip" qty={book.lot ? LOT_SIZE : 1} />
   );
 
   // Épure minimaliste : la couverture porte déjà titre/auteurs (alt complet
   // ci-dessus) — la carte n'affiche que le prix en texte visible, quel que
   // soit le statut d'achat (`BookPrice` : le prix est un fait du livre).
-  const priceBlock = (
-    <BookPrice
-      price={book.price}
-      className="min-w-0 truncate font-sans text-sm font-black text-ink"
-    />
-  );
+  // Vendu par lot : le prix affiché est celui du LOT (`lotPriceEuros`), avec
+  // sa mention — afficher le prix d'un exemplaire qu'on ne peut pas acheter
+  // seul tromperait sur le montant réellement ajouté au panier.
+  const priceBlock =
+    book.lot && book.price != null ? (
+      <p className="min-w-0 truncate font-sans text-sm font-black text-ink">
+        {formatPrice(lotPriceEuros(book.price))}{" "}
+        <span className="text-[10px] font-bold uppercase tracking-[.05em] text-muted">
+          les {LOT_SIZE}
+        </span>
+      </p>
+    ) : (
+      <BookPrice
+        price={book.price}
+        className="min-w-0 truncate font-sans text-sm font-black text-ink"
+      />
+    );
 
   const hasFooter = Boolean(book.price != null || statusBadge || digitalBadge || cartChip);
 
@@ -121,7 +132,6 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
           <div className="flex flex-none items-center gap-2">
             {statusBadge}
             {digitalBadge}
-            {lotChip}
             {cartChip}
           </div>
         </div>

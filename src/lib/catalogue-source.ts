@@ -91,9 +91,9 @@ export interface CommerceInfo {
    */
   digital?: boolean;
   /**
-   * Coché = « Vendu par lot » (`Books.ts:commerce.venteParLot`) — le front
-   * propose alors l'ajout d'un lot de `LOT_SIZE` exemplaires en un geste
-   * (carte, fiche). Optionnel : absent = `false`.
+   * Coché = « Vendu par lot » (`Books.ts:commerce.venteParLot`) — le titre
+   * ne se vend QUE par lots de `LOT_SIZE` exemplaires (`shipping-core.ts`).
+   * Optionnel : absent = `false`.
    */
   lot?: boolean;
 }

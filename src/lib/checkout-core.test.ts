@@ -243,6 +243,19 @@ describe("validateCheckoutLines", () => {
     expect(result.ok && result.manifestOnly).toBe(true);
   });
 
+  it("titre vendu uniquement par lot : une quantité hors lot est REFUSÉE (jamais 3 exemplaires)", () => {
+    const lotBook = book({ lot: true, stock: 50 });
+    for (const qty of [1, 3, 9, 15]) {
+      const refused = validateCheckoutLine({ id: 1, qty }, lotBook, NOW);
+      expect(refused.ok).toBe(false);
+      expect(!refused.ok && refused.refusal.reason).toBe("lot-quantity");
+    }
+    expect(validateCheckoutLine({ id: 1, qty: 10 }, lotBook, NOW).ok).toBe(true);
+    expect(validateCheckoutLine({ id: 1, qty: 30 }, lotBook, NOW).ok).toBe(true);
+    // Un titre ordinaire garde sa vente à l'unité.
+    expect(validateCheckoutLine({ id: 1, qty: 3 }, book({ stock: 50 }), NOW).ok).toBe(true);
+  });
+
   it("lotCount : lots COMPLETS de 10 exemplaires parmi les lignes validées « lot »", () => {
     const books = new Map([
       [1, book({ lot: true, stock: 50 })],

@@ -107,8 +107,9 @@ export interface Book {
   format?: "papier" | "numerique";
   /**
    * `true` ssi la fiche est cochée « Vendu par lot »
-   * (`CommerceInfo.lot`) : la carte et la fiche proposent d'ajouter un lot
-   * de `LOT_SIZE` exemplaires d'un geste (`shipping-core.ts`). Posé par
+   * (`CommerceInfo.lot`) : le titre ne se vend QUE par lots de `LOT_SIZE`
+   * exemplaires (`shipping-core.ts`) — carte, fiche et panier n'offrent que
+   * ce pas, le prix affiché est celui du lot. Posé par
    * `resolveNativePurchase`, optionnel comme `format`.
    */
   lot?: boolean;

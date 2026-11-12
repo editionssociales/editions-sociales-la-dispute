@@ -425,6 +425,16 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
       expect(resolveNativePurchase(book, { sellable: true, stock: 0, lot: true }, permalink).lot).toBe(true);
     });
 
+    it("moins d'un lot en stock (1 à 9 exemplaires) → épuisé : rien n'est vendable à l'unité", () => {
+      const book = toBook("editions-sociales", raw);
+      const resolved = resolveNativePurchase(book, { sellable: true, stock: 9, lot: true }, permalink);
+      expect(resolved.status).toBe("unavailable");
+      expect(resolved.unavailableReason).toBe("out-of-stock");
+      expect(resolveNativePurchase(book, { sellable: true, stock: 10, lot: true }, permalink).status).toBe("available");
+      // Sans le drapeau, 9 exemplaires restent vendables à l'unité.
+      expect(resolveNativePurchase(book, { sellable: true, stock: 9 }, permalink).status).toBe("available");
+    });
+
     it("jamais pour un titre numérique seul (un lot s'expédie)", () => {
       const book = toBook("editions-sociales", raw);
       const resolved = resolveNativePurchase(book, { sellable: true, stock: null, digital: true, lot: true }, permalink);

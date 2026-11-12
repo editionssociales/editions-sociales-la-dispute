@@ -3,7 +3,9 @@ import {
   CART_MAX_CENTS,
   computeShipping,
   countLots,
+  isWholeLots,
   LOT_SIZE,
+  lotPriceEuros,
   LOT_FREE_SHIPPING_MIN_LOTS,
   LOT_SHIPPING_COST_CENTS,
   FREE_SHIPPING_MIN_CART_CENTS,
@@ -367,5 +369,18 @@ describe("countLots", () => {
         { lot: true, digital: false, qty: 5 },
       ]),
     ).toBe(0);
+  });
+});
+
+describe("vente uniquement par lot — quantité et prix", () => {
+  it("isWholeLots : seuls les multiples entiers non nuls de LOT_SIZE se vendent", () => {
+    expect([10, 20, 100].every(isWholeLots)).toBe(true);
+    expect([0, 1, 9, 15, 25, -10, 10.5].some(isWholeLots)).toBe(false);
+  });
+
+  it("lotPriceEuros : 10 × le prix unitaire, sans dérive de flottant", () => {
+    expect(lotPriceEuros(5)).toBe(50);
+    expect(lotPriceEuros(4.35)).toBe(43.5);
+    expect(lotPriceEuros(0.07)).toBe(0.7);
   });
 });

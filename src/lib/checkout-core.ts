@@ -19,7 +19,7 @@ import type Stripe from "stripe";
 import { MAX_LINE_QTY } from "./cart-core";
 import { eurosToCents } from "./money";
 import { assessSellability, isUpcoming } from "./sellability";
-import { countLots, isManifestOnly } from "./shipping-core";
+import { countLots, isManifestOnly, isWholeLots, LOT_SIZE } from "./shipping-core";
 
 /* ------------------------------ requête entrante ------------------------------ */
 
@@ -119,7 +119,12 @@ export interface CheckoutBookLookup {
   digital: boolean;
 }
 
-export type LineRefusalReason = "not-found" | "not-sellable" | "insufficient-stock" | "no-price";
+export type LineRefusalReason =
+  | "not-found"
+  | "not-sellable"
+  | "insufficient-stock"
+  | "no-price"
+  | "lot-quantity";
 
 export interface LineRefusal {
   id: number;
@@ -174,6 +179,20 @@ export function validateCheckoutLine(
     return {
       ok: false,
       refusal: { id: input.id, reason: "not-found", message: "Livre introuvable ou dépublié." },
+    };
+  }
+  // Titre vendu UNIQUEMENT par lot (`shipping-core.ts:isWholeLots`) : une
+  // quantité qui n'est pas un multiple de `LOT_SIZE` ne se vend pas — le
+  // client ne propose que des pas de 10, mais un panier antérieur à la coche
+  // ou une requête forgée ne doit jamais acheter 3 exemplaires.
+  if (book.lot && !book.digital && !isWholeLots(input.qty)) {
+    return {
+      ok: false,
+      refusal: {
+        id: input.id,
+        reason: "lot-quantity",
+        message: `« ${book.title} » se vend uniquement par lot de ${LOT_SIZE} exemplaires — ajustez la quantité.`,
+      },
     };
   }
   const verdict = assessSellability(

@@ -315,7 +315,7 @@ describe("CartView — vente par lot", () => {
     expect(el.textContent).not.toContain("Port forfaitaire lot");
   });
 
-  it("titre vendu par lot, moins de 10 exemplaires : rappel de la règle, port de grille", async () => {
+  it("quantité hors lot (panier antérieur à la coche) : ligne signalée, commande bloquée", async () => {
     lotIds.add(CAPITAL.id);
     seedQty(3);
     const el = mount(
@@ -324,9 +324,32 @@ describe("CartView — vente par lot", () => {
       </CartProvider>,
     );
     await settle(el);
-    expect(el.textContent).toContain("Par lot de 10 exemplaires");
+    expect(el.textContent).toContain("Vendu uniquement par lot de 10 : ajustez la quantité.");
     expect(el.textContent).not.toContain("Port forfaitaire lot");
-    expect(el.textContent).not.toContain("2 lots ou plus");
+    const commander = [...el.querySelectorAll("button")].find((b) => b.textContent?.includes("Commander"));
+    expect(commander?.disabled).toBe(true);
+  });
+
+  it("le stepper avance par lots de 10 et répare une quantité hors lot au premier clic", async () => {
+    lotIds.add(CAPITAL.id);
+    seedQty(3);
+    const el = mount(
+      <CartProvider>
+        <CartView goodies={[]} />
+      </CartProvider>,
+    );
+    await settle(el);
+    const plus = el.querySelector<HTMLButtonElement>('button[aria-label="Ajouter un lot de 10"]');
+    expect(plus).not.toBeNull();
+    await act(async () => {
+      plus!.click();
+    });
+    await settle(el);
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!).lines).toEqual([
+      { id: CAPITAL.id, qty: 10 },
+    ]);
+    expect(el.textContent).toContain("Vendu par lot de 10 — 1 lot");
+    expect(el.textContent).toContain("Port forfaitaire lot");
   });
 
   it("sans lot : aucun encart lot", async () => {

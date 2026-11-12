@@ -292,7 +292,7 @@ export interface Book {
      */
     reducedShippingFlag?: boolean | null;
     /**
-     * Ajoute un bouton « Lot de 10 » sur la carte et la fiche (le livre reste vendu à l’unité, au même prix). Port de 10 € pour un lot de 10 exemplaires, offert dès deux lots dans le même panier.
+     * Le livre ne se vend plus à l’unité : uniquement par lots de 10 exemplaires (10, 20, 30…). Le prix saisi reste le prix d’UN exemplaire et le stock reste en exemplaires ; le site affiche le prix du lot. Port de 10 € pour un lot, offert dès deux lots.
      */
     venteParLot?: boolean | null;
     /**
