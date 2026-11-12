@@ -97,20 +97,20 @@ const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
 
 /**
  * Monogrammes maisons de la rangée mobile — carrés sur l'accent de la maison
- * (R3 : navy = Éditions sociales, pop-orange = La Dispute depuis le retour
- * client 2026-08-20 — ex-brick, cf. `lib/editions.ts`). Clefs = labels de
+ * (R3 : pop-teal = Éditions sociales, bleu clair depuis le retour client
+ * 2026-11 — ex-navy ; pop-orange = La Dispute depuis le retour client
+ * 2026-08-20 — ex-brick, cf. `lib/editions.ts`). Clefs = labels de
  * `NAV_HOUSES` (clef stable, indépendante des hrefs — désormais les pages
  * maisons `/editions/[slug]`), classes littérales (contrat JIT) ; le nom
  * accessible est `maisonMonogramName(sigle, label)` (WCAG 2.5.3 : le sigle
  * visible figure dans le nom).
  *
- * Les DEUX accents n'ont plus la même nature — d'où l'anneau PORTÉ PAR
- * L'ENTRÉE, plus par une règle commune : navy est SOMBRE (texte paper,
- * inversion vers paper, anneau sombre + surcharge claire) ; l'orange est
- * CLAIR — texte ink (5,84:1 ; paper serait à 2,95:1, sous AA), inversion vers
- * l'INK au survol (jamais vers paper : l'orange en texte à ce corps y est
- * sous AA, cf. `pop-palette.ts` — même recette qu'`ALARM` de `button.tsx`),
- * anneau clair + surcharge sombre (R5).
+ * Les DEUX accents sont désormais CLAIRS, donc de même recette : texte ink
+ * (paper serait sous AA, cf. `pop-palette.ts`), inversion vers l'INK au survol
+ * (jamais vers paper : un accent clair en texte à ce corps y est sous AA —
+ * même recette qu'`ALARM` de `button.tsx`), anneau clair + surcharge sombre
+ * (R5). La recette reste PAR ENTRÉE : une maison pourra changer d'accent sans
+ * toucher l'autre.
  */
 const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string; ring: string }> = {
   "La Dispute": {
@@ -120,8 +120,8 @@ const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string; ring: 
   },
   "Les Éditions sociales": {
     sigle: "ES",
-    cellClass: "bg-navy text-paper hover:bg-paper hover:text-navy",
-    ring: `${FOCUS_RING_DARK} ${FOCUS_RING_HOVER_LIGHT}`,
+    cellClass: "bg-pop-teal text-ink hover:bg-ink hover:text-pop-teal",
+    ring: `${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK}`,
   },
 };
 
@@ -183,12 +183,15 @@ const LAYER_MORPH = "transition-opacity duration-200 ease-out";
  * « Nous soutenir » (chantier 3 §4 — c'était l'inverse : CTA à 42px, maisons
  * à 23px, dans le composant le plus vu du site).
  */
-function maisonCellClass(compact: boolean) {
+function maisonCellClass(compact: boolean, hover: string) {
   // Échelle rem (#88, R7 zoom-texte) : 14/16/22/30px → 0.875/1/1.375/1.875rem.
   const lg = compact ? "lg:py-3 lg:text-[0.875rem]" : "lg:py-7 lg:text-[clamp(1.375rem,2vw,1.875rem)]";
-  // Fond paper au repos, ink au survol : anneau clair + sa surcharge de survol
-  // (R5) — l'ink seul serait invisible sur l'ink du survol (1:1).
-  return `flex min-h-11 items-center bg-paper px-6 py-4 font-sans text-[1rem] font-black italic uppercase leading-none tracking-[.01em] text-ink hover:bg-ink hover:text-paper ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${FOCUS_RING_HOVER_DARK} ${lg}`;
+  // Fond paper au repos, ACCENT DE LA MAISON au survol (retour client
+  // 2026-11 : `hover` littéral — orange pour La Dispute, bleu clair pour les
+  // Éditions sociales, les mêmes que leurs monogrammes) ; texte ink sur les
+  // deux états (12,44:1+ sur ces fonds clairs) : l'anneau clair tient donc le
+  // repos COMME le survol, sans surcharge (R5), comme les cellules de section.
+  return `flex min-h-11 items-center bg-paper px-6 py-4 font-sans text-[1rem] font-black italic uppercase leading-none tracking-[.01em] text-ink ${hover} ${CELL_TRANSITION} ${FOCUS_RING_LIGHT} ${lg}`;
 }
 
 function navCellClass(section: NavSectionId, active: boolean, compact: boolean) {
@@ -669,14 +672,14 @@ function SiteHeaderChrome({
               3×2 : Dispute | Accueil | Panier sur la 1ʳᵉ rangée, ES en pleine
               largeur en dessous (« Les Éditions sociales » dicte la largeur). */}
           <li className="col-start-1 row-span-2 row-start-1 grid grid-cols-[1fr_auto_auto] grid-rows-2 gap-[2px]">
-            <Link href={NAV_HOUSES[0].href} className={maisonCellClass(compact)}>
+            <Link href={NAV_HOUSES[0].href} className={maisonCellClass(compact, "hover:bg-pop-orange")}>
               {NAV_HOUSES[0].label}
             </Link>
             <HomeNavCell active={homeActive} placement={ICON_SQUARE} />
             <CartNavCell placement={ICON_SQUARE} />
             <Link
               href={NAV_HOUSES[1].href}
-              className={`col-span-3 ${maisonCellClass(compact)}`}
+              className={`col-span-3 ${maisonCellClass(compact, "hover:bg-pop-teal")}`}
             >
               {NAV_HOUSES[1].label}
             </Link>

@@ -179,6 +179,7 @@ const HOUSE_TAG_ACTIVE: Record<Accent, string> = {
   ocher: `bg-ocher text-paper ${FOCUS_RING_DARK}`,
   brick: `bg-brick text-paper ${FOCUS_RING_DARK}`,
   "pop-orange": `bg-pop-orange text-ink ${FOCUS_RING_LIGHT}`,
+  "pop-teal": `bg-pop-teal text-ink ${FOCUS_RING_LIGHT}`,
 };
 
 /**

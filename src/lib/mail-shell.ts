@@ -16,9 +16,10 @@ export const PAPER = "#faf7f2";
 export const INK = "#17140f";
 export const LINE_COLOR = "#e4ded1";
 export const MUTED = "#5c574c";
-export const NAVY = "#262a5c";
 /** Orange « pop » de La Dispute — `--color-pop-orange` de `globals.css` : le monogramme LD du site (R3), PAS la brique. */
 export const POP_ORANGE = "#ec6b06";
+/** Bleu clair « pop » des Éditions sociales — `--color-pop-teal` de `globals.css` : le monogramme ES du site (retour client 2026-11), ex-navy. */
+export const POP_TEAL = "#88cdd4";
 /** Aucun client mail ne charge une webfont de façon fiable : pile système seule. */
 export const FONT_STACK = "ui-sans-serif, system-ui, sans-serif";
 /** Domaine canonique — littéral : ces modules restent purs (aucune I/O), donc pas de lecture de `NEXT_PUBLIC_SITE_URL`/requête entrante ici. */
@@ -35,9 +36,9 @@ export function escapeHtml(value: string): string {
 
 /**
  * Monogramme carré d'en-tête — même recette ET mêmes teintes que
- * `MAISON_MONOGRAM` (`site-header.tsx`) : ES = navy / sigle `paper`, LD =
- * pop-orange / sigle `ink` (un sigle clair sur l'orange serait illisible) ;
- * extrabold italique.
+ * `MAISON_MONOGRAM` (`site-header.tsx`) : ES = pop-teal, LD = pop-orange,
+ * sigle `ink` sur les deux (un sigle clair sur un accent clair serait
+ * illisible) ; extrabold italique.
  */
 export function monogramCell(sigle: string, background: string, color: string = PAPER): string {
   return (
@@ -52,7 +53,7 @@ function headerRow(): string {
   return (
     `<tr><td style="padding-bottom:24px;">` +
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>` +
-    monogramCell("ES", NAVY) +
+    monogramCell("ES", POP_TEAL, INK) +
     `<td width="2"></td>` +
     monogramCell("LD", POP_ORANGE, INK) +
     `<td style="padding-left:12px;font-family:${FONT_STACK};font-size:13px;font-weight:800;` +

@@ -24,7 +24,9 @@ export const EDITIONS: Record<EditionSlug, EditionInfo> = {
     description:
       "Fondées en 1927, Les Éditions sociales publient les grands textes du marxisme, de la philosophie et des sciences sociales, ainsi que la recherche critique contemporaine.",
     legacyUrl: "https://editionssociales.fr",
-    accent: "navy",
+    // Bleu CLAIR (`pop-teal`) depuis le retour client 2026-11 — ex-navy, qui
+    // reste l'accent de couverture des dos de livres décoratifs.
+    accent: "pop-teal",
   },
   "la-dispute": {
     slug: "la-dispute",

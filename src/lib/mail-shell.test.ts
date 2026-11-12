@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { INK, LINE_COLOR, MUTED, NAVY, PAPER, POP_ORANGE, renderMailShell } from "./mail-shell";
+import { INK, LINE_COLOR, MUTED, PAPER, POP_ORANGE, POP_TEAL, renderMailShell } from "./mail-shell";
 
 /**
  * Les teintes des e-mails sont recopiées en dur (aucun client mail ne lit
@@ -21,7 +21,7 @@ describe("mail-shell — teintes alignées sur globals.css", () => {
     ["ink", INK],
     ["muted", MUTED],
     ["line", LINE_COLOR],
-    ["navy", NAVY],
+    ["pop-teal", POP_TEAL],
     ["pop-orange", POP_ORANGE],
   ])("--color-%s", (name, value) => {
     expect(value.toLowerCase()).toBe(token(name));
@@ -32,9 +32,10 @@ describe("mail-shell — monogrammes du logo", () => {
   const html = renderMailShell({ documentTitle: "t", preheader: "p", heading: "h", bodyHtml: "" });
   const cell = (sigle: string) => html.match(new RegExp(`<td[^>]*background-color:[^>]*>${sigle}</td>`))?.[0] ?? "";
 
-  it("ES : fond navy, sigle paper (comme le header du site)", () => {
-    expect(cell("ES")).toContain(`background-color:${NAVY}`);
-    expect(cell("ES")).toContain(`color:${PAPER}`);
+  it("ES : fond pop-teal (bleu clair), sigle ink — comme le header du site", () => {
+    expect(cell("ES")).toContain(`background-color:${POP_TEAL}`);
+    expect(cell("ES")).toContain(`color:${INK}`);
+    expect(html).not.toContain("#262a5c");
   });
 
   it("LD : fond pop-orange, sigle ink — jamais la brique", () => {

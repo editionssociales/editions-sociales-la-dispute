@@ -16,5 +16,8 @@ export const ACCENT_BG: Record<Accent, string> = {
   // quatre de couverture : tout texte posé dessus est `ink`, jamais `paper`
   // (5,84:1 vs 2,95:1, cf. `pop-palette.ts`) — à traiter par l'appelant.
   "pop-orange": "bg-pop-orange",
+  // Identité Les Éditions sociales (ex-navy) — CLAIR comme l'orange : tout
+  // texte posé dessus est `ink`, jamais `paper`.
+  "pop-teal": "bg-pop-teal",
 };
 
