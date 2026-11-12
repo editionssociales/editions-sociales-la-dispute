@@ -34,6 +34,7 @@ import { HighlightLiveCell as HighlightLiveCell_601e17702a673359c1d6db00f11b092b
 import { RencontresFilterChipsPanel as RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7 } from '../../../payload/admin/rencontres/RencontresFilterChipsPanel.tsx'
 import { PromoStatusCell as PromoStatusCell_25194799f840adb1e4fb478a2598df32 } from '../../../payload/admin/cells/PromoStatusCell.tsx'
 import { MaisonDefaultField as MaisonDefaultField_ea254be05674e252f8fb118c3e282745 } from '../../../payload/admin/MaisonDefaultField.tsx'
+import { SectionRowLabel as SectionRowLabel_b97236b5f9713ad6f5741b2b44183070 } from '../../../payload/admin/SectionRowLabel.tsx'
 import { StockNavLink as StockNavLink_6618fbe14a6645bc8a42a9773c06e167 } from '../../../payload/admin/stock/StockNavLink.tsx'
 import { VentesNavLink as VentesNavLink_a41d437a4d5b60b3c21d25728573cbee } from '../../../payload/admin/ventes/VentesNavLink.tsx'
 import { HealthNavLink as HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e } from '../../../payload/admin/health/HealthNavLink.tsx'
@@ -82,6 +83,7 @@ export const importMap = {
   "/payload/admin/rencontres/RencontresFilterChipsPanel.tsx#RencontresFilterChipsPanel": RencontresFilterChipsPanel_079b6093e285ecacd0d8c728264b54b7,
   "/payload/admin/cells/PromoStatusCell.tsx#PromoStatusCell": PromoStatusCell_25194799f840adb1e4fb478a2598df32,
   "/payload/admin/MaisonDefaultField.tsx#MaisonDefaultField": MaisonDefaultField_ea254be05674e252f8fb118c3e282745,
+  "/payload/admin/SectionRowLabel.tsx#SectionRowLabel": SectionRowLabel_b97236b5f9713ad6f5741b2b44183070,
   "/payload/admin/stock/StockNavLink.tsx#StockNavLink": StockNavLink_6618fbe14a6645bc8a42a9773c06e167,
   "/payload/admin/ventes/VentesNavLink.tsx#VentesNavLink": VentesNavLink_a41d437a4d5b60b3c21d25728573cbee,
   "/payload/admin/health/HealthNavLink.tsx#HealthNavLink": HealthNavLink_cbd8cf891db6a103ebc58763a180ba5e,

@@ -13,3 +13,15 @@ export function safeHttpUrl(raw: string | null | undefined): string | null {
     return null;
   }
 }
+
+/**
+ * Cible d'un bouton éditorial : URL http(s) absolue (`safeHttpUrl`) OU chemin du
+ * site (`/souscription`, jamais `//hôte` — c'est une URL de protocole relatif,
+ * donc externe) ; sinon `null`. Jamais `javascript:`/`data:`.
+ */
+export function safeHref(raw: string | null | undefined): string | null {
+  const propre = raw?.trim();
+  if (!propre) return null;
+  if (propre.startsWith("/") && !propre.startsWith("//")) return propre;
+  return safeHttpUrl(propre);
+}

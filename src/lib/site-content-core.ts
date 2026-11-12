@@ -4,7 +4,7 @@ import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { CAMPAIGN_2026_PALIERS, DONATION_TIERS, type DonationTier } from "./donation-tiers";
 import { EDITION_LIST } from "./editions";
-import { safeHttpUrl } from "./safe-url";
+import { safeHref, safeHttpUrl } from "./safe-url";
 import {
   CONTACT_INTRO_DEFAUT,
   CONTACT_TITRE_DEFAUT,
@@ -707,16 +707,34 @@ export interface NosMaisonsLien {
   image: { url: string; width: number; height: number; alt: string } | null;
 }
 
+/** Couleur de fond d'une mise en avant — valeurs du select `miseEnAvant.couleur` (`PageNosMaisons.ts`). */
+export type NosMaisonsCouleur = "jaune" | "rose" | "bleu" | "orange";
+
+/**
+ * Une section de `/nos-maisons` (éditeur libre, blocs Payload) — déjà VALIDÉE :
+ * titre facultatif nettoyé (`null` = aucun intertitre), URLs http(s) (ou chemin
+ * du site pour le bouton d'une mise en avant), lignes invalides écartées. Une
+ * section qui n'a plus rien à montrer (texte vide, carrousel sans ligne
+ * valide, citation sans texte) disparaît ENTIÈREMENT.
+ */
+export type NosMaisonsSection =
+  | { type: "texte"; id: string; titre: string | null; paragraphes: string[] }
+  | { type: "videos"; id: string; titre: string | null; videos: NosMaisonsLien[] }
+  | { type: "articles"; id: string; titre: string | null; articles: NosMaisonsLien[] }
+  | {
+      type: "miseEnAvant";
+      id: string;
+      titre: string;
+      paragraphes: string[];
+      lien: { libelle: string; href: string } | null;
+      couleur: NosMaisonsCouleur;
+    }
+  | { type: "citation"; id: string; texte: string; auteur: string | null; source: string | null }
+  | { type: "maisons"; id: string; titre: string | null };
+
 export interface PageNosMaisonsContent {
   titre: string;
-  /** Paragraphes du texte d'introduction (séparés par une ligne vide à la saisie) ; vide = section non rendue. */
-  paragraphes: string[];
-  videos: NosMaisonsLien[];
-  articles: NosMaisonsLien[];
-  /** Titres de section FACULTATIFS — `null` = aucun titre visible (le cas courant, retour client 2026-11). */
-  titreVideos: string | null;
-  titreArticles: string | null;
-  titreMaisons: string | null;
+  sections: NosMaisonsSection[];
 }
 
 /** Texte brut → paragraphes (séparés par une ligne vide), blancs écartés. */
@@ -768,18 +786,80 @@ function mergeLiens(rows: ReadonlyArray<LienBrut> | null | undefined): NosMaison
   return out;
 }
 
-/** Fusion du global `page-nos-maisons` — titre vide = défaut dur, listes/texte vides = section absente. */
+const COULEURS: readonly NosMaisonsCouleur[] = ["jaune", "rose", "bleu", "orange"];
+
+type SectionBrute = NonNullable<PageNosMaisons["sections"]>[number];
+
+function mergeSection(section: SectionBrute): NosMaisonsSection | null {
+  const id = section.id ?? "";
+  switch (section.blockType) {
+    case "texte": {
+      const paragraphes = splitParagraphes(section.contenu);
+      return paragraphes.length > 0
+        ? { type: "texte", id, titre: section.titre?.trim() || null, paragraphes }
+        : null;
+    }
+    case "carrouselVideos": {
+      const videos = mergeLiens(section.videos);
+      return videos.length > 0 ? { type: "videos", id, titre: section.titre?.trim() || null, videos } : null;
+    }
+    case "carrouselArticles": {
+      const articles = mergeLiens(section.articles);
+      return articles.length > 0
+        ? { type: "articles", id, titre: section.titre?.trim() || null, articles }
+        : null;
+    }
+    case "miseEnAvant": {
+      const titre = section.titre?.trim();
+      if (!titre) return null;
+      const libelle = section.lienLibelle?.trim();
+      const href = safeHref(section.lienUrl);
+      return {
+        type: "miseEnAvant",
+        id,
+        titre,
+        paragraphes: splitParagraphes(section.texte),
+        // Un bouton exige les DEUX : libellé et adresse valide.
+        lien: libelle && href ? { libelle, href } : null,
+        couleur: COULEURS.includes(section.couleur as NosMaisonsCouleur)
+          ? (section.couleur as NosMaisonsCouleur)
+          : "jaune",
+      };
+    }
+    case "citation": {
+      const texte = section.texte?.trim();
+      return texte
+        ? {
+            type: "citation",
+            id,
+            texte,
+            auteur: section.auteur?.trim() || null,
+            source: section.source?.trim() || null,
+          }
+        : null;
+    }
+    case "maisons":
+      return { type: "maisons", id, titre: section.titre?.trim() || null };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Fusion du global `page-nos-maisons` — titre vide = défaut dur ; sections
+ * validées une à une, dans l'ordre de saisie. Aucune section exploitable ⇒ les
+ * deux cartes maisons seules (« vide = défaut », comme le reste du site).
+ */
 export function mergePageNosMaisons(
   global: PageNosMaisons | null | undefined,
 ): PageNosMaisonsContent {
+  const sections = (global?.sections ?? []).flatMap((s) => {
+    const merged = mergeSection(s);
+    return merged ? [merged] : [];
+  });
   return {
     titre: texteOuDefaut(global?.titre, NOS_MAISONS_TITRE_DEFAUT),
-    paragraphes: splitParagraphes(global?.texte),
-    videos: mergeLiens(global?.videos),
-    articles: mergeLiens(global?.articles),
-    titreVideos: global?.titreVideos?.trim() || null,
-    titreArticles: global?.titreArticles?.trim() || null,
-    titreMaisons: global?.titreMaisons?.trim() || null,
+    sections: sections.length > 0 ? sections : [{ type: "maisons", id: "defaut", titre: null }],
   };
 }
 

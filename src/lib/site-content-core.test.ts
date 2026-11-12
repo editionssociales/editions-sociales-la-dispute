@@ -10,8 +10,9 @@ import {
   mergePagesLegales,
   mergeReglagesSite,
   richTextToSafeHtml,
+  type NosMaisonsSection,
 } from "./site-content-core";
-import { safeHttpUrl } from "./safe-url";
+import { safeHref, safeHttpUrl } from "./safe-url";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { livraisonInfosDefaut } from "./site-defaults";
 import { CAMPAIGN_2026_PALIERS } from "./donation-tiers";
@@ -788,64 +789,136 @@ describe("splitParagraphes", () => {
 });
 
 describe("mergePageNosMaisons", () => {
-  it("global absent → titre par défaut, aucune section", () => {
-    expect(mergePageNosMaisons(null)).toEqual({
-      titre: "Nos maisons",
-      paragraphes: [],
-      videos: [],
-      articles: [],
-      titreVideos: null,
-      titreArticles: null,
-      titreMaisons: null,
-    });
+  const MAISONS_PAR_DEFAUT = [{ type: "maisons", id: "defaut", titre: null }];
+
+  it("global absent ou sans section → titre par défaut, les deux cartes maisons seules", () => {
+    expect(mergePageNosMaisons(null)).toEqual({ titre: "Nos maisons", sections: MAISONS_PAR_DEFAUT });
+    expect(mergePageNosMaisons({ id: 1, sections: [] }).sections).toEqual(MAISONS_PAR_DEFAUT);
   });
 
-  it("titres de section : repris tels quels s'ils sont saisis, sinon null", () => {
-    const merged = mergePageNosMaisons({ id: 1, titreVideos: " À voir ", titreArticles: "", titreMaisons: "  " });
-    expect(merged.titreVideos).toBe("À voir");
-    expect(merged.titreArticles).toBeNull();
-    expect(merged.titreMaisons).toBeNull();
-  });
-
-  it("écarte les lignes sans titre ou à URL non http(s), garde l'ordre", () => {
+  it("valide chaque type de section, dans l'ordre de saisie, titres facultatifs nettoyés", () => {
     const merged = mergePageNosMaisons({
       id: 1,
       titre: " Chez nous ",
-      texte: "A\n\nB",
-      videos: [
-        { titre: "V1", url: "https://youtu.be/abcdefghijk", media: " France 2 ", date: "", id: "1" },
-        { titre: "V2", url: "javascript:alert(1)", id: "2" },
-        { titre: " ", url: "https://exemple.fr", id: "3" },
+      sections: [
+        { blockType: "texte", id: "t", titre: "  Intro ", contenu: "A\n\nB" },
+        {
+          blockType: "carrouselVideos",
+          id: "v",
+          titre: "",
+          videos: [
+            { titre: "V1", url: "https://youtu.be/abcdefghijk", media: " France 2 ", date: "", id: "1" },
+            { titre: "V2", url: "javascript:alert(1)", id: "2" },
+            { titre: " ", url: "https://exemple.fr", id: "3" },
+          ],
+        },
+        {
+          blockType: "carrouselArticles",
+          id: "a",
+          articles: [{ titre: "Art", url: "https://exemple.fr/a", id: "4" }],
+        },
+        {
+          blockType: "miseEnAvant",
+          id: "m",
+          titre: " À ne pas manquer ",
+          texte: "Un mot.",
+          lienLibelle: " Souscrire ",
+          lienUrl: "/souscription",
+          couleur: "rose",
+        },
+        { blockType: "citation", id: "c", texte: " « Bravo » ", auteur: " A. B. ", source: "" },
+        { blockType: "maisons", id: "h", titre: " Nos deux maisons " },
       ],
-      articles: [{ titre: "Art", url: "https://exemple.fr/a", id: "4" }],
     });
     expect(merged.titre).toBe("Chez nous");
-    expect(merged.paragraphes).toEqual(["A", "B"]);
-    expect(merged.videos).toEqual([
-      { titre: "V1", url: "https://youtu.be/abcdefghijk", media: "France 2", date: null, image: null },
-    ]);
-    expect(merged.articles).toEqual([
-      { titre: "Art", url: "https://exemple.fr/a", media: null, date: null, image: null },
+    expect(merged.sections).toEqual([
+      { type: "texte", id: "t", titre: "Intro", paragraphes: ["A", "B"] },
+      {
+        type: "videos",
+        id: "v",
+        titre: null,
+        videos: [
+          { titre: "V1", url: "https://youtu.be/abcdefghijk", media: "France 2", date: null, image: null },
+        ],
+      },
+      {
+        type: "articles",
+        id: "a",
+        titre: null,
+        articles: [{ titre: "Art", url: "https://exemple.fr/a", media: null, date: null, image: null }],
+      },
+      {
+        type: "miseEnAvant",
+        id: "m",
+        titre: "À ne pas manquer",
+        paragraphes: ["Un mot."],
+        lien: { libelle: "Souscrire", href: "/souscription" },
+        couleur: "rose",
+      },
+      { type: "citation", id: "c", texte: "« Bravo »", auteur: "A. B.", source: null },
+      { type: "maisons", id: "h", titre: "Nos deux maisons" },
     ]);
   });
 
-  it("image de couverture d'un article : reprise si le média est peuplé et dimensionné, sinon null", () => {
+  it("une section sans rien à montrer disparaît ; toutes écartées → cartes maisons par défaut", () => {
+    const merged = mergePageNosMaisons({
+      id: 1,
+      sections: [
+        { blockType: "texte", id: "1", contenu: "  " },
+        { blockType: "carrouselVideos", id: "2", videos: [{ titre: "x", url: "pas une url", id: "x" }] },
+        { blockType: "miseEnAvant", id: "3", titre: " " },
+        { blockType: "citation", id: "4", texte: "" },
+      ],
+    });
+    expect(merged.sections).toEqual(MAISONS_PAR_DEFAUT);
+  });
+
+  it("mise en avant : bouton seulement si libellé ET adresse valides ; couleur inconnue → jaune", () => {
+    const get = (over: object) =>
+      mergePageNosMaisons({ id: 1, sections: [{ blockType: "miseEnAvant", id: "m", titre: "T", ...over } as never] })
+        .sections[0] as Extract<NosMaisonsSection, { type: "miseEnAvant" }>;
+    expect(get({ lienLibelle: "Go", lienUrl: "https://exemple.fr" }).lien).toEqual({ libelle: "Go", href: "https://exemple.fr/" });
+    expect(get({ lienLibelle: "Go", lienUrl: "javascript:alert(1)" }).lien).toBeNull();
+    expect(get({ lienLibelle: "Go", lienUrl: "//evil.example" }).lien).toBeNull();
+    expect(get({ lienLibelle: "", lienUrl: "/souscription" }).lien).toBeNull();
+    expect(get({ couleur: "violet" }).couleur).toBe("jaune");
+  });
+
+  it("photo d'un article : reprise si le média est peuplé et dimensionné, sinon null", () => {
     const media = (over: Partial<Media>): Media =>
       ({ id: 9, url: "https://blob.example/a.jpg", width: 1200, height: 800, alt: " Une une ", ...over }) as Media;
     const merged = mergePageNosMaisons({
       id: 1,
-      articles: [
-        { titre: "Avec", url: "https://exemple.fr/a", image: media({}), id: "1" },
-        { titre: "Id seul", url: "https://exemple.fr/b", image: 9, id: "2" },
-        { titre: "Sans taille", url: "https://exemple.fr/c", image: media({ width: null }), id: "3" },
-        { titre: "Sans image", url: "https://exemple.fr/d", id: "4" },
+      sections: [
+        {
+          blockType: "carrouselArticles",
+          id: "a",
+          articles: [
+            { titre: "Avec", url: "https://exemple.fr/a", image: media({}), id: "1" },
+            { titre: "Id seul", url: "https://exemple.fr/b", image: 9, id: "2" },
+            { titre: "Sans taille", url: "https://exemple.fr/c", image: media({ width: null }), id: "3" },
+            { titre: "Sans image", url: "https://exemple.fr/d", id: "4" },
+          ],
+        },
       ],
     });
-    expect(merged.articles.map((a) => a.image)).toEqual([
+    const articles = (merged.sections[0] as Extract<NosMaisonsSection, { type: "articles" }>).articles;
+    expect(articles.map((a) => a.image)).toEqual([
       { url: "https://blob.example/a.jpg", width: 1200, height: 800, alt: "Une une" },
       null,
       null,
       null,
     ]);
+  });
+});
+
+describe("safeHref", () => {
+  it("accepte http(s) et les chemins du site ; refuse protocole relatif, javascript:, vide", () => {
+    expect(safeHref("https://exemple.fr/a")).toBe("https://exemple.fr/a");
+    expect(safeHref(" /souscription ")).toBe("/souscription");
+    expect(safeHref("//evil.example")).toBeNull();
+    expect(safeHref("javascript:alert(1)")).toBeNull();
+    expect(safeHref("")).toBeNull();
+    expect(safeHref(null)).toBeNull();
   });
 });

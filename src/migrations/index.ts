@@ -36,6 +36,7 @@ import * as migration_20261112_120000_page_nos_maisons from './20261112_120000_p
 import * as migration_20261113_090000_livre_masque from './20261113_090000_livre_masque';
 import * as migration_20261113_100000_nos_maisons_article_image from './20261113_100000_nos_maisons_article_image';
 import * as migration_20261113_110000_livraison_infos from './20261113_110000_livraison_infos';
+import * as migration_20261113_120000_nos_maisons_sections from './20261113_120000_nos_maisons_sections';
 import * as migration_20261006_100000_commande_nom_prenom from './20261006_100000_commande_nom_prenom'
 
 export const migrations = [
@@ -233,5 +234,10 @@ export const migrations = [
     up: migration_20261113_110000_livraison_infos.up,
     down: migration_20261113_110000_livraison_infos.down,
     name: '20261113_110000_livraison_infos',
+  },
+  {
+    up: migration_20261113_120000_nos_maisons_sections.up,
+    down: migration_20261113_120000_nos_maisons_sections.down,
+    name: '20261113_120000_nos_maisons_sections',
   },
 ];

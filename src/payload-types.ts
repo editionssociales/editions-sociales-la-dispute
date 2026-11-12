@@ -1482,7 +1482,7 @@ export interface PageContact {
   createdAt?: string | null;
 }
 /**
- * Page /nos-maisons : texte, vidéos (interventions dans les médias) et articles. Une section vide n’est pas affichée.
+ * Page /nos-maisons : ajoutez, supprimez et réordonnez librement des sections (texte, carrousel de vidéos, carrousel d’articles avec photo, mise en avant, citation, cartes des deux maisons).
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "page-nos-maisons".
@@ -1494,63 +1494,130 @@ export interface PageNosMaisons {
    */
   titre?: string | null;
   /**
-   * Texte brut ; séparez les paragraphes par une ligne vide. Vide = pas de texte.
+   * Les sections s’affichent dans cet ordre. Sans aucune section, la page ne montre que les cartes des deux maisons.
    */
-  texte?: string | null;
-  /**
-   * Facultatif — vide = aucun titre (le cas courant).
-   */
-  titreVideos?: string | null;
-  /**
-   * Facultatif — vide = aucun titre.
-   */
-  titreArticles?: string | null;
-  /**
-   * Facultatif — vide = aucun titre.
-   */
-  titreMaisons?: string | null;
-  /**
-   * Carrousel, dans cet ordre.
-   */
-  videos?:
-    | {
-        titre: string;
-        /**
-         * Lien YouTube (intégré dans la page). Tout autre lien http(s) s’affiche comme un lien vers la vidéo.
-         */
-        url: string;
-        /**
-         * Nom du média (ex. « France Inter »). Optionnel.
-         */
-        media?: string | null;
-        /**
-         * Texte libre (ex. « 12 octobre 2026 »). Optionnel.
-         */
-        date?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  articles?:
-    | {
-        titre: string;
-        /**
-         * Lien http(s) vers l’article.
-         */
-        url: string;
-        /**
-         * Nom du média (ex. « France Inter »). Optionnel.
-         */
-        media?: string | null;
-        /**
-         * Texte libre (ex. « 12 octobre 2026 »). Optionnel.
-         */
-        date?: string | null;
-        /**
-         * Optionnelle — affichée au-dessus du titre de l’article. Sans image, l’article reste une simple ligne de texte.
-         */
-        image?: (number | null) | Media;
-        id?: string | null;
-      }[]
+  sections?:
+    | (
+        | {
+            /**
+             * Facultatif — vide = aucun titre affiché. Sert aussi de nom à cette section dans l’éditeur.
+             */
+            titre?: string | null;
+            /**
+             * Texte brut ; séparez les paragraphes par une ligne vide.
+             */
+            contenu: string;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'texte';
+          }
+        | {
+            /**
+             * Facultatif — vide = aucun titre affiché. Sert aussi de nom à cette section dans l’éditeur.
+             */
+            titre?: string | null;
+            /**
+             * Dans cet ordre.
+             */
+            videos?:
+              | {
+                  titre: string;
+                  /**
+                   * Lien YouTube (intégré dans la page). Tout autre lien http(s) s’affiche comme un lien vers la vidéo.
+                   */
+                  url: string;
+                  /**
+                   * Nom du média (ex. « France Inter »). Optionnel.
+                   */
+                  media?: string | null;
+                  /**
+                   * Texte libre (ex. « 12 octobre 2026 »). Optionnel.
+                   */
+                  date?: string | null;
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'carrouselVideos';
+          }
+        | {
+            /**
+             * Facultatif — vide = aucun titre affiché. Sert aussi de nom à cette section dans l’éditeur.
+             */
+            titre?: string | null;
+            /**
+             * Dans cet ordre.
+             */
+            articles?:
+              | {
+                  titre: string;
+                  /**
+                   * Lien http(s) vers l’article.
+                   */
+                  url: string;
+                  /**
+                   * Nom du média (ex. « France Inter »). Optionnel.
+                   */
+                  media?: string | null;
+                  /**
+                   * Texte libre (ex. « 12 octobre 2026 »). Optionnel.
+                   */
+                  date?: string | null;
+                  /**
+                   * Optionnelle — affichée au-dessus du titre, dans le carrousel.
+                   */
+                  image?: (number | null) | Media;
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'carrouselArticles';
+          }
+        | {
+            /**
+             * Le grand titre de l’encadré. Sert aussi de nom à cette section dans l’éditeur.
+             */
+            titre: string;
+            /**
+             * Optionnel — texte brut, paragraphes séparés par une ligne vide.
+             */
+            texte?: string | null;
+            /**
+             * Optionnel — sans libellé ni adresse, pas de bouton.
+             */
+            lienLibelle?: string | null;
+            /**
+             * https://… ou un chemin du site (ex. /souscription).
+             */
+            lienUrl?: string | null;
+            couleur?: ('jaune' | 'rose' | 'bleu' | 'orange') | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'miseEnAvant';
+          }
+        | {
+            texte: string;
+            auteur?: string | null;
+            /**
+             * Média, ouvrage, fonction… Optionnel.
+             */
+            source?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'citation';
+          }
+        | {
+            /**
+             * Facultatif — vide = aucun titre affiché. Sert aussi de nom à cette section dans l’éditeur.
+             */
+            titre?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'maisons';
+          }
+      )[]
     | null;
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -1811,28 +1878,77 @@ export interface PageContactSelect<T extends boolean = true> {
  */
 export interface PageNosMaisonsSelect<T extends boolean = true> {
   titre?: T;
-  texte?: T;
-  titreVideos?: T;
-  titreArticles?: T;
-  titreMaisons?: T;
-  videos?:
+  sections?:
     | T
     | {
-        titre?: T;
-        url?: T;
-        media?: T;
-        date?: T;
-        id?: T;
-      };
-  articles?:
-    | T
-    | {
-        titre?: T;
-        url?: T;
-        media?: T;
-        date?: T;
-        image?: T;
-        id?: T;
+        texte?:
+          | T
+          | {
+              titre?: T;
+              contenu?: T;
+              id?: T;
+              blockName?: T;
+            };
+        carrouselVideos?:
+          | T
+          | {
+              titre?: T;
+              videos?:
+                | T
+                | {
+                    titre?: T;
+                    url?: T;
+                    media?: T;
+                    date?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        carrouselArticles?:
+          | T
+          | {
+              titre?: T;
+              articles?:
+                | T
+                | {
+                    titre?: T;
+                    url?: T;
+                    media?: T;
+                    date?: T;
+                    image?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        miseEnAvant?:
+          | T
+          | {
+              titre?: T;
+              texte?: T;
+              lienLibelle?: T;
+              lienUrl?: T;
+              couleur?: T;
+              id?: T;
+              blockName?: T;
+            };
+        citation?:
+          | T
+          | {
+              texte?: T;
+              auteur?: T;
+              source?: T;
+              id?: T;
+              blockName?: T;
+            };
+        maisons?:
+          | T
+          | {
+              titre?: T;
+              id?: T;
+              blockName?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;
