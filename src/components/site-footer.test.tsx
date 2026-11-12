@@ -74,3 +74,30 @@ describe("SiteFooter — newsletter avec Brevo", () => {
     expect(html).toContain("Brevo");
   });
 });
+
+describe("SiteFooter — structure compacte", () => {
+  const html = renderToStaticMarkup(<SiteFooter footer={FOOTER} newsletterEnabled />);
+
+  it("garde une seule instance du formulaire newsletter", () => {
+    expect(html.match(/<form/g)).toHaveLength(1);
+  });
+
+  it("garde tous les liens du plan du site dans une seule nav", () => {
+    expect(html.match(/aria-label="Plan du site"/g)).toHaveLength(1);
+    for (const href of ["/panier", "/souscription", "/contact", "/catalogue"]) {
+      expect(html).toContain(`href="${href}"`);
+    }
+  });
+
+  it("n'affiche « Suivez-nous » que si des réseaux sont saisis", () => {
+    expect(html).not.toContain("Suivez-nous");
+    const avec = renderToStaticMarkup(
+      <SiteFooter
+        footer={{ ...FOOTER, reseauxSociaux: [{ label: "Mastodon", url: "https://example.org/a" }] }}
+        newsletterEnabled
+      />,
+    );
+    expect(avec).toContain("Suivez-nous");
+    expect(avec).toContain("Mastodon");
+  });
+});
