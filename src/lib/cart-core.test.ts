@@ -79,7 +79,9 @@ describe("setLineQty", () => {
 
   it("plafonne à MAX_LINE_QTY", () => {
     const state = addToCart(EMPTY_CART, 1, 1);
-    expect(setLineQty(state, 1, 999).lines).toEqual([{ id: 1, qty: MAX_LINE_QTY }]);
+    expect(setLineQty(state, 1, MAX_LINE_QTY * 10).lines).toEqual([{ id: 1, qty: MAX_LINE_QTY }]);
+    // Plus aucune limite de commande « produit » : des centaines de lots passent.
+    expect(setLineQty(state, 1, 5_000).lines).toEqual([{ id: 1, qty: 5_000 }]);
   });
 
   it("n'a aucun effet sur une ligne absente", () => {
@@ -182,7 +184,7 @@ describe("parseCartState — désérialisation défensive (localStorage non fiab
       version: CART_VERSION,
       lines: [
         { id: 1, qty: 2.6 },
-        { id: 2, qty: 500 },
+        { id: 2, qty: MAX_LINE_QTY * 10 },
         { id: 3, qty: -5 },
       ],
     });

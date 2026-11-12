@@ -43,13 +43,13 @@ export interface CartState {
 export const EMPTY_CART: CartState = { version: CART_VERSION, lines: [] };
 
 /**
- * Plafond défensif par ligne — même esprit que `FREE_AMOUNT` de
- * `donation-tiers.ts` : borne un `localStorage` trafiqué ou une frappe
- * malheureuse (`qty: 9999`), jamais une vraie limite produit. Assez haut
- * pour plusieurs lots de `LOT_SIZE` exemplaires (`shipping-core.ts`) : la
- * vraie limite reste le stock, revérifié au checkout.
+ * Borne TECHNIQUE par ligne — aucune limite de commande, notamment pour les
+ * lots (retour client 2026-11 : plus de maximum) : elle ne protège que d'un
+ * `localStorage` trafiqué ou d'une requête forgée (`qty: 1e308`), très au-delà
+ * de tout stock réel. La seule vraie limite d'une commande est le STOCK,
+ * revérifié au checkout (`insufficient-stock`).
  */
-export const MAX_LINE_QTY = 100;
+export const MAX_LINE_QTY = 100_000;
 
 function clampQty(qty: number): number {
   if (!Number.isFinite(qty)) return 1;

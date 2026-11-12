@@ -81,7 +81,7 @@ describe("parseCheckoutRequest", () => {
   });
 
   it("quantité plafonnée à MAX_LINE_QTY (défense localStorage/requête forgée)", () => {
-    const result = parseCheckoutRequest({ lines: [{ id: 1, qty: 9999 }], zone: "FR" });
+    const result = parseCheckoutRequest({ lines: [{ id: 1, qty: MAX_LINE_QTY * 10 }], zone: "FR" });
     expect(result).toEqual({ lines: [{ id: 1, qty: MAX_LINE_QTY }], zone: "FR", promoCode: null });
   });
 });
