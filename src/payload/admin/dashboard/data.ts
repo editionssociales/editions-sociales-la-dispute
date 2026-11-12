@@ -183,7 +183,7 @@ export interface WorkOrderRow {
   createdAt: string
   paidAt: string | null
   totalTTC: number
-  shippingMethod: 'standard' | 'reduit' | 'offert' | 'aucun'
+  shippingMethod: 'standard' | 'reduit' | 'offert' | 'lot' | 'aucun'
   lines: { titleSnapshot: string; quantity: number }[]
 }
 

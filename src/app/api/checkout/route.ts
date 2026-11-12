@@ -89,6 +89,7 @@ export async function POST(req: Request): Promise<Response> {
     hasPreorderPhysicalLines: preorder.hasPhysicalLines,
     zone: parsed.zone,
     manifestOnly: validation.manifestOnly,
+    lotCount: validation.lotCount,
     promoEval,
   });
   if (!quote.shipping.ok) {

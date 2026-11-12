@@ -127,6 +127,7 @@ describe("getCommerceBookRecords", () => {
       sellable: true,
       stock: 3,
       reducedShippingFlag: true,
+      lot: false,
       preorderEnabled: true,
       digital: false,
     });
@@ -143,6 +144,7 @@ describe("getCommerceBookRecords", () => {
       sellable: false,
       stock: null,
       reducedShippingFlag: false,
+      lot: false,
       preorderEnabled: false,
       digital: false,
     });

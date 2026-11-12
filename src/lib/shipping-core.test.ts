@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   CART_MAX_CENTS,
   computeShipping,
+  countLots,
+  LOT_FREE_SHIPPING_MIN_LOTS,
+  LOT_SHIPPING_COST_CENTS,
   FREE_SHIPPING_MIN_CART_CENTS,
   isManifestOnly,
   MANIFEST_SHIPPING_COST_CENTS,
@@ -16,6 +19,7 @@ function request(overrides: Partial<ShippingRequest> = {}): ShippingRequest {
     manifestOnly: false,
     freeShippingCoupon: false,
     hasPhysicalItems: true,
+    lotCount: 0,
     ...overrides,
   };
 }
@@ -285,5 +289,71 @@ describe("isManifestOnly — règle « panier manifeste »", () => {
     expect(
       isManifestOnly([{ reducedShippingFlag: true }, { reducedShippingFlag: false }]),
     ).toBe(false);
+  });
+});
+
+describe("computeShipping — vente par lot", () => {
+  it("constantes : 10 € le lot, offert dès 2 lots", () => {
+    expect(LOT_SHIPPING_COST_CENTS).toBe(1000);
+    expect(LOT_FREE_SHIPPING_MIN_LOTS).toBe(2);
+  });
+
+  it("1 lot → 10 € forfaitaires, même sur un petit panier", () => {
+    expect(computeShipping(request({ cartTotalCents: 500, lotCount: 1 }))).toEqual({ ok: true, costCents: 1000 });
+  });
+
+  it("2 lots ou plus → offert", () => {
+    expect(computeShipping(request({ cartTotalCents: 9000, lotCount: 2 }))).toEqual({ ok: true, costCents: 0 });
+    expect(computeShipping(request({ cartTotalCents: 9000, lotCount: 5 }))).toEqual({ ok: true, costCents: 0 });
+  });
+
+  it("1 lot + coupon free_shipping ≥ 50 € → 0 (le coupon prime sur le forfait)", () => {
+    expect(
+      computeShipping(request({ cartTotalCents: 6000, lotCount: 1, freeShippingCoupon: true })),
+    ).toEqual({ ok: true, costCents: 0 });
+  });
+
+  it("1 lot + coupon sous 50 € → forfait 10 €", () => {
+    expect(
+      computeShipping(request({ cartTotalCents: 4000, lotCount: 1, freeShippingCoupon: true })),
+    ).toEqual({ ok: true, costCents: 1000 });
+  });
+
+  it("1 lot + manifeste → 10 € (le forfait lot prime sur 2,50 €)", () => {
+    expect(computeShipping(request({ cartTotalCents: 1000, lotCount: 1, manifestOnly: true }))).toEqual({
+      ok: true,
+      costCents: 1000,
+    });
+  });
+
+  it("1 lot + panier > 500 € → pas de refus (la grille standard ne s'applique pas)", () => {
+    expect(computeShipping(request({ cartTotalCents: 60000, lotCount: 1 }))).toEqual({ ok: true, costCents: 1000 });
+  });
+
+  it("zone invalide → refus même avec des lots", () => {
+    expect(computeShipping(request({ zone: "US", lotCount: 3 }))).toMatchObject({ ok: false, reason: "zone" });
+  });
+
+  it("aucun article physique → 0 même avec lotCount", () => {
+    expect(computeShipping(request({ hasPhysicalItems: false, lotCount: 1 }))).toEqual({ ok: true, costCents: 0 });
+  });
+
+  it("lotCount non entier ou négatif → TypeError", () => {
+    expect(() => computeShipping(request({ lotCount: 1.5 }))).toThrow(TypeError);
+    expect(() => computeShipping(request({ lotCount: -1 }))).toThrow(TypeError);
+  });
+});
+
+describe("countLots", () => {
+  it("somme les quantités des lignes physiques « lot » seulement", () => {
+    expect(
+      countLots([
+        { lot: true, digital: false, qty: 2 },
+        { lot: true, digital: true, qty: 5 },
+        { lot: false, digital: false, qty: 9 },
+        { lot: true, digital: false, qty: 1 },
+      ]),
+    ).toBe(3);
+    expect(countLots([])).toBe(0);
   });
 });

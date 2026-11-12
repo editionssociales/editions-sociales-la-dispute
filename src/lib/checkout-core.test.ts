@@ -24,6 +24,7 @@ function book(overrides: Partial<CheckoutBookLookup> = {}): CheckoutBookLookup {
     sellable: true,
     stock: 10,
     reducedShippingFlag: false,
+    lot: false,
     preorderEnabled: false,
     digital: false,
     ...overrides,
@@ -98,6 +99,7 @@ describe("validateCheckoutLine", () => {
         unitPriceCents: 1500,
         lineTotalCents: 3000,
         reducedShippingFlag: false,
+        lot: false,
         isPreorder: false,
         digital: false,
       },
@@ -202,6 +204,7 @@ describe("validateCheckoutLines", () => {
           unitPriceCents: 1000,
           lineTotalCents: 2000,
           reducedShippingFlag: true,
+          lot: false,
           isPreorder: false,
           digital: false,
         },
@@ -213,12 +216,14 @@ describe("validateCheckoutLines", () => {
           unitPriceCents: 2000,
           lineTotalCents: 2000,
           reducedShippingFlag: true,
+          lot: false,
           isPreorder: false,
           digital: false,
         },
       ],
       subtotalCents: 4000,
       manifestOnly: true,
+      lotCount: 0,
     });
   });
 
@@ -236,6 +241,22 @@ describe("validateCheckoutLines", () => {
       NOW,
     );
     expect(result.ok && result.manifestOnly).toBe(true);
+  });
+
+  it("lotCount : somme des quantités des lignes validées « lot »", () => {
+    const books = new Map([
+      [1, book({ lot: true })],
+      [2, book()],
+    ]);
+    const result = validateCheckoutLines(
+      [
+        { id: 1, qty: 2 },
+        { id: 2, qty: 3 },
+      ],
+      books,
+      NOW,
+    );
+    expect(result.ok && result.lotCount).toBe(2);
   });
 
   it("manifestOnly faux dès qu'UNE ligne n'a pas le drapeau", () => {
@@ -298,6 +319,7 @@ describe("validateCheckoutLine — précommande (client 2026-08-20)", () => {
         unitPriceCents: 1800,
         lineTotalCents: 3600,
         reducedShippingFlag: false,
+        lot: false,
         isPreorder: true,
         digital: false,
       },
@@ -469,6 +491,7 @@ describe("encodeCheckoutLines / decodeCheckoutLines", () => {
         unitPriceCents: 1500,
         lineTotalCents: 3000,
         reducedShippingFlag: false,
+        lot: false,
       },
       {
         id: 45,
@@ -478,6 +501,7 @@ describe("encodeCheckoutLines / decodeCheckoutLines", () => {
         unitPriceCents: 2200,
         lineTotalCents: 2200,
         reducedShippingFlag: true,
+        lot: false,
       },
     ];
     const encoded = encodeCheckoutLines(lines);

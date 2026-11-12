@@ -610,6 +610,17 @@ export const Books: CollectionConfig = {
                       },
                     },
                     {
+                      name: 'venteParLot',
+                      type: 'checkbox',
+                      defaultValue: false,
+                      label: 'Vendu par lot (port forfaitaire)',
+                      admin: {
+                        width: '50%',
+                        description:
+                          'Port de 10 € pour un lot, offert dès deux lots dans le même panier.',
+                      },
+                    },
+                    {
                       name: 'preorder',
                       type: 'checkbox',
                       defaultValue: false,

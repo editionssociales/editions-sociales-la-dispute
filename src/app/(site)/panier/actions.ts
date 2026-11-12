@@ -27,7 +27,7 @@ import type { CartSnapshot } from "./snapshot";
 
 /** Relecture serveur des lignes du panier — jamais de prix/statut lus depuis le client. */
 export async function getCartSnapshot(ids: number[]): Promise<CartSnapshot> {
-  if (ids.length === 0) return { books: [], reducedShippingFlags: [] };
+  if (ids.length === 0) return { books: [], reducedShippingFlags: [], lotFlags: [] };
   const [all, records] = await Promise.all([getAllBooks(), getCommerceBookRecords(ids)]);
   return {
     books: pickBooksByIds(all, ids),
@@ -35,6 +35,7 @@ export async function getCartSnapshot(ids: number[]): Promise<CartSnapshot> {
       id,
       flag: record.reducedShippingFlag,
     })),
+    lotFlags: [...records].map(([id, record]) => ({ id, flag: record.lot })),
   };
 }
 

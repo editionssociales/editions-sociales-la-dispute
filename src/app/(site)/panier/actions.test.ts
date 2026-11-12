@@ -47,6 +47,7 @@ function record(overrides: Partial<CheckoutBookLookup> = {}): CheckoutBookLookup
     sellable: true,
     stock: null,
     reducedShippingFlag: false,
+    lot: false,
     preorderEnabled: false,
     digital: false,
     ...overrides,
@@ -83,7 +84,7 @@ beforeEach(() => {
 describe("getCartSnapshot", () => {
   it("ids vides → aucune lecture, réponse vide", async () => {
     const snapshot = await getCartSnapshot([]);
-    expect(snapshot).toEqual({ books: [], reducedShippingFlags: [] });
+    expect(snapshot).toEqual({ books: [], reducedShippingFlags: [], lotFlags: [] });
   });
 
   it("relit le catalogue courant et projette le drapeau de port réduit pour les ids demandés", async () => {

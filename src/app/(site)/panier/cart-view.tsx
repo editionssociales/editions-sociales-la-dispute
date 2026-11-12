@@ -20,7 +20,12 @@ import {
   FOCUS_RING_LIGHT,
 } from "@/lib/ui";
 import { MAX_LINE_QTY, resolveCartSummary, type CartLineView } from "@/lib/cart-core";
-import { FREE_SHIPPING_MIN_CART_CENTS, type ShippingZone } from "@/lib/shipping-core";
+import {
+  FREE_SHIPPING_MIN_CART_CENTS,
+  LOT_FREE_SHIPPING_MIN_LOTS,
+  LOT_SHIPPING_COST_CENTS,
+  type ShippingZone,
+} from "@/lib/shipping-core";
 import { computeCartQuote } from "@/lib/cart-quote";
 import type { PromoEvalResult } from "@/lib/promo-core";
 import { getCartSnapshot, validatePromoCode } from "./actions";
@@ -331,7 +336,7 @@ export function CartView({
     [goodies, state.lines],
   );
 
-  const [snapshot, setSnapshot] = useState<CartSnapshot>({ books: [], reducedShippingFlags: [] });
+  const [snapshot, setSnapshot] = useState<CartSnapshot>({ books: [], reducedShippingFlags: [], lotFlags: [] });
   const [snapshotReady, setSnapshotReady] = useState(false);
   /**
    * Composition (`idsKey`) pour laquelle `snapshot` a été relu — l'auto-guérison
@@ -401,9 +406,13 @@ export function CartView({
     () => new Map(snapshot.reducedShippingFlags.map((f) => [f.id, f.flag])),
     [snapshot],
   );
+  const lotFlagsMap = useMemo(
+    () => new Map(snapshot.lotFlags.map((f) => [f.id, f.flag])),
+    [snapshot],
+  );
   const summary = useMemo(
-    () => resolveCartSummary(state, snapshot.books, flagsMap),
-    [state, snapshot, flagsMap],
+    () => resolveCartSummary(state, snapshot.books, flagsMap, lotFlagsMap),
+    [state, snapshot, flagsMap, lotFlagsMap],
   );
 
   // Auto-guérison : un id du panier introuvable dans l'instantané (livre
@@ -499,8 +508,12 @@ export function CartView({
     hasPreorderPhysicalLines,
     zone,
     manifestOnly: summary.manifestOnly,
+    lotCount: summary.lotCount,
     promoEval,
   });
+  // Port offert par les lots (≥ 2) : la mention « dès 50 € avec un code » ne
+  // doit pas la contredire, et la ligne de port s'affiche « Offerte ».
+  const lotsFreeShipping = hasPhysicalItems && summary.lotCount >= LOT_FREE_SHIPPING_MIN_LOTS;
 
   const [checkoutPending, startCheckoutTransition] = useTransition();
   /** Un item par refus (`checkout-core.ts` en rédige un par article en défaut) — jamais fusionnés en un seul paragraphe (cf. `<ul>` ci-dessous) ; l'`id`, quand il existe, marque la ligne en cause dans la grille. */
@@ -711,9 +724,21 @@ export function CartView({
                   : promoResult.message}
               </p>
             )}
+            {hasPhysicalItems && summary.lotCount === 1 && (
+              <p className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-ink">
+                Port forfaitaire lot : {euros(LOT_SHIPPING_COST_CENTS)}. Ajoutez un deuxième lot : la
+                livraison est offerte.
+              </p>
+            )}
+            {lotsFreeShipping && (
+              <p className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-bottle">
+                Livraison offerte — {LOT_FREE_SHIPPING_MIN_LOTS} lots ou plus.
+              </p>
+            )}
             {hasPhysicalItems &&
               shipping.ok &&
               !freeShippingCoupon &&
+              summary.lotCount === 0 &&
               summary.subtotalCents > 0 &&
               summary.subtotalCents < FREE_SHIPPING_MIN_CART_CENTS && (
                 <p className="font-sans text-xs text-muted">
@@ -756,7 +781,13 @@ export function CartView({
             )}
           </dt>
           <dd className="bg-paper px-3.5 py-2.5 text-right font-sans text-sm font-bold text-ink">
-            {hasPhysicalItems ? (shipping.ok ? euros(totals.shippingCents ?? 0) : "—") : "Aucun envoi"}
+            {hasPhysicalItems
+              ? shipping.ok
+                ? lotsFreeShipping
+                  ? "Offerte"
+                  : euros(totals.shippingCents ?? 0)
+                : "—"
+              : "Aucun envoi"}
           </dd>
 
           {/* Panier mixte (client 2026-08-20) : le total de port ci-dessus

@@ -20,6 +20,12 @@ function isShippingZone(zone: string): zone is ShippingZone {
 /** Tarif du port réduit « manifeste » (panier composé UNIQUEMENT d'articles `reducedShippingFlag`). */
 export const MANIFEST_SHIPPING_COST_CENTS = 250; // 2,50 €
 
+/** Port forfaitaire d'UN lot « vendu par lot » (`commerce.venteParLot`) — pour tout l'envoi, autres livres du panier compris. */
+export const LOT_SHIPPING_COST_CENTS = 1000; // 10,00 €
+
+/** Nombre de lots (somme des quantités) à partir duquel le port est offert. */
+export const LOT_FREE_SHIPPING_MIN_LOTS = 2;
+
 /** Plancher (inclus) du panier pour que le coupon `free_shipping` s'applique. */
 export const FREE_SHIPPING_MIN_CART_CENTS = 5000; // 50,00 €
 
@@ -89,6 +95,12 @@ export interface ShippingRequest {
    * zone de livraison n'a pas de sens pour un fichier numérique).
    */
   hasPhysicalItems: boolean;
+  /**
+   * Nombre de lots dans le panier ENTIER : somme des QUANTITÉS des lignes
+   * physiques « vendu par lot » (`commerce.venteParLot`), entier ≥ 0 — calculé
+   * par l'appelant via `countLots`. 1 lot → port forfaitaire ; ≥ 2 → offert.
+   */
+  lotCount: number;
 }
 
 export type ShippingRefusalReason = "zone" | "cart-too-high";
@@ -133,6 +145,18 @@ export function isManifestOnly(items: readonly { reducedShippingFlag: boolean }[
 }
 
 /**
+ * LA règle « nombre de lots » : somme des QUANTITÉS des lignes PHYSIQUES
+ * « vendu par lot » — consommée par `resolveCartSummary` (`cart-core.ts`) et
+ * `validateCheckoutLines` (`checkout-core.ts`), jamais ré-inlinée. Un lot
+ * numérique n'existe pas (rien à expédier) : les lignes `digital` sont ignorées.
+ */
+export function countLots(
+  items: readonly { lot: boolean; digital: boolean; qty: number }[],
+): number {
+  return items.reduce((sum, i) => (i.lot && !i.digital ? sum + i.qty : sum), 0);
+}
+
+/**
  * Calcule le coût du port pour un panier, en centimes TTC — ou un refus
  * explicite (zone non vendue, panier au-delà de la grille).
  *
@@ -140,16 +164,25 @@ export function isManifestOnly(items: readonly { reducedShippingFlag: boolean }[
  * 0. Aucun article physique (`hasPhysicalItems: false`, client 2026-09-09) →
  *    0, SANS même valider la zone — rien à expédier.
  * 1. Zone non vendue (hors FR/BE/CH) → refus immédiat, avant tout calcul.
- * 2. Coupon `free_shipping` ET panier ≥ 50 € → 0 (gratuit).
- * 3. Panier « manifeste » (uniquement des articles à port réduit) → 2,50 €
+ * 2. Au moins `LOT_FREE_SHIPPING_MIN_LOTS` (2) lots → 0 (offert).
+ * 3. Coupon `free_shipping` ET panier ≥ 50 € → 0 (gratuit).
+ * 4. Exactement 1 lot → 10 € forfaitaires pour TOUT l'envoi (les autres livres
+ *    voyagent avec) — règle au format, hors grille standard et son refus > 500 €.
+ * 5. Panier « manifeste » (uniquement des articles à port réduit) → 2,50 €
  *    forfaitaire, quel que soit le montant — règle au format, pas à la
  *    valeur, donc non soumise à la grille standard ni à son refus > 500 €.
- * 4. Sinon, grille standard lissée (refus explicite au-delà de `CART_MAX_CENTS`).
+ * 6. Sinon, grille standard lissée (refus explicite au-delà de `CART_MAX_CENTS`).
  */
 export function computeShipping(request: ShippingRequest): ShippingResult {
   if (!Number.isInteger(request.cartTotalCents) || request.cartTotalCents < 0) {
     throw new TypeError(
       `computeShipping: cartTotalCents doit être un entier de centimes ≥ 0 (reçu ${request.cartTotalCents}) — jamais de flottant.`,
+    );
+  }
+
+  if (!Number.isInteger(request.lotCount) || request.lotCount < 0) {
+    throw new TypeError(
+      `computeShipping: lotCount doit être un entier ≥ 0 (reçu ${request.lotCount}).`,
     );
   }
 
@@ -166,8 +199,16 @@ export function computeShipping(request: ShippingRequest): ShippingResult {
     };
   }
 
+  if (request.lotCount >= LOT_FREE_SHIPPING_MIN_LOTS) {
+    return { ok: true, costCents: 0 };
+  }
+
   if (request.freeShippingCoupon && request.cartTotalCents >= FREE_SHIPPING_MIN_CART_CENTS) {
     return { ok: true, costCents: 0 };
+  }
+
+  if (request.lotCount === 1) {
+    return { ok: true, costCents: LOT_SHIPPING_COST_CENTS };
   }
 
   if (request.manifestOnly) {

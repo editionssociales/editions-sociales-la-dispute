@@ -67,6 +67,7 @@ export async function getCommerceBookRecords(
         sellable: Boolean(doc.commerce?.sellable),
         stock: doc.commerce?.stock ?? null,
         reducedShippingFlag: Boolean(doc.commerce?.reducedShippingFlag),
+        lot: Boolean(doc.commerce?.venteParLot),
         preorderEnabled: Boolean(doc.commerce?.preorder),
         digital: digitalBookIds.has(doc.id),
       } satisfies CheckoutBookLookup,

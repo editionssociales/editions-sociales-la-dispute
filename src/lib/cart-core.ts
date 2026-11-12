@@ -24,7 +24,7 @@
  * distinguer sans ambiguïté deux lignes.
  */
 import { eurosToCents } from "./money";
-import { isManifestOnly } from "./shipping-core";
+import { countLots, isManifestOnly } from "./shipping-core";
 import type { Book, Cover, EditionSlug } from "./types";
 
 /** Version du format persisté — toute valeur différente (ou absente) invalide le panier stocké. */
@@ -167,6 +167,8 @@ export interface CartLineView {
   purchasable: boolean;
   /** Port réduit « manifeste » (`commerce.reducedShippingFlag`, fourni séparément par l'appelant). */
   reducedShippingFlag: boolean;
+  /** Vendu par lot (`commerce.venteParLot`, fourni séparément comme `reducedShippingFlag`). */
+  lot: boolean;
   /**
    * `true` ssi `book.status === "preorder"` (client 2026-08-20) — reflet
    * direct du statut résolu, jamais une seconde règle : cette ligne ira dans
@@ -190,6 +192,8 @@ export interface CartSummary {
   subtotalCents: number;
   /** Vrai ssi au moins une ligne `purchasable` PHYSIQUE ET toutes le sont avec `reducedShippingFlag` — une ligne numérique (client 2026-09-09) n'entre ni dans le compte ni dans la règle, elle ne s'expédie jamais. */
   manifestOnly: boolean;
+  /** Somme des quantités des lignes `purchasable` PHYSIQUES « vendu par lot » (`countLots`). */
+  lotCount: number;
 }
 
 /** Extrait uniquement les livres demandés d'un instantané — pur, réutilisé par la façade serveur (`panier/actions.ts`). */
@@ -211,6 +215,7 @@ export function resolveCartSummary(
   state: CartState,
   books: Book[],
   reducedShippingFlags: ReadonlyMap<number, boolean>,
+  lotFlags: ReadonlyMap<number, boolean> = new Map(),
 ): CartSummary {
   const byId = new Map(books.map((b) => [b.id, b]));
   const missingIds: number[] = [];
@@ -237,6 +242,7 @@ export function resolveCartSummary(
       lineTotalCents: purchasable && unitPriceCents != null ? unitPriceCents * line.qty : 0,
       purchasable,
       reducedShippingFlag: reducedShippingFlags.get(line.id) ?? false,
+      lot: lotFlags.get(line.id) ?? false,
       isPreorder: book.status === "preorder",
       digital: book.format === "numerique",
     });
@@ -246,7 +252,9 @@ export function resolveCartSummary(
   const subtotalCents = purchasableLines.reduce((sum, l) => sum + l.lineTotalCents, 0);
   const manifestOnly = isManifestOnly(purchasableLines.filter((l) => !l.digital));
 
-  return { lines, missingIds, subtotalCents, manifestOnly };
+  const lotCount = countLots(purchasableLines);
+
+  return { lines, missingIds, subtotalCents, manifestOnly, lotCount };
 }
 
 /* ---------------------------------- totaux ---------------------------------- */

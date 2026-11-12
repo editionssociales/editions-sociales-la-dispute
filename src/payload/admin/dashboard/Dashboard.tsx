@@ -87,6 +87,7 @@ const SHIPPING_LABELS: Record<string, string> = {
   standard: 'standard',
   reduit: 'réduit',
   offert: 'offert',
+  lot: 'forfait lot',
   aucun: 'aucun envoi',
 }
 

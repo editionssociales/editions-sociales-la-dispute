@@ -285,6 +285,15 @@ describe("resolveCartSummary", () => {
     expect(resolveCartSummary(state, [capital, ideologie], flags).manifestOnly).toBe(true);
   });
 
+  it("lotCount : somme des quantités des lignes purchasable « lot »", () => {
+    const state: CartState = { version: CART_VERSION, lines: [{ id: 1, qty: 3 }, { id: 2, qty: 4 }] };
+    const lots = new Map([[1, true]]);
+    const summary = resolveCartSummary(state, [capital, ideologie], new Map(), lots);
+    expect(summary.lotCount).toBe(3);
+    expect(summary.lines.find((l) => l.id === 1)?.lot).toBe(true);
+    expect(resolveCartSummary(state, [capital, ideologie], new Map()).lotCount).toBe(0);
+  });
+
   it("manifestOnly : faux dès qu'une ligne purchasable n'a pas le drapeau", () => {
     const state: CartState = { version: CART_VERSION, lines: [{ id: 1, qty: 1 }, { id: 2, qty: 1 }] };
     const flags = new Map([[1, true], [2, false]]);

@@ -288,6 +288,10 @@ export interface Book {
      */
     reducedShippingFlag?: boolean | null;
     /**
+     * Port de 10 € pour un lot, offert dès deux lots dans le même panier.
+     */
+    venteParLot?: boolean | null;
+    /**
      * Un livre à paraître devient achetable en précommande dès que cette case est cochée — expédié à la parution. Sans effet sur un livre déjà paru.
      */
     preorder?: boolean | null;
@@ -453,7 +457,7 @@ export interface Order {
         id?: string | null;
       }[]
     | null;
-  shippingMethod: 'standard' | 'reduit' | 'offert' | 'aucun';
+  shippingMethod: 'standard' | 'reduit' | 'offert' | 'lot' | 'aucun';
   shippingCostTTC: number;
   promoCode?: (number | null) | PromoCode;
   discountTTC?: number | null;
@@ -870,6 +874,7 @@ export interface BooksSelect<T extends boolean = true> {
         stock?: T;
         sellable?: T;
         reducedShippingFlag?: T;
+        venteParLot?: T;
         preorder?: T;
         stockSuivi?: T;
         stockUpdatedAt?: T;

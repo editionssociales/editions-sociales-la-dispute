@@ -151,7 +151,7 @@ describe('Orders.fields — `shippingMethod` « aucun » (titre numérique seul,
     const field = topLevelFields().find((f) => f.name === 'shippingMethod') as
       | { options?: { value: string }[]; access?: { update?: Access } }
       | undefined
-    expect(field?.options?.map((o) => o.value)).toEqual(['standard', 'reduit', 'offert', 'aucun'])
+    expect(field?.options?.map((o) => o.value)).toEqual(['standard', 'reduit', 'offert', 'lot', 'aucun'])
     expect(field?.access?.update).toBeTypeOf('function')
     expect(field?.access?.update?.(adminUser)).toBe(false)
   })

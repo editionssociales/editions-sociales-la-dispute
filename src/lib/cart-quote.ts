@@ -58,10 +58,10 @@
  * Zéro I/O ici, comme les trois modules composés.
  */
 import { computeCartTotals, type CartTotals } from "./cart-core";
-import { computeShipping, type ShippingResult } from "./shipping-core";
+import { computeShipping, LOT_FREE_SHIPPING_MIN_LOTS, type ShippingResult } from "./shipping-core";
 import type { PromoEvalResult } from "./promo-core";
 
-export type ShippingMethodLabel = "standard" | "reduit" | "offert" | "aucun";
+export type ShippingMethodLabel = "standard" | "reduit" | "offert" | "lot" | "aucun";
 
 export interface CartQuoteInput {
   /** Sous-total TTC des lignes « parues » (commande normale), en centimes — 0 si aucune. */
@@ -87,6 +87,8 @@ export interface CartQuoteInput {
   zone: string;
   /** Panier ENTIER (les deux parties confondues, lignes PHYSIQUES seulement) composé UNIQUEMENT d'articles à port réduit — le barème lit toujours le panier physique combiné (règle client). */
   manifestOnly: boolean;
+  /** Nombre de lots du panier ENTIER (somme des quantités des lignes physiques « vendu par lot », `countLots`) — 1 : port forfaitaire, ≥ 2 : offert (`shipping-core.ts`). */
+  lotCount: number;
   /** Verdict déjà résolu par `evaluatePromoCode` (sur le sous-total COMBINÉ) — `null` = aucun code promo soumis/appliqué. */
   promoEval: PromoEvalResult | null;
 }
@@ -103,6 +105,8 @@ export interface CartQuotePart {
 }
 
 export interface CartQuote {
+  /** Nombre de lots du panier, tel que reçu — l'affichage (encart « lot » du panier) le relit ici plutôt que de le recalculer. */
+  lotCount: number;
   /** `true` ssi un code `free_shipping` valide est appliqué — dérivé du même verdict que la remise `fixed_cart` (cf. `totals.discountCents`, la remise réellement appliquée). */
   freeShippingCoupon: boolean;
   /** Résolution du barème sur le sous-total PHYSIQUE combiné — le tarif d'UN SEUL envoi (règle 3), avant multiplication par `shipments`. `costCents: 0` sans même valider la zone si `physicalSubtotalCents` combiné n'a AUCUNE ligne physique (client 2026-09-09). */
@@ -153,7 +157,8 @@ export interface CartQuote {
  *  7. Étiquettes dérivées EN DERNIER du coût réellement obtenu (même
  *     précédence qu'avant l'extraction) : PAS de ligne physique dans la
  *     partie → `"aucun"` ; sinon coupon `free_shipping` valide ET port
- *     effectivement à 0 → « offert » ; sinon panier « manifeste » →
+ *     effectivement à 0 (moins de 2 lots) → « offert » ; sinon au moins un lot
+ *     → « lot » ; sinon panier « manifeste » →
  *     « réduit » ; sinon → « standard ». `shippingMethod` (combiné) applique
  *     la même formule au panier entier ; `normalShippingMethod`/
  *     `preorderShippingMethod` l'appliquent à CHAQUE partie — les trois
@@ -175,6 +180,7 @@ export function computeCartQuote(input: CartQuoteInput): CartQuote {
     manifestOnly: input.manifestOnly,
     freeShippingCoupon,
     hasPhysicalItems,
+    lotCount: input.lotCount,
   });
 
   const shipments = (input.hasNormalPhysicalLines ? 1 : 0) + (input.hasPreorderPhysicalLines ? 1 : 0);
@@ -192,11 +198,13 @@ export function computeCartQuote(input: CartQuoteInput): CartQuote {
 
   function labelFor(partHasPhysicalLines: boolean): ShippingMethodLabel {
     if (!partHasPhysicalLines) return "aucun";
-    return freeShippingCoupon && shipping.ok && shipping.costCents === 0
-      ? "offert"
-      : input.manifestOnly
-        ? "reduit"
-        : "standard";
+    // Port à 0 dû au SEUL coupon (moins de 2 lots) → « offert » ; le port offert
+    // par les lots reste étiqueté « lot ».
+    if (freeShippingCoupon && input.lotCount < LOT_FREE_SHIPPING_MIN_LOTS && shipping.ok && shipping.costCents === 0) {
+      return "offert";
+    }
+    if (input.lotCount >= 1) return "lot";
+    return input.manifestOnly ? "reduit" : "standard";
   }
 
   function buildPart(
@@ -244,6 +252,7 @@ export function computeCartQuote(input: CartQuoteInput): CartQuote {
   const preorderShippingMethod = labelFor(input.hasPreorderPhysicalLines);
 
   return {
+    lotCount: input.lotCount,
     freeShippingCoupon,
     shipping,
     shippingMethod,

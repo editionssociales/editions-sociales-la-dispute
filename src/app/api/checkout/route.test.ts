@@ -96,6 +96,7 @@ function book(overrides: Partial<FakeBook> = {}): FakeBook {
     sellable: true,
     stock: 10,
     reducedShippingFlag: false,
+    lot: false,
     preorderEnabled: false,
     digital: false,
     ...overrides,

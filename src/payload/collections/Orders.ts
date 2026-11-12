@@ -451,6 +451,7 @@ export const Orders: CollectionConfig = {
         { value: 'standard', label: 'Standard (grille par valeur)' },
         { value: 'reduit', label: 'Réduit (« manifeste »)' },
         { value: 'offert', label: 'Offert (code promo)' },
+        { value: 'lot', label: 'Forfait lot (10 €, offert dès 2 lots)' },
         // Titre(s) numérique(s) seul(s) (client 2026-09-09) : toutes les
         // lignes de CETTE commande sont vendues uniquement en numérique —
         // rien à expédier, port TTC à 0, adresse non collectée au checkout.

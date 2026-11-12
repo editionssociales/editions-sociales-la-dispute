@@ -79,10 +79,13 @@ vi.mock("next/image", () => ({
   },
 }));
 
+const lotIds = vi.hoisted(() => new Set<number>());
+
 vi.mock("./actions", () => ({
   getCartSnapshot: async (ids: number[]): Promise<CartSnapshot> => ({
     books: ids.flatMap((id) => (CATALOGUE[id] ? [CATALOGUE[id]] : [])),
     reducedShippingFlags: ids.map((id) => ({ id, flag: false })),
+    lotFlags: ids.map((id) => ({ id, flag: lotIds.has(id) })),
   }),
   validatePromoCode: async () => ({
     ok: false as const,
@@ -158,6 +161,7 @@ afterEach(() => {
   container = null;
   root = null;
   memoryStorage.clear();
+  lotIds.clear();
 });
 
 beforeAll(() => {
@@ -270,5 +274,55 @@ describe("CartView — ajout goodie au checkout", () => {
     expect(stored.lines.map((l) => l.id)).toEqual([CAPITAL.id]);
     expect(el.textContent).toContain("Le Capital");
     expect(el.textContent).not.toContain("999");
+  });
+});
+
+describe("CartView — vente par lot", () => {
+  function seedQty(qty: number): void {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: CART_VERSION, lines: [{ id: CAPITAL.id, qty }] }),
+    );
+  }
+
+  it("1 lot : encart du forfait et invitation au deuxième lot", async () => {
+    lotIds.add(CAPITAL.id);
+    seedQty(1);
+    const el = mount(
+      <CartProvider>
+        <CartView goodies={[]} />
+      </CartProvider>,
+    );
+    await settle(el);
+    expect(el.textContent).toContain("Port forfaitaire lot");
+    expect(el.textContent).toContain("Ajoutez un deuxième lot");
+    expect(el.textContent).not.toContain("Offerte");
+    expect(el.textContent).not.toContain("avec un code éligible");
+  });
+
+  it("2 lots : livraison offerte, ligne de port « Offerte »", async () => {
+    lotIds.add(CAPITAL.id);
+    seedQty(2);
+    const el = mount(
+      <CartProvider>
+        <CartView goodies={[]} />
+      </CartProvider>,
+    );
+    await settle(el);
+    expect(el.textContent).toContain("Livraison offerte");
+    expect(el.textContent).toContain("2 lots ou plus");
+    expect(el.textContent).toContain("Offerte");
+    expect(el.textContent).not.toContain("Port forfaitaire lot");
+  });
+
+  it("sans lot : aucun encart lot", async () => {
+    seedQty(1);
+    const el = mount(
+      <CartProvider>
+        <CartView goodies={[]} />
+      </CartProvider>,
+    );
+    await settle(el);
+    expect(el.textContent).not.toContain("lot");
   });
 });

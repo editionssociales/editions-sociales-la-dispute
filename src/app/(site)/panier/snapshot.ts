@@ -7,4 +7,6 @@ import type { Book } from "@/lib/types";
 export interface CartSnapshot {
   books: Book[];
   reducedShippingFlags: { id: number; flag: boolean }[];
+  /** Livres « vendu par lot » (`commerce.venteParLot`) — même chemin que le port réduit. */
+  lotFlags: { id: number; flag: boolean }[];
 }

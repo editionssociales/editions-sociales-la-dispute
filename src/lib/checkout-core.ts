@@ -19,7 +19,7 @@ import type Stripe from "stripe";
 import { MAX_LINE_QTY } from "./cart-core";
 import { eurosToCents } from "./money";
 import { assessSellability, isUpcoming } from "./sellability";
-import { isManifestOnly } from "./shipping-core";
+import { countLots, isManifestOnly } from "./shipping-core";
 
 /* ------------------------------ requête entrante ------------------------------ */
 
@@ -106,6 +106,8 @@ export interface CheckoutBookLookup {
    */
   stock: number | null;
   reducedShippingFlag: boolean;
+  /** Vendu par lot (`Books.ts:commerce.venteParLot`) — port forfaitaire, cf. `shipping-core.ts:countLots`. */
+  lot: boolean;
   /** « Ouvert à la précommande » (`Books.ts:commerce.preorder`) — lève le refus `upcoming` pour cette ligne, cf. `sellability.ts`. */
   preorderEnabled: boolean;
   /**
@@ -133,6 +135,8 @@ export interface ValidatedCheckoutLine {
   unitPriceCents: number;
   lineTotalCents: number;
   reducedShippingFlag: boolean;
+  /** Reflet de `CheckoutBookLookup.lot`, relu frais au checkout. */
+  lot: boolean;
   /**
    * `true` ssi cette ligne est une précommande (parution future + « Ouvert à
    * la précommande » coché, verdict `ok` via `preorderEnabled` — client
@@ -253,6 +257,7 @@ export function validateCheckoutLine(
       unitPriceCents,
       lineTotalCents: unitPriceCents * input.qty,
       reducedShippingFlag: book.reducedShippingFlag,
+      lot: book.lot,
       isPreorder: isUpcoming(book.publishedAt, now),
       digital: book.digital,
     },
@@ -260,7 +265,7 @@ export function validateCheckoutLine(
 }
 
 export type CheckoutLinesResult =
-  | { ok: true; lines: ValidatedCheckoutLine[]; subtotalCents: number; manifestOnly: boolean }
+  | { ok: true; lines: ValidatedCheckoutLine[]; subtotalCents: number; manifestOnly: boolean; lotCount: number }
   | { ok: false; refusals: LineRefusal[] };
 
 /**
@@ -291,7 +296,7 @@ export function validateCheckoutLines(
 
   const subtotalCents = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
   const manifestOnly = isManifestOnly(lines.filter((l) => !l.digital));
-  return { ok: true, lines, subtotalCents, manifestOnly };
+  return { ok: true, lines, subtotalCents, manifestOnly, lotCount: countLots(lines) };
 }
 
 /* ------------------------------ scission commande / précommande ------------------------------ */

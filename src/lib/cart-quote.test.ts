@@ -20,6 +20,7 @@ function input(overrides: Partial<CartQuoteInput> = {}): CartQuoteInput {
     hasPreorderLines: false,
     zone: "FR",
     manifestOnly: false,
+    lotCount: 0,
     promoEval: null,
     ...overrides,
   };
@@ -398,5 +399,52 @@ describe("computeCartQuote — titre numérique seul (client 2026-09-09)", () =>
     );
     expect(quote.shipping).toEqual({ ok: true, costCents: 250 }); // MANIFEST_SHIPPING_COST_CENTS
     expect(quote.normalShippingMethod).toBe("reduit");
+  });
+});
+
+describe("computeCartQuote — vente par lot", () => {
+  it("1 lot : port 10 €, étiquette « lot », lotCount exposé", () => {
+    const quote = computeCartQuote(input({ normalSubtotalCents: 5000, lotCount: 1 }));
+    expect(quote.lotCount).toBe(1);
+    expect(quote.totals.shippingCents).toBe(1000);
+    expect(quote.shippingMethod).toBe("lot");
+    expect(quote.normalShippingMethod).toBe("lot");
+  });
+
+  it("2 lots : port offert, étiquette « lot »", () => {
+    const quote = computeCartQuote(input({ normalSubtotalCents: 10000, lotCount: 2 }));
+    expect(quote.totals.shippingCents).toBe(0);
+    expect(quote.shippingMethod).toBe("lot");
+  });
+
+  it("2 lots + coupon free_shipping : port offert par les lots, étiquette « lot »", () => {
+    const quote = computeCartQuote(
+      input({
+        normalSubtotalCents: 10000,
+        lotCount: 2,
+        promoEval: { ok: true, type: "free_shipping", discountCents: 0 } as never,
+      }),
+    );
+    expect(quote.shippingMethod).toBe("lot");
+  });
+
+  it("1 lot + coupon free_shipping ≥ 50 € : port 0 dû au coupon, étiquette « offert »", () => {
+    const quote = computeCartQuote(
+      input({
+        normalSubtotalCents: 6000,
+        lotCount: 1,
+        promoEval: { ok: true, type: "free_shipping", discountCents: 0 } as never,
+      }),
+    );
+    expect(quote.totals.shippingCents).toBe(0);
+    expect(quote.shippingMethod).toBe("offert");
+  });
+
+  it("panier mixte avec lot : le tarif résolu une fois est facturé par envoi (×2)", () => {
+    const quote = computeCartQuote(
+      input({ normalSubtotalCents: 3000, preorderSubtotalCents: 3000, hasPreorderLines: true, lotCount: 1 }),
+    );
+    expect(quote.shipments).toBe(2);
+    expect(quote.totals.shippingCents).toBe(2000);
   });
 });
