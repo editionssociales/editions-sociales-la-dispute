@@ -1,7 +1,7 @@
 import { sanitizeCms } from "./cms-html";
 import { isoDayParis, monthsAgoParisMonthStartUtc } from "./format";
 import { matchesSearchQuery } from "./search-text";
-import { assessSellability, isUpcoming } from "./sellability";
+import { assessSellability, isUpcoming, lowStockNotice } from "./sellability";
 import { frenchTypo } from "./typo-fr";
 import { type CommerceInfo, type RawBook } from "./catalogue-source";
 import { LOT_SIZE } from "./shipping-core";
@@ -120,6 +120,7 @@ export function resolveNativePurchase(
   unavailableReason?: UnavailableReason;
   format: Book["format"];
   lot?: true;
+  lowStock?: { left: number; lot: boolean };
 } {
   // Posé une fois, rendu par TOUTES les branches ci-dessous — même parti pris
   // que `purchaseMode` (toujours posé par ce builder, jamais réénoncé par
@@ -146,7 +147,21 @@ export function resolveNativePurchase(
   }
   if (verdict.ok) {
     const status: PurchaseStatus = isUpcoming(book.publishedAt) ? "preorder" : "available";
-    return { status, permalink: internalPermalink, purchaseMode: "cart", format, ...lot };
+    // Le stock n'est dit à l'acheteur que lorsqu'il compte (bientôt épuisé) —
+    // jamais pour une précommande (rien n'est en stock avant la parution) ni
+    // un numérique seul (pas de stock).
+    const notice =
+      status === "available" && !commerce.digital
+        ? lowStockNotice(commerce.stock, { lot: isLot, lotSize: LOT_SIZE })
+        : null;
+    return {
+      status,
+      permalink: internalPermalink,
+      purchaseMode: "cart",
+      format,
+      ...lot,
+      ...(notice ? { lowStock: notice } : {}),
+    };
   }
   const external = book.buy.parislibrairies || book.buy.lalibrairie;
   if (external) {

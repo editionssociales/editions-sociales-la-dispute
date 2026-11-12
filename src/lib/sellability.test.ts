@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { assessSellability, isUpcoming, upcomingBoundaryUtc } from "./sellability";
+import {
+  assessSellability,
+  isUpcoming,
+  LOW_STOCK_NOTICE_MAX,
+  lowStockLabel,
+  lowStockNotice,
+  upcomingBoundaryUtc,
+} from "./sellability";
 
 /**
  * L'invariant « upcoming prime toujours » et la sémantique du stock
@@ -244,5 +251,38 @@ describe("upcomingBoundaryUtc", () => {
     // Seed SQL (minuit UTC) : 18/07 stocké « 2026-07-18T00:00Z », 19/07 stocké « 2026-07-19T00:00Z ».
     expect("2026-07-18T00:00:00.000Z" < borne).toBe(true);
     expect("2026-07-19T00:00:00.000Z" >= borne).toBe(true);
+  });
+});
+
+describe("lowStockNotice — le stock n'est dit que lorsqu'il compte pour l'acheteur", () => {
+  const lotSize = 10;
+  const unit = { lot: false, lotSize };
+  const lots = { lot: true, lotSize };
+
+  it("titre ordinaire : de 1 à LOW_STOCK_NOTICE_MAX exemplaires, pas au-delà", () => {
+    expect(lowStockNotice(1, unit)).toEqual({ left: 1, lot: false });
+    expect(lowStockNotice(LOW_STOCK_NOTICE_MAX, unit)).toEqual({ left: LOW_STOCK_NOTICE_MAX, lot: false });
+    expect(lowStockNotice(LOW_STOCK_NOTICE_MAX + 1, unit)).toBeNull();
+    expect(lowStockNotice(200, unit)).toBeNull();
+  });
+
+  it("stock non renseigné ou nul : rien (« indisponible »/« épuisé » le disent déjà)", () => {
+    expect(lowStockNotice(null, unit)).toBeNull();
+    expect(lowStockNotice(undefined, unit)).toBeNull();
+    expect(lowStockNotice(0, unit)).toBeNull();
+  });
+
+  it("titre vendu par lot : seulement quand il ne reste qu'UN lot entier", () => {
+    expect(lowStockNotice(10, lots)).toEqual({ left: 1, lot: true });
+    expect(lowStockNotice(19, lots)).toEqual({ left: 1, lot: true });
+    expect(lowStockNotice(20, lots)).toBeNull();
+    expect(lowStockNotice(200, lots)).toBeNull();
+    expect(lowStockNotice(9, lots)).toBeNull(); // moins d'un lot = épuisé, déjà dit ailleurs
+  });
+
+  it("libellés publics", () => {
+    expect(lowStockLabel({ left: 1, lot: false })).toBe("Dernier exemplaire");
+    expect(lowStockLabel({ left: 3, lot: false })).toBe("Plus que 3 exemplaires");
+    expect(lowStockLabel({ left: 1, lot: true })).toBe("Dernier lot disponible");
   });
 });

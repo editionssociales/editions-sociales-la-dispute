@@ -4,6 +4,7 @@ import { BookCover } from "@/lib/cover";
 import { canAddToCart } from "@/lib/cart-core";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { formatPrice } from "@/lib/format";
+import { lowStockLabel } from "@/lib/sellability";
 import { LOT_SIZE, lotPriceEuros } from "@/lib/shipping-core";
 import { BookPrice } from "./book-price";
 import { EpubTag } from "./epub-tag";
@@ -69,7 +70,16 @@ export function BookCard({ book, preload }: { book: Book; preload?: boolean }) {
       {book.unavailableReason === "out-of-stock" ? "Épuisé" : "Indisponible"}
     </span>
   );
-  const statusBadge = preorderBadge || upcomingBadge || externalBadge || unavailableBadge;
+  // Stock bientôt épuisé (`Book.lowStock`, posé seulement quand il compte) :
+  // même recette que « Épuisé », en brick — on prévient avant la rupture, on
+  // ne dit jamais « en stock » d'un livre commandable.
+  const lowStockBadge = book.lowStock && !book.format?.startsWith("num") && (
+    <span className="inline-flex flex-none border-b-2 border-r-2 border-ink bg-paper px-2 py-0.5 font-sans text-[10px] font-extrabold uppercase tracking-[.05em] text-brick">
+      {lowStockLabel(book.lowStock)}
+    </span>
+  );
+  const statusBadge =
+    preorderBadge || upcomingBadge || externalBadge || unavailableBadge || lowStockBadge;
 
   // Titre numérique seul (client 2026-09-09) — orthogonal au statut d'achat
   // (co-existe avec `preorderBadge`, par ex.) ; pastille de format INVERSÉE

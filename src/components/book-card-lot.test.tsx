@@ -59,3 +59,16 @@ describe("BookCard — titre vendu par lot (`Book.lot`)", () => {
     expect(markup).not.toContain("puce×");
   });
 });
+
+describe("BookCard — stock bientôt épuisé", () => {
+  it("pastille « Plus que 2 exemplaires » quand lowStock est posé", () => {
+    const markup = renderToStaticMarkup(<BookCard book={book({ lowStock: { left: 2, lot: false } })} />);
+    expect(markup).toContain("Plus que 2 exemplaires");
+  });
+
+  it("aucune pastille de stock sans lowStock (jamais « en stock »)", () => {
+    const markup = renderToStaticMarkup(<BookCard book={book({})} />);
+    expect(markup).not.toContain("Plus que");
+    expect(markup.toLowerCase()).not.toContain("en stock");
+  });
+});

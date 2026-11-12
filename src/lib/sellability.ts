@@ -157,3 +157,44 @@ export function assessSellability(
   if (facts.stock < qty) return { ok: false, reason: "insufficient-stock" };
   return { ok: true };
 }
+
+/**
+ * Seuil (inclus) en dessous duquel le stock devient une information pour
+ * l'ACHETEUR (« Plus que 3 exemplaires ») — au-dessus, un livre commandable
+ * est en stock par définition et le site n'en dit rien (retour client
+ * 2026-11 : « en stock » n'apprend rien). Distinct du seuil d'alerte
+ * ÉDITORIAL du back-office (`reglages-boutique.seuilAlerteStockBas`, qui sert
+ * à réassortir) : celui-ci est une règle d'affichage public, fixée ici.
+ */
+export const LOW_STOCK_NOTICE_MAX = 5;
+
+/** Stock bientôt épuisé d'un titre commandable : `left` exemplaires, ou `left` lots pour un titre vendu par lot. */
+export interface LowStockNotice {
+  left: number;
+  lot: boolean;
+}
+
+/**
+ * LA règle « le stock mérite d'être dit » — `null` quand il n'a aucune
+ * importance pour l'acheteur (stock non renseigné, numérique, ou confortable).
+ * Un titre ordinaire : `1…LOW_STOCK_NOTICE_MAX` exemplaires. Un titre vendu par
+ * lot : seulement quand il ne reste qu'UN lot (`lotSize` exemplaires, lots
+ * entiers restants = `floor(stock / lotSize)`) — le prochain achat serait le
+ * dernier. À n'appeler que pour une fiche déjà jugée commandable (`ok`).
+ */
+export function lowStockNotice(
+  stock: number | null | undefined,
+  opts: { lot: boolean; lotSize: number },
+): LowStockNotice | null {
+  if (stock == null || stock <= 0) return null;
+  if (opts.lot) {
+    return Math.floor(stock / opts.lotSize) === 1 ? { left: 1, lot: true } : null;
+  }
+  return stock <= LOW_STOCK_NOTICE_MAX ? { left: stock, lot: false } : null;
+}
+
+/** Libellé public du stock bas — « Dernier exemplaire », « Plus que 3 exemplaires », « Dernier lot disponible ». */
+export function lowStockLabel(notice: LowStockNotice): string {
+  if (notice.lot) return "Dernier lot disponible";
+  return notice.left === 1 ? "Dernier exemplaire" : `Plus que ${notice.left} exemplaires`;
+}

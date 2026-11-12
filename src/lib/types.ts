@@ -106,6 +106,13 @@ export interface Book {
    */
   format?: "papier" | "numerique";
   /**
+   * Stock bientôt épuisé d'un titre commandable (`sellability.ts:lowStockNotice`)
+   * — posé UNIQUEMENT quand il compte pour l'acheteur ; absent sinon (un livre
+   * commandable est en stock, le site ne le répète pas). Jamais posé pour une
+   * précommande, un numérique seul ou un titre indisponible (déjà « Épuisé »).
+   */
+  lowStock?: { left: number; lot: boolean };
+  /**
    * `true` ssi la fiche est cochée « Vendu par lot »
    * (`CommerceInfo.lot`) : le titre ne se vend QUE par lots de `LOT_SIZE`
    * exemplaires (`shipping-core.ts`) — carte, fiche et panier n'offrent que

@@ -415,6 +415,33 @@ describe("resolveNativePurchase — dérivation du statut d'achat", () => {
     });
   });
 
+  describe("stock bientôt épuisé (`lowStock`)", () => {
+    const permalink = "/catalogue/editions-sociales/un-livre";
+    const raw = rawBook({ id: 40, slug: "un-livre", title: "Un livre" });
+    const resolve = (commerce: Parameters<typeof resolveNativePurchase>[1], publishedAt?: string) =>
+      resolveNativePurchase(
+        { ...toBook("editions-sociales", raw), ...(publishedAt ? { publishedAt } : {}) },
+        commerce,
+        permalink,
+      );
+
+    it("posé pour un titre commandable à stock bas, absent sinon", () => {
+      expect(resolve({ sellable: true, stock: 3 }).lowStock).toEqual({ left: 3, lot: false });
+      expect(resolve({ sellable: true, stock: 6 }).lowStock).toBeUndefined();
+      expect(resolve({ sellable: true, stock: 50 }).lowStock).toBeUndefined();
+    });
+
+    it("jamais pour un titre indisponible (déjà « Épuisé »), ni un numérique seul", () => {
+      expect(resolve({ sellable: true, stock: 0 }).lowStock).toBeUndefined();
+      expect(resolve({ sellable: true, stock: 2, digital: true }).lowStock).toBeUndefined();
+    });
+
+    it("titre vendu par lot : « dernier lot » seulement", () => {
+      expect(resolve({ sellable: true, stock: 15, lot: true }).lowStock).toEqual({ left: 1, lot: true });
+      expect(resolve({ sellable: true, stock: 40, lot: true }).lowStock).toBeUndefined();
+    });
+  });
+
   describe("titre vendu par lot (`commerce.lot`)", () => {
     const permalink = "/catalogue/editions-sociales/avenir-en-commun";
     const raw = rawBook({ id: 30, slug: "avenir-en-commun", title: "L'Avenir en commun" });

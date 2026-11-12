@@ -2,6 +2,7 @@ import type { Book } from "@/lib/types";
 import { canAddToCart } from "@/lib/cart-core";
 import { DELIVERY_DELAY_RANGE } from "@/lib/delivery-copy";
 import { formatDateFr, formatPrice } from "@/lib/format";
+import { lowStockLabel } from "@/lib/sellability";
 import { AddToCartButton } from "./cart/add-to-cart-button";
 import { centsToEuros } from "@/lib/money";
 import {
@@ -38,7 +39,7 @@ const MICROCOPY_CLASS = "mt-2 font-sans text-xs font-bold uppercase tracking-[.0
  * Titre numérique seul (client 2026-09-09, « Notes sur Mill ») : le repère
  * est VISUEL — pastille `EpubTag` collée au prix, comme chez les libraires en
  * ligne (Decitre, Fnac, leslibraires.fr) — et la microcopie de
- * stock/expédition (`inStockCopy`, « Expédié à parution ») cède la place à ce
+ * stock/expédition (`deliveryCopy`, « Expédié à parution ») cède la place à ce
  * seul équivalent numérique : rien n'est en stock ni expédié, le fichier part
  * par lien signé après paiement (`src/lib/ebook-token.ts`, e-mail de
  * confirmation). Pas de détail ici (arbitrage client) : le mail dit le reste.
@@ -51,7 +52,7 @@ export function BuyLinksList({
 }: {
   book: Book;
   /**
-   * Mention affichée pour un livre en stock — éditable au back-office
+   * Délai de livraison affiché pour un livre commandable — éditable au back-office
    * (`PagesLegales.livraisonDelai`, batch 3), fusionnée côté serveur par
    * l'appelant (fiche catalogue/boutique) ; défaut `DELIVERY_DELAY_RANGE`
    * pour tout appelant qui ne la pose pas (tests compris).
@@ -60,7 +61,15 @@ export function BuyLinksList({
 }) {
   // Fourchette réelle plutôt que promesse d'expédition éclair (demande client
   // 2026-08-26) — source unique `delivery-copy.ts`, surchargeable au back-office.
-  const inStockCopy = `En stock — livraison ${livraisonDelai}`;
+  // Plus de « En stock » (retour client 2026-11) : un livre commandable est en
+  // stock par définition. Le stock n'est dit que lorsqu'il compte pour
+  // l'acheteur (`lowStock` : bientôt épuisé), avant le délai de livraison.
+  const deliveryCopy = `Livraison ${livraisonDelai}`;
+  const lowStockLine = book.lowStock ? (
+    <p className="mt-2 font-sans text-xs font-extrabold uppercase tracking-[.04em] text-brick">
+      {lowStockLabel(book.lowStock)}
+    </p>
+  ) : null;
   // Titre vendu UNIQUEMENT par lot (`Book.lot`) : le seul geste d'achat ajoute
   // un lot, le prix affiché est celui du lot (`lotPriceEuros`) et la règle de
   // port vient de `shipping-core.ts`, jamais réénoncée en dur.
@@ -82,7 +91,7 @@ export function BuyLinksList({
   ) : null;
   // Titre numérique seul (client 2026-09-09) : remplace toute mention de
   // stock/expédition, quel que soit le statut d'achat qui la porterait
-  // (`inStockCopy` ci-dessus comme la microcopie de précommande ci-dessous).
+  // (`deliveryCopy` ci-dessus comme la microcopie de précommande ci-dessous).
   const digital = book.format === "numerique";
   // Calculé UNE fois, rendu par les CINQ branches sans exception (bug signalé
   // par la cliente : `upcoming`/`unavailable` n'affichaient pas le prix de
@@ -220,7 +229,8 @@ export function BuyLinksList({
           className="mt-3 w-full"
           label={lot ? `Ajouter un lot de ${LOT_SIZE}` : undefined}
         />
-        <p className={MICROCOPY_CLASS}>{digital ? DIGITAL_MICROCOPY : inStockCopy}</p>
+        {!digital && lowStockLine}
+        <p className={MICROCOPY_CLASS}>{digital ? DIGITAL_MICROCOPY : deliveryCopy}</p>
         {lotNote}
         {secondaryLinks}
       </div>
@@ -250,7 +260,7 @@ export function BuyLinksList({
         {book.status === "available"
           ? digital
             ? DIGITAL_MICROCOPY
-            : inStockCopy
+            : deliveryCopy
           : "En vente chez un libraire partenaire"}
       </p>
       {secondaryLinks}

@@ -211,11 +211,13 @@ describe("BuyLinksList — titre numérique seul (client 2026-09-09)", () => {
     expect(markup).not.toContain("Expédié à parution");
   });
 
-  it("available SANS format numérique (livre papier, comportement historique) : « En stock » inchangé", () => {
+  it("available SANS format numérique (livre papier) : le délai de livraison, jamais « En stock »", () => {
     const markup = renderToStaticMarkup(
       <BuyLinksList book={book({ status: "available", purchaseMode: "cart" })} />,
     );
-    expect(markup).toContain("En stock");
+    expect(markup).toContain("Livraison entre 48");
+    expect(markup).not.toContain("En stock");
+    expect(markup).not.toContain("Plus que");
     expect(markup).not.toContain(">ePub<");
     expect(markup).not.toContain("Téléchargement après paiement");
   });
@@ -253,5 +255,35 @@ describe("BuyLinksList — titre vendu par lot (`Book.lot`)", () => {
   it("sans le drapeau : aucun bouton de lot", () => {
     const markup = renderToStaticMarkup(<BuyLinksList book={book(available)} />);
     expect(markup).not.toContain("Ajouter un lot de");
+  });
+});
+
+describe("BuyLinksList — le stock n'est dit que lorsqu'il compte", () => {
+  const available = { status: "available", purchaseMode: "cart", permalink: "/catalogue/x/y" } as const;
+
+  it("stock bientôt épuisé : « Plus que 3 exemplaires », avant le délai de livraison", () => {
+    const markup = renderToStaticMarkup(
+      <BuyLinksList book={book({ ...available, lowStock: { left: 3, lot: false } })} />,
+    );
+    expect(markup).toContain("Plus que 3 exemplaires");
+    expect(markup.indexOf("Plus que 3")).toBeLessThan(markup.indexOf("Livraison entre"));
+    expect(markup).not.toContain("En stock");
+  });
+
+  it("dernier exemplaire / dernier lot", () => {
+    expect(
+      renderToStaticMarkup(<BuyLinksList book={book({ ...available, lowStock: { left: 1, lot: false } })} />),
+    ).toContain("Dernier exemplaire");
+    expect(
+      renderToStaticMarkup(
+        <BuyLinksList book={book({ ...available, lot: true, lowStock: { left: 1, lot: true } })} />,
+      ),
+    ).toContain("Dernier lot disponible");
+  });
+
+  it("stock confortable (aucun lowStock) : rien sur le stock", () => {
+    const markup = renderToStaticMarkup(<BuyLinksList book={book(available)} />);
+    expect(markup).not.toContain("Plus que");
+    expect(markup).not.toContain("Dernier");
   });
 });
