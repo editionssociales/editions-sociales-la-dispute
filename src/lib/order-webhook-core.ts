@@ -65,6 +65,14 @@ export interface OrderLineFacts {
    * (déjà décidé par `shippingMethod`/`shippingCostCents` de la commande).
    */
   digital: boolean;
+  /**
+   * Titre « vendu par lot » AU MOMENT DE LA VENTE — relu fraîchement par
+   * l'appelant (`commerce-source.ts`), jamais des `metadata`. N'est PAS
+   * stocké par ligne : sert uniquement à poser `Orders.venteParLot` sur la
+   * commande (`buildOrderCreateData`). Optionnel (absent = `false`) : les
+   * chemins qui n'ont aucune notion de lot (dons) ne le posent pas.
+   */
+  lot?: boolean;
 }
 
 /** Alias du port — même étiquette que `ShippingMethodLabel` (`cart-quote.ts`), sous le nom attendu par ses consommateurs (`order-handler.ts`). */
@@ -134,6 +142,8 @@ export interface OrderCreateData {
     unitPriceTTC: number;
     digital: boolean;
   }[];
+  /** Au moins une ligne « vendue par lot » (jamais pour un don) — `Orders.venteParLot`. */
+  venteParLot: boolean;
   shippingMethod: OrderShippingMethod;
   shippingCostTTC: number;
   promoCode: number | null;
@@ -271,6 +281,9 @@ export function buildOrderCreateData(
       unitPriceTTC: centsToEuros(l.unitPriceCents),
       digital: l.digital,
     })),
+    // Un don n'est jamais une commande de lot, même si une contrepartie
+    // portait un jour le drapeau.
+    venteParLot: facts.orderType !== "don" && facts.lines.some((l) => l.lot === true),
     shippingMethod: facts.shippingMethod,
     shippingCostTTC: centsToEuros(facts.shippingCostCents),
     promoCode: facts.promoCodeId,

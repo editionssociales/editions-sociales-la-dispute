@@ -460,3 +460,12 @@ export const revalidatePageContactAfterChange: GlobalAfterChangeHook = ({ req })
   invalidateSiteGlobalTag('page-contact')
   revalidatePath('/contact')
 }
+
+/**
+ * Hook `mail-commande-lot` : lu uniquement par le webhook Stripe (mail), aucune
+ * page à purger — on expire seulement le data-cache du global.
+ */
+export const revalidateMailCommandeLotAfterChange: GlobalAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  invalidateSiteGlobalTag('mail-commande-lot')
+}

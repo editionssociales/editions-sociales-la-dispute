@@ -34,10 +34,10 @@ import {
   type OrderSessionFacts,
   type OrderShippingMethod,
 } from "@/lib/order-webhook-core";
-import { selectOrderMailer, type OrderMailDownload } from "@/lib/order-mail";
+import { selectOrderMailer, type OrderMailDownload, type OrderMailLot } from "@/lib/order-mail";
 import { signEbookToken } from "@/lib/ebook-token";
 import { SITE_URL } from "@/lib/mail-shell";
-import { getPagesLegales } from "@/lib/site-content";
+import { getMailCommandeLot, getPagesLegales } from "@/lib/site-content";
 
 /**
  * Orchestration I/O du webhook côté `kind: "order"` (plan §4 étape 9, scission
@@ -119,6 +119,8 @@ async function resolveOrderParts(
           // par `shippingMethod`/`shippingCostCents` de la commande) : sert
           // uniquement la colonne « Numérique » de l'export préparation.
           digital: book.digital,
+          // Idem : relu frais, sert `Orders.venteParLot` (onglet « Lots » + mail dédié).
+          lot: book.lot,
         },
       ];
     });
@@ -373,6 +375,24 @@ async function createPaidOrderPart(
       // C'est le SEUL chemin qui la lit : le gabarit de don n'affiche aucune
       // note d'expédition (port offert, rien à chiffrer — choix documenté).
       const { livraisonDelai } = await getPagesLegales();
+      // Commande de lot(s) : texte + recommandations du global
+      // `mail-commande-lot`. `getMailCommandeLot` dégrade déjà seule sur ses
+      // défauts ; le try/catch est un filet de plus — une panne de lecture ne
+      // doit JAMAIS empêcher l'envoi (repli : mail standard).
+      let lot: OrderMailLot | undefined;
+      if (order.venteParLot) {
+        try {
+          const content = await getMailCommandeLot();
+          lot = {
+            subject: content.objet,
+            message: content.message,
+            recommandationsTitre: content.recommandationsTitre,
+            recommandations: content.recommandations,
+          };
+        } catch (err) {
+          Sentry.captureException(err);
+        }
+      }
       await selectOrderMailer().sendOrderConfirmation({
         orderNumber: order.number ?? order.stripeSessionId,
         orderType,
@@ -391,6 +411,7 @@ async function createPaidOrderPart(
         // "aucun"`) : ni phrase d'expédition ni délai — le bloc téléchargement
         // (ci-dessus) porte seul le message.
         noShipment: order.shippingMethod === "aucun",
+        ...(lot ? { lot } : {}),
       });
     },
   });

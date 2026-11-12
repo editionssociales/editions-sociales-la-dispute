@@ -1,4 +1,5 @@
 import "server-only";
+import { bookFichePath } from "./book-fiche-path";
 import config from "@payload-config";
 import { getPayload } from "payload";
 import type { Order } from "@/payload-types";
@@ -187,10 +188,8 @@ export async function findBookFichePaths(ids: number[]): Promise<string[]> {
     overrideAccess: true,
   });
   return docs.flatMap((doc) => {
-    if (typeof doc.slug !== "string" || doc.slug === "") return [];
-    if (typeof doc.edition === "string") return [`/catalogue/${doc.edition}/${doc.slug}`];
-    if (doc.origin === "boutique") return [`/boutique/${doc.slug}`];
-    return [];
+    const path = bookFichePath(doc);
+    return path ? [path] : [];
   });
 }
 

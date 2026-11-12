@@ -7,7 +7,7 @@ import styles from './orders-filter-chips.module.css'
 /**
  * Chips de filtre de la liste Commandes (`/admin/collections/orders`) — un
  * seul groupe, exclusif : Toutes | À traiter | Précommandes | Dons |
- * Remboursées | Historique Woo. Calque de
+ * Lots | Remboursées | Historique Woo. Calque de
  * `rencontres/RencontresFilterChips.tsx` (même découpage RSC/client, même
  * convention `where[...]`).
  *
@@ -55,7 +55,7 @@ import styles from './orders-filter-chips.module.css'
  * chaîne brute).
  */
 
-type Chip = 'toutes' | 'a-traiter' | 'precommandes' | 'dons' | 'remboursees' | 'historique-woo'
+type Chip = 'toutes' | 'a-traiter' | 'precommandes' | 'dons' | 'lots' | 'remboursees' | 'historique-woo'
 
 interface WhereCondition {
   field: string
@@ -68,6 +68,7 @@ const CHIPS: { key: Chip; label: string }[] = [
   { key: 'a-traiter', label: 'À traiter' },
   { key: 'precommandes', label: 'Précommandes' },
   { key: 'dons', label: 'Dons' },
+  { key: 'lots', label: 'Lots' },
   { key: 'remboursees', label: 'Remboursées' },
   { key: 'historique-woo', label: 'Historique Woo' },
 ]
@@ -102,6 +103,8 @@ function buildHref(chip: Chip): string {
       return buildWhereHref([[{ field: 'orderType', op: 'equals', value: 'precommande' }]])
     case 'dons':
       return buildWhereHref([[{ field: 'orderType', op: 'equals', value: 'don' }]])
+    case 'lots':
+      return buildWhereHref([[{ field: 'venteParLot', op: 'equals', value: 'true' }]])
     case 'remboursees':
       return buildWhereHref([[{ field: 'status', op: 'equals', value: 'refunded' }]])
     case 'historique-woo':
@@ -118,6 +121,7 @@ function activeChip(search: string): Chip {
   }
   if (search.includes('[orderType][equals]=precommande')) return 'precommandes'
   if (search.includes('[orderType][equals]=don')) return 'dons'
+  if (search.includes('[venteParLot][equals]=true')) return 'lots'
   if (search.includes('[status][equals]=refunded')) return 'remboursees'
   if (search.includes('[stripeSessionId][contains]=woo-')) return 'historique-woo'
   return 'toutes'

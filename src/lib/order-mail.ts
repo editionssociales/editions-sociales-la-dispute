@@ -41,6 +41,25 @@ export interface OrderMailDownload {
   url: string;
 }
 
+/** Recommandation de lecture du mail de commande de lot — URLs ABSOLUES (clients mail sans base). */
+export interface OrderMailRecommendation {
+  title: string;
+  authors?: string;
+  url: string;
+  coverUrl?: string;
+}
+
+/** Habillage propre aux commandes de lots (global `mail-commande-lot`, lu par le webhook — ce module reste PUR). */
+export interface OrderMailLot {
+  /** Vide/absent = objet habituel. */
+  subject?: string;
+  /** Texte brut : paragraphes séparés par une ligne vide. */
+  message: string;
+  recommandationsTitre: string;
+  /** Liste vide = bloc omis. */
+  recommandations: OrderMailRecommendation[];
+}
+
 export interface OrderMailPayload {
   orderNumber: string;
   email: string;
@@ -83,6 +102,12 @@ export interface OrderMailPayload {
    * d'expédition ou de précommande affichée comme avant).
    */
   noShipment?: boolean;
+  /**
+   * Commande de lot(s) (`Orders.venteParLot`) : le message personnalisé
+   * remplace l'accroche standard, un bloc de recommandations suit le
+   * récapitulatif. Absent = mail standard strictement inchangé.
+   */
+  lot?: OrderMailLot;
 }
 
 export interface OrderMailer {
@@ -186,6 +211,61 @@ const introSentence = (orderNumberMarkup: string, preorder: boolean) =>
 const contactSentence = (emailMarkup: string, preorder: boolean) =>
   `Une question sur votre ${preorder ? "précommande" : "commande"} ? Écrivez-nous à ${emailMarkup} — nous vous répondrons avec plaisir.`;
 
+/** Paragraphes d'un texte brut saisi au back-office (séparés par une ligne vide), vides écartés. */
+function messageParagraphs(message: string): string[] {
+  return message
+    .split(/\r?\n\s*\r?\n/)
+    .map((p) => p.trim())
+    .filter((p) => p !== "");
+}
+
+/** Message de lot en HTML : chaque paragraphe échappé, retours à la ligne simples → `<br />`. */
+function lotMessageHtml(message: string): string {
+  return messageParagraphs(message)
+    .map((p) => escapeHtml(p).replace(/\r?\n/g, "<br />"))
+    .join("<br /><br />");
+}
+
+/** Bloc de recommandations (HTML) — vignette si présente, titre en gras lié, auteurs ; omis si liste vide. */
+function recommendationsHtml(lot: OrderMailLot): string {
+  if (lot.recommandations.length === 0) return "";
+  const rows = lot.recommandations
+    .map((r) => {
+      const cover = r.coverUrl
+        ? `<td width="64" valign="top" style="padding:0 12px 12px 0;">` +
+          `<a href="${escapeHtml(r.url)}"><img src="${escapeHtml(r.coverUrl)}" width="64" alt="" ` +
+          `style="display:block;width:64px;height:auto;border:0;" /></a></td>`
+        : "";
+      return (
+        `<tr>${cover}<td valign="top" style="padding:0 0 12px;font-family:${FONT_STACK};font-size:14px;line-height:1.5;color:${INK};">` +
+        `<a href="${escapeHtml(r.url)}" style="font-weight:800;color:${INK};">${escapeHtml(r.title)}</a>` +
+        (r.authors ? `<br />${escapeHtml(r.authors)}` : "") +
+        `</td></tr>`
+      );
+    })
+    .join("");
+  return (
+    `<tr><td style="padding-bottom:8px;border-top:1px solid ${LINE_COLOR};">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td colspan="2" style="padding:16px 0 12px;font-family:${FONT_STACK};font-size:13px;font-weight:800;color:${INK};">` +
+    `${escapeHtml(lot.recommandationsTitre)}</td></tr>` +
+    rows +
+    `</table></td></tr>` +
+    `<tr><td style="height:12px;line-height:12px;">&nbsp;</td></tr>`
+  );
+}
+
+/** Même bloc en texte brut. */
+function recommendationsText(lot: OrderMailLot): string[] {
+  if (lot.recommandations.length === 0) return [];
+  return [
+    `${lot.recommandationsTitre.toUpperCase()}\n` +
+      lot.recommandations
+        .map((r) => `- ${r.title}${r.authors ? ` (${r.authors})` : ""} : ${r.url}`)
+        .join("\n"),
+  ];
+}
+
 /**
  * Rendu texte brut (multipart, `textContent`) — mêmes phrases que le HTML
  * (constantes partagées ci-dessus), données non échappées (text/plain).
@@ -199,7 +279,9 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
     .join("\n");
   return [
     "Bonjour,",
-    introSentence(payload.orderNumber, preorder),
+    ...(payload.lot
+      ? messageParagraphs(payload.lot.message)
+      : [introSentence(payload.orderNumber, preorder)]),
     "RÉCAPITULATIF\n" +
       lines +
       `\n${SHIPPING_LABEL} : ${euros(payload.shippingCostTTC)}` +
@@ -218,6 +300,7 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
             `\n${DOWNLOADS_NOTE}`,
         ]
       : []),
+    ...(payload.lot ? recommendationsText(payload.lot) : []),
     contactSentence(CONTACT_EMAIL, preorder),
     `Consulter le site : ${SITE_URL}`,
     "Les Éditions sociales × La Dispute",
@@ -265,7 +348,9 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     // Corps.
     `<tr><td style="padding-bottom:20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${INK};">` +
     `Bonjour,<br />` +
-    `Nous avons bien reçu votre ${preorder ? "précommande" : "commande"} <strong>${orderNumber}</strong>. Merci de votre confiance.` +
+    (payload.lot
+      ? lotMessageHtml(payload.lot.message)
+      : `Nous avons bien reçu votre ${preorder ? "précommande" : "commande"} <strong>${orderNumber}</strong>. Merci de votre confiance.`) +
     `</td></tr>` +
     // Encadré récapitulatif — bordure 2px ink.
     `<tr><td style="border:2px solid ${INK};padding:16px;">` +
@@ -299,6 +384,8 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     // doit pas se confondre avec ce qui reste à expédier. Bloc absent quand
     // la commande n'a aucun fichier attaché (cas de la quasi-totalité).
     downloadsHtml +
+    // Recommandations de lecture (commande de lot seulement, omises si vides).
+    (payload.lot ? recommendationsHtml(payload.lot) : "") +
     // Contact.
     `<tr><td style="padding-bottom:24px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${MUTED};">` +
     `Une question sur votre ${preorder ? "précommande" : "commande"} ? Écrivez-nous à ` +
@@ -330,9 +417,11 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
   });
 
   return {
-    subject: preorder
-      ? `Confirmation de votre précommande ${payload.orderNumber}`
-      : `Confirmation de votre commande ${payload.orderNumber}`,
+    subject:
+      payload.lot?.subject?.trim() ||
+      (preorder
+        ? `Confirmation de votre précommande ${payload.orderNumber}`
+        : `Confirmation de votre commande ${payload.orderNumber}`),
     html,
     text: renderOrderConfirmationText(payload),
   };

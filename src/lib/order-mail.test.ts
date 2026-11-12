@@ -268,3 +268,61 @@ describe("renderOrderConfirmationEmail — version texte (multipart)", () => {
     expect(text).not.toContain("&amp;");
   });
 });
+
+describe("renderOrderConfirmationEmail — commande de lot", () => {
+  const LOT = {
+    message: "Merci <3 !\nLigne deux.\n\nSecond paragraphe & fin.",
+    recommandationsTitre: "Nos recommandations de lecture",
+    recommandations: [
+      {
+        title: "Livre <un>",
+        authors: "A. Auteur",
+        url: "https://ld-es.fr/catalogue/la-dispute/un",
+        coverUrl: "https://blob.example/un.jpg",
+      },
+      { title: "Livre deux", url: "https://ld-es.fr/boutique/deux" },
+    ],
+  };
+
+  it("remplace l'accroche standard par le message (échappé, <br> pour les retours simples)", () => {
+    const { html, text } = renderOrderConfirmationEmail({ ...PAYLOAD, lot: LOT });
+    expect(html).toContain("Merci &lt;3 !<br />Ligne deux.<br /><br />Second paragraphe &amp; fin.");
+    expect(html).not.toContain("Nous avons bien reçu votre");
+    expect(text).toContain("Merci <3 !\nLigne deux.");
+    expect(text).toContain("Second paragraphe & fin.");
+    expect(text).not.toContain("Nous avons bien reçu votre");
+  });
+
+  it("garde le récapitulatif et ajoute le bloc de recommandations (vignette seulement si fournie)", () => {
+    const { html, text } = renderOrderConfirmationEmail({ ...PAYLOAD, lot: LOT });
+    expect(html).toContain("RÉCAPITULATIF");
+    expect(html).toContain("Nos recommandations de lecture");
+    expect(html).toContain("Livre &lt;un&gt;");
+    expect(html).toContain('src="https://blob.example/un.jpg"');
+    expect(html.match(/<img /g)).toHaveLength(1);
+    expect(html).toContain("A. Auteur");
+    expect(text).toContain("- Livre deux : https://ld-es.fr/boutique/deux");
+  });
+
+  it("omet le bloc sans recommandation", () => {
+    const { html, text } = renderOrderConfirmationEmail({
+      ...PAYLOAD,
+      lot: { ...LOT, recommandations: [] },
+    });
+    expect(html).not.toContain("Nos recommandations de lecture");
+    expect(text).not.toContain("NOS RECOMMANDATIONS");
+  });
+
+  it("objet personnalisé, sinon objet habituel", () => {
+    expect(renderOrderConfirmationEmail({ ...PAYLOAD, lot: { ...LOT, subject: "Merci !" } }).subject).toBe("Merci !");
+    expect(renderOrderConfirmationEmail({ ...PAYLOAD, lot: LOT }).subject).toBe(
+      "Confirmation de votre commande ES-2026-042",
+    );
+  });
+
+  it("sans `lot`, le mail standard est inchangé", () => {
+    const { html } = renderOrderConfirmationEmail(PAYLOAD);
+    expect(html).toContain("Nous avons bien reçu votre");
+    expect(html).not.toContain("recommandations");
+  });
+});

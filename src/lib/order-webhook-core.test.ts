@@ -76,6 +76,7 @@ describe("buildOrderCreateData", () => {
           digital: false,
         },
       ],
+      venteParLot: false,
       shippingMethod: "standard",
       shippingCostTTC: 6.5,
       promoCode: null,
@@ -262,6 +263,7 @@ describe("buildOrderCreateData", () => {
           digital: false,
         },
       ],
+      venteParLot: false,
       shippingMethod: "offert",
       shippingCostTTC: 0,
       promoCode: null,
@@ -517,5 +519,32 @@ describe("recapAddressFromOrder", () => {
     expect(
       recapAddressFromOrder({ shippingAddress: undefined as unknown as Order["shippingAddress"] }),
     ).toBeUndefined();
+  });
+});
+
+describe("buildOrderCreateData — venteParLot", () => {
+  const line = (lot?: boolean): OrderLineFacts => ({
+    bookId: 1,
+    titleSnapshot: "L'Avenir en commun",
+    isbnSnapshot: null,
+    quantity: 1,
+    unitPriceCents: 1000,
+    digital: false,
+    ...(lot === undefined ? {} : { lot }),
+  });
+
+  it("vrai dès qu'une ligne est vendue par lot", () => {
+    const r = buildOrderCreateData(facts({ lines: [line(false), line(true)] }));
+    expect("error" in r ? null : r.venteParLot).toBe(true);
+  });
+
+  it("faux sans ligne de lot (drapeau absent compris)", () => {
+    const r = buildOrderCreateData(facts({ lines: [line(false), line()] }));
+    expect("error" in r ? null : r.venteParLot).toBe(false);
+  });
+
+  it("jamais pour un don, même avec un drapeau de lot", () => {
+    const r = buildOrderCreateData(facts({ orderType: "don", lines: [line(true)] }));
+    expect("error" in r ? null : r.venteParLot).toBe(false);
   });
 });

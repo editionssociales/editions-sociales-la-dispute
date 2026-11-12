@@ -31,6 +31,7 @@ import * as migration_20260830_090000_souscription_soutiens_titres_jauge from '.
 import * as migration_20260909_100000_ebook_numerique_seul from './20260909_100000_ebook_numerique_seul'
 import * as migration_20260909_110000_commande_sans_envoi from './20260909_110000_commande_sans_envoi'
 import * as migration_20261112_100000_vente_par_lot from './20261112_100000_vente_par_lot'
+import * as migration_20261112_110000_commande_lot_mail from './20261112_110000_commande_lot_mail';
 import * as migration_20261006_100000_commande_nom_prenom from './20261006_100000_commande_nom_prenom'
 
 export const migrations = [
@@ -203,5 +204,10 @@ export const migrations = [
     up: migration_20261112_100000_vente_par_lot.up,
     down: migration_20261112_100000_vente_par_lot.down,
     name: '20261112_100000_vente_par_lot',
+  },
+  {
+    up: migration_20261112_110000_commande_lot_mail.up,
+    down: migration_20261112_110000_commande_lot_mail.down,
+    name: '20261112_110000_commande_lot_mail',
   },
 ];

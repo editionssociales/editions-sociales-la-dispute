@@ -113,6 +113,7 @@ export interface Config {
     'page-a-propos': PageAPropos;
     'page-contact': PageContact;
     'pages-legales': PagesLegales;
+    'mail-commande-lot': MailCommandeLot;
   };
   globalsSelect: {
     'page-souscription': PageSouscriptionSelect<false> | PageSouscriptionSelect<true>;
@@ -120,6 +121,7 @@ export interface Config {
     'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
     'page-contact': PageContactSelect<false> | PageContactSelect<true>;
     'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
+    'mail-commande-lot': MailCommandeLotSelect<false> | MailCommandeLotSelect<true>;
   };
   locale: null;
   widgets: {
@@ -421,6 +423,10 @@ export interface Order {
    * Commande normale, précommande (article à paraître) ou don. Un panier mixte (paru + précommande) crée une commande de chaque type pour un même paiement. « Don » : jamais compté dans le chiffre d’affaires, mais suivi en préparation et expédition comme une commande normale.
    */
   orderType: 'commande' | 'precommande' | 'don';
+  /**
+   * Cochée automatiquement quand la commande contient un titre vendu par lot (onglet « Lots » de la liste). Un don n’est jamais une commande de lot.
+   */
+  venteParLot?: boolean | null;
   paidAt?: string | null;
   email: string;
   /**
@@ -911,6 +917,7 @@ export interface OrdersSelect<T extends boolean = true> {
   number?: T;
   status?: T;
   orderType?: T;
+  venteParLot?: T;
   paidAt?: T;
   email?: T;
   phone?: T;
@@ -1564,6 +1571,30 @@ export interface PagesLegales {
   createdAt?: string | null;
 }
 /**
+ * Texte du mail de confirmation des commandes de lots. Un champ vide = le texte par défaut.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mail-commande-lot".
+ */
+export interface MailCommandeLot {
+  id: number;
+  /**
+   * Vide = objet habituel (« Confirmation de votre commande … »).
+   */
+  objet?: string | null;
+  /**
+   * Texte brut ; séparez les paragraphes par une ligne vide. Remplace la phrase d’accueil du mail. Vide = texte par défaut.
+   */
+  message?: string | null;
+  recommandationsTitre?: string | null;
+  /**
+   * Six livres au plus. Une fiche non publiée est ignorée.
+   */
+  recommandations?: (number | Book)[] | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "page-souscription_select".
  */
@@ -1716,6 +1747,19 @@ export interface PagesLegalesSelect<T extends boolean = true> {
   cgv?: T;
   mentionsLegales?: T;
   confidentialite?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mail-commande-lot_select".
+ */
+export interface MailCommandeLotSelect<T extends boolean = true> {
+  objet?: T;
+  message?: T;
+  recommandationsTitre?: T;
+  recommandations?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

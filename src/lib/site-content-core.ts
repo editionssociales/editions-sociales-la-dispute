@@ -1,3 +1,4 @@
+import { bookFichePath } from "./book-fiche-path";
 import { lexicalToHtml } from "./catalogue-pg-map";
 import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
@@ -6,6 +7,8 @@ import { EDITION_LIST } from "./editions";
 import type { Accent } from "./format";
 import type { EditionSlug } from "./types";
 import type {
+  Book,
+  MailCommandeLot,
   Media,
   PageAPropos,
   PageContact,
@@ -716,5 +719,85 @@ export function mergePageContact(
   return {
     titre: texteOuDefaut(global?.titre, CONTACT_DEFAUT.titre),
     intro: texteOuDefaut(global?.intro, CONTACT_DEFAUT.intro),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Mail « commande par lot »                                           */
+/* ------------------------------------------------------------------ */
+
+/** Une recommandation de lecture prête pour le gabarit mail (URLs absolues). */
+export interface MailLotRecommandation {
+  title: string;
+  authors?: string;
+  url: string;
+  coverUrl?: string;
+}
+
+export interface MailCommandeLotContent {
+  /** Vide = objet habituel du mail de commande. */
+  objet?: string;
+  message: string;
+  recommandationsTitre: string;
+  recommandations: MailLotRecommandation[];
+}
+
+/** Défaut sobre en attendant le texte du client (saisissable au back-office). */
+const MAIL_LOT_DEFAUT = {
+  message:
+    "Merci pour votre commande et pour votre soutien ! Vos exemplaires seront expédiés dans les meilleurs délais. " +
+    "Vous trouverez ci-dessous le récapitulatif de votre commande.",
+  recommandationsTitre: "Nos recommandations de lecture",
+};
+
+/**
+ * Recommandations du global → `{ title, authors, url, coverUrl }`. Une entrée
+ * non peuplée (id nu), non publiée ou sans chemin public est IGNORÉE en
+ * silence : un mail ne doit jamais porter un lien mort ni échouer pour ça.
+ * La couverture n'est reprise que si son URL est absolue (un client mail n'a
+ * pas de base pour un chemin relatif — cas du stockage local en dev).
+ */
+function resolveRecommandations(
+  entries: (number | Book)[] | null | undefined,
+  siteUrl: string,
+): MailLotRecommandation[] {
+  return (entries ?? []).flatMap((entry) => {
+    if (typeof entry === "number" || entry._status !== "published" || !entry.title) return [];
+    const path = bookFichePath(entry);
+    if (!path) return [];
+    const authors = (Array.isArray(entry.authors) ? entry.authors : [])
+      .flatMap((a) => (typeof a === "object" && a?.name ? [a.name] : []))
+      .join(", ");
+    const cover = typeof entry.cover === "object" ? entry.cover?.url : null;
+    return [
+      {
+        title: entry.title,
+        ...(authors ? { authors } : {}),
+        url: `${siteUrl}${path}`,
+        ...(cover && /^https?:\/\//.test(cover) ? { coverUrl: cover } : {}),
+      },
+    ];
+  });
+}
+
+/** Valeurs de repli quand le global est illisible — le mail part quand même. */
+export function defaultMailCommandeLot(): MailCommandeLotContent {
+  return { ...MAIL_LOT_DEFAUT, recommandations: [] };
+}
+
+/** Fusion du global `mail-commande-lot` — champ vide = défaut dur. `siteUrl` = domaine absolu des liens. */
+export function mergeMailCommandeLot(
+  global: MailCommandeLot | null | undefined,
+  siteUrl: string,
+): MailCommandeLotContent {
+  const objet = global?.objet?.trim();
+  return {
+    ...(objet ? { objet } : {}),
+    message: texteOuDefaut(global?.message, MAIL_LOT_DEFAUT.message),
+    recommandationsTitre: texteOuDefaut(
+      global?.recommandationsTitre,
+      MAIL_LOT_DEFAUT.recommandationsTitre,
+    ),
+    recommandations: resolveRecommandations(global?.recommandations, siteUrl),
   };
 }

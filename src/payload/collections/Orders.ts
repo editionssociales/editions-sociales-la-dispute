@@ -297,6 +297,26 @@ export const Orders: CollectionConfig = {
       },
     },
     {
+      // Fait relu FRAÎCHEMENT au webhook (au moins une ligne de CETTE commande
+      // est une fiche « vendue par lot », `Books.ts:commerce.venteParLot`) —
+      // jamais une valeur client. Drapeau d'affichage/filtre (chip « Lots »,
+      // mail dédié), PAS un `orderType` : l'idempotence `(stripeSessionId,
+      // orderType)` et la scission commande/précommande restent intactes.
+      name: 'venteParLot',
+      type: 'checkbox',
+      defaultValue: false,
+      index: true,
+      label: 'Commande de lot(s)',
+      access: lockedAfterCreate,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description:
+          'Cochée automatiquement quand la commande contient un titre vendu par lot ' +
+          '(onglet « Lots » de la liste). Un don n’est jamais une commande de lot.',
+      },
+    },
+    {
       // Champ `ui` : `createdAt` n'existe pas dans `Orders.fields` (généré
       // automatiquement par Payload, recon 2026-08-21) — seul moyen de le
       // rendre lisible en sidebar, à côté de `paidAt`. Purement

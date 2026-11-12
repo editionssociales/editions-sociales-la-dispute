@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  defaultMailCommandeLot,
+  mergeMailCommandeLot,
   mergePageAPropos,
   mergePageContact,
   mergePageSouscription,
@@ -688,5 +690,57 @@ describe("mergePageSouscription — soutiens (lot D3, 2026-08-30) : contrat de v
       "https://blob.example/dix.jpg",
       "https://blob.example/vingt.jpg",
     ]);
+  });
+});
+
+describe("mergeMailCommandeLot", () => {
+  const SITE = "https://ld-es.fr";
+  const book = (over: Record<string, unknown>) =>
+    ({
+      id: 1,
+      title: "Livre",
+      slug: "livre",
+      edition: "la-dispute",
+      origin: "catalogue",
+      _status: "published",
+      authors: [{ id: 1, name: "Ada Lovelace", slug: "ada" }],
+      cover: { id: 9, url: "https://blob.example/c.jpg" },
+      ...over,
+    }) as never;
+
+  it("global vide ou absent = défauts sobres", () => {
+    for (const g of [null, undefined, { id: 1 } as never]) {
+      expect(mergeMailCommandeLot(g, SITE)).toEqual(defaultMailCommandeLot());
+    }
+    expect(defaultMailCommandeLot().message).toMatch(/^Merci pour votre commande/);
+  });
+
+  it("résout les recommandations en URL absolue, auteurs et couverture absolue", () => {
+    const r = mergeMailCommandeLot(
+      {
+        id: 1,
+        objet: "  Merci  ",
+        recommandations: [book({}), book({ id: 2, slug: "x", edition: null, origin: "boutique", cover: { url: "/api/rel.jpg" } })],
+      } as never,
+      SITE,
+    );
+    expect(r.objet).toBe("Merci");
+    expect(r.recommandations).toEqual([
+      {
+        title: "Livre",
+        authors: "Ada Lovelace",
+        url: "https://ld-es.fr/catalogue/la-dispute/livre",
+        coverUrl: "https://blob.example/c.jpg",
+      },
+      { title: "Livre", authors: "Ada Lovelace", url: "https://ld-es.fr/boutique/x" },
+    ]);
+  });
+
+  it("ignore en silence ids nus, brouillons et fiches sans chemin", () => {
+    const r = mergeMailCommandeLot(
+      { id: 1, recommandations: [7, book({ _status: "draft" }), book({ slug: "" })] } as never,
+      SITE,
+    );
+    expect(r.recommandations).toEqual([]);
   });
 });

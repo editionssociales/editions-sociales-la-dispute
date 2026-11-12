@@ -23,6 +23,7 @@ import { Users } from './payload/collections/Users.ts'
 import { VirementsSouscription } from './payload/collections/VirementsSouscription.ts'
 import { attachPoolErrorHandler } from './payload/lib/pool-error-handler.ts'
 import { PageAPropos } from './payload/globals/PageAPropos.ts'
+import { MailCommandeLot } from './payload/globals/MailCommandeLot.ts'
 import { PageContact } from './payload/globals/PageContact.ts'
 import { PageSouscription } from './payload/globals/PageSouscription.ts'
 import { PagesLegales } from './payload/globals/PagesLegales.ts'
@@ -97,7 +98,7 @@ export default buildConfig({
     Users,
     ImportRuns,
   ],
-  globals: [PageSouscription, ReglagesBoutique, PageAPropos, PageContact, PagesLegales],
+  globals: [PageSouscription, ReglagesBoutique, PageAPropos, PageContact, PagesLegales, MailCommandeLot],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({

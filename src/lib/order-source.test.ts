@@ -188,6 +188,7 @@ function orderCreateData(overrides: Partial<OrderCreateData> = {}): OrderCreateD
         digital: false,
       },
     ],
+    venteParLot: false,
     shippingMethod: "standard",
     shippingCostTTC: 6.5,
     promoCode: null,

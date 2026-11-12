@@ -5,16 +5,19 @@ import config from "@payload-config";
 import { getPayload, type DataFromGlobalSlug, type GlobalSlug } from "payload";
 import {
   mergePageAPropos,
+  mergeMailCommandeLot,
   mergePageContact,
   mergePageSouscription,
   mergePagesLegales,
   mergeReglagesSite,
   type PageAProposContent,
+  type MailCommandeLotContent,
   type PageContactContent,
   type PageSouscriptionContent,
   type PagesLegalesContent,
   type ReglagesSiteContent,
 } from "./site-content-core";
+import { SITE_URL } from "./mail-shell";
 
 /**
  * Lecture server-only des globals « Contenus du site » via la Local API
@@ -118,5 +121,14 @@ export const getPageContact = cache(async (): Promise<PageContactContent> => {
     "page-contact",
     mergePageContact,
     "page Contact servie avec ses textes par défaut",
+  );
+});
+
+/** Texte du mail des commandes de lots (global `mail-commande-lot`) — lu par le webhook, jamais par un rendu public. */
+export const getMailCommandeLot = cache(async (): Promise<MailCommandeLotContent> => {
+  return readGlobal(
+    "mail-commande-lot",
+    (doc) => mergeMailCommandeLot(doc, SITE_URL),
+    "mail de commande de lot servi avec son texte par défaut",
   );
 });
