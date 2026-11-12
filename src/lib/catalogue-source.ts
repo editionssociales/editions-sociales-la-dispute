@@ -62,6 +62,12 @@ export interface RawBook {
    * casser les fixtures `RawBook` existantes qui n'en ont pas besoin.
    */
   commerce?: CommerceInfo | null;
+  /**
+   * Livre masqué (`Books.ts:masque`) : absent de toutes les listes du site,
+   * mais fiche, URL et achat inchangés (`catalogue.ts:isListed`). Posé
+   * seulement quand il est vrai ; optionnel comme `commerce`.
+   */
+  hidden?: true;
 }
 
 /** Ce que le moteur de commerce connaît de la vente d'un livre. */

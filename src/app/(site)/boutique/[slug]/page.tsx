@@ -34,6 +34,8 @@ export async function generateMetadata({
     title: book.title,
     description: cmsExcerpt(book.presentation, 160) || book.title,
     alternates: { canonical: `/boutique/${slug}` },
+    // Article masqué (`Books.ts:masque`) : joignable par son adresse, hors des moteurs de recherche.
+    ...(book.hidden ? { robots: { index: false, follow: false } } : {}),
     // Issue #87b : même composition que la fiche catalogue (même forme de
     // données, `BookDetail`) — `openGraph` REMPLACE celui du layout (fusion
     // superficielle par champ, `src/app/CLAUDE.md`), donc `siteName`/`locale`

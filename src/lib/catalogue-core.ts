@@ -66,7 +66,20 @@ export function toBook(
     // Par défaut « papier » — même parti pris que `purchaseMode` : le seul
     // appelant qui pose `"numerique"` est `resolveNativePurchase`, en aval.
     format: "papier",
+    ...(raw.hidden ? { hidden: true as const } : {}),
   };
+}
+
+/**
+ * LA règle « ce livre figure dans les listes du site » — faux pour une fiche
+ * masquée (`Books.ts:masque`). Appliquée par `catalogue.ts` à TOUTES les
+ * surfaces de découverte (grille, facettes, recherche, nouveautés, à paraître,
+ * suggestions du panier) et par le plan du site ; jamais par la fiche, le
+ * panier ni le checkout, qui continuent de voir le livre (URL et achat
+ * inchangés).
+ */
+export function isListed(book: Pick<Book, "hidden">): boolean {
+  return !book.hidden;
 }
 
 /* --------------------------- résolution d'achat (Payload) --------------------------- */

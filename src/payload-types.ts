@@ -319,6 +319,10 @@ export interface Book {
      */
     lalibrairie?: string | null;
   };
+  /**
+   * Le livre n’apparaît plus nulle part sur le site, mais reste achetable et garde son adresse. Cochez pour afficher l’adresse exacte à transmettre.
+   */
+  masque?: boolean | null;
   contentTouched?: boolean | null;
   wpSource?: {
     site?: ('editions-sociales' | 'la-dispute') | null;
@@ -894,6 +898,7 @@ export interface BooksSelect<T extends boolean = true> {
         parislibrairies?: T;
         lalibrairie?: T;
       };
+  masque?: T;
   contentTouched?: T;
   wpSource?:
     | T

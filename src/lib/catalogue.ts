@@ -8,6 +8,7 @@ import {
   buildNativeBookDetail,
   buildNativeCatalogue,
   computeFacets,
+  isListed,
   newReleases,
   queryBooks,
   recentReleases,
@@ -16,6 +17,8 @@ import { buildSuggestionIndexData, type SuggestionIndexData } from "./search-sug
 import type { Book, BookDetail, BookFilters, EditionSlug, Facet } from "./types";
 
 export type { CatalogueView } from "./browse";
+// Règle unique « figure dans les listes » (`catalogue-core.ts`) — relayée pour le plan du site.
+export { isListed };
 
 /**
  * Façade du catalogue unifié (server-only) — Payload/Postgres, SEULE source.
@@ -101,7 +104,7 @@ export const getAllBooks = cache(async (): Promise<Book[]> => {
  */
 async function getCatalogueBooks(): Promise<Book[]> {
   const all = await getAllBooks();
-  return all.filter((b) => b.origin === "catalogue");
+  return all.filter((b) => b.origin === "catalogue" && isListed(b));
 }
 
 /** Applique filtres + tri (pagination gérée par l'appelant). */
@@ -173,7 +176,7 @@ export const getBook = cache(
 export async function getBoutiqueBooks(): Promise<Book[]> {
   const all = await getAllBooks();
   return all
-    .filter((b) => b.origin === "boutique")
+    .filter((b) => b.origin === "boutique" && isListed(b))
     .sort((a, b) => a.title.localeCompare(b.title, "fr"));
 }
 

@@ -113,6 +113,12 @@ export interface Book {
    */
   lowStock?: { left: number; lot: boolean };
   /**
+   * `true` ssi la fiche est masquée (`Books.ts:masque`) : jamais listée
+   * (`catalogue.ts:isListed`), `noindex`, mais joignable par son adresse et
+   * achetable comme avant. Posé par `toBook`, seulement quand il est vrai.
+   */
+  hidden?: true;
+  /**
    * `true` ssi la fiche est cochée « Vendu par lot »
    * (`CommerceInfo.lot`) : le titre ne se vend QUE par lots de `LOT_SIZE`
    * exemplaires (`shipping-core.ts`) — carte, fiche et panier n'offrent que

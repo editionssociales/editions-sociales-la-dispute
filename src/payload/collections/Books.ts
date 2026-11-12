@@ -718,6 +718,37 @@ export const Books: CollectionConfig = {
         },
       ],
     },
+    // Masquer un livre du site SANS toucher à sa fiche : il disparaît de toutes
+    // les listes (catalogue, recherche, accueil, à paraître, plan du site,
+    // suggestions du panier) et sort des moteurs de recherche (`noindex`),
+    // mais son URL, sa vendabilité et son panier restent EXACTEMENT les mêmes
+    // — seule l'adresse exacte y mène (`catalogue.ts:isListed`, règle unique).
+    // Lisible par TOUS (aucun `access.read`) : la lecture publique du front
+    // passe par `PUBLIC_BOOKS_READ` (`overrideAccess: false`), un champ réservé
+    // aux connectés y serait invisible et le livre réapparaîtrait partout.
+    {
+      name: 'masque',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Masquer du catalogue',
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Le livre n’apparaît plus nulle part sur le site, mais reste achetable et garde son adresse. Cochez pour afficher l’adresse exacte à transmettre.',
+      },
+    },
+    {
+      name: 'masqueUrl',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        condition: (data) => Boolean(data?.masque),
+        components: {
+          Field: '/payload/admin/books/HiddenBookUrlField.tsx#HiddenBookUrlField',
+        },
+      },
+    },
     // Champs internes (migration / parachute de parité) — hors UI admin.
     // Ancien onglet Technique (issue #24) retiré : plus de surface éditoriale.
     {

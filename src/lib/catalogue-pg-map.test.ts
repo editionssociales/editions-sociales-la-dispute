@@ -249,6 +249,12 @@ describe("payloadBookToRawBook — commerce natif (groupe `commerce`)", () => {
     expect(sans.commerce && "lot" in sans.commerce).toBe(false);
   });
 
+  it("masque coché → `hidden: true` ; décoché ou absent → champ absent", () => {
+    expect(payloadBookToRawBook(book({ masque: true })).hidden).toBe(true);
+    expect("hidden" in payloadBookToRawBook(book({ masque: false }))).toBe(false);
+    expect("hidden" in payloadBookToRawBook(book({}))).toBe(false);
+  });
+
   it("groupe `commerce` absent (fiche jamais touchée par la migration commerce) → null", () => {
     const raw = payloadBookToRawBook(book({ commerce: undefined }));
     expect(raw.commerce).toBeNull();

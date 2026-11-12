@@ -50,7 +50,7 @@ interface BooksFilterChipsProps {
   borne: string
 }
 
-type EtatChip = 'tous' | 'brouillons' | 'a-paraitre' | 'sans-couverture' | 'stock-bas'
+type EtatChip = 'tous' | 'brouillons' | 'a-paraitre' | 'sans-couverture' | 'stock-bas' | 'masques'
 type MaisonChip = 'es' | 'la-dispute'
 
 interface WhereCondition {
@@ -70,6 +70,7 @@ const ETAT_CHIPS: { key: EtatChip; label: string }[] = [
   { key: 'a-paraitre', label: 'À paraître' },
   { key: 'sans-couverture', label: 'Sans couverture' },
   { key: 'stock-bas', label: 'Stock bas' },
+  { key: 'masques', label: 'Masqués' },
 ]
 
 const MAISON_CHIPS: { key: MaisonChip; label: string }[] = [
@@ -93,6 +94,8 @@ function etatConditions(etat: EtatChip, seuil: number, borne: string): WhereCond
         { field: 'commerce.stock', op: 'less_than_equal', value: String(seuil) },
         { field: 'dateParution', op: 'less_than', value: borne },
       ]
+    case 'masques':
+      return [{ field: 'masque', op: 'equals', value: 'true' }]
     case 'tous':
     default:
       return []
@@ -120,6 +123,7 @@ function activeEtat(search: string): EtatChip {
   if (search.includes('[dateParution][greater_than_equal]=')) return 'a-paraitre'
   if (search.includes('[cover][exists]=false')) return 'sans-couverture'
   if (search.includes('[commerce.stock][less_than_equal]=')) return 'stock-bas'
+  if (search.includes('[masque][equals]=true')) return 'masques'
   return 'tous'
 }
 

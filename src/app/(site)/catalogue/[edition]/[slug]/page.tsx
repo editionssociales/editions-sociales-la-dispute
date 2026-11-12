@@ -38,6 +38,9 @@ export async function generateMetadata({
     title: book.title,
     description,
     alternates: { canonical: `/catalogue/${edition}/${slug}` },
+    // Livre masqué (`Books.ts:masque`) : joignable par son adresse, mais hors
+    // des moteurs de recherche — sinon « masqué » ne le serait que sur le site.
+    ...(book.hidden ? { robots: { index: false, follow: false } } : {}),
     // Carte de partage : la couverture en visuel (URL absolue via
     // `metadataBase`), type `book` + carte large — title/description/url
     // suivent les champs ci-dessus (résolution Next). `openGraph` REMPLACE

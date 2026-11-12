@@ -178,5 +178,6 @@ export function payloadBookToRawBook(
     videoUrl: doc.video?.trim() || null,
     tocHtml: lexicalToHtml(doc.tableMatieres) || null,
     commerce: toCommerce(doc.commerce, digitalBookIds?.has(doc.id) ?? false),
+    ...(doc.masque ? { hidden: true as const } : {}),
   };
 }

@@ -8,6 +8,7 @@ import {
   queryBooks,
   recentReleases,
   resolveNativePurchase,
+  isListed,
   toBook,
 } from "./catalogue-core";
 import {
@@ -670,5 +671,33 @@ describe("recentReleases — vitrine accueil, plancher jamais vide", () => {
   it("respecte `limit` même quand la fenêtre en fournirait davantage", () => {
     const books = [book(1, "2026-09-01"), book(2, "2026-08-01"), book(3, "2026-07-01")];
     expect(recentReleases(books, 2, now)).toHaveLength(2);
+  });
+});
+
+describe("livre masqué (`RawBook.hidden`)", () => {
+  const raw = rawBook({ id: 50, slug: "masque", title: "Un livre masqué" });
+
+  it("toBook ne pose `hidden` que lorsqu'il est vrai", () => {
+    expect(toBook("editions-sociales", { ...raw, hidden: true }).hidden).toBe(true);
+    expect("hidden" in toBook("editions-sociales", raw)).toBe(false);
+  });
+
+  it("isListed : faux pour un livre masqué, vrai sinon", () => {
+    expect(isListed(toBook("editions-sociales", { ...raw, hidden: true }))).toBe(false);
+    expect(isListed(toBook("editions-sociales", raw))).toBe(true);
+  });
+
+  it("masquer ne change NI le statut d'achat NI l'URL : vendable, permalien et panier intacts", () => {
+    const permalink = "/catalogue/editions-sociales/masque";
+    const commerce = { sellable: true, stock: 50 };
+    const visible = resolveNativePurchase(toBook("editions-sociales", raw), commerce, permalink);
+    const hidden = resolveNativePurchase(
+      toBook("editions-sociales", { ...raw, hidden: true }),
+      commerce,
+      permalink,
+    );
+    expect(hidden).toEqual(visible);
+    expect(hidden.status).toBe("available");
+    expect(hidden.permalink).toBe(permalink);
   });
 });

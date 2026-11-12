@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getAllBooks, getBoutiqueBooks } from "@/lib/catalogue";
+import { getAllBooks, getBoutiqueBooks, isListed } from "@/lib/catalogue";
 import type { Book, EditionSlug } from "@/lib/types";
 
 /**
@@ -56,8 +56,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://ld-es.fr"
   ).replace(/\/+$/, "");
   const allBooks = await getAllBooks();
+  // Livres masqués (`Books.ts:masque`) : hors du plan du site — l'adresse
+  // exacte ne se découvre jamais par un moteur de recherche.
   const books = allBooks.filter(
-    (b): b is Book & { edition: EditionSlug } => b.edition != null,
+    (b): b is Book & { edition: EditionSlug } => b.edition != null && isListed(b),
   );
   const boutiqueOnly = await getBoutiqueBooks();
 
