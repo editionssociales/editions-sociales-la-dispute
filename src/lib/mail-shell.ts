@@ -25,6 +25,37 @@ export const FONT_STACK = "ui-sans-serif, system-ui, sans-serif";
 /** Domaine canonique — littéral : ces modules restent purs (aucune I/O), donc pas de lecture de `NEXT_PUBLIC_SITE_URL`/requête entrante ici. */
 export const SITE_URL = "https://ld-es.fr";
 
+/**
+ * Comptes sociaux de la maison — constantes dures comme `SITE_URL` (module pur,
+ * aucune I/O ; une promesse faite dans un mail ne dépend pas de la
+ * configuration). Instagram `ladispute.ed`, Twitter/X `@DisputeEditions`.
+ */
+export const INSTAGRAM_URL = "https://www.instagram.com/ladispute.ed/";
+export const TWITTER_URL = "https://x.com/DisputeEditions";
+/** Phrase d'invitation — la MÊME dans le HTML (liens sur les deux noms) et le texte brut. */
+const SOCIAL_BEFORE =
+  "Pour suivre nos actualités et découvrir nos prochaines publications, retrouvez-nous sur ";
+
+/** Bloc « réseaux » du pied de TOUS les e-mails (HTML) — ajouté par `renderMailShell`, jamais recopié par un mail. */
+function socialRow(): string {
+  const link = (href: string, label: string) =>
+    `<a href="${href}" style="color:${INK};font-weight:700;text-decoration:underline;">${label}</a>`;
+  return (
+    `<tr><td style="padding-top:20px;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
+    `<tr><td style="border-top:2px solid ${INK};padding-top:16px;font-family:${FONT_STACK};` +
+    `font-size:14px;line-height:1.5;color:${INK};">` +
+    `${SOCIAL_BEFORE}${link(INSTAGRAM_URL, "Instagram")} et ${link(TWITTER_URL, "Twitter/X")}.` +
+    `</td></tr></table>` +
+    `</td></tr>`
+  );
+}
+
+/** Même bloc en texte brut (versions `textContent`) — adresses en clair, les liens ne cliquent pas toujours. */
+export function socialTextBlock(): string {
+  return `${SOCIAL_BEFORE}Instagram et Twitter/X.\nInstagram : ${INSTAGRAM_URL}\nTwitter/X : ${TWITTER_URL}`;
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -98,6 +129,7 @@ export function renderMailShell({ documentTitle, preheader, heading, bodyHtml }:
     `<tr><td style="padding-bottom:12px;font-family:${FONT_STACK};font-size:22px;font-weight:800;` +
     `color:${INK};">${escapeHtml(heading)}</td></tr>` +
     bodyHtml +
+    socialRow() +
     `</table>` +
     `</td></tr>` +
     `</table>` +

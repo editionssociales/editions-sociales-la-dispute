@@ -1,6 +1,18 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { INK, LINE_COLOR, MUTED, PAPER, POP_ORANGE, POP_TEAL, renderMailShell } from "./mail-shell";
+import {
+  INK,
+  INSTAGRAM_URL,
+  LINE_COLOR,
+  MUTED,
+  PAPER,
+  POP_ORANGE,
+  POP_TEAL,
+  renderMailShell,
+  socialTextBlock,
+  TWITTER_URL,
+} from "./mail-shell";
+import { renderDonationThanksEmail } from "./donation-mail";
 
 /**
  * Les teintes des e-mails sont recopiées en dur (aucun client mail ne lit
@@ -42,5 +54,35 @@ describe("mail-shell — monogrammes du logo", () => {
     expect(cell("LD")).toContain(`background-color:${POP_ORANGE}`);
     expect(cell("LD")).toContain(`color:${INK}`);
     expect(html).not.toContain("#a8422b");
+  });
+});
+
+describe("mail-shell — invitation à suivre les réseaux (tous les e-mails)", () => {
+  const PHRASE = "Pour suivre nos actualités et découvrir nos prochaines publications, retrouvez-nous sur";
+
+  it("comptes officiels : Instagram ladispute.ed, Twitter/X @DisputeEditions", () => {
+    expect(INSTAGRAM_URL).toBe("https://www.instagram.com/ladispute.ed/");
+    expect(TWITTER_URL).toBe("https://x.com/DisputeEditions");
+  });
+
+  it("le gabarit commun ajoute la phrase et les deux liens à TOUT e-mail", () => {
+    const html = renderMailShell({ documentTitle: "t", preheader: "p", heading: "h", bodyHtml: "" });
+    expect(html).toContain(PHRASE);
+    expect(html).toContain(`href="${INSTAGRAM_URL}"`);
+    expect(html).toContain(`href="${TWITTER_URL}"`);
+    expect(html).toMatch(/>Instagram<\/a> et <a[^>]*>Twitter\/X<\/a>\./);
+  });
+
+  it("version texte : phrase + adresses en clair", () => {
+    const text = socialTextBlock();
+    expect(text).toContain(PHRASE);
+    expect(text).toContain(`Instagram : ${INSTAGRAM_URL}`);
+    expect(text).toContain(`Twitter/X : ${TWITTER_URL}`);
+  });
+
+  it("le mail de remerciement de don (HTML et texte) la porte aussi", () => {
+    const { html, text } = renderDonationThanksEmail();
+    expect(html).toContain(INSTAGRAM_URL);
+    expect(text).toContain(TWITTER_URL);
   });
 });

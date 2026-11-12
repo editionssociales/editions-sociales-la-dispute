@@ -29,7 +29,16 @@
 import { brevoConfigured, sendTransactionalEmail } from "./brevo";
 import { CONTACT_EMAIL } from "./contact-address";
 import { formatPrice } from "./format";
-import { FONT_STACK, INK, LINE_COLOR, MUTED, SITE_URL, escapeHtml, renderMailShell } from "./mail-shell";
+import {
+  FONT_STACK,
+  INK,
+  LINE_COLOR,
+  MUTED,
+  SITE_URL,
+  escapeHtml,
+  renderMailShell,
+  socialTextBlock,
+} from "./mail-shell";
 
 /** Adresse de livraison de la contrepartie — mêmes champs que `OrderAddressFacts` (`order-webhook-core.ts`), recopiés ici pour ne pas faire dépendre ce module pur du cœur webhook. */
 export interface DonationMailRecapAddress {
@@ -175,6 +184,8 @@ function renderDonationThanksText(recap?: DonationMailRecap): string {
     (recap ? "\n\n" + recapText(recap) : "") +
     "\n\n" +
     `Une question ? Écrivez-nous à ${CONTACT_EMAIL}.` +
+    "\n\n" +
+    socialTextBlock() +
     "\n\n" +
     `Les Éditions sociales × La Dispute — ld-es.fr`
   );

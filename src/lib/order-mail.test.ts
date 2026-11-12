@@ -48,6 +48,19 @@ describe("renderOrderConfirmationEmail — pur", () => {
     expect(html).not.toContain("<profits>");
   });
 
+  it("porte l'invitation à suivre Instagram et Twitter/X (HTML et texte), lot compris", () => {
+    for (const payload of [
+      PAYLOAD,
+      { ...PAYLOAD, lot: { message: "Merci.", recommandationsTitre: "À lire", recommandations: [] } },
+    ]) {
+      const { html, text } = renderOrderConfirmationEmail(payload);
+      expect(html).toContain("https://www.instagram.com/ladispute.ed/");
+      expect(html).toContain("https://x.com/DisputeEditions");
+      expect(text).toContain("Instagram : https://www.instagram.com/ladispute.ed/");
+      expect(text).toContain("Twitter/X : https://x.com/DisputeEditions");
+    }
+  });
+
   it("affiche la remise seulement si positive", () => {
     const withoutDiscount = { ...PAYLOAD, discountTTC: 0 };
     expect(renderOrderConfirmationEmail(withoutDiscount).html).not.toContain("Remise");

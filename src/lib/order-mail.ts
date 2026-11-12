@@ -25,6 +25,7 @@ import {
   SITE_URL,
   escapeHtml,
   renderMailShell,
+  socialTextBlock,
 } from "./mail-shell";
 
 export interface OrderMailLine {
@@ -311,6 +312,7 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
       : []),
     ...(payload.lot ? recommendationsText(payload.lot) : []),
     contactSentence(CONTACT_EMAIL, preorder),
+    socialTextBlock(),
     `Consulter le site : ${SITE_URL}`,
     "Les Éditions sociales × La Dispute",
   ].join("\n\n");
