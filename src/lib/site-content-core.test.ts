@@ -5,13 +5,13 @@ import {
   mergePageAPropos,
   mergePageContact,
   mergePageNosMaisons,
-  safeHttpUrl,
   splitParagraphes,
   mergePageSouscription,
   mergePagesLegales,
   mergeReglagesSite,
   richTextToSafeHtml,
 } from "./site-content-core";
+import { safeHttpUrl } from "./safe-url";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { CAMPAIGN_2026_PALIERS } from "./donation-tiers";
 import { EDITIONS } from "./editions";

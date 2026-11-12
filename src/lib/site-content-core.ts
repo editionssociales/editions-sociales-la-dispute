@@ -4,6 +4,7 @@ import { cmsExcerpt, sanitizeCms, type SafeHtml } from "./cms-html";
 import { DELIVERY_DELAY_RANGE } from "./delivery-copy";
 import { CAMPAIGN_2026_PALIERS, DONATION_TIERS, type DonationTier } from "./donation-tiers";
 import { EDITION_LIST } from "./editions";
+import { safeHttpUrl } from "./safe-url";
 import type { Accent } from "./format";
 import type { EditionSlug } from "./types";
 import type {
@@ -744,22 +745,6 @@ export interface PageNosMaisonsContent {
 }
 
 const NOS_MAISONS_DEFAUT_TITRE = "Nos maisons";
-
-/**
- * URL saisie au back-office → URL absolue http(s) normalisée, sinon `null`.
- * Règle unique : une URL `javascript:`/`data:` saisie ne doit JAMAIS finir
- * dans un `href` ou un `src` d'iframe.
- */
-export function safeHttpUrl(raw: string | null | undefined): string | null {
-  const propre = raw?.trim();
-  if (!propre) return null;
-  try {
-    const url = new URL(propre);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Texte brut → paragraphes (séparés par une ligne vide), blancs écartés. */
 export function splitParagraphes(texte: string | null | undefined): string[] {

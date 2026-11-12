@@ -24,7 +24,7 @@ export type { NouveauteBook };
  * couvertures (`Cover`), lien de fiche, bootstrap LCP et `id` DOM singleton
  * (`NOUVEAUTES_RAIL_ID`) — le rail lui-même (défilement natif, glissé
  * souris, flèches, effet de profondeur) vit dans `scroll-rail.tsx` (dont ce
- * fichier est aujourd'hui le seul consommateur — les visuels de soutien ont
+ * fichier est l'adaptateur historique, `/nos-maisons` l'appelant aussi en direct — les visuels de soutien ont
  * pris leur propre carrousel en boucle, `souscription/_components/soutiens-carousel.tsx`).
  *
  * PROFONDEUR (épure minimaliste — la perspective 3D/rotation a été retirée) :

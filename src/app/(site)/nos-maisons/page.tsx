@@ -8,7 +8,7 @@ import { ScrollRail, type ScrollRailItem } from "@/components/scroll-rail";
 import { NAV_HOUSES } from "@/lib/nav";
 import { getPageNosMaisons } from "@/lib/site-content";
 import type { NosMaisonsLien } from "@/lib/site-content-core";
-import { FOCUS_RING_LIGHT } from "@/lib/ui";
+import { FOCUS_RING_DARK, FOCUS_RING_INVERTING, FOCUS_RING_LIGHT } from "@/lib/ui";
 import { youTubeEmbedUrl } from "@/lib/video";
 
 /**
@@ -65,7 +65,7 @@ function videoItem(video: NosMaisonsLien, index: number): ScrollRailItem {
             href={video.url}
             target="_blank"
             rel="noreferrer"
-            className={`flex aspect-video w-full items-center justify-center border-b-2 border-ink bg-ink px-4 text-center font-sans text-sm font-bold uppercase tracking-[.05em] text-paper hover:bg-navy ${FOCUS_RING_LIGHT}`}
+            className={`flex aspect-video w-full items-center justify-center border-b-2 border-ink bg-ink px-4 text-center font-sans text-sm font-bold uppercase tracking-[.05em] text-paper hover:bg-navy ${FOCUS_RING_DARK}`}
           >
             <span>
               Voir la vidéo
@@ -105,12 +105,15 @@ export default async function NosMaisonsPage() {
           <div className="mt-6">
             <ScrollRail
               items={videos.map(videoItem)}
-              ariaLabel="Vidéos"
+              ariaLabel="Carrousel des vidéos"
               showArrows
               prevAriaLabel="Vidéo précédente"
               nextAriaLabel="Vidéo suivante"
-              trackClassName="flex items-stretch gap-4 overflow-x-auto pb-4 pt-12 [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              itemClassName="w-[min(85vw,28rem)] flex-none [scroll-snap-align:center]"
+              // Le padding horizontal CSS reproduit celui que `ScrollRail` pose au
+              // montage pour centrer la 1re carte : sans lui, la vidéo sauterait
+              // du bord gauche au centre à l'hydratation.
+              trackClassName="flex items-stretch gap-4 overflow-x-auto px-[max(1rem,calc((100%-min(85vw,40rem))/2))] pb-4 pt-12 [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              itemClassName="w-[min(85vw,40rem)] flex-none [scroll-snap-align:center]"
             />
           </div>
         </section>
@@ -158,7 +161,7 @@ export default async function NosMaisonsPage() {
             <Link
               key={h.href}
               href={h.href}
-              className={`flex min-h-32 items-end bg-paper p-6 font-sans text-xl font-black italic leading-tight text-ink hover:bg-ink hover:text-paper ${FOCUS_RING_LIGHT}`}
+              className={`flex min-h-32 items-end bg-paper p-6 font-sans text-xl font-black italic leading-tight text-ink hover:bg-ink hover:text-paper ${FOCUS_RING_INVERTING}`}
             >
               {h.label}
             </Link>

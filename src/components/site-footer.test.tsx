@@ -111,6 +111,8 @@ describe("SiteFooter — mise en page", () => {
 
   it("ne passe à 4 colonnes qu'à xl, avec un plancher pour la newsletter", () => {
     expect(html).toContain("xl:grid-cols-[1.4fr_minmax(20rem,1.3fr)_1fr_1fr]");
-    expect(html).not.toContain("lg:grid-cols-[");
+    // Entre lg et xl : 3 colonnes seulement (newsletter ≥ 350 px à 1024 px), Mentions en bandeau.
+    expect(html).toContain("lg:grid-cols-[1.3fr_1.2fr_1fr]");
+    expect(html).toContain("lg:col-span-3 xl:col-span-1");
   });
 });

@@ -724,14 +724,19 @@ export function CartView({
                   : promoResult.message}
               </p>
             )}
-            {hasPhysicalItems && summary.lotCount === 1 && (
-              <p className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-ink">
+            {/* Suit le port RÉELLEMENT calculé : un code « livraison offerte » prime
+                sur le forfait d'un lot (`shipping-core.ts`), l'encart se tait alors. */}
+            {hasPhysicalItems &&
+              summary.lotCount === 1 &&
+              shipping.ok &&
+              shipping.costCents === LOT_SHIPPING_COST_CENTS && (
+              <p aria-live="polite" className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-ink">
                 Port forfaitaire lot : {euros(LOT_SHIPPING_COST_CENTS)}. Ajoutez un deuxième lot : la
                 livraison est offerte.
               </p>
             )}
             {lotsFreeShipping && (
-              <p className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-bottle">
+              <p aria-live="polite" className="border-2 border-ink bg-paper px-3 py-2 font-sans text-xs font-bold text-bottle">
                 Livraison offerte — {LOT_FREE_SHIPPING_MIN_LOTS} lots ou plus.
               </p>
             )}

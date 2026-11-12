@@ -244,8 +244,8 @@ export function SiteFooter({
           deux instances vivaient dans le DOM à la fois, et franchir `lg` en
           cours de saisie perdait le champ. Ordre du DOM = ordre de lecture
           mobile = ordre visuel desktop (aucun placement explicite). */}
-      <FramedGrid className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1.4fr_minmax(20rem,1.3fr)_1fr_1fr]">
-        <AdresseCell className="sm:col-span-2 xl:col-span-1" adresse={footer.adresse} />
+      <FramedGrid className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.3fr_1.2fr_1fr] xl:grid-cols-[1.4fr_minmax(20rem,1.3fr)_1fr_1fr]">
+        <AdresseCell className="sm:col-span-2 lg:col-span-1" adresse={footer.adresse} />
         <NewsletterCell enabled={newsletterEnabled} />
         {/* Diffusion + Suivez-nous empilés dans UNE colonne : sous-grille au
             même filet de 2px ; Diffusion seule sans réseau saisi. */}
@@ -253,7 +253,7 @@ export function SiteFooter({
           <DiffusionCell />
           {reseaux.length > 0 ? <ReseauxCell reseaux={reseaux} /> : null}
         </div>
-        <MentionsCell className="sm:col-span-2 xl:col-span-1" year={year} />
+        <MentionsCell className="sm:col-span-2 lg:col-span-3 xl:col-span-1" year={year} />
       </FramedGrid>
     </footer>
   );

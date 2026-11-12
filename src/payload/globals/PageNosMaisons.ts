@@ -1,16 +1,26 @@
 import type { Field, GlobalConfig } from 'payload'
 
+import { safeHttpUrl } from '../../lib/safe-url.ts'
 import { isAdminOrEditor } from '../access.ts'
 import { revalidatePageNosMaisonsAfterChange } from '../hooks/revalidate.ts'
 
 /**
  * Lien externe de la page (vidéo ou article) : même forme des deux côtés, seul
- * le rendu diffère (`/nos-maisons`). L'URL est revalidée (http/https) à la
- * lecture (`site-content-core.ts:safeHttpUrl`) — le champ n'est qu'un texte.
+ * le rendu diffère (`/nos-maisons`). L'URL passe DEUX fois par la même règle
+ * (`safe-url.ts:safeHttpUrl`) : à la saisie (message clair plutôt qu'une ligne
+ * écartée en silence) et à la lecture (garde de sécurité, qui fait foi).
  */
 const lienFields = (urlDescription: string): Field[] => [
   { name: 'titre', type: 'text', label: 'Titre', required: true },
-  { name: 'url', type: 'text', label: 'Adresse (URL)', required: true, admin: { description: urlDescription } },
+  {
+    name: 'url',
+    type: 'text',
+    label: 'Adresse (URL)',
+    required: true,
+    validate: (value: string | null | undefined) =>
+      safeHttpUrl(value) ? true : 'Adresse complète attendue, commençant par https:// (ou http://).',
+    admin: { description: urlDescription },
+  },
   { name: 'media', type: 'text', label: 'Média', admin: { description: 'Nom du média (ex. « France Inter »). Optionnel.' } },
   { name: 'date', type: 'text', label: 'Date', admin: { description: 'Texte libre (ex. « 12 octobre 2026 »). Optionnel.' } },
 ]
