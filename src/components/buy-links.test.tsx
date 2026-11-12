@@ -234,9 +234,13 @@ describe("BuyLinksList — titre vendu par lot (`Book.lot`)", () => {
     const markup = renderToStaticMarkup(
       <BuyLinksList book={book({ ...available, lot: true, price: 5 })} />,
     );
-    expect(markup).toContain(formatPrice(50));
-    expect(markup).toContain(`soit ${formatPrice(5)} l’exemplaire`);
-    expect(markup).toContain("offert dès");
+    const text = markup.replace(/<!-- -->/g, "");
+    expect(text).toContain(formatPrice(50));
+    expect(text).toContain("le lot de 10");
+    expect(text).toContain(`soit ${formatPrice(5)} l’exemplaire`);
+    expect(text).toContain("Port pour 1 lot");
+    expect(text).toContain("Dès 2 lots");
+    expect(text).toContain("Port offert");
   });
 
   it("précommande d'un titre vendu par lot : le bouton précommande un lot", () => {

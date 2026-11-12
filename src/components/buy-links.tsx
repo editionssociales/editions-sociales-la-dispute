@@ -65,13 +65,20 @@ export function BuyLinksList({
   // un lot, le prix affiché est celui du lot (`lotPriceEuros`) et la règle de
   // port vient de `shipping-core.ts`, jamais réénoncée en dur.
   const lot = Boolean(book.lot);
+  // Règle de port du lot en DEUX lignes libellé/valeur, sous un filet — une
+  // phrase en capitales qui disait tout à la fois se lisait mal (retour
+  // client) ; le prix à l'exemplaire, lui, vit sous le prix (`priceBlock`).
   const lotNote = lot ? (
-    <p className={MICROCOPY_CLASS}>
-      Vendu par lot de {LOT_SIZE} exemplaires
-      {book.price != null ? ` — soit ${formatPrice(book.price)} l’exemplaire` : ""}. Port{" "}
-      {formatPrice(centsToEuros(LOT_SHIPPING_COST_CENTS))} pour un lot, offert dès{" "}
-      {LOT_FREE_SHIPPING_MIN_LOTS} lots.
-    </p>
+    <dl className="mt-3 flex flex-col gap-1 border-t border-ink/20 pt-3 font-sans text-xs">
+      <div className="flex items-baseline justify-between gap-3">
+        <dt className="text-muted">Port pour 1 lot</dt>
+        <dd className="font-bold text-ink">{formatPrice(centsToEuros(LOT_SHIPPING_COST_CENTS))}</dd>
+      </div>
+      <div className="flex items-baseline justify-between gap-3">
+        <dt className="text-muted">Dès {LOT_FREE_SHIPPING_MIN_LOTS} lots</dt>
+        <dd className="font-bold text-ink">Port offert</dd>
+      </div>
+    </dl>
   ) : null;
   // Titre numérique seul (client 2026-09-09) : remplace toute mention de
   // stock/expédition, quel que soit le statut d'achat qui la porterait
@@ -86,11 +93,20 @@ export function BuyLinksList({
       <BookPrice price={book.price} className={PRICE_CLASS} />
       <EpubTag size="lg" />
     </div>
+  ) : lot && book.price != null ? (
+    // Vendu par lot : le prix du LOT en grand, sa mention à côté, le prix à
+    // l'exemplaire en dessous — trois faits, trois niveaux de lecture.
+    <div>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <BookPrice price={lotPriceEuros(book.price)} className={PRICE_CLASS} />
+        <span className="font-sans text-xs font-bold uppercase tracking-[.04em] text-muted">
+          le lot de {LOT_SIZE}
+        </span>
+      </div>
+      <p className="mt-1.5 font-sans text-sm text-muted">soit {formatPrice(book.price)} l’exemplaire</p>
+    </div>
   ) : (
-    <BookPrice
-      price={book.lot && book.price != null ? lotPriceEuros(book.price) : book.price}
-      className={PRICE_CLASS}
-    />
+    <BookPrice price={book.price} className={PRICE_CLASS} />
   );
   // Liens libraires de repli — lus une seule fois, rendus par les CINQ
   // branches de statut sans exception (bug signalé par la cliente,
