@@ -7,12 +7,14 @@ import {
   mergePageAPropos,
   mergeMailCommandeLot,
   mergePageContact,
+  mergePageNosMaisons,
   mergePageSouscription,
   mergePagesLegales,
   mergeReglagesSite,
   type PageAProposContent,
   type MailCommandeLotContent,
   type PageContactContent,
+  type PageNosMaisonsContent,
   type PageSouscriptionContent,
   type PagesLegalesContent,
   type ReglagesSiteContent,
@@ -121,6 +123,14 @@ export const getPageContact = cache(async (): Promise<PageContactContent> => {
     "page-contact",
     mergePageContact,
     "page Contact servie avec ses textes par défaut",
+  );
+});
+
+export const getPageNosMaisons = cache(async (): Promise<PageNosMaisonsContent> => {
+  return readGlobal(
+    "page-nos-maisons",
+    mergePageNosMaisons,
+    "page Nos maisons servie sans vidéo ni article",
   );
 });
 

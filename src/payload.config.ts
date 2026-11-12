@@ -25,6 +25,7 @@ import { attachPoolErrorHandler } from './payload/lib/pool-error-handler.ts'
 import { PageAPropos } from './payload/globals/PageAPropos.ts'
 import { MailCommandeLot } from './payload/globals/MailCommandeLot.ts'
 import { PageContact } from './payload/globals/PageContact.ts'
+import { PageNosMaisons } from './payload/globals/PageNosMaisons.ts'
 import { PageSouscription } from './payload/globals/PageSouscription.ts'
 import { PagesLegales } from './payload/globals/PagesLegales.ts'
 import { ReglagesBoutique } from './payload/globals/ReglagesBoutique.ts'
@@ -98,7 +99,7 @@ export default buildConfig({
     Users,
     ImportRuns,
   ],
-  globals: [PageSouscription, ReglagesBoutique, PageAPropos, PageContact, PagesLegales, MailCommandeLot],
+  globals: [PageSouscription, ReglagesBoutique, PageAPropos, PageContact, PageNosMaisons, PagesLegales, MailCommandeLot],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({

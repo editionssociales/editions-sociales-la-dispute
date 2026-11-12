@@ -75,7 +75,7 @@ import { cartFlyTarget } from "./cart/fly-to-cart";
  * sur le chevron quand le menu est fermé (`CartCountBadge`, exigence client).
  *
  * Le carré Accueil (desktop dans le bloc maisons ; mobile en rangée haute) est
- * permanent. `useSearchParams` (états Geme / À paraître)
+ * permanent. `useSearchParams` (état À paraître)
  * est confiné derrière `<Suspense>` — sans ça, le layout racine dynamiserait
  * tout le site.
  *
@@ -90,7 +90,7 @@ import { cartFlyTarget } from "./cart/fly-to-cart";
 
 const NAV_HOVER_CLASS: Record<NavSectionId, string> = {
   catalogue: "bg-paper hover:bg-pop-pink",
-  geme: "bg-paper hover:bg-pop-teal",
+  "nos-maisons": "bg-paper hover:bg-pop-teal",
   "a-paraitre": "bg-paper hover:bg-pop-orange",
   agenda: "bg-paper hover:bg-pop-yellow",
 };
@@ -128,7 +128,7 @@ const MAISON_MONOGRAM: Record<string, { sigle: string; cellClass: string; ring: 
 /** Placement en grille desktop (littéral : le JIT ne compile pas `col-start-${n}`). */
 const SECTION_PLACEMENT: Record<NavSectionId, string> = {
   catalogue: "col-start-3 row-start-1",
-  geme: "col-start-4 row-start-1",
+  "nos-maisons": "col-start-4 row-start-1",
   "a-paraitre": "col-start-3 row-start-2",
   agenda: "col-start-4 row-start-2",
 };
@@ -722,11 +722,11 @@ function SiteHeaderInner() {
 /**
  * Lecture SYNCHRONE de `window.location.search` à l'initialisation (jamais en
  * effet) — `URLSearchParams` est un `NavSearch` valide (méthode `get`).
- * Élimine le flash de couleur active (rose → teal) que produisait
+ * Élimine le flash de couleur active (rose → orange) que produisait
  * `search=null` en fallback avant l'hydratation de `useSearchParams`, sur un
- * lien profond (ex. `/catalogue/editions-sociales?libelle=geme`) : sans
+ * lien profond (ex. `/catalogue?upcoming=1`) : sans
  * cette lecture précoce, la cellule « Catalogue » s'allumait d'abord avant
- * de basculer sur « La Geme » une fois `SiteHeaderInner` monté.
+ * de basculer sur « À paraître » une fois `SiteHeaderInner` monté.
  */
 function useInitialSearch(): NavSearch | null {
   const [search] = useState<NavSearch | null>(() =>
@@ -753,7 +753,7 @@ function SiteHeaderFallback() {
 }
 
 /**
- * `useSearchParams` (Geme / À paraître) est confiné derrière `<Suspense>` :
+ * `useSearchParams` (À paraître) est confiné derrière `<Suspense>` :
  * sans ça, le layout racine basculerait tout le site en rendu dynamique
  * (piège documenté).
  */

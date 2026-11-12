@@ -4,6 +4,9 @@ import {
   mergeMailCommandeLot,
   mergePageAPropos,
   mergePageContact,
+  mergePageNosMaisons,
+  safeHttpUrl,
+  splitParagraphes,
   mergePageSouscription,
   mergePagesLegales,
   mergeReglagesSite,
@@ -742,5 +745,62 @@ describe("mergeMailCommandeLot", () => {
       SITE,
     );
     expect(r.recommandations).toEqual([]);
+  });
+});
+
+describe("safeHttpUrl", () => {
+  it("accepte http et https, refuse le reste", () => {
+    expect(safeHttpUrl(" https://exemple.fr/a ")).toBe("https://exemple.fr/a");
+    expect(safeHttpUrl("http://exemple.fr")).toBe("http://exemple.fr/");
+    expect(safeHttpUrl("javascript:alert(1)")).toBeNull();
+    expect(safeHttpUrl("data:text/html,x")).toBeNull();
+    expect(safeHttpUrl("pas une url")).toBeNull();
+    expect(safeHttpUrl("")).toBeNull();
+    expect(safeHttpUrl(null)).toBeNull();
+  });
+});
+
+describe("splitParagraphes", () => {
+  it("sépare sur ligne vide, écarte les blancs", () => {
+    expect(splitParagraphes("Un\n\n  Deux  \r\n\r\nTrois\nsuite")).toEqual([
+      "Un",
+      "Deux",
+      "Trois\nsuite",
+    ]);
+    expect(splitParagraphes("  ")).toEqual([]);
+    expect(splitParagraphes(null)).toEqual([]);
+  });
+});
+
+describe("mergePageNosMaisons", () => {
+  it("global absent → titre par défaut, aucune section", () => {
+    expect(mergePageNosMaisons(null)).toEqual({
+      titre: "Nos maisons",
+      paragraphes: [],
+      videos: [],
+      articles: [],
+    });
+  });
+
+  it("écarte les lignes sans titre ou à URL non http(s), garde l'ordre", () => {
+    const merged = mergePageNosMaisons({
+      id: 1,
+      titre: " Chez nous ",
+      texte: "A\n\nB",
+      videos: [
+        { titre: "V1", url: "https://youtu.be/abcdefghijk", media: " France 2 ", date: "", id: "1" },
+        { titre: "V2", url: "javascript:alert(1)", id: "2" },
+        { titre: " ", url: "https://exemple.fr", id: "3" },
+      ],
+      articles: [{ titre: "Art", url: "https://exemple.fr/a", id: "4" }],
+    });
+    expect(merged.titre).toBe("Chez nous");
+    expect(merged.paragraphes).toEqual(["A", "B"]);
+    expect(merged.videos).toEqual([
+      { titre: "V1", url: "https://youtu.be/abcdefghijk", media: "France 2", date: null },
+    ]);
+    expect(merged.articles).toEqual([
+      { titre: "Art", url: "https://exemple.fr/a", media: null, date: null },
+    ]);
   });
 });

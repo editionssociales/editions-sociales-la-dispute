@@ -9,21 +9,21 @@ describe("activeSections", () => {
   it("allume les quatre sections sur l'accueil", () => {
     expect(activeSections("/")).toEqual({
       catalogue: true,
-      geme: true,
+      "nos-maisons": true,
       "a-paraitre": true,
       agenda: true,
     });
   });
 
-  it("allume Catalogue sur le fonds ES sans facette Geme", () => {
-    const a = activeSections("/catalogue/editions-sociales");
+  it("garde Catalogue allumé sur le fonds ES, même filtré GEME", () => {
+    const a = activeSections("/catalogue/editions-sociales", search("libelle=geme"));
     expect(a.catalogue).toBe(true);
-    expect(a.geme).toBe(false);
+    expect(a["nos-maisons"]).toBe(false);
   });
 
-  it("allume La GEME seulement avec libelle=geme", () => {
-    const a = activeSections("/catalogue/editions-sociales", search("libelle=geme"));
-    expect(a.geme).toBe(true);
+  it("allume Nos maisons sur /nos-maisons seulement", () => {
+    const a = activeSections("/nos-maisons");
+    expect(a["nos-maisons"]).toBe(true);
     expect(a.catalogue).toBe(false);
   });
 

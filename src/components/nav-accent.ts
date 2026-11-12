@@ -19,7 +19,7 @@ import { POP_BG } from "./pop-palette";
  */
 export const NAV_ACCENT_BG: Record<NavSectionId, string> = {
   catalogue: POP_BG.pink,
-  geme: POP_BG.teal,
+  "nos-maisons": POP_BG.teal,
   "a-paraitre": POP_BG.orange,
   agenda: POP_BG.yellow,
 };

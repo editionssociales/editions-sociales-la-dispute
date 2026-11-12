@@ -12,6 +12,7 @@ import type {
   Media,
   PageAPropos,
   PageContact,
+  PageNosMaisons,
   PageSouscription,
   PagesLegales,
 } from "@/payload-types";
@@ -719,6 +720,89 @@ export function mergePageContact(
   return {
     titre: texteOuDefaut(global?.titre, CONTACT_DEFAUT.titre),
     intro: texteOuDefaut(global?.intro, CONTACT_DEFAUT.intro),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Page Nos maisons                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Un lien externe de la page (vidéo ou article) — `url` déjà validée http(s). */
+export interface NosMaisonsLien {
+  titre: string;
+  url: string;
+  media: string | null;
+  date: string | null;
+}
+
+export interface PageNosMaisonsContent {
+  titre: string;
+  /** Paragraphes du texte d'introduction (séparés par une ligne vide à la saisie) ; vide = section non rendue. */
+  paragraphes: string[];
+  videos: NosMaisonsLien[];
+  articles: NosMaisonsLien[];
+}
+
+const NOS_MAISONS_DEFAUT_TITRE = "Nos maisons";
+
+/**
+ * URL saisie au back-office → URL absolue http(s) normalisée, sinon `null`.
+ * Règle unique : une URL `javascript:`/`data:` saisie ne doit JAMAIS finir
+ * dans un `href` ou un `src` d'iframe.
+ */
+export function safeHttpUrl(raw: string | null | undefined): string | null {
+  const propre = raw?.trim();
+  if (!propre) return null;
+  try {
+    const url = new URL(propre);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Texte brut → paragraphes (séparés par une ligne vide), blancs écartés. */
+export function splitParagraphes(texte: string | null | undefined): string[] {
+  if (!texte) return [];
+  return texte
+    .split(/\r?\n\s*\r?\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+type LienBrut = {
+  titre?: string | null;
+  url?: string | null;
+  media?: string | null;
+  date?: string | null;
+} | null | undefined;
+
+/** Lignes sans titre ou à URL invalide écartées (jamais rendues), ordre de saisie conservé. */
+function mergeLiens(rows: ReadonlyArray<LienBrut> | null | undefined): NosMaisonsLien[] {
+  const out: NosMaisonsLien[] = [];
+  for (const row of rows ?? []) {
+    const titre = row?.titre?.trim();
+    const url = safeHttpUrl(row?.url);
+    if (!titre || !url) continue;
+    out.push({
+      titre,
+      url,
+      media: row?.media?.trim() || null,
+      date: row?.date?.trim() || null,
+    });
+  }
+  return out;
+}
+
+/** Fusion du global `page-nos-maisons` — titre vide = défaut dur, listes/texte vides = section absente. */
+export function mergePageNosMaisons(
+  global: PageNosMaisons | null | undefined,
+): PageNosMaisonsContent {
+  return {
+    titre: texteOuDefaut(global?.titre, NOS_MAISONS_DEFAUT_TITRE),
+    paragraphes: splitParagraphes(global?.texte),
+    videos: mergeLiens(global?.videos),
+    articles: mergeLiens(global?.articles),
   };
 }
 

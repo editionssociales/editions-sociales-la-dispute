@@ -8,9 +8,7 @@
  * reste dans les composants ; ce module ne porte que le contenu et la logique.
  */
 
-import { resolveLibelleSlug } from "./libelles";
-
-export type NavSectionId = "catalogue" | "geme" | "a-paraitre" | "agenda";
+export type NavSectionId = "catalogue" | "nos-maisons" | "a-paraitre" | "agenda";
 
 /** Lecture minimale des query params (URLSearchParams ou objet get-only). */
 export type NavSearch = { get(name: string): string | null };
@@ -22,19 +20,13 @@ export interface NavSection {
   /**
    * Vrai si la section correspond à l'URL courante (hors accueil, cf.
    * `activeSections`). `search` sert aux facettes partagées sur `/catalogue`
-   * (Geme, À paraître).
+   * (À paraître).
    */
   isActive(pathname: string, search?: NavSearch | null): boolean;
 }
 
 function param(search: NavSearch | null | undefined, name: string): string | null {
   return search?.get(name) ?? null;
-}
-
-/** Libellé GEME actif — accepte `?libelle=geme` et l'ancien `?collection=geme`. */
-function isGemeFilter(search: NavSearch | null | undefined): boolean {
-  const raw = param(search, "libelle") || param(search, "collection");
-  return resolveLibelleSlug(raw) === "geme";
 }
 
 export const NAV_SECTIONS: NavSection[] = [
@@ -44,10 +36,7 @@ export const NAV_SECTIONS: NavSection[] = [
     href: "/catalogue",
     isActive: (p, search) => {
       if (!p.startsWith("/catalogue")) return false;
-      // Geme et À paraître ont leurs propres cellules.
-      if (p.startsWith("/catalogue/editions-sociales") && isGemeFilter(search)) {
-        return false;
-      }
+      // À paraître a sa propre cellule.
       if ((p === "/catalogue" || p === "/catalogue/") && param(search, "upcoming") === "1") {
         return false;
       }
@@ -55,10 +44,10 @@ export const NAV_SECTIONS: NavSection[] = [
     },
   },
   {
-    id: "geme",
-    label: "La GEME",
-    href: "/catalogue/editions-sociales?libelle=geme",
-    isActive: (p, search) => p.startsWith("/catalogue/editions-sociales") && isGemeFilter(search),
+    id: "nos-maisons",
+    label: "Nos maisons",
+    href: "/nos-maisons",
+    isActive: (p) => p.startsWith("/nos-maisons"),
   },
   {
     id: "a-paraitre",
@@ -118,11 +107,11 @@ export function activeSections(
   search?: NavSearch | null,
 ): Record<NavSectionId, boolean> {
   if (pathname === "/") {
-    return { catalogue: true, geme: true, "a-paraitre": true, agenda: true };
+    return { catalogue: true, "nos-maisons": true, "a-paraitre": true, agenda: true };
   }
   return {
     catalogue: NAV_SECTIONS[0].isActive(pathname, search),
-    geme: NAV_SECTIONS[1].isActive(pathname, search),
+    "nos-maisons": NAV_SECTIONS[1].isActive(pathname, search),
     "a-paraitre": NAV_SECTIONS[2].isActive(pathname, search),
     agenda: NAV_SECTIONS[3].isActive(pathname, search),
   };

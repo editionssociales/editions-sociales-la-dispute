@@ -112,6 +112,7 @@ export interface Config {
     'reglages-boutique': ReglagesBoutique;
     'page-a-propos': PageAPropos;
     'page-contact': PageContact;
+    'page-nos-maisons': PageNosMaisons;
     'pages-legales': PagesLegales;
     'mail-commande-lot': MailCommandeLot;
   };
@@ -120,6 +121,7 @@ export interface Config {
     'reglages-boutique': ReglagesBoutiqueSelect<false> | ReglagesBoutiqueSelect<true>;
     'page-a-propos': PageAProposSelect<false> | PageAProposSelect<true>;
     'page-contact': PageContactSelect<false> | PageContactSelect<true>;
+    'page-nos-maisons': PageNosMaisonsSelect<false> | PageNosMaisonsSelect<true>;
     'pages-legales': PagesLegalesSelect<false> | PagesLegalesSelect<true>;
     'mail-commande-lot': MailCommandeLotSelect<false> | MailCommandeLotSelect<true>;
   };
@@ -1475,6 +1477,64 @@ export interface PageContact {
   createdAt?: string | null;
 }
 /**
+ * Page /nos-maisons : texte, vidéos (interventions dans les médias) et articles. Une section vide n’est pas affichée.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-nos-maisons".
+ */
+export interface PageNosMaisons {
+  id: number;
+  /**
+   * Vide = « Nos maisons ».
+   */
+  titre?: string | null;
+  /**
+   * Texte brut ; séparez les paragraphes par une ligne vide. Vide = pas de texte.
+   */
+  texte?: string | null;
+  /**
+   * Carrousel, dans cet ordre.
+   */
+  videos?:
+    | {
+        titre: string;
+        /**
+         * Lien YouTube (intégré dans la page). Tout autre lien http(s) s’affiche comme un lien vers la vidéo.
+         */
+        url: string;
+        /**
+         * Nom du média (ex. « France Inter »). Optionnel.
+         */
+        media?: string | null;
+        /**
+         * Texte libre (ex. « 12 octobre 2026 »). Optionnel.
+         */
+        date?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  articles?:
+    | {
+        titre: string;
+        /**
+         * Lien http(s) vers l’article.
+         */
+        url: string;
+        /**
+         * Nom du média (ex. « France Inter »). Optionnel.
+         */
+        media?: string | null;
+        /**
+         * Texte libre (ex. « 12 octobre 2026 »). Optionnel.
+         */
+        date?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages-legales".
  */
@@ -1716,6 +1776,35 @@ export interface PageAProposSelect<T extends boolean = true> {
 export interface PageContactSelect<T extends boolean = true> {
   titre?: T;
   intro?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "page-nos-maisons_select".
+ */
+export interface PageNosMaisonsSelect<T extends boolean = true> {
+  titre?: T;
+  texte?: T;
+  videos?:
+    | T
+    | {
+        titre?: T;
+        url?: T;
+        media?: T;
+        date?: T;
+        id?: T;
+      };
+  articles?:
+    | T
+    | {
+        titre?: T;
+        url?: T;
+        media?: T;
+        date?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

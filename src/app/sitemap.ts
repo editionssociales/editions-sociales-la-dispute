@@ -42,6 +42,7 @@ const STATIC_PATHS = [
   "/editions/la-dispute",
   "/souscription",
   "/rencontres",
+  "/nos-maisons",
   "/contact",
   "/mentions-legales",
   "/confidentialite",

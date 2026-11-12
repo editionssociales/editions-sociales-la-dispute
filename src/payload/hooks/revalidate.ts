@@ -461,6 +461,13 @@ export const revalidatePageContactAfterChange: GlobalAfterChangeHook = ({ req })
   revalidatePath('/contact')
 }
 
+/** Hook `page-nos-maisons` : seule la page /nos-maisons lit ce global. */
+export const revalidatePageNosMaisonsAfterChange: GlobalAfterChangeHook = ({ req }) => {
+  if (req.context?.disableRevalidate) return
+  invalidateSiteGlobalTag('page-nos-maisons')
+  revalidatePath('/nos-maisons')
+}
+
 /**
  * Hook `mail-commande-lot` : lu uniquement par le webhook Stripe (mail), aucune
  * page à purger — on expire seulement le data-cache du global.
