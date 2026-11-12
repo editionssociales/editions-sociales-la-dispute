@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   INK,
@@ -9,6 +9,7 @@ import {
   POP_ORANGE,
   POP_TEAL,
   renderMailShell,
+  socialRowHtml,
   socialTextBlock,
   TWITTER_URL,
 } from "./mail-shell";
@@ -65,12 +66,27 @@ describe("mail-shell — invitation à suivre les réseaux (tous les e-mails)", 
     expect(TWITTER_URL).toBe("https://x.com/DisputeEditions");
   });
 
-  it("le gabarit commun ajoute la phrase et les deux liens à TOUT e-mail", () => {
-    const html = renderMailShell({ documentTitle: "t", preheader: "p", heading: "h", bodyHtml: "" });
+  it("bloc HTML : phrase, liens sur les deux noms, puis les deux icônes cliquables (PNG hébergés)", () => {
+    const html = socialRowHtml();
     expect(html).toContain(PHRASE);
     expect(html).toContain(`href="${INSTAGRAM_URL}"`);
     expect(html).toContain(`href="${TWITTER_URL}"`);
     expect(html).toMatch(/>Instagram<\/a> et <a[^>]*>Twitter\/X<\/a>\./);
+    expect(html).toContain('src="https://ld-es.fr/mail/instagram.png"');
+    expect(html).toContain('src="https://ld-es.fr/mail/x.png"');
+    expect(html).toContain('alt="Instagram"');
+    expect(html).toContain('alt="Twitter/X"');
+  });
+
+  it("le gabarit commun, lui, ne l'ajoute plus : chaque mail la place avant son récapitulatif", () => {
+    const html = renderMailShell({ documentTitle: "t", preheader: "p", heading: "h", bodyHtml: "" });
+    expect(html).not.toContain(INSTAGRAM_URL);
+  });
+
+  it("les fichiers d'icônes existent dans public/mail", () => {
+    for (const f of ["instagram.png", "x.png"]) {
+      expect(existsSync(new URL(`../../public/mail/${f}`, import.meta.url))).toBe(true);
+    }
   });
 
   it("version texte : phrase + adresses en clair", () => {
@@ -80,9 +96,11 @@ describe("mail-shell — invitation à suivre les réseaux (tous les e-mails)", 
     expect(text).toContain(`Twitter/X : ${TWITTER_URL}`);
   });
 
-  it("le mail de remerciement de don (HTML et texte) la porte aussi", () => {
-    const { html, text } = renderDonationThanksEmail();
-    expect(html).toContain(INSTAGRAM_URL);
-    expect(text).toContain(TWITTER_URL);
+  it("don : après la signature, AVANT le récapitulatif de contrepartie (HTML et texte)", () => {
+    const recap = { tierTitle: "Palier 100", amountEuros: 100, lines: [{ title: "Un livre", quantity: 1 }] };
+    const { html, text } = renderDonationThanksEmail(recap);
+    expect(html.indexOf(INSTAGRAM_URL)).toBeGreaterThan(html.indexOf("L’équipe des éditions sociales"));
+    expect(html.indexOf(INSTAGRAM_URL)).toBeLessThan(html.indexOf("Un livre"));
+    expect(text.indexOf(TWITTER_URL)).toBeLessThan(text.indexOf("Un livre"));
   });
 });

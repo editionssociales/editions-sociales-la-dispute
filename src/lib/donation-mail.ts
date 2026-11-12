@@ -37,6 +37,7 @@ import {
   SITE_URL,
   escapeHtml,
   renderMailShell,
+  socialRowHtml,
   socialTextBlock,
 } from "./mail-shell";
 
@@ -180,12 +181,10 @@ function recapText(recap: DonationMailRecap): string {
  */
 function renderDonationThanksText(recap?: DonationMailRecap): string {
   return (
-    [...PARAGRAPHS, SIGNATURE].join("\n\n") +
+    [...PARAGRAPHS, SIGNATURE, socialTextBlock()].join("\n\n") +
     (recap ? "\n\n" + recapText(recap) : "") +
     "\n\n" +
     `Une question ? Écrivez-nous à ${CONTACT_EMAIL}.` +
-    "\n\n" +
-    socialTextBlock() +
     "\n\n" +
     `Les Éditions sociales × La Dispute — ld-es.fr`
   );
@@ -209,6 +208,8 @@ export function renderDonationThanksEmail(recap?: DonationMailRecap): {
   const bodyHtml =
     PARAGRAPHS.map((p) => paragraphRow(p)).join("") +
     paragraphRow(SIGNATURE, { strong: true }) +
+    // Invitation à suivre les réseaux : fin du texte de remerciement, AVANT le récapitulatif.
+    socialRowHtml() +
     // Contrepartie (client 2026-08-21) — bloc additionnel, APRÈS le corps
     // verbatim, jamais entre deux paragraphes.
     (recap ? recapRow(recap) : "") +

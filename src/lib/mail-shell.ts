@@ -36,17 +36,28 @@ export const TWITTER_URL = "https://x.com/DisputeEditions";
 const SOCIAL_BEFORE =
   "Pour suivre nos actualités et découvrir nos prochaines publications, retrouvez-nous sur ";
 
-/** Bloc « réseaux » du pied de TOUS les e-mails (HTML) — ajouté par `renderMailShell`, jamais recopié par un mail. */
-function socialRow(): string {
+/**
+ * Bloc « réseaux » des e-mails (HTML) : la phrase d'invitation (liens sur les
+ * deux noms) puis les deux icônes cliquables. Chaque mail l'insère lui-même
+ * À LA FIN DE SON TEXTE D'ACCUEIL, AVANT le récapitulatif (retour client
+ * 2026-11), jamais dans le pied. Icônes = PNG hébergés (`public/mail/`, 56 px
+ * affichés à 28) : aucun client mail ne rend de SVG de façon fiable ; `alt`
+ * porte le nom quand les images sont bloquées (le lien texte reste cliquable).
+ */
+export function socialRowHtml(): string {
   const link = (href: string, label: string) =>
     `<a href="${href}" style="color:${INK};font-weight:700;text-decoration:underline;">${label}</a>`;
+  const icon = (href: string, file: string, alt: string) =>
+    `<td style="padding-right:12px;"><a href="${href}" style="text-decoration:none;">` +
+    `<img src="${SITE_URL}/mail/${file}" width="28" height="28" alt="${alt}" ` +
+    `style="display:block;border:0;width:28px;height:28px;" /></a></td>`;
   return (
-    `<tr><td style="padding-top:20px;">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +
-    `<tr><td style="border-top:2px solid ${INK};padding-top:16px;font-family:${FONT_STACK};` +
-    `font-size:14px;line-height:1.5;color:${INK};">` +
+    `<tr><td style="padding-bottom:20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${INK};">` +
     `${SOCIAL_BEFORE}${link(INSTAGRAM_URL, "Instagram")} et ${link(TWITTER_URL, "Twitter/X")}.` +
-    `</td></tr></table>` +
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;"><tr>` +
+    icon(INSTAGRAM_URL, "instagram.png", "Instagram") +
+    icon(TWITTER_URL, "x.png", "Twitter/X") +
+    `</tr></table>` +
     `</td></tr>`
   );
 }
@@ -129,7 +140,6 @@ export function renderMailShell({ documentTitle, preheader, heading, bodyHtml }:
     `<tr><td style="padding-bottom:12px;font-family:${FONT_STACK};font-size:22px;font-weight:800;` +
     `color:${INK};">${escapeHtml(heading)}</td></tr>` +
     bodyHtml +
-    socialRow() +
     `</table>` +
     `</td></tr>` +
     `</table>` +

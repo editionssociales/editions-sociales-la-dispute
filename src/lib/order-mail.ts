@@ -25,6 +25,7 @@ import {
   SITE_URL,
   escapeHtml,
   renderMailShell,
+  socialRowHtml,
   socialTextBlock,
 } from "./mail-shell";
 
@@ -292,6 +293,7 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
     ...(payload.lot
       ? [...messageParagraphs(payload.lot.message), lotReferenceText(payload.orderNumber)]
       : [introSentence(payload.orderNumber, preorder)]),
+    socialTextBlock(),
     "RÉCAPITULATIF\n" +
       lines +
       `\n${SHIPPING_LABEL} : ${euros(payload.shippingCostTTC)}` +
@@ -312,7 +314,6 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
       : []),
     ...(payload.lot ? recommendationsText(payload.lot) : []),
     contactSentence(CONTACT_EMAIL, preorder),
-    socialTextBlock(),
     `Consulter le site : ${SITE_URL}`,
     "Les Éditions sociales × La Dispute",
   ].join("\n\n");
@@ -363,6 +364,8 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
       ? `${lotMessageHtml(payload.lot.message)}<br /><br />${lotReferenceHtml(orderNumber)}`
       : `Nous avons bien reçu votre ${preorder ? "précommande" : "commande"} <strong>${orderNumber}</strong>. Merci de votre confiance.`) +
     `</td></tr>` +
+    // Invitation à suivre les réseaux : fin du texte d'accueil, AVANT le récapitulatif.
+    socialRowHtml() +
     // Encadré récapitulatif — bordure 2px ink.
     `<tr><td style="border:2px solid ${INK};padding:16px;">` +
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">` +

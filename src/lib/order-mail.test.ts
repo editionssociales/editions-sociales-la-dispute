@@ -58,6 +58,9 @@ describe("renderOrderConfirmationEmail — pur", () => {
       expect(html).toContain("https://x.com/DisputeEditions");
       expect(text).toContain("Instagram : https://www.instagram.com/ladispute.ed/");
       expect(text).toContain("Twitter/X : https://x.com/DisputeEditions");
+      // Fin du texte d'accueil, AVANT le récapitulatif — HTML comme texte.
+      expect(html.indexOf("https://x.com/DisputeEditions")).toBeLessThan(html.indexOf("RÉCAPITULATIF"));
+      expect(text.indexOf("Twitter/X : https://x.com/DisputeEditions")).toBeLessThan(text.indexOf("RÉCAPITULATIF"));
     }
   });
 
@@ -318,7 +321,9 @@ describe("renderOrderConfirmationEmail — commande de lot", () => {
     expect(html).toContain("Nos recommandations de lecture");
     expect(html).toContain("Livre &lt;un&gt;");
     expect(html).toContain('src="https://blob.example/un.jpg"');
-    expect(html.match(/<img /g)).toHaveLength(1);
+    // 1 vignette de recommandation + les 2 icônes des réseaux (`mail-shell.ts:socialRowHtml`).
+    expect(html.match(/<img /g)).toHaveLength(3);
+    expect(html.match(/src="https:\/\/blob\.example\//g)).toHaveLength(1);
     expect(html).toContain("A. Auteur");
     expect(text).toContain("- Livre deux : https://ld-es.fr/boutique/deux");
   });
