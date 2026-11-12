@@ -293,6 +293,12 @@ describe("renderOrderConfirmationEmail — commande de lot", () => {
     expect(text).not.toContain("Nous avons bien reçu votre");
   });
 
+  it("garde le numéro de commande quel que soit le message et l'objet saisis", () => {
+    const { html, text } = renderOrderConfirmationEmail({ ...PAYLOAD, lot: { ...LOT, subject: "Merci !" } });
+    expect(html).toContain("Commande n° <strong>ES-2026-042</strong>");
+    expect(text).toContain("Commande n° ES-2026-042");
+  });
+
   it("garde le récapitulatif et ajoute le bloc de recommandations (vignette seulement si fournie)", () => {
     const { html, text } = renderOrderConfirmationEmail({ ...PAYLOAD, lot: LOT });
     expect(html).toContain("RÉCAPITULATIF");

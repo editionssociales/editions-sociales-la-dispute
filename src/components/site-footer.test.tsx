@@ -101,3 +101,16 @@ describe("SiteFooter — structure compacte", () => {
     expect(avec).toContain("Mastodon");
   });
 });
+
+describe("SiteFooter — mise en page", () => {
+  const html = renderToStaticMarkup(<SiteFooter footer={FOOTER} newsletterEnabled />);
+
+  it("la colonne Diffusion ne laisse pas de pavé de fond sous ses cellules", () => {
+    expect(html).not.toContain("content-start");
+  });
+
+  it("ne passe à 4 colonnes qu'à xl, avec un plancher pour la newsletter", () => {
+    expect(html).toContain("xl:grid-cols-[1.4fr_minmax(20rem,1.3fr)_1fr_1fr]");
+    expect(html).not.toContain("lg:grid-cols-[");
+  });
+});

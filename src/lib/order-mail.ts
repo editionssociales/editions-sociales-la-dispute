@@ -211,6 +211,15 @@ const introSentence = (orderNumberMarkup: string, preorder: boolean) =>
 const contactSentence = (emailMarkup: string, preorder: boolean) =>
   `Une question sur votre ${preorder ? "précommande" : "commande"} ? Écrivez-nous à ${emailMarkup} — nous vous répondrons avec plaisir.`;
 
+/**
+ * Référence de commande d'un mail de lot : le message saisi au back-office
+ * REMPLACE la phrase d'accueil (seule à porter le numéro), et l'objet est
+ * lui aussi remplaçable — la référence est donc une ligne fixe, indépendante
+ * du texte saisi.
+ */
+const lotReferenceText = (orderNumber: string) => `Commande n° ${orderNumber}`;
+const lotReferenceHtml = (orderNumberMarkup: string) => `Commande n° <strong>${orderNumberMarkup}</strong>`;
+
 /** Paragraphes d'un texte brut saisi au back-office (séparés par une ligne vide), vides écartés. */
 function messageParagraphs(message: string): string[] {
   return message
@@ -280,7 +289,7 @@ function renderOrderConfirmationText(payload: OrderMailPayload): string {
   return [
     "Bonjour,",
     ...(payload.lot
-      ? messageParagraphs(payload.lot.message)
+      ? [...messageParagraphs(payload.lot.message), lotReferenceText(payload.orderNumber)]
       : [introSentence(payload.orderNumber, preorder)]),
     "RÉCAPITULATIF\n" +
       lines +
@@ -349,7 +358,7 @@ export function renderOrderConfirmationEmail(payload: OrderMailPayload): {
     `<tr><td style="padding-bottom:20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${INK};">` +
     `Bonjour,<br />` +
     (payload.lot
-      ? lotMessageHtml(payload.lot.message)
+      ? `${lotMessageHtml(payload.lot.message)}<br /><br />${lotReferenceHtml(orderNumber)}`
       : `Nous avons bien reçu votre ${preorder ? "précommande" : "commande"} <strong>${orderNumber}</strong>. Merci de votre confiance.`) +
     `</td></tr>` +
     // Encadré récapitulatif — bordure 2px ink.

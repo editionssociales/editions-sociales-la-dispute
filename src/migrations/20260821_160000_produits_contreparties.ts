@@ -1,4 +1,4 @@
-import { MigrateUpArgs, MigrateDownArgs } from '@payloadcms/db-postgres'
+import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 
 /**
  * Fiches produits servies UNIQUEMENT en contrepartie de don (client
@@ -53,7 +53,14 @@ function lexicalDoc(text: string) {
   }
 }
 
-export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
+/**
+ * La Local API lit TOUTES les colonnes de la config courante : rejouée sur une
+ * base vierge, elle échoue dès qu'une migration POSTÉRIEURE a ajouté une
+ * colonne à `books` (ici `commerce_vente_par_lot`). `up` s'efface alors et
+ * c'est cette migration-là qui rappelle `seedProduitsContreparties` une fois
+ * sa colonne posée (idempotent : une fiche déjà là est sautée).
+ */
+export async function seedProduitsContreparties({ payload, req }: Pick<MigrateUpArgs, 'payload' | 'req'>): Promise<void> {
   for (const produit of PRODUITS) {
     const { docs } = await payload.find({
       collection: 'books',
@@ -86,6 +93,17 @@ export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
       req,
     })
   }
+}
+
+export async function up(args: MigrateUpArgs): Promise<void> {
+  const { rows } = await args.db.execute(sql`
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'payload' AND table_name = '_books_v' AND column_name = 'version_commerce_vente_par_lot'
+  `)
+  // Colonne déjà là (ou absente de la config) : la base est à jour pour la config courante.
+  // Absente alors que la config la connaît : base vierge, voir `seedProduitsContreparties`.
+  if (rows.length === 0) return
+  await seedProduitsContreparties(args)
 }
 
 export async function down({ payload, req }: MigrateDownArgs): Promise<void> {
