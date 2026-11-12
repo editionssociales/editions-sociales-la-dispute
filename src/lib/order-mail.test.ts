@@ -56,11 +56,11 @@ describe("renderOrderConfirmationEmail — pur", () => {
       const { html, text } = renderOrderConfirmationEmail(payload);
       expect(html).toContain("https://www.instagram.com/ladispute.ed/");
       expect(html).toContain("https://x.com/DisputeEditions");
-      expect(text).toContain("Instagram : https://www.instagram.com/ladispute.ed/");
-      expect(text).toContain("Twitter/X : https://x.com/DisputeEditions");
+      expect(text).toContain("Instagram @ladispute.ed : https://www.instagram.com/ladispute.ed/");
+      expect(text).toContain("Twitter/X @DisputeEditions : https://x.com/DisputeEditions");
       // Fin du texte d'accueil, AVANT le récapitulatif — HTML comme texte.
       expect(html.indexOf("https://x.com/DisputeEditions")).toBeLessThan(html.indexOf("RÉCAPITULATIF"));
-      expect(text.indexOf("Twitter/X : https://x.com/DisputeEditions")).toBeLessThan(text.indexOf("RÉCAPITULATIF"));
+      expect(text.indexOf("Twitter/X @DisputeEditions : https://x.com/DisputeEditions")).toBeLessThan(text.indexOf("RÉCAPITULATIF"));
     }
   });
 

@@ -76,6 +76,9 @@ describe("mail-shell — invitation à suivre les réseaux (tous les e-mails)", 
     expect(html).toContain('src="https://ld-es.fr/mail/x.png"');
     expect(html).toContain('alt="Instagram"');
     expect(html).toContain('alt="Twitter/X"');
+    // L'identifiant de chaque plateforme est visible, et cliquable.
+    expect(html).toMatch(/<a href="https:\/\/www\.instagram\.com\/ladispute\.ed\/"[^>]*>@ladispute\.ed<\/a>/);
+    expect(html).toMatch(/<a href="https:\/\/x\.com\/DisputeEditions"[^>]*>@DisputeEditions<\/a>/);
   });
 
   it("le gabarit commun, lui, ne l'ajoute plus : chaque mail la place avant son récapitulatif", () => {
@@ -92,8 +95,8 @@ describe("mail-shell — invitation à suivre les réseaux (tous les e-mails)", 
   it("version texte : phrase + adresses en clair", () => {
     const text = socialTextBlock();
     expect(text).toContain(PHRASE);
-    expect(text).toContain(`Instagram : ${INSTAGRAM_URL}`);
-    expect(text).toContain(`Twitter/X : ${TWITTER_URL}`);
+    expect(text).toContain(`Instagram @ladispute.ed : ${INSTAGRAM_URL}`);
+    expect(text).toContain(`Twitter/X @DisputeEditions : ${TWITTER_URL}`);
   });
 
   it("don : après la signature, AVANT le récapitulatif de contrepartie (HTML et texte)", () => {

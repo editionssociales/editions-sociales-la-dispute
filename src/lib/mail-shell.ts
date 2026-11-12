@@ -32,6 +32,9 @@ export const SITE_URL = "https://ld-es.fr";
  */
 export const INSTAGRAM_URL = "https://www.instagram.com/ladispute.ed/";
 export const TWITTER_URL = "https://x.com/DisputeEditions";
+/** Identifiants affichés à côté des icônes (retour client 2026-11 : « voir le @ de chaque plateforme »). */
+export const INSTAGRAM_HANDLE = "@ladispute.ed";
+export const TWITTER_HANDLE = "@DisputeEditions";
 /** Phrase d'invitation — la MÊME dans le HTML (liens sur les deux noms) et le texte brut. */
 const SOCIAL_BEFORE =
   "Pour suivre nos actualités et découvrir nos prochaines publications, retrouvez-nous sur ";
@@ -47,16 +50,21 @@ const SOCIAL_BEFORE =
 export function socialRowHtml(): string {
   const link = (href: string, label: string) =>
     `<a href="${href}" style="color:${INK};font-weight:700;text-decoration:underline;">${label}</a>`;
-  const icon = (href: string, file: string, alt: string) =>
-    `<td style="padding-right:12px;"><a href="${href}" style="text-decoration:none;">` +
+  // Une plateforme = icône + identifiant, tous deux cliquables.
+  const plateforme = (href: string, file: string, alt: string, handle: string) =>
+    `<td style="padding-right:24px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>` +
+    `<td style="padding-right:8px;"><a href="${href}" style="text-decoration:none;">` +
     `<img src="${SITE_URL}/mail/${file}" width="28" height="28" alt="${alt}" ` +
-    `style="display:block;border:0;width:28px;height:28px;" /></a></td>`;
+    `style="display:block;border:0;width:28px;height:28px;" /></a></td>` +
+    `<td style="font-family:${FONT_STACK};font-size:15px;font-weight:700;line-height:28px;">` +
+    `<a href="${href}" style="color:${INK};text-decoration:none;">${handle}</a></td>` +
+    `</tr></table></td>`;
   return (
     `<tr><td style="padding-bottom:20px;font-family:${FONT_STACK};font-size:15px;line-height:1.6;color:${INK};">` +
     `${SOCIAL_BEFORE}${link(INSTAGRAM_URL, "Instagram")} et ${link(TWITTER_URL, "Twitter/X")}.` +
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;"><tr>` +
-    icon(INSTAGRAM_URL, "instagram.png", "Instagram") +
-    icon(TWITTER_URL, "x.png", "Twitter/X") +
+    plateforme(INSTAGRAM_URL, "instagram.png", "Instagram", INSTAGRAM_HANDLE) +
+    plateforme(TWITTER_URL, "x.png", "Twitter/X", TWITTER_HANDLE) +
     `</tr></table>` +
     `</td></tr>`
   );
@@ -64,7 +72,7 @@ export function socialRowHtml(): string {
 
 /** Même bloc en texte brut (versions `textContent`) — adresses en clair, les liens ne cliquent pas toujours. */
 export function socialTextBlock(): string {
-  return `${SOCIAL_BEFORE}Instagram et Twitter/X.\nInstagram : ${INSTAGRAM_URL}\nTwitter/X : ${TWITTER_URL}`;
+  return `${SOCIAL_BEFORE}Instagram et Twitter/X.\nInstagram ${INSTAGRAM_HANDLE} : ${INSTAGRAM_URL}\nTwitter/X ${TWITTER_HANDLE} : ${TWITTER_URL}`;
 }
 
 export function escapeHtml(value: string): string {
